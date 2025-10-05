@@ -1,199 +1,142 @@
-# PO文件自动翻译工具
+# UE 本地化 PO 文件 AI 翻译工具
 
-使用Moonshot AI API自动翻译Unreal Engine本地化PO文件。
+> 使用 Moonshot AI 自动翻译 Unreal Engine 本地化文件，内置翻译记忆库，节省 50-70% 成本。
 
-## 工作原理
+## ✨ 特性
 
-直接翻译PO文件:
-- PO文件包含 `msgid`（原文）和 `msgstr`（译文）
-- 工具读取msgid，翻译后填入msgstr
-- 自动备份原文件，原地更新
-- 递归搜索 `localization/` 目录下的所有 `.po` 文件
+- 🚀 **一键翻译** - 自动处理整个项目的 PO 文件
+- 💾 **翻译记忆库** - 智能缓存常见短语，减少重复翻译
+- 📊 **详细报告** - 自动生成翻译对照表和统计信息
+- 🎯 **专业术语** - 内置 UE 术语库，保证翻译准确性
+- 🌍 **多语言支持** - 自动识别语言目录（zh-Hans, ja, ko 等）
+- 🔄 **去重优化** - 相同条目只翻译一次
 
-## 快速开始
+## 🚀 快速开始
 
-### 第一步: 安装
-
-**推荐方式（跨平台）:**
+### 1. 安装依赖
 ```bash
 python setup.py
 ```
 
-**手动安装:**
+### 2. 配置 API 密钥
 ```bash
-pip install -r requirements.txt
+# 复制配置文件
+cp env.example .env
+
+# 编辑 .env，填入 API 密钥
+MOONSHOT_API_KEY=sk-xxxxx
 ```
+获取密钥：https://platform.moonshot.cn/
 
-### 第二步: 配置API密钥
-
-1. 访问 https://platform.moonshot.cn/ 获取API密钥
-2. 复制 `env.example` 为 `.env`
-3. 编辑 `.env`:
-   ```ini
-   MOONSHOT_API_KEY=sk-xxxxx
-   PO_DIR=localization
-   LANGUAGE=zh-Hans  # 可选，不设置则每次交互选择
-   BATCH_SIZE=10
-   ```
-
-**目录结构示例:**
+### 3. 准备 PO 文件
 ```
 localization/
-  ├── zh-Hans/       # 简体中文
+  ├── zh-Hans/     # 目标语言
   │   └── Game.po
-  ├── en/            # 英文
-  │   └── Game.po
-  └── ja/            # 日文
+  └── en/          # 源语言
       └── Game.po
 ```
 
-### 第三步: 开始翻译
-
+### 4. 开始翻译
 ```bash
-# 方式1: 使用菜单（推荐）
 python run.py
-
-# 方式2: 命令行
-python translate.py
+# 选择 [2] 开始翻译 → 选择目标语言 → 完成
 ```
 
-## 核心命令
+## 📖 使用方式
 
+### 菜单模式（推荐）
 ```bash
-# 一键翻译（使用.env配置）
-python translate.py
-
-# 分析翻译工作量
-python analyze_po.py
-
-# 预览翻译进度
-python compare_translations.py
-
-# 单文件翻译
-python po_translator.py fy/zh-Hans/X_ToolkitTest.po --api-key YOUR_KEY
-
-# 批量翻译
-python batch_translate.py --api-key YOUR_KEY --dir fy/zh-Hans
-```
-
-## 翻译记忆库（Translation Memory）⭐
-
-**v3.1 新功能** - 智能缓存系统，自动复用常见短语翻译：
-
-### 核心优势
-- **节省Token** - 减少50-70%的AI调用成本
-- **提高一致性** - 相同短语使用相同翻译  
-- **加快速度** - 缓存命中无需等待AI响应
-
-### 内置短语库（57+条）
-```
-XTools|Random     → XTools|随机
-Asset Naming      → 资产命名
-Connection Mode   → 连接模式
-Unique            → 去重
-...
-```
-
-### 使用示例
-```bash
-# 自动启用，无需配置
 python run.py
-
-# 输出示例：
-# [TM] 翻译记忆库已启用
-# [TM] 缓存命中 45/100, 需AI翻译 55
-# [TM] 学习 12 条新短语
-# [TM] 节省费用: ¥0.11 (61%)
-
-# 管理记忆库
-python tools/manage_tm.py --list all
-python tools/manage_tm.py --search "Connection"
-python tools/manage_tm.py --export tm_backup.json
+```
+```
+[1] 分析PO文件      # 查看工作量和预估费用
+[2] 开始翻译        # 自动翻译所有待翻译条目
+[3] 预览翻译进度    # 查看翻译效果
+[4] 快速检查        # 检查文件状态
 ```
 
-详细说明：[docs/翻译记忆库说明.md](docs/翻译记忆库说明.md)
+### 命令行模式
+```bash
+# 一键翻译（读取 .env 配置）
+python src/translate.py
 
-## 费用说明
+# 指定语言翻译
+python src/batch_translate.py --api-key xxx --lang zh-Hans
+```
 
-- Moonshot API定价: 约 ¥0.012/1000 tokens
-- 典型5300行PO文件预估费用: ¥0.5-2.0（使用TM后: ¥0.2-0.8）
-- 使用 `python analyze_po.py` 可获得精确预估
+## 💡 翻译记忆库
 
-## 工具列表
+自动缓存和复用常见短语，无需配置：
 
-| 工具 | 说明 |
+```bash
+[TM] 缓存命中 45/100, 需AI翻译 55
+[TM] 学习了 12 个新短语
+[TM] 节省费用: ¥0.11 (61%)
+```
+
+**内置 90+ 条 UE 专业术语**，如：
+- `XTools|Random` → `XTools|随机`
+- `Asset Naming` → `资产命名`
+- `Connection Mode` → `连接模式`
+
+管理命令：
+```bash
+python tools/manage_tm.py --list all      # 查看所有
+python tools/manage_tm.py --search "工具"  # 搜索
+```
+
+## 💰 费用说明
+
+| 项目 | 费用 |
 |------|------|
-| **run.py** | 菜单界面（推荐） |
-| **translate.py** | 一键翻译 |
-| **setup.py** | 安装向导 |
-| **po_translator.py** | 单文件翻译 |
-| **batch_translate.py** | 批量翻译 |
-| **analyze_po.py** | 统计分析 |
-| **compare_translations.py** | 预览进度 |
-| **quick_check.py** | 快速检查 |
-| **manage_tm.py** | 翻译记忆库管理 |
+| **API 定价** | ¥0.012/1000 tokens |
+| **典型项目** (800条) | ¥0.5-2.0 |
+| **使用 TM 后** | ¥0.2-0.8 (节省 60%) |
 
-## 文件结构
+使用 `python run.py` → `[1] 分析PO文件` 可获得精确预估。
+
+## 📊 翻译报告
+
+每次翻译自动生成详细报告：
 
 ```
-po翻译/
-├── run.py                # 主菜单（推荐使用）
-├── setup.py              # 安装向导
-├── requirements.txt      # Python依赖
-├── .env                  # 配置文件
-│
-├── src/                  # 核心源代码
-│   ├── po_translator.py # 核心翻译类
-│   ├── batch_translate.py # 批量翻译
-│   └── translate.py     # 一键翻译
-│
-├── tools/                # 辅助工具
-│   ├── analyze_po.py    # 统计分析
-│   ├── compare_translations.py # 预览进度
-│   ├── quick_check.py   # 快速检查
-│   ├── manage_tm.py     # 翻译记忆库管理
-│   └── test_translator.py # 单元测试
-│
-├── docs/                 # 项目文档
-├── fy/zh-Hans/          # PO文件目录
-├── log/                 # 翻译报告
-└── README.md            # 本文件
+log/translation_report_20251006_023921.txt
+
+需要翻译: 103
+唯一条目: 88
+重复条目: 15 (14.6%)
+记忆库命中: 45/88 (51.1%)
+翻译成功: 88/103
+Token使用: 12,450
+实际费用: ¥0.35
 ```
 
-详细说明请查看：[PROJECT_STRUCTURE.md](PROJECT_STRUCTURE.md)
-
-## 示例
-
-翻译前:
-```po
-msgid "XTools|Collision"
-msgstr ""
-```
-
-翻译后:
-```po
-msgid "XTools|Collision"
-msgstr "XTools|碰撞"
-```
-
-同时生成备份文件 `*.po.backup`
-
-## 翻译报告
-
-每次翻译完成后，系统会自动在 `log/` 目录下生成详细的翻译报告：
+## 📁 项目结构
 
 ```
-log/translation_report_20251006_001418.txt
+├── run.py              # 主菜单
+├── setup.py            # 安装向导
+├── src/                # 核心代码
+│   ├── po_translator.py
+│   ├── batch_translate.py
+│   └── translation_memory.py
+├── tools/              # 辅助工具
+│   ├── analyze_po.py
+│   ├── compare_translations.py
+│   └── manage_tm.py
+├── localization/       # PO文件目录
+├── log/                # 翻译报告
+└── data/               # 翻译记忆库
+
 ```
 
-报告内容包括：
-- 翻译时间和统计信息
-- 每个文件的翻译详情
-- 完整的原文-译文对照表
-- 翻译成功/失败统计
+详细说明：[PROJECT_STRUCTURE.md](PROJECT_STRUCTURE.md)
 
-这样可以方便地：
-- 追踪翻译历史
-- 验证翻译质量
-- 定位问题条目
-- 进行人工审核
+## 🤝 参与贡献
+
+欢迎提交 Issue 和 Pull Request！
+
+## 📄 许可证
+
+MIT License

@@ -19,5 +19,9 @@ __pycache__/
 *.log
 *.tmp
 
-# 翻译记忆库（运行时生成）
-data/translation_memory.json
+# 翻译记忆库 - 允许提交内置词库
+# data/translation_memory.json
+
+# 日志文件 - 完全忽略
+log/
+!log/.gitkeep
