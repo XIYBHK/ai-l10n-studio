@@ -1,0 +1,23 @@
+# API密钥配置
+.env
+
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+
+# 备份文件
+*.backup
+*.bak
+
+# IDE
+.vscode/
+.idea/
+*.swp
+
+# 临时文件
+*.log
+*.tmp
+
+# 翻译记忆库（运行时生成）
+data/translation_memory.json

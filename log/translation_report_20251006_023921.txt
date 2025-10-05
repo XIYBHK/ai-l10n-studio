@@ -1,0 +1,398 @@
+================================================================================
+PO文件翻译报告
+================================================================================
+生成时间: 2025-10-06 02:39:21
+翻译文件数: 1
+总条目数: 1688
+需要翻译: 103
+唯一条目: 88
+重复条目: 15
+记忆库命中: 35/88 (39.8%)
+翻译成功: 88/103
+
+--------------------------------------------------------------------------------
+Token使用统计:
+  输入tokens: 7,298
+  输出tokens: 839
+  总计tokens: 8,137
+  实际费用: ¥0.0976
+================================================================================
+
+
+================================================================================
+文件 [1/1]: X_ToolkitTest.po
+================================================================================
+文件路径: localization\zh-Hans\X_ToolkitTest.po
+总条目数: 1688
+需要翻译: 103
+唯一条目: 88
+重复条目: 15
+记忆库命中: 35/88 (39.8%)
+翻译成功: 88/103
+
+Token使用:
+  输入tokens: 7,298
+  输出tokens: 839
+  总计tokens: 8,137
+  费用: ¥0.0976
+
+--------------------------------------------------------------------------------
+翻译对照表:
+--------------------------------------------------------------------------------
+
+[1]
+原文: Asset Naming|Prefix Rules
+译文: 资产命名|前缀规则
+
+[2]
+原文: Asset Naming|General
+译文: 资产命名|通用
+
+[3]
+原文: Debug
+译文: 调试
+
+[4]
+原文: Optimization
+译文: 优化
+
+[5]
+原文: Performance
+译文: 性能
+
+[6]
+原文: Sampling
+译文: 采样
+
+[7]
+原文: Asset Naming|Exclusion Rules
+译文: 资产命名|排除规则
+
+[8]
+原文: XTools|Geometry
+译文: XTools|几何体
+
+[9]
+原文: Asset Prefix Mappings
+译文: 资产前缀映射
+
+[10]
+原文: Auto-Fixup Redirectors
+译文: 自动修复重定向器
+
+[11]
+原文: Auto-Rename on Create
+译文: 创建时自动重命名
+
+[12]
+原文: Auto-Rename on Import
+译文: 导入时自动重命名
+
+[13]
+原文: Draw Only Successful Hits
+译文: 仅绘制成功的命中
+
+[14]
+原文: Enable Bounds Culling
+译文: 启用边界剔除
+
+[15]
+原文: Enable Debug Draw
+译文: 启用调试绘制
+
+[16]
+原文: Enable Debug Log
+译文: 启用调试日志
+
+[17]
+原文: Enable Parallel Processing
+译文: 启用并行处理
+
+[18]
+原文: Bounding Box
+译文: 边界框
+
+[19]
+原文: Success
+译文: 成功
+
+[20]
+原文: Use Complex Collision
+译文: 使用复杂碰撞
+
+[21]
+原文: Config
+译文: 配置
+
+[22]
+原文: Debug Draw Duration
+译文: 调试绘制持续时间
+
+[23]
+原文: Excluded Asset Classes
+译文: 排除的资产类别
+
+[24]
+原文: Excluded Folders
+译文: 排除的文件夹
+
+[25]
+原文: Grid Spacing
+译文: 网格间距
+
+[26]
+原文: Method
+译文: 方法
+
+[27]
+原文: Noise
+译文: 噪声
+
+[28]
+原文: Out Points
+译文: 输出点
+
+[29]
+原文: Parallel Batch Size
+译文: 并行批处理大小
+
+[30]
+原文: Parent Class Prefix Mappings
+译文: 父类前缀映射
+
+[31]
+原文: Point Sampling Config
+译文: 点采样配置
+
+[32]
+原文: Sample Points Inside Mesh
+译文: 在网格内部采样点
+
+[33]
+原文: Generate Grid Points Inside Mesh (Deprecated)
+译文: 在网格内部生成网格点（已弃用）
+
+[34]
+原文: Stream
+译文: 流送
+
+[35]
+原文: Target Actor
+译文: 目标Actor
+
+[36]
+原文: Trace Radius
+译文: 追踪半径
+
+[37]
+原文: World Context Object
+译文: 世界上下文对象
+
+[38]
+原文: X Asset Editor
+译文: X资产编辑器
+
+[39]
+原文: Map of asset class names to their prefixes. You can modify existing rules or add new ones.
+译文: 资产类名到其前缀的映射表。您可以修改现有规则或添加新规则。
+
+[40]
+原文: When enabled, redirectors will be automatically fixed up and deleted after renaming
+译文: 当启用时，在重命名后自动修复并删除重定向器。
+
+[41]
+原文: When enabled, newly created assets will be automatically renamed according to naming rules
+译文: 当启用时，新创建的资产将根据命名规则自动重命名。
+
+[42]
+原文: When enabled, assets will be automatically renamed according to naming rules upon import
+译文: 当启用时，在导入时资产将根据命名规则自动重命名。
+
+[43]
+原文: Whether to only show successful hit points in debug drawing
+译文: 是否仅在调试绘制中显示成功的命中点。
+
+[44]
+原文: [Optimization] Whether to enable model bounds culling
+译文: [优化] 是否启用模型边界剔除。
+
+[45]
+原文: Whether to enable debug drawing
+译文: 是否启用调试绘制。
+
+[46]
+原文: When enabled, detailed debug information will be shown in Output Log
+译文: 当启用时，在输出日志中显示详细的调试信息。
+
+[47]
+原文: When enabled, use multithreading to process large sets of assets for better performance
+译文: 当启用时，使用多线程处理大量资产以提高性能。
+
+[48]
+原文: Whether to use complex collision (per-polygon)
+译文: 是否使用复杂碰撞（每个多边形）。
+
+[49]
+原文: Debug drawing duration
+译文: 调试绘制持续时间。
+
+[50]
+原文: Asset class names that should be excluded from automatic renaming (e.g., World, BlueprintGeneratedClass)
+译文: 应该从自动重命名中排除的资产类名（例如，World, BlueprintGeneratedClass）。
+
+[51]
+原文: Folder paths to exclude from automatic renaming (e.g., /Game/ThirdParty/)
+译文: 排除自动重命名的文件夹路径（例如，/Game/ThirdParty/）
+
+[52]
+原文: Spacing for generated point grid
+译文: 生成的点网格间距
+
+[53]
+原文: Sampling method: Surface Proximity or Voxelize (TBD)
+译文: 采样方法：表面接近度或体素化（待定）
+
+[54]
+原文: Maximum random offset for each sample point on each axis
+译文: 每个采样点在每个轴向上的最大随机偏移量
+
+[55]
+原文: Number of assets processed per batch; larger values may improve performance but increase memory usage
+译文: 每批处理的资产数量；较大的值可能提高性能但增加内存使用量
+
+[56]
+原文: Map of Blueprint parent class names to their prefixes. Used to distinguish Blueprint subclasses (e.g., ActorComponent vs SceneComponent).
+译文: 蓝图父类名到其前缀的映射表。用于区分蓝图子类（例如，ActorComponent 与 SceneComponent）。
+
+[57]
+原文: Configuration for point sampling operations\nGroups all sampling parameters to simplify API and improve maintainability
+译文: 点采样操作的配置\n将所有采样参数组合在一起，以简化API并提高可维护性
+
+[58]
+原文: Generate point grid within TargetActor collision using selected sampling method. Use the Config struct to configure all parameters.
+译文: 在TargetActor碰撞内使用选定的采样方法生成点网格。使用Config结构体配置所有参数。
+
+[59]
+原文: [DEPRECATED] Generate point grid within TargetActor collision using selected sampling method. Use SamplePointsInsideMesh() instead.
+译文: [已弃用] 在TargetActor碰撞内使用选定的采样方法生成点网格。请改用SamplePointsInsideMesh()。
+
+[60]
+原文: [Surface Proximity mode] Detection sphere radius
+译文: [表面接近度模式] 检测球体半径
+
+[61]
+原文: Asset editor plugin settings\nProvides configuration options for asset naming, collision tools, etc.
+译文: 资产编辑器插件设置\n提供资产命名、碰撞工具等的配置选项。
+
+[62]
+原文: Renamed: {0} | Skipped: {1} | Failed: {2}
+译文: 已重命名：{0} | 已跳过：{1} | 失败：{2}
+
+[63]
+原文: Invalid Asset
+译文: 无效资产
+
+[64]
+原文: ==================== Normalization Completed ====================\n
+译文: ==================== 归一化完成 ====================\n
+
+[65]
+原文: Summary:\n
+译文: 摘要：\n
+
+[66]
+原文: - Total: {0}\n
+译文: - 总计：{0}\n
+
+[67]
+原文: - Renamed: {0}\n
+译文: - 已重命名：{0}\n
+
+[68]
+原文: - Already OK: {0}\n
+译文: - 已正确：{0}\n
+
+[69]
+原文: - Failed: {0}\n
+译文: - 失败：{0}\n
+
+[70]
+原文: ====================================================\n
+译文: ====================================================\n
+
+[71]
+原文: Note: Some assets may have been skipped because they no longer exist.\n
+译文: 注意：有些资产可能因为它们不再存在而被跳过。\n
+
+[72]
+原文: This can happen when 'Auto-Rename on Create/Import' is enabled and\n
+译文: 当启用“创建/导入时自动重命名”时，这种情况可能会发生。\n
+
+[73]
+原文: assets were already automatically renamed. Check the Output Log for details.\n
+译文: 已经被自动重命名的资产。查看输出日志以获取详细信息。\n
+
+[74]
+原文: Project Default
+译文: 项目默认
+
+[75]
+原文: Simple And Complex
+译文: 简单与复杂
+
+[76]
+原文: Use Simple As Complex
+译文: 将简单用作复杂
+
+[77]
+原文: Use Complex As Simple
+译文: 将复杂用作简单
+
+[78]
+原文: • \"MyCharacterData\" → \"CD_\"  (Character data)
+译文: • "MyCharacterData" → "CD_"  （角色数据）
+
+[79]
+原文: Note: More specific class names have higher priority (e.g., \"SceneComponent\" matches before \"ActorComponent\").
+译文: 注意：更具体的类名具有更高的优先级（例如，"SceneComponent" 在 "ActorComponent" 之前匹配）。
+
+[80]
+原文: Reset
+译文: 重置
+
+[81]
+原文: Reset All Prefix Mappings to Defaults
+译文: 将所有前缀映射重置为默认值
+
+[82]
+原文: Reset all prefix mappings (86 asset types + 30+ parent class mappings) to default values. This will clear your custom modifications.
+译文: 将所有前缀映射（86种资产类型 + 30多个父类映射）重置为默认值。这将清除您的自定义修改。
+
+[83]
+原文: Parent Class Mapping Tips
+译文: 父类映射提示
+
+[84]
+原文: 💡 Parent Class Prefix Mappings - Usage Tips
+译文: 💡 父类前缀映射 - 使用提示
+
+[85]
+原文: Use Parent Class Prefix Mappings to add custom prefixes for Blueprint, DataAsset, and PrimaryDataAsset subclasses.\nThe system automatically detects the parent C++ class and applies the corresponding prefix.
+译文: 使用父类前缀映射为蓝图、数据资产和主数据资产子类添加自定义前缀。系统自动检测父C++类并应用相应的前缀。
+
+[86]
+原文: Examples:
+译文: 示例：
+
+[87]
+原文: • \"MyGameDataAsset\" → \"GD_\"  (Custom game data)
+译文: • "MyGameDataAsset" → "GD_"  （自定义游戏数据）
+
+[88]
+原文: • \"MyWeaponData\" → \"WD_\"  (Weapon data)
+译文: • "MyWeaponData" → "WD_"  （武器数据）
+
+
+================================================================================
+报告结束
+================================================================================
