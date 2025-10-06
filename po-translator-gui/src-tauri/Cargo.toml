@@ -33,3 +33,10 @@ lazy_static = "1.4"
 # this feature is used for production builds or when `devPath` points to the filesystem
 # DO NOT REMOVE!!
 custom-protocol = ["tauri/custom-protocol"]
+
+[profile.release]
+opt-level = "z"     # 优化体积
+lto = true          # 链接时优化
+codegen-units = 1   # 单个代码生成单元
+strip = true        # 移除调试符号
+panic = "abort"     # 减小二进制体积

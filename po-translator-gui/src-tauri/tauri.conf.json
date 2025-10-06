@@ -47,7 +47,7 @@
     },
     "bundle": {
       "active": true,
-      "targets": "all",
+      "targets": ["msi", "nsis", "deb", "appimage", "dmg", "app"],
       "identifier": "com.potranslator.gui",
       "icon": [
         "icons/icon.png"
