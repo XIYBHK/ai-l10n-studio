@@ -75,14 +75,16 @@ impl AITranslator {
         let client = HttpClient::new();
         let base_url = base_url.unwrap_or_else(|| "https://api.moonshot.cn/v1".to_string());
         let system_prompt = Self::get_system_prompt();
-        
+
         // 从文件加载TM（合并内置短语和已保存的翻译）
         let tm = if use_tm {
-            Some(TranslationMemory::new_from_file("../data/translation_memory.json")?)
+            Some(TranslationMemory::new_from_file(
+                "../data/translation_memory.json",
+            )?)
         } else {
             None
         };
-        
+
         Ok(Self {
             client,
             api_key,
@@ -142,7 +144,8 @@ impl AITranslator {
         // Step 1: 使用翻译记忆库进行预翻译 + 去重
         let mut result = vec![String::new(); texts.len()];
         let mut untranslated_indices = Vec::new();
-        let mut unique_texts: std::collections::HashMap<String, Vec<usize>> = std::collections::HashMap::new();
+        let mut unique_texts: std::collections::HashMap<String, Vec<usize>> =
+            std::collections::HashMap::new();
 
         if let Some(ref mut tm) = self.tm {
             for (i, text) in texts.iter().enumerate() {
@@ -153,27 +156,38 @@ impl AITranslator {
                 } else {
                     // TM未命中，记录到去重map
                     untranslated_indices.push(i);
-                    unique_texts.entry(text.clone()).or_insert_with(Vec::new).push(i);
+                    unique_texts
+                        .entry(text.clone())
+                        .or_insert_with(Vec::new)
+                        .push(i);
                 }
             }
         } else {
             // 没有TM，直接去重
             for (i, text) in texts.iter().enumerate() {
                 untranslated_indices.push(i);
-                unique_texts.entry(text.clone()).or_insert_with(Vec::new).push(i);
+                unique_texts
+                    .entry(text.clone())
+                    .or_insert_with(Vec::new)
+                    .push(i);
             }
         }
 
         // 计算去重节省的次数：待翻译总数 - unique数量
-            let untranslated_count = texts.len() - self.batch_stats.tm_hits;
+        let untranslated_count = texts.len() - self.batch_stats.tm_hits;
         let unique_count = unique_texts.len();
         self.batch_stats.deduplicated = untranslated_count - unique_count;
 
         // Step 2: 翻译去重后的文本
         if !unique_texts.is_empty() {
             let unique_list: Vec<String> = unique_texts.keys().cloned().collect();
-            crate::app_log!("[预处理] 原始{}条 -> TM命中{}条 -> 待翻译{}条 -> 去重节省{}条", 
-                texts.len(), self.batch_stats.tm_hits, untranslated_count, self.batch_stats.deduplicated);
+            crate::app_log!(
+                "[预处理] 原始{}条 -> TM命中{}条 -> 待翻译{}条 -> 去重节省{}条",
+                texts.len(),
+                self.batch_stats.tm_hits,
+                untranslated_count,
+                self.batch_stats.deduplicated
+            );
 
             let ai_translations = self.translate_with_ai(unique_list.clone()).await?;
             self.batch_stats.ai_translated = unique_list.len();
@@ -198,7 +212,7 @@ impl AITranslator {
                         let builtin = crate::services::translation_memory::get_builtin_memory();
                         let exists_in_learned = tm.memory.contains_key(unique_text);
                         let exists_in_builtin = builtin.contains_key(unique_text);
-                        
+
                         if !exists_in_learned && !exists_in_builtin {
                             // 既不在learned也不在builtin中，才学习
                             tm.add_translation(unique_text.clone(), translation.clone());
@@ -214,17 +228,21 @@ impl AITranslator {
             }
         }
 
-        crate::app_log!("[统计] 总{}条 | TM命中{}条 | 去重节省{}条 | AI翻译{}条 | 学习{}条", 
-            self.batch_stats.total, self.batch_stats.tm_hits, 
-            self.batch_stats.deduplicated, self.batch_stats.ai_translated, 
-            self.batch_stats.tm_learned);
+        crate::app_log!(
+            "[统计] 总{}条 | TM命中{}条 | 去重节省{}条 | AI翻译{}条 | 学习{}条",
+            self.batch_stats.total,
+            self.batch_stats.tm_hits,
+            self.batch_stats.deduplicated,
+            self.batch_stats.ai_translated,
+            self.batch_stats.tm_learned
+        );
 
         Ok(result)
     }
 
     async fn translate_with_ai(&mut self, texts: Vec<String>) -> Result<Vec<String>> {
         let user_prompt = self.build_user_prompt(&texts);
-        
+
         // 构建消息数组
         let messages = if self.conversation_history.is_empty() {
             vec![
@@ -259,7 +277,8 @@ impl AITranslator {
         let mut last_error: Option<anyhow::Error> = None;
 
         for retry in 0..max_retries {
-            match self.client
+            match self
+                .client
                 .post(&format!("{}/chat/completions", self.base_url))
                 .header("Authorization", format!("Bearer {}", self.api_key))
                 .header("Content-Type", "application/json")
@@ -277,8 +296,14 @@ impl AITranslator {
                             last_error = Some(e.into());
                             if retry < max_retries - 1 {
                                 let delay_secs = 2_u64.pow(retry as u32); // 1s, 2s, 4s
-                                crate::app_log!("[重试] 解析响应失败，{}秒后重试 ({}/{})", delay_secs, retry + 1, max_retries);
-                                tokio::time::sleep(tokio::time::Duration::from_secs(delay_secs)).await;
+                                crate::app_log!(
+                                    "[重试] 解析响应失败，{}秒后重试 ({}/{})",
+                                    delay_secs,
+                                    retry + 1,
+                                    max_retries
+                                );
+                                tokio::time::sleep(tokio::time::Duration::from_secs(delay_secs))
+                                    .await;
                             }
                         }
                     }
@@ -287,7 +312,12 @@ impl AITranslator {
                     last_error = Some(e.into());
                     if retry < max_retries - 1 {
                         let delay_secs = 2_u64.pow(retry as u32); // 1s, 2s, 4s
-                        crate::app_log!("[重试] 网络请求失败，{}秒后重试 ({}/{})", delay_secs, retry + 1, max_retries);
+                        crate::app_log!(
+                            "[重试] 网络请求失败，{}秒后重试 ({}/{})",
+                            delay_secs,
+                            retry + 1,
+                            max_retries
+                        );
                         tokio::time::sleep(tokio::time::Duration::from_secs(delay_secs)).await;
                     }
                 }
@@ -352,9 +382,16 @@ impl AITranslator {
         // 防止历史过长：保留最近10轮对话
         if self.conversation_history.len() > 21 {
             let system_msg = self.conversation_history[0].clone();
-            let recent_msgs: Vec<_> = self.conversation_history.iter().rev().take(20).cloned().collect();
+            let recent_msgs: Vec<_> = self
+                .conversation_history
+                .iter()
+                .rev()
+                .take(20)
+                .cloned()
+                .collect();
             self.conversation_history = vec![system_msg];
-            self.conversation_history.extend(recent_msgs.into_iter().rev());
+            self.conversation_history
+                .extend(recent_msgs.into_iter().rev());
         }
     }
 
@@ -380,7 +417,7 @@ impl AITranslator {
         for (i, translation) in translations.iter_mut().enumerate() {
             if i < original_texts.len() {
                 let original = &original_texts[i];
-                
+
                 // 检查换行符
                 if original.contains("\\n") && !translation.contains("\\n") {
                     if original.ends_with("\\n") && !translation.ends_with("\\n") {
@@ -403,7 +440,7 @@ impl AITranslator {
     fn count_placeholders(&self, text: &str) -> usize {
         let mut count = 0;
         let mut chars = text.chars().peekable();
-        
+
         while let Some(ch) = chars.next() {
             if ch == '{' {
                 if let Some(&next) = chars.peek() {
@@ -420,10 +457,9 @@ impl AITranslator {
                 }
             }
         }
-        
+
         count
     }
-
 }
 
 impl AITranslator {

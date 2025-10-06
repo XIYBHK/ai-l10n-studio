@@ -126,11 +126,13 @@ impl POParser {
 
     pub fn write_file<P: AsRef<Path>>(&self, file_path: P, entries: &[POEntry]) -> Result<()> {
         let mut content = String::new();
-        
+
         // 添加文件头
         content.push_str("# SOME DESCRIPTIVE TITLE.\n");
         content.push_str("# Copyright (C) YEAR THE PACKAGE'S COPYRIGHT HOLDER\n");
-        content.push_str("# This file is distributed under the same license as the PACKAGE package.\n");
+        content.push_str(
+            "# This file is distributed under the same license as the PACKAGE package.\n",
+        );
         content.push_str("# FIRST AUTHOR <EMAIL@ADDRESS>, YEAR.\n");
         content.push_str("#\n");
         content.push_str("msgid \"\"\n");

@@ -6,7 +6,7 @@ use std::fs;
 use std::path::{Path, PathBuf};
 
 use crate::commands::POEntry;
-use crate::services::{POParser, AITranslator, TranslationMemory, TokenStats};
+use crate::services::{AITranslator, POParser, TokenStats, TranslationMemory};
 use crate::utils::common::is_simple_phrase;
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -80,14 +80,22 @@ impl BatchTranslator {
 
         for (index, file_path) in po_files.iter().enumerate() {
             if let Some(ref callback) = progress_callback {
-                callback(format!("正在处理: {}", file_path.display()), index + 1, total_files);
+                callback(
+                    format!("正在处理: {}", file_path.display()),
+                    index + 1,
+                    total_files,
+                );
             }
 
             match self.translate_po_file(file_path).await {
                 Ok(report) => {
                     reports.push(report);
                     if let Some(ref callback) = progress_callback {
-                        callback(format!("完成: {}", file_path.display()), index + 1, total_files);
+                        callback(
+                            format!("完成: {}", file_path.display()),
+                            index + 1,
+                            total_files,
+                        );
                     }
                 }
                 Err(e) => {
@@ -120,12 +128,17 @@ impl BatchTranslator {
         Ok(reports)
     }
 
-    async fn translate_po_file<P: AsRef<Path>>(&mut self, file_path: P) -> Result<TranslationReport> {
+    async fn translate_po_file<P: AsRef<Path>>(
+        &mut self,
+        file_path: P,
+    ) -> Result<TranslationReport> {
         let file_path = file_path.as_ref();
-        
+
         // 解析PO文件
-        let entries = self.parser.parse_file(file_path.to_string_lossy().to_string())?;
-        
+        let entries = self
+            .parser
+            .parse_file(file_path.to_string_lossy().to_string())?;
+
         // 统计信息
         let total_entries = entries.len();
         let need_translation: Vec<_> = entries
@@ -180,7 +193,10 @@ impl BatchTranslator {
 
         let mut ai_translations = Vec::new();
         if !untranslated_texts.is_empty() {
-            ai_translations = self.translator.translate_batch(untranslated_texts, None).await?;
+            ai_translations = self
+                .translator
+                .translate_batch(untranslated_texts, None)
+                .await?;
         }
 
         // 合并翻译结果
@@ -197,7 +213,8 @@ impl BatchTranslator {
         // 更新翻译记忆库
         for (original, translation) in &translations_map {
             if is_simple_phrase(original) && translation.len() <= 50 {
-                self.translation_memory.add_translation(original.clone(), translation.clone());
+                self.translation_memory
+                    .add_translation(original.clone(), translation.clone());
             }
         }
 
@@ -223,10 +240,8 @@ impl BatchTranslator {
         }
 
         // 保存翻译后的文件
-        self.parser.write_file(
-            file_path.to_string_lossy().to_string(),
-            &updated_entries,
-        )?;
+        self.parser
+            .write_file(file_path.to_string_lossy().to_string(), &updated_entries)?;
 
         // 保存翻译记忆库到文件
         let memory_path = "../data/translation_memory.json";
@@ -328,12 +343,15 @@ impl BatchTranslator {
         let report_file = log_dir.join(format!("translation_report_{}.txt", timestamp));
 
         let mut content = String::new();
-        
+
         // 写入报告头部
         content.push_str(&format!("{}\n", "=".repeat(80)));
         content.push_str("PO文件翻译报告\n");
         content.push_str(&format!("{}\n", "=".repeat(80)));
-        content.push_str(&format!("生成时间: {}\n", Utc::now().format("%Y-%m-%d %H:%M:%S")));
+        content.push_str(&format!(
+            "生成时间: {}\n",
+            Utc::now().format("%Y-%m-%d %H:%M:%S")
+        ));
         content.push_str(&format!("翻译文件数: {}\n", reports.len()));
 
         // 统计总数
@@ -344,8 +362,11 @@ impl BatchTranslator {
 
         content.push_str(&format!("总条目数: {}\n", total_entries));
         content.push_str(&format!("需要翻译: {}\n", total_need_translation));
-        content.push_str(&format!("翻译成功: {}/{}\n", total_translated, total_need_translation));
-        
+        content.push_str(&format!(
+            "翻译成功: {}/{}\n",
+            total_translated, total_need_translation
+        ));
+
         if total_failed > 0 {
             content.push_str(&format!("翻译失败: {}\n", total_failed));
         }
@@ -367,17 +388,21 @@ impl BatchTranslator {
         // 每个文件的详细报告
         for (i, report) in reports.iter().enumerate() {
             content.push_str(&format!("\n{}\n", "=".repeat(80)));
-            content.push_str(&format!("文件 [{}/{}]: {}\n", 
-                i + 1, 
-                reports.len(), 
-                Path::new(&report.file).file_name().unwrap_or_default().to_string_lossy()
+            content.push_str(&format!(
+                "文件 [{}/{}]: {}\n",
+                i + 1,
+                reports.len(),
+                Path::new(&report.file)
+                    .file_name()
+                    .unwrap_or_default()
+                    .to_string_lossy()
             ));
             content.push_str(&format!("{}\n", "=".repeat(80)));
             content.push_str(&format!("文件路径: {}\n", report.file));
             content.push_str(&format!("总条目数: {}\n", report.total_entries));
             content.push_str(&format!("需要翻译: {}\n", report.need_translation));
             content.push_str(&format!("翻译成功: {}\n", report.translated));
-            
+
             if report.failed > 0 {
                 content.push_str(&format!("翻译失败: {}\n", report.failed));
             }
@@ -390,12 +415,16 @@ impl BatchTranslator {
             }
 
             if let Some(ref tm) = report.tm_stats {
-                content.push_str(&format!("记忆库命中: {}/{} ({:.1}%)\n", 
-                    tm.cache_hits, tm.total_queries, tm.hit_rate));
+                content.push_str(&format!(
+                    "记忆库命中: {}/{} ({:.1}%)\n",
+                    tm.cache_hits, tm.total_queries, tm.hit_rate
+                ));
             }
 
-            content.push_str(&format!("Token使用: {} (¥{:.4})\n", 
-                report.token_stats.total_tokens, report.token_stats.cost));
+            content.push_str(&format!(
+                "Token使用: {} (¥{:.4})\n",
+                report.token_stats.total_tokens, report.token_stats.cost
+            ));
         }
 
         fs::write(&report_file, content)?;

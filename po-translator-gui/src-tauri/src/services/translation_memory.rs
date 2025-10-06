@@ -1,7 +1,7 @@
 use anyhow::Result;
 use chrono::{DateTime, Utc};
-use serde::{Deserialize, Serialize};
 use indexmap::IndexMap;
+use serde::{Deserialize, Serialize};
 use std::fs;
 use std::path::Path;
 
@@ -32,7 +32,7 @@ impl TranslationMemory {
         // 只加载内置短语
         let builtin = get_builtin_memory();
         let total_entries = builtin.len();
-        
+
         Self {
             memory: builtin,
             stats: MemoryStats {
@@ -47,7 +47,7 @@ impl TranslationMemory {
     /// 从文件加载或创建新的TM（合并内置短语）
     pub fn new_from_file<P: AsRef<Path>>(file_path: P) -> Result<Self> {
         let path = file_path.as_ref();
-        
+
         // 如果文件不存在，加载内置短语（首次使用）
         if !path.exists() {
             let memory = get_builtin_memory();
@@ -63,13 +63,13 @@ impl TranslationMemory {
                 last_updated: Utc::now(),
             });
         }
-        
+
         // 文件存在，只加载learned部分，不加载内置短语
         let content = fs::read_to_string(path)?;
         let data: serde_json::Value = serde_json::from_str(&content)?;
-        
+
         let mut memory = IndexMap::new();
-        
+
         // 尝试加载learned字段（Python格式）
         if let Some(learned_obj) = data.get("learned") {
             if let Some(learned_map) = learned_obj.as_object() {
@@ -80,7 +80,10 @@ impl TranslationMemory {
                 }
                 let learned_count = memory.len();
                 if learned_count > 0 {
-                    crate::app_log!("[TM] 加载翻译记忆库: {} 条学习记录（不含内置短语）", learned_count);
+                    crate::app_log!(
+                        "[TM] 加载翻译记忆库: {} 条学习记录（不含内置短语）",
+                        learned_count
+                    );
                 } else {
                     crate::app_log!("[TM] 记忆库为空");
                 }
@@ -96,7 +99,7 @@ impl TranslationMemory {
                 crate::app_log!("[TM] 加载翻译记忆库（旧格式）: {} 条", memory.len());
             }
         }
-        
+
         let total_entries = memory.len();
         Ok(Self {
             memory,
@@ -123,11 +126,13 @@ impl TranslationMemory {
     pub fn save_to_file<P: AsRef<Path>>(&self, file_path: P) -> Result<()> {
         // 分离内置和学习的翻译（与Python版本保持一致）
         let builtin = get_builtin_memory();
-        let learned: IndexMap<String, String> = self.memory.iter()
+        let learned: IndexMap<String, String> = self
+            .memory
+            .iter()
             .filter(|(k, _)| !builtin.contains_key(k.as_str()))
             .map(|(k, v)| (k.clone(), v.clone()))
             .collect();
-        
+
         // 构造保存的数据结构（与Python版本一致）
         let data = serde_json::json!({
             "learned": learned,
@@ -140,10 +145,10 @@ impl TranslationMemory {
                 "misses": self.stats.misses,
             }
         });
-        
+
         let content = serde_json::to_string_pretty(&data)?;
         fs::write(file_path, content)?;
-        
+
         crate::app_log!("[TM] 保存翻译记忆库: {} 条学习记录", learned.len());
         Ok(())
     }
@@ -154,14 +159,14 @@ impl TranslationMemory {
             self.stats.hits += 1;
             return Some(translation.clone());
         }
-        
+
         // 2. 未命中则查builtin（不占用运行时memory）
         let builtin = get_builtin_memory();
         if let Some(translation) = builtin.get(source) {
             self.stats.hits += 1;
             return Some(translation.clone());
         }
-        
+
         // 3. 都未命中
         self.stats.misses += 1;
         None
@@ -169,22 +174,28 @@ impl TranslationMemory {
 
     pub fn add_translation(&mut self, source: String, target: String) {
         const MAX_CAPACITY: usize = 10000;
-        
+
         // 检查容量限制
         if self.memory.len() >= MAX_CAPACITY {
             // 获取内置短语列表，保护它们不被移除
             let builtin = get_builtin_memory();
-            
+
             // 查找第一个非内置短语并移除（FIFO策略）
-            if let Some(key) = self.memory.keys()
+            if let Some(key) = self
+                .memory
+                .keys()
                 .find(|k| !builtin.contains_key(k.as_str()))
                 .cloned()
             {
                 self.memory.shift_remove(&key);
-                crate::app_log!("[TM] 达到容量上限({})，移除最早的条目: {}", MAX_CAPACITY, key);
+                crate::app_log!(
+                    "[TM] 达到容量上限({})，移除最早的条目: {}",
+                    MAX_CAPACITY,
+                    key
+                );
             }
         }
-        
+
         self.memory.insert(source, target);
         self.stats.total_entries = self.memory.len();
         self.last_updated = Utc::now();
@@ -233,7 +244,7 @@ impl Default for TranslationMemory {
 // 内置的常用翻译记忆（从 Python 版本迁移）
 pub fn get_builtin_memory() -> IndexMap<String, String> {
     let mut memory = IndexMap::new();
-    
+
     // XTools 命名空间
     memory.insert("XTools|Random".to_string(), "XTools|随机".to_string());
     memory.insert("XTools|Sort".to_string(), "XTools|排序".to_string());
@@ -241,17 +252,32 @@ pub fn get_builtin_memory() -> IndexMap<String, String> {
     memory.insert("XTools|Collision".to_string(), "XTools|碰撞".to_string());
     memory.insert("XTools|Math".to_string(), "XTools|数学".to_string());
     memory.insert("XTools|String".to_string(), "XTools|字符串".to_string());
-    memory.insert("XTools|Transform".to_string(), "XTools|Transform".to_string());
+    memory.insert(
+        "XTools|Transform".to_string(),
+        "XTools|Transform".to_string(),
+    );
     memory.insert("XTools|Utilities".to_string(), "XTools|工具".to_string());
     memory.insert("XTools|Debug".to_string(), "XTools|调试".to_string());
-    
+
     // Asset Naming 相关
     memory.insert("Asset Naming".to_string(), "资产命名".to_string());
-    memory.insert("Asset Naming|Validation".to_string(), "资产命名|验证".to_string());
-    memory.insert("Asset Naming|Exclusion Rules".to_string(), "资产命名|排除规则".to_string());
-    memory.insert("Asset Naming|Prefix".to_string(), "资产命名|前缀".to_string());
-    memory.insert("Asset Naming|Suffix".to_string(), "资产命名|后缀".to_string());
-    
+    memory.insert(
+        "Asset Naming|Validation".to_string(),
+        "资产命名|验证".to_string(),
+    );
+    memory.insert(
+        "Asset Naming|Exclusion Rules".to_string(),
+        "资产命名|排除规则".to_string(),
+    );
+    memory.insert(
+        "Asset Naming|Prefix".to_string(),
+        "资产命名|前缀".to_string(),
+    );
+    memory.insert(
+        "Asset Naming|Suffix".to_string(),
+        "资产命名|后缀".to_string(),
+    );
+
     // 常见术语
     memory.insert("Connection".to_string(), "连接".to_string());
     memory.insert("Connection Mode".to_string(), "连接模式".to_string());
@@ -274,7 +300,7 @@ pub fn get_builtin_memory() -> IndexMap<String, String> {
     memory.insert("In Place".to_string(), "原地".to_string());
     memory.insert("By Value".to_string(), "按值".to_string());
     memory.insert("By Reference".to_string(), "按引用".to_string());
-    
+
     // 常见短语
     memory.insert("Unique".to_string(), "去重".to_string());
     memory.insert("Slice".to_string(), "截取".to_string());
@@ -298,7 +324,7 @@ pub fn get_builtin_memory() -> IndexMap<String, String> {
     memory.insert("None".to_string(), "无".to_string());
     memory.insert("Default".to_string(), "默认".to_string());
     memory.insert("Custom".to_string(), "自定义".to_string());
-    
+
     // UE 常用术语
     memory.insert("Settings".to_string(), "设置".to_string());
     memory.insert("Options".to_string(), "选项".to_string());
@@ -318,7 +344,7 @@ pub fn get_builtin_memory() -> IndexMap<String, String> {
     memory.insert("No".to_string(), "否".to_string());
     memory.insert("Apply".to_string(), "应用".to_string());
     memory.insert("Reset".to_string(), "重置".to_string());
-    
+
     // 游戏相关术语
     memory.insert("Player".to_string(), "玩家".to_string());
     memory.insert("Game".to_string(), "游戏".to_string());
@@ -330,6 +356,6 @@ pub fn get_builtin_memory() -> IndexMap<String, String> {
     memory.insert("Skill".to_string(), "技能".to_string());
     memory.insert("Item".to_string(), "物品".to_string());
     memory.insert("Inventory".to_string(), "背包".to_string());
-    
+
     memory
 }

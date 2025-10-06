@@ -75,22 +75,20 @@ impl ConfigManager {
     }
 
     pub fn load_from_file<P: AsRef<Path>>(path: P) -> Result<AppConfig> {
-        let content = fs::read_to_string(path)
-            .map_err(|e| anyhow!("无法读取配置文件: {}", e))?;
-        
-        let config: AppConfig = serde_json::from_str(&content)
-            .map_err(|e| anyhow!("配置文件格式错误: {}", e))?;
-        
+        let content = fs::read_to_string(path).map_err(|e| anyhow!("无法读取配置文件: {}", e))?;
+
+        let config: AppConfig =
+            serde_json::from_str(&content).map_err(|e| anyhow!("配置文件格式错误: {}", e))?;
+
         Ok(config)
     }
 
     pub fn save(&self) -> Result<()> {
         let content = serde_json::to_string_pretty(&self.config)
             .map_err(|e| anyhow!("序列化配置失败: {}", e))?;
-        
-        fs::write(&self.config_path, content)
-            .map_err(|e| anyhow!("保存配置文件失败: {}", e))?;
-        
+
+        fs::write(&self.config_path, content).map_err(|e| anyhow!("保存配置文件失败: {}", e))?;
+
         Ok(())
     }
 
@@ -174,23 +172,22 @@ impl ConfigManager {
     pub fn export_config<P: AsRef<Path>>(&self, export_path: P) -> Result<()> {
         let content = serde_json::to_string_pretty(&self.config)
             .map_err(|e| anyhow!("序列化配置失败: {}", e))?;
-        
-        fs::write(export_path, content)
-            .map_err(|e| anyhow!("导出配置文件失败: {}", e))?;
-        
+
+        fs::write(export_path, content).map_err(|e| anyhow!("导出配置文件失败: {}", e))?;
+
         Ok(())
     }
 
     pub fn import_config<P: AsRef<Path>>(&mut self, import_path: P) -> Result<()> {
-        let content = fs::read_to_string(import_path)
-            .map_err(|e| anyhow!("读取导入配置文件失败: {}", e))?;
-        
-        let imported_config: AppConfig = serde_json::from_str(&content)
-            .map_err(|e| anyhow!("导入配置文件格式错误: {}", e))?;
-        
+        let content =
+            fs::read_to_string(import_path).map_err(|e| anyhow!("读取导入配置文件失败: {}", e))?;
+
+        let imported_config: AppConfig =
+            serde_json::from_str(&content).map_err(|e| anyhow!("导入配置文件格式错误: {}", e))?;
+
         self.config = imported_config;
         self.save()?;
-        
+
         Ok(())
     }
 
