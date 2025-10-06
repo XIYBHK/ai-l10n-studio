@@ -64,13 +64,14 @@ jobs:
 
       - name: Debug - List Windows build output
         if: matrix.platform == 'windows-latest'
+        working-directory: ./po-translator-gui
         shell: pwsh
         run: |
-          Write-Host "Listing target/release/bundle directory:"
-          if (Test-Path "src-tauri/target/release/bundle") {
-            Get-ChildItem -Path "src-tauri/target/release/bundle" -Recurse | Select-Object FullName
+          Write-Host "=== Listing entire src-tauri/target directory ==="
+          if (Test-Path "src-tauri/target") {
+            Get-ChildItem -Path "src-tauri/target" -Recurse -File | Select-Object FullName, Length
           } else {
-            Write-Host "Bundle directory does not exist"
+            Write-Host "Target directory does not exist"
           }
 
       - name: Upload artifacts (Windows)
