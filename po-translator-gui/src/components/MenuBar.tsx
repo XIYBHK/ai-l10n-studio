@@ -1,16 +1,10 @@
-import React from 'react';
-import { Menu, Button, Input, Space, Dropdown } from 'antd';
+import { Button, Tooltip, Divider } from 'antd';
 import { 
-  FileOutlined, 
-  TranslationOutlined, 
-  SettingOutlined,
-  PlayCircleOutlined,
-  SaveOutlined,
   FolderOpenOutlined,
-  DownloadOutlined,
-  UploadOutlined
+  SaveOutlined,
+  SettingOutlined,
+  TranslationOutlined,
 } from '@ant-design/icons';
-import { useAppStore } from '../store/useAppStore';
 
 interface MenuBarProps {
   onOpenFile: () => void;
@@ -29,137 +23,87 @@ export const MenuBar: React.FC<MenuBarProps> = ({
   onTranslateAll,
   onSettings,
   apiKey,
-  onApiKeyChange,
   isTranslating,
   hasEntries,
 }) => {
-  const fileMenuItems = [
-    {
-      key: 'open',
-      icon: <FolderOpenOutlined />,
-      label: '打开PO文件',
-      onClick: onOpenFile,
-    },
-    {
-      key: 'save',
-      icon: <SaveOutlined />,
-      label: '保存文件',
-      onClick: onSaveFile,
-    },
-    {
-      type: 'divider' as const,
-    },
-    {
-      key: 'import',
-      icon: <UploadOutlined />,
-      label: '导入翻译记忆',
-    },
-    {
-      key: 'export',
-      icon: <DownloadOutlined />,
-      label: '导出翻译记忆',
-    },
-  ];
-
-  const translateMenuItems = [
-    {
-      key: 'translate-all',
-      icon: <PlayCircleOutlined />,
-      label: '翻译全部未翻译条目',
-      onClick: onTranslateAll,
-    },
-    {
-      key: 'translate-selected',
-      icon: <TranslationOutlined />,
-      label: '翻译选中条目',
-    },
-    {
-      type: 'divider' as const,
-    },
-    {
-      key: 'preview',
-      label: '预览翻译结果',
-    },
-    {
-      key: 'validate',
-      label: '验证翻译',
-    },
-  ];
-
-  const settingsMenuItems = [
-    {
-      key: 'api-settings',
-      label: 'API设置',
-      onClick: onSettings,
-    },
-    {
-      key: 'memory-settings',
-      label: '翻译记忆设置',
-    },
-    {
-      key: 'ui-settings',
-      label: '界面设置',
-    },
-  ];
-
-  const menuItems = [
-    {
-      key: 'file',
-      icon: <FileOutlined />,
-      label: '文件',
-      children: fileMenuItems,
-    },
-    {
-      key: 'translate',
-      icon: <TranslationOutlined />,
-      label: '翻译',
-      children: translateMenuItems,
-    },
-    {
-      key: 'settings',
-      icon: <SettingOutlined />,
-      label: '设置',
-      children: settingsMenuItems,
-    },
-  ];
-
   return (
     <div style={{ 
       display: 'flex', 
       alignItems: 'center', 
-      padding: '0 16px',
-      background: '#fff',
-      borderBottom: '1px solid #f0f0f0',
-      height: '64px'
+      padding: '8px 16px',
+      background: '#fafafa',
+      borderBottom: '1px solid #d9d9d9',
+      gap: '8px'
     }}>
-      <div style={{ fontSize: '18px', fontWeight: 'bold', marginRight: '24px' }}>
-        PO翻译工具
+      <div style={{ 
+        fontSize: '16px', 
+        fontWeight: 600, 
+        marginRight: '16px',
+        color: '#1890ff'
+      }}>
+        🌐 PO 翻译工具
       </div>
       
-      <Menu
-        mode="horizontal"
-        items={menuItems}
-        style={{ flex: 1, border: 'none', background: 'transparent' }}
-      />
+      <Tooltip title="打开 PO 文件 (Ctrl+O)">
+        <Button 
+          icon={<FolderOpenOutlined />}
+          onClick={onOpenFile}
+          size="middle"
+        >
+          打开
+        </Button>
+      </Tooltip>
       
-      <Space style={{ marginLeft: 'auto' }}>
-        <Input
-          placeholder="API Key"
-          value={apiKey}
-          onChange={(e) => onApiKeyChange(e.target.value)}
-          style={{ width: 200 }}
-          type="password"
-        />
-        <Button
+      <Tooltip title="保存文件 (Ctrl+S)">
+        <Button 
+          icon={<SaveOutlined />}
+          onClick={onSaveFile}
+          disabled={!hasEntries}
+          size="middle"
+        >
+          保存
+        </Button>
+      </Tooltip>
+      
+      <Divider type="vertical" style={{ height: '24px', margin: '0 8px' }} />
+      
+      <Tooltip title="翻译所有未翻译条目">
+        <Button 
           type="primary"
-          icon={<PlayCircleOutlined />}
+          icon={<TranslationOutlined />}
           onClick={onTranslateAll}
           loading={isTranslating}
           disabled={!apiKey || !hasEntries}
+          size="middle"
         >
-          开始翻译
+          {isTranslating ? '翻译中...' : '批量翻译'}
         </Button>
-      </Space>
+      </Tooltip>
+      
+      <div style={{ flex: 1 }} />
+      
+      <Tooltip title="设置 API 密钥和翻译选项">
+        <Button 
+          icon={<SettingOutlined />}
+          onClick={onSettings}
+          size="middle"
+        >
+          设置
+        </Button>
+      </Tooltip>
+      
+      {!apiKey && (
+        <div style={{ 
+          padding: '4px 12px', 
+          background: '#fff7e6', 
+          border: '1px solid #ffd591',
+          borderRadius: '4px',
+          fontSize: '12px',
+          color: '#fa8c16'
+        }}>
+          ⚠️ 请先在设置中配置 API 密钥
+        </div>
+      )}
     </div>
   );
 };

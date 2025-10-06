@@ -73,104 +73,121 @@ export const EditorPane: React.FC<EditorPaneProps> = ({
 
   if (!entry) {
     return (
-      <Card style={{ height: '100%' }}>
-        <div style={{ 
-          display: 'flex', 
-          alignItems: 'center', 
-          justifyContent: 'center', 
-          height: '100%',
-          color: '#999'
-        }}>
-          请选择一个条目进行编辑
-        </div>
-      </Card>
+      <div style={{ 
+        height: '100%',
+        display: 'flex', 
+        flexDirection: 'column',
+        alignItems: 'center', 
+        justifyContent: 'center',
+        color: '#bfbfbf'
+      }}>
+        <div style={{ fontSize: '48px', marginBottom: '16px' }}>📝</div>
+        <div style={{ fontSize: '16px' }}>请从左侧列表选择一个条目进行编辑</div>
+        <div style={{ fontSize: '12px', marginTop: '8px' }}>或者点击工具栏的"打开"按钮导入 PO 文件</div>
+      </div>
     );
   }
 
   return (
-    <Card 
-      title={
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-          <Title level={4} style={{ margin: 0 }}>翻译编辑器</Title>
-          <Space>
-            <Button 
-              size="small" 
-              icon={<ReloadOutlined />}
-              onClick={handleAutoTranslate}
-              loading={isAutoTranslating}
-              disabled={!entry.msgid || !config?.api_key}
-            >
-              自动翻译
-            </Button>
-            <Button 
-              size="small" 
-              icon={<SaveOutlined />}
-              type="primary"
-            >
-              保存
-            </Button>
-          </Space>
-        </div>
-      }
-      style={{ height: '100%' }}
-    >
-      <div style={{ height: 'calc(100% - 60px)', overflow: 'auto' }}>
+    <div style={{ height: '100%', display: 'flex', flexDirection: 'column' }}>
+      {/* 工具栏 */}
+      <div style={{ 
+        padding: '12px 16px', 
+        borderBottom: '1px solid #f0f0f0',
+        background: '#fafafa',
+        display: 'flex',
+        justifyContent: 'space-between',
+        alignItems: 'center'
+      }}>
+        <Title level={5} style={{ margin: 0 }}>翻译编辑器</Title>
+        <Space>
+          <Button 
+            size="small" 
+            icon={<ReloadOutlined />}
+            onClick={handleAutoTranslate}
+            loading={isAutoTranslating}
+            disabled={!entry.msgid || !config?.api_key}
+          >
+            AI 翻译
+          </Button>
+        </Space>
+      </div>
+
+      {/* 编辑区域 */}
+      <div style={{ 
+        flex: 1, 
+        overflow: 'auto',
+        padding: '16px'
+      }}>
         {/* 原文区域 */}
-        <div style={{ marginBottom: 24 }}>
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
-            <Text strong>原文 (msgid)</Text>
+        <div style={{ marginBottom: 20 }}>
+          <div style={{ 
+            display: 'flex', 
+            justifyContent: 'space-between', 
+            alignItems: 'center', 
+            marginBottom: 8 
+          }}>
+            <Text strong style={{ fontSize: '13px', color: '#595959' }}>
+              原文
+            </Text>
             <Button 
               size="small" 
+              type="text"
               icon={<CopyOutlined />}
               onClick={handleCopyOriginal}
-            >
-              复制
-            </Button>
+            />
           </div>
           <div style={{ 
-            padding: '12px', 
-            background: '#f5f5f5', 
-            borderRadius: '6px',
-            border: '1px solid #d9d9d9',
-            minHeight: '60px',
+            padding: '12px 16px', 
+            background: '#fafafa', 
+            borderRadius: '4px',
+            border: '1px solid #e8e8e8',
+            minHeight: '50px',
             fontSize: '14px',
-            lineHeight: '1.5'
+            lineHeight: '1.6',
+            color: '#262626'
           }}>
             {entry.msgid || '(空)'}
           </div>
         </div>
 
-        {/* 上下文区域 */}
+        {/* 上下文 */}
         {entry.msgctxt && (
-          <div style={{ marginBottom: 24 }}>
-            <Text strong style={{ marginBottom: 8, display: 'block' }}>上下文 (msgctxt)</Text>
+          <div style={{ marginBottom: 20 }}>
+            <Text strong style={{ fontSize: '13px', color: '#595959', display: 'block', marginBottom: 8 }}>
+              上下文
+            </Text>
             <div style={{ 
               padding: '8px 12px', 
               background: '#e6f7ff', 
-              borderRadius: '6px',
-              border: '1px solid #91d5ff',
+              borderRadius: '4px',
+              border: '1px solid #bae7ff',
               fontSize: '12px',
-              color: '#666'
+              color: '#0050b3'
             }}>
-              {entry.msgctxt}
+              📌 {entry.msgctxt}
             </div>
           </div>
         )}
 
-        {/* 注释区域 */}
+        {/* 注释 */}
         {entry.comments && entry.comments.length > 0 && (
-          <div style={{ marginBottom: 24 }}>
-            <Text strong style={{ marginBottom: 8, display: 'block' }}>注释</Text>
+          <div style={{ marginBottom: 20 }}>
+            <Text strong style={{ fontSize: '13px', color: '#595959', display: 'block', marginBottom: 8 }}>
+              注释
+            </Text>
             <div style={{ 
               padding: '8px 12px', 
-              background: '#fff7e6', 
-              borderRadius: '6px',
-              border: '1px solid #ffd591',
+              background: '#fffbe6', 
+              borderRadius: '4px',
+              border: '1px solid #ffe58f',
               fontSize: '12px',
-              color: '#666'
+              color: '#ad6800'
             }}>
               {entry.comments.map((comment, index) => (
-                <div key={index}>{comment}</div>
+                <div key={index} style={{ marginBottom: index < entry.comments!.length - 1 ? '4px' : 0 }}>
+                  💬 {comment}
+                </div>
               ))}
             </div>
           </div>
@@ -178,42 +195,50 @@ export const EditorPane: React.FC<EditorPaneProps> = ({
 
         {/* 译文区域 */}
         <div>
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
-            <Text strong>译文 (msgstr)</Text>
+          <div style={{ 
+            display: 'flex', 
+            justifyContent: 'space-between', 
+            alignItems: 'center', 
+            marginBottom: 8 
+          }}>
+            <Text strong style={{ fontSize: '13px', color: '#595959' }}>
+              译文
+            </Text>
             <Button 
               size="small" 
+              type="text"
               icon={<CopyOutlined />}
               onClick={handleCopyTranslation}
               disabled={!translation}
-            >
-              复制
-            </Button>
+            />
           </div>
           <TextArea
             value={translation}
             onChange={(e) => handleTranslationChange(e.target.value)}
-            placeholder="输入翻译..."
-            rows={6}
+            placeholder="请输入翻译内容..."
+            autoSize={{ minRows: 4, maxRows: 12 }}
             style={{ 
               fontSize: '14px',
-              lineHeight: '1.5'
+              lineHeight: '1.6'
             }}
           />
         </div>
 
-        {/* 行号信息 */}
+        {/* 状态栏 */}
         <div style={{ 
           marginTop: 16, 
-          padding: '8px 12px', 
-          background: '#fafafa', 
-          borderRadius: '4px',
+          padding: '8px 0',
           fontSize: '12px',
-          color: '#666',
-          textAlign: 'center'
+          color: '#8c8c8c',
+          borderTop: '1px solid #f0f0f0',
+          display: 'flex',
+          gap: '16px'
         }}>
-          行号: {entry.line_start}
+          <span>行号: {entry.line_start}</span>
+          <span>字符: {translation.length}</span>
+          <span>状态: {translation ? '✓ 已翻译' : '○ 未翻译'}</span>
         </div>
       </div>
-    </Card>
+    </div>
   );
 };

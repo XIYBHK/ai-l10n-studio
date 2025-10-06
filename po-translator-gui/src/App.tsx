@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import { Layout } from 'antd';
 import { invoke } from '@tauri-apps/api/tauri';
 import { MenuBar } from './components/MenuBar';
@@ -17,7 +17,6 @@ function App() {
     currentEntry,
     isTranslating,
     progress,
-    config,
     setEntries,
     setCurrentEntry,
     updateEntry,
@@ -49,7 +48,7 @@ function App() {
 
   const openFile = async () => {
     try {
-      const filePath = await invoke('open_file_dialog');
+      const filePath = await invoke<string | null>('open_file_dialog');
       if (filePath) {
         const entries = await parsePOFile(filePath);
         setEntries(entries);
@@ -111,7 +110,7 @@ function App() {
   };
 
   return (
-    <Layout style={{ height: '100vh' }}>
+    <Layout style={{ height: '100vh', background: '#f5f5f5' }}>
       <MenuBar
         onOpenFile={openFile}
         onSaveFile={saveFile}
@@ -123,8 +122,17 @@ function App() {
         hasEntries={entries.length > 0}
       />
       
-      <Layout>
-        <Sider width={300} style={{ background: '#fff' }}>
+      <Layout style={{ background: '#f5f5f5' }}>
+        <Sider 
+          width={320} 
+          style={{ 
+            background: '#fff',
+            borderRight: '1px solid #e8e8e8',
+            margin: '8px 0 8px 8px',
+            borderRadius: '4px',
+            overflow: 'hidden'
+          }}
+        >
           <EntryList
             entries={entries}
             currentEntry={currentEntry}
@@ -134,7 +142,14 @@ function App() {
           />
         </Sider>
         
-        <Content style={{ padding: '16px', background: '#fff' }}>
+        <Content 
+          style={{ 
+            margin: '8px',
+            background: '#fff',
+            borderRadius: '4px',
+            overflow: 'auto'
+          }}
+        >
           <EditorPane
             entry={currentEntry}
             onEntryUpdate={updateEntry}

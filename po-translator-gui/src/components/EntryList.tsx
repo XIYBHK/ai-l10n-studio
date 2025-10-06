@@ -1,7 +1,6 @@
 import React from 'react';
-import { List, Card, Progress, Typography } from 'antd';
+import { List, Progress, Typography } from 'antd';
 import { POEntry } from '../types/tauri';
-import { useAppStore } from '../store/useAppStore';
 
 const { Text } = Typography;
 
@@ -53,13 +52,25 @@ export const EntryList: React.FC<EntryListProps> = ({
   };
 
   return (
-    <Card title={`条目列表 (${entries.length})`} style={{ height: '100%' }}>
+    <div style={{ height: '100%', display: 'flex', flexDirection: 'column' }}>
+      <div style={{ 
+        padding: '12px 16px', 
+        borderBottom: '1px solid #f0f0f0',
+        background: '#fafafa',
+        fontWeight: 600,
+        fontSize: '14px'
+      }}>
+        条目列表 ({entries.length})
+      </div>
+      
       {isTranslating && (
-        <Progress 
-          percent={progress} 
-          style={{ marginBottom: 16 }} 
-          status="active"
-        />
+        <div style={{ padding: '8px 16px' }}>
+          <Progress 
+            percent={Math.round(progress)} 
+            size="small"
+            status="active"
+          />
+        </div>
       )}
       
       <List
@@ -73,10 +84,11 @@ export const EntryList: React.FC<EntryListProps> = ({
             <List.Item
               style={{
                 cursor: 'pointer',
-                backgroundColor: isSelected ? '#f0f0f0' : 'transparent',
-                borderRadius: '4px',
-                margin: '2px 0',
-                padding: '8px',
+                backgroundColor: isSelected ? '#e6f7ff' : 'transparent',
+                borderLeft: isSelected ? '3px solid #1890ff' : '3px solid transparent',
+                padding: '10px 16px',
+                transition: 'all 0.2s',
+                borderBottom: '1px solid #f0f0f0',
               }}
               onClick={() => onEntrySelect(entry)}
             >
@@ -84,47 +96,50 @@ export const EntryList: React.FC<EntryListProps> = ({
                 <div style={{ 
                   display: 'flex', 
                   alignItems: 'center', 
-                  marginBottom: 4 
+                  marginBottom: 6,
+                  gap: '8px'
                 }}>
-                  <span style={{ marginRight: 8 }}>
+                  <span style={{ fontSize: '16px' }}>
                     {getStatusIcon(status)}
                   </span>
-                  <Text strong style={{ fontSize: '12px' }}>
+                  <Text type="secondary" style={{ fontSize: '12px' }}>
                     #{index + 1}
                   </Text>
+                  <div style={{ 
+                    fontSize: '11px', 
+                    color: getStatusColor(status),
+                    fontWeight: '500',
+                    marginLeft: 'auto'
+                  }}>
+                    {status === 'translated' && '✓ 已翻译'}
+                    {status === 'untranslated' && '○ 未翻译'}
+                    {status === 'empty' && '– 空'}
+                  </div>
                 </div>
                 
                 <div style={{ 
-                  fontWeight: 'bold', 
-                  marginBottom: 4,
                   fontSize: '13px',
+                  lineHeight: '1.4',
                   overflow: 'hidden',
                   textOverflow: 'ellipsis',
-                  whiteSpace: 'nowrap'
+                  display: '-webkit-box',
+                  WebkitLineClamp: 2,
+                  WebkitBoxOrient: 'vertical',
+                  color: '#262626'
                 }}>
-                  {entry.msgid || '(空)'}
-                </div>
-                
-                <div style={{ 
-                  fontSize: '11px', 
-                  color: getStatusColor(status),
-                  fontWeight: '500'
-                }}>
-                  {status === 'translated' && '已翻译'}
-                  {status === 'untranslated' && '未翻译'}
-                  {status === 'empty' && '空条目'}
+                  {entry.msgid || '(空条目)'}
                 </div>
                 
                 {entry.msgctxt && (
                   <div style={{ 
-                    fontSize: '10px', 
-                    color: '#999',
-                    marginTop: 2,
+                    fontSize: '11px', 
+                    color: '#8c8c8c',
+                    marginTop: 4,
                     overflow: 'hidden',
                     textOverflow: 'ellipsis',
                     whiteSpace: 'nowrap'
                   }}>
-                    上下文: {entry.msgctxt}
+                    📌 {entry.msgctxt}
                   </div>
                 )}
               </div>
@@ -132,10 +147,10 @@ export const EntryList: React.FC<EntryListProps> = ({
           );
         }}
         style={{ 
-          height: 'calc(100% - 60px)', 
+          flex: 1,
           overflow: 'auto' 
         }}
       />
-    </Card>
+    </div>
   );
 };
