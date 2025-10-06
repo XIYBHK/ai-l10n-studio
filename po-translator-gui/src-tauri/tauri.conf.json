@@ -50,17 +50,7 @@
       "identifier": "com.potranslator.gui",
       "icon": [
         "icons/icon.png"
-      ],
-      "windows": {
-        "wix": {
-          "language": ["en-US", "zh-CN"]
-        }
-      },
-      "linux": {
-        "deb": {
-          "depends": []
-        }
-      }
+      ]
     },
     "security": {
       "csp": null
