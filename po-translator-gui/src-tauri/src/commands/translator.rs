@@ -264,3 +264,15 @@ pub async fn validate_config(config: serde_json::Value) -> Result<bool, String> 
     config_manager.validate_config().map_err(|e| e.to_string())?;
     Ok(true)
 }
+
+// 日志相关命令
+#[tauri::command]
+pub async fn get_app_logs() -> Result<Vec<String>, String> {
+    Ok(crate::utils::logger::get_logs())
+}
+
+#[tauri::command]
+pub async fn clear_app_logs() -> Result<(), String> {
+    crate::utils::logger::clear_logs();
+    Ok(())
+}

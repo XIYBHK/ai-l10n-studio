@@ -1,6 +1,6 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
-import { POEntry, TranslationReport, AppConfig } from '../types/tauri';
+import { POEntry, TranslationReport, AppConfig, TranslationStats } from '../types/tauri';
 
 type ThemeMode = 'light' | 'dark';
 type Language = 'zh-CN' | 'en-US';
@@ -10,6 +10,7 @@ interface AppState {
   entries: POEntry[];
   currentEntry: POEntry | null;
   currentIndex: number;
+  currentFilePath: string | null; // 当前打开的文件路径
   
   // 翻译状态
   isTranslating: boolean;
@@ -23,11 +24,15 @@ interface AppState {
   theme: ThemeMode;
   language: Language;
   
+  // 累计统计（持久化）
+  cumulativeStats: TranslationStats;
+  
   // Actions
   setEntries: (entries: POEntry[]) => void;
   setCurrentEntry: (entry: POEntry | null) => void;
   setCurrentIndex: (index: number) => void;
   updateEntry: (index: number, entry: Partial<POEntry>) => void;
+  setCurrentFilePath: (path: string | null) => void;
   
   setTranslating: (isTranslating: boolean) => void;
   setProgress: (progress: number) => void;
@@ -39,6 +44,10 @@ interface AppState {
   setTheme: (theme: ThemeMode) => void;
   toggleTheme: () => void;
   setLanguage: (language: Language) => void;
+  
+  // 累计统计
+  updateCumulativeStats: (stats: TranslationStats) => void;
+  resetCumulativeStats: () => void;
   
   // 导航
   nextEntry: () => void;
@@ -52,12 +61,26 @@ export const useAppStore = create<AppState>()(
       entries: [],
       currentEntry: null,
       currentIndex: -1,
+      currentFilePath: null,
       isTranslating: false,
       progress: 0,
       report: null,
       config: null,
       theme: 'light',
       language: 'zh-CN',
+      cumulativeStats: {
+        total: 0,
+        tm_hits: 0,
+        deduplicated: 0,
+        ai_translated: 0,
+        token_stats: {
+          input_tokens: 0,
+          output_tokens: 0,
+          total_tokens: 0,
+          cost: 0
+        },
+        tm_learned: 0
+      },
       
       // Actions
       setEntries: (entries) => {
@@ -67,6 +90,8 @@ export const useAppStore = create<AppState>()(
           currentIndex: entries.length > 0 ? 0 : -1
         });
       },
+      
+      setCurrentFilePath: (path) => set({ currentFilePath: path }),
       
       setCurrentEntry: (entry) => {
         const { entries } = get();
@@ -113,6 +138,44 @@ export const useAppStore = create<AppState>()(
         set({ language });
       },
       
+      // 累计统计
+      updateCumulativeStats: (stats) => {
+        const prev = get().cumulativeStats;
+        set({
+          cumulativeStats: {
+            total: prev.total + stats.total,
+            tm_hits: prev.tm_hits + stats.tm_hits,
+            deduplicated: prev.deduplicated + stats.deduplicated,
+            ai_translated: prev.ai_translated + stats.ai_translated,
+            token_stats: {
+              input_tokens: prev.token_stats.input_tokens + stats.token_stats.input_tokens,
+              output_tokens: prev.token_stats.output_tokens + stats.token_stats.output_tokens,
+              total_tokens: prev.token_stats.total_tokens + stats.token_stats.total_tokens,
+              cost: prev.token_stats.cost + stats.token_stats.cost
+            },
+            tm_learned: prev.tm_learned + stats.tm_learned
+          }
+        });
+      },
+      
+      resetCumulativeStats: () => {
+        set({
+          cumulativeStats: {
+            total: 0,
+            tm_hits: 0,
+            deduplicated: 0,
+            ai_translated: 0,
+            token_stats: {
+              input_tokens: 0,
+              output_tokens: 0,
+              total_tokens: 0,
+              cost: 0
+            },
+            tm_learned: 0
+          }
+        });
+      },
+      
       // 导航
       nextEntry: () => {
         const { currentIndex, entries } = get();
@@ -133,6 +196,7 @@ export const useAppStore = create<AppState>()(
       partialize: (state) => ({
         theme: state.theme,
         language: state.language,
+        cumulativeStats: state.cumulativeStats,
       }),
     }
   )

@@ -1,10 +1,13 @@
 import { useState, useEffect } from 'react';
 import { Layout, ConfigProvider } from 'antd';
 import { invoke } from '@tauri-apps/api/tauri';
+import { listen } from '@tauri-apps/api/event';
+import { throttle } from 'lodash';
 import { MenuBar } from './components/MenuBar';
 import { EntryList } from './components/EntryList';
 import { EditorPane } from './components/EditorPane';
 import { SettingsModal } from './components/SettingsModal';
+import { DevToolsModal } from './components/DevToolsModal';
 import { AIWorkspace } from './components/AIWorkspace';
 import { useAppStore } from './store/useAppStore';
 import { useTranslator } from './hooks/useTranslator';
@@ -19,10 +22,12 @@ function App() {
   const {
     entries,
     currentEntry,
+    currentFilePath,
     isTranslating,
     progress,
     setEntries,
     setCurrentEntry,
+    setCurrentFilePath,
     updateEntry,
     setTranslating,
     setProgress,
@@ -32,6 +37,7 @@ function App() {
   const { parsePOFile, translateBatchWithStats } = useTranslator();
   const [apiKey, setApiKey] = useState('');
   const [settingsVisible, setSettingsVisible] = useState(false);
+  const [devToolsVisible, setDevToolsVisible] = useState(false);
   const [translationStats, setTranslationStats] = useState<TranslationStats | null>(null);
   const [leftWidth, setLeftWidth] = useState(35); // 左侧栏宽度百分比
   const [isResizing, setIsResizing] = useState(false);
@@ -42,6 +48,70 @@ function App() {
   useEffect(() => {
     loadConfig();
   }, []);
+
+  // 全局快捷键监听
+  useEffect(() => {
+    const handleKeyDown = (event: KeyboardEvent) => {
+      // Ctrl+O 打开文件
+      if ((event.ctrlKey || event.metaKey) && event.key === 'o') {
+        event.preventDefault();
+        openFile();
+      }
+      // Ctrl+S 保存文件
+      else if ((event.ctrlKey || event.metaKey) && event.key === 's') {
+        event.preventDefault();
+        saveFile();
+      }
+    };
+
+    window.addEventListener('keydown', handleKeyDown);
+    
+    return () => {
+      window.removeEventListener('keydown', handleKeyDown);
+    };
+  }, [currentFilePath, entries]); // 依赖 currentFilePath 和 entries，确保闭包中获取最新值
+
+  // 文件拖放监听（使用 Tauri API）
+  useEffect(() => {
+    let unlistenFn: (() => void) | null = null;
+
+    const setupListener = async () => {
+      // 使用 @tauri-apps/api/event 的 listen
+      unlistenFn = await listen<string[]>('tauri://file-drop', async (event) => {
+        const files = event.payload;
+        console.log('✅ File drop event received:', files);
+        
+        if (files && files.length > 0) {
+          const filePath = files[0];
+          // 检查是否为 .po 文件
+          if (filePath.toLowerCase().endsWith('.po')) {
+            try {
+              const entries = await parsePOFile(filePath);
+              setEntries(entries);
+              setCurrentFilePath(filePath);
+              console.log(`✅ 已通过拖放导入文件: ${filePath}`);
+              alert(`成功导入文件: ${filePath.split(/[/\\]/).pop()}`);
+            } catch (error) {
+              console.error('❌ Failed to parse dropped file:', error);
+              alert(`文件解析失败：${error instanceof Error ? error.message : '未知错误'}`);
+            }
+          } else {
+            alert('⚠️ 仅支持 .po 文件！');
+          }
+        }
+      });
+      
+      console.log('✅ File drop listener setup complete');
+    };
+
+    setupListener();
+
+    return () => {
+      if (unlistenFn) {
+        unlistenFn();
+      }
+    };
+  }, []); // 空依赖数组，只在组件挂载时设置一次监听器
 
   const loadConfig = async () => {
     try {
@@ -64,6 +134,7 @@ function App() {
       if (filePath) {
         const entries = await parsePOFile(filePath);
         setEntries(entries);
+        setCurrentFilePath(filePath); // 记录当前打开的文件路径
       }
     } catch (error) {
       console.error('Failed to open file:', error);
@@ -99,10 +170,11 @@ function App() {
       // 使用带统计的批量翻译
       const result = await translateBatchWithStats(texts, apiKey);
       
-      // 更新所有条目
-      result.translations.forEach((translation, index) => {
-        const entryIndex = entries.findIndex(e => e.msgid === texts[index]);
-        if (entryIndex >= 0) {
+      // 更新所有条目 - 使用原始索引而非findIndex
+      untranslatedEntries.forEach((entry, index) => {
+        const translation = result.translations[index];
+        const entryIndex = entries.indexOf(entry);
+        if (entryIndex >= 0 && translation) {
           updateEntry(entryIndex, { 
             msgstr: translation, 
             needsReview: true  // 标记为待确认
@@ -135,19 +207,43 @@ function App() {
     }
   };
 
+  // 保存到原文件
   const saveFile = async () => {
+    if (!currentFilePath) {
+      alert('没有打开的文件，请使用"另存为"');
+      return;
+    }
+    
+    try {
+      await invoke('save_po_file', { filePath: currentFilePath, entries });
+      alert('保存成功！');
+    } catch (error) {
+      console.error('Failed to save file:', error);
+      alert(`保存失败：${error instanceof Error ? error.message : '未知错误'}`);
+    }
+  };
+  
+  // 另存为
+  const saveAsFile = async () => {
     try {
       const filePath = await invoke('save_file_dialog');
       if (filePath) {
         await invoke('save_po_file', { filePath, entries });
+        setCurrentFilePath(filePath as string); // 更新当前文件路径
+        alert('保存成功！');
       }
     } catch (error) {
       console.error('Failed to save file:', error);
+      alert(`保存失败：${error instanceof Error ? error.message : '未知错误'}`);
     }
   };
 
   const handleSettings = () => {
     setSettingsVisible(true);
+  };
+
+  const handleDevTools = () => {
+    setDevToolsVisible(true);
   };
 
   const handleSettingsSave = (newConfig: any) => {
@@ -207,7 +303,8 @@ function App() {
   };
 
   useEffect(() => {
-    const handleMouseMove = (e: MouseEvent) => {
+    // 使用throttle优化拖拽性能，限制为60fps (16ms)
+    const handleMouseMove = throttle((e: MouseEvent) => {
       if (!isResizing) return;
       
       const windowWidth = window.innerWidth;
@@ -217,10 +314,11 @@ function App() {
       if (newWidth >= 20 && newWidth <= 60) {
         setLeftWidth(newWidth);
       }
-    };
+    }, 16); // 60fps = 1000ms/60 ≈ 16ms
 
     const handleMouseUp = () => {
       setIsResizing(false);
+      handleMouseMove.cancel(); // 取消待执行的throttle调用
     };
 
     if (isResizing) {
@@ -231,6 +329,7 @@ function App() {
     }
 
     return () => {
+      handleMouseMove.cancel(); // 清理待执行的throttle
       document.removeEventListener('mousemove', handleMouseMove);
       document.removeEventListener('mouseup', handleMouseUp);
       document.body.style.cursor = '';
@@ -250,8 +349,10 @@ function App() {
         <MenuBar
           onOpenFile={openFile}
           onSaveFile={saveFile}
+          onSaveAsFile={saveAsFile}
           onTranslateAll={translateAll}
           onSettings={handleSettings}
+          onDevTools={handleDevTools}
           apiKey={apiKey}
           onApiKeyChange={setApiKey}
           isTranslating={isTranslating}
@@ -342,6 +443,11 @@ function App() {
         visible={settingsVisible}
         onClose={() => setSettingsVisible(false)}
         onSave={handleSettingsSave}
+      />
+
+      <DevToolsModal
+        visible={devToolsVisible}
+        onClose={() => setDevToolsVisible(false)}
       />
     </Layout>
     </div>

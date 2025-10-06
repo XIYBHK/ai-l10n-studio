@@ -6,14 +6,17 @@ import {
   TranslationOutlined,
   BulbOutlined,
   BulbFilled,
+  BugOutlined,
 } from '@ant-design/icons';
 import { useTheme } from '../hooks/useTheme';
 
 interface MenuBarProps {
   onOpenFile: () => void;
   onSaveFile: () => void;
+  onSaveAsFile: () => void;
   onTranslateAll: () => void;
   onSettings: () => void;
+  onDevTools?: () => void;
   apiKey: string;
   onApiKeyChange: (key: string) => void;
   isTranslating: boolean;
@@ -25,8 +28,10 @@ interface MenuBarProps {
 export const MenuBar: React.FC<MenuBarProps> = ({
   onOpenFile,
   onSaveFile,
+  onSaveAsFile,
   onTranslateAll,
   onSettings,
+  onDevTools,
   apiKey,
   isTranslating,
   hasEntries,
@@ -63,7 +68,7 @@ export const MenuBar: React.FC<MenuBarProps> = ({
         </Button>
       </Tooltip>
       
-      <Tooltip title="保存文件 (Ctrl+S)">
+      <Tooltip title="保存到原文件 (Ctrl+S)">
         <Button 
           icon={<SaveOutlined />}
           onClick={onSaveFile}
@@ -71,6 +76,17 @@ export const MenuBar: React.FC<MenuBarProps> = ({
           size="middle"
         >
           保存
+        </Button>
+      </Tooltip>
+      
+      <Tooltip title="另存为新文件">
+        <Button 
+          icon={<SaveOutlined />}
+          onClick={onSaveAsFile}
+          disabled={!hasEntries}
+          size="middle"
+        >
+          另存为
         </Button>
       </Tooltip>
       
@@ -96,6 +112,17 @@ export const MenuBar: React.FC<MenuBarProps> = ({
           <Button 
             icon={isDarkMode ? <BulbFilled /> : <BulbOutlined />}
             onClick={onThemeToggle}
+            size="middle"
+            type="text"
+          />
+        </Tooltip>
+      )}
+      
+      {onDevTools && (
+        <Tooltip title="开发者工具 - 查看日志和调试信息">
+          <Button 
+            icon={<BugOutlined />}
+            onClick={onDevTools}
             size="middle"
             type="text"
           />

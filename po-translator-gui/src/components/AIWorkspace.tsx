@@ -13,6 +13,7 @@ import {
 import { TranslationStats } from '../types/tauri';
 import { MemoryManager } from './MemoryManager';
 import { useTheme } from '../hooks/useTheme';
+import { useAppStore } from '../store/useAppStore';
 
 interface AIWorkspaceProps {
   stats: TranslationStats | null;
@@ -24,54 +25,18 @@ export const AIWorkspace: React.FC<AIWorkspaceProps> = ({ stats, isTranslating, 
   const [memoryManagerVisible, setMemoryManagerVisible] = useState(false);
   const { colors } = useTheme();
   
-  // 累计统计
-  const [cumulativeStats, setCumulativeStats] = useState<TranslationStats>({
-    total: 0,
-    tm_hits: 0,
-    deduplicated: 0,
-    ai_translated: 0,
-    token_stats: {
-      input_tokens: 0,
-      output_tokens: 0,
-      total_tokens: 0,
-      cost: 0
-    },
-    tm_learned: 0
-  });
+  // 从 store 读取累计统计
+  const { cumulativeStats, updateCumulativeStats, resetCumulativeStats } = useAppStore();
   
-  // 当stats更新时累加到cumulative
+  // 当stats更新时累加到cumulative（使用store）
   useEffect(() => {
     if (stats) {
-      setCumulativeStats(prev => ({
-        total: prev.total + stats.total,
-        tm_hits: prev.tm_hits + stats.tm_hits,
-        deduplicated: prev.deduplicated + stats.deduplicated,
-        ai_translated: prev.ai_translated + stats.ai_translated,
-        token_stats: {
-          input_tokens: prev.token_stats.input_tokens + stats.token_stats.input_tokens,
-          output_tokens: prev.token_stats.output_tokens + stats.token_stats.output_tokens,
-          total_tokens: prev.token_stats.total_tokens + stats.token_stats.total_tokens,
-          cost: prev.token_stats.cost + stats.token_stats.cost
-        },
-        tm_learned: prev.tm_learned + stats.tm_learned
-      }));
+      updateCumulativeStats(stats);
     }
-  }, [stats]);
+  }, [stats, updateCumulativeStats]);
   
   const handleReset = () => {
-    setCumulativeStats({
-      total: 0,
-      tm_hits: 0,
-      deduplicated: 0,
-      ai_translated: 0,
-      token_stats: {
-        input_tokens: 0,
-        output_tokens: 0,
-        total_tokens: 0,
-        cost: 0
-      },
-      tm_learned: 0
-    });
+    resetCumulativeStats();
     if (onResetStats) {
       onResetStats();
     }

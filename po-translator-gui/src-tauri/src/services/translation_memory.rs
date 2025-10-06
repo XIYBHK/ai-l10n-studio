@@ -52,7 +52,7 @@ impl TranslationMemory {
         if !path.exists() {
             let memory = get_builtin_memory();
             let total_entries = memory.len();
-            println!("[TM] 首次使用，加载内置短语: {} 条", total_entries);
+            crate::app_log!("[TM] 首次使用，加载内置短语: {} 条", total_entries);
             return Ok(Self {
                 memory,
                 stats: MemoryStats {
@@ -64,7 +64,7 @@ impl TranslationMemory {
             });
         }
         
-        // 文件存在，只加载learned部分，不自动加载内置短语
+        // 文件存在，只加载learned部分，不加载内置短语
         let content = fs::read_to_string(path)?;
         let data: serde_json::Value = serde_json::from_str(&content)?;
         
@@ -80,9 +80,9 @@ impl TranslationMemory {
                 }
                 let learned_count = memory.len();
                 if learned_count > 0 {
-                    println!("[TM] 加载翻译记忆库: {} 条学习记录（不含内置短语）", learned_count);
+                    crate::app_log!("[TM] 加载翻译记忆库: {} 条学习记录（不含内置短语）", learned_count);
                 } else {
-                    println!("[TM] 记忆库为空");
+                    crate::app_log!("[TM] 记忆库为空");
                 }
             }
         } else if let Some(memory_obj) = data.get("memory") {
@@ -93,7 +93,7 @@ impl TranslationMemory {
                         memory.insert(k.clone(), translation.to_string());
                     }
                 }
-                println!("[TM] 加载翻译记忆库（旧格式）: {} 条", memory.len());
+                crate::app_log!("[TM] 加载翻译记忆库（旧格式）: {} 条", memory.len());
             }
         }
         
@@ -144,21 +144,47 @@ impl TranslationMemory {
         let content = serde_json::to_string_pretty(&data)?;
         fs::write(file_path, content)?;
         
-        println!("[TM] 保存翻译记忆库: {} 条学习记录", learned.len());
+        crate::app_log!("[TM] 保存翻译记忆库: {} 条学习记录", learned.len());
         Ok(())
     }
 
     pub fn get_translation(&mut self, source: &str) -> Option<String> {
+        // 1. 先查learned memory
         if let Some(translation) = self.memory.get(source) {
             self.stats.hits += 1;
-            Some(translation.clone())
-        } else {
-            self.stats.misses += 1;
-            None
+            return Some(translation.clone());
         }
+        
+        // 2. 未命中则查builtin（不占用运行时memory）
+        let builtin = get_builtin_memory();
+        if let Some(translation) = builtin.get(source) {
+            self.stats.hits += 1;
+            return Some(translation.clone());
+        }
+        
+        // 3. 都未命中
+        self.stats.misses += 1;
+        None
     }
 
     pub fn add_translation(&mut self, source: String, target: String) {
+        const MAX_CAPACITY: usize = 10000;
+        
+        // 检查容量限制
+        if self.memory.len() >= MAX_CAPACITY {
+            // 获取内置短语列表，保护它们不被移除
+            let builtin = get_builtin_memory();
+            
+            // 查找第一个非内置短语并移除（FIFO策略）
+            if let Some(key) = self.memory.keys()
+                .find(|k| !builtin.contains_key(k.as_str()))
+                .cloned()
+            {
+                self.memory.shift_remove(&key);
+                crate::app_log!("[TM] 达到容量上限({})，移除最早的条目: {}", MAX_CAPACITY, key);
+            }
+        }
+        
         self.memory.insert(source, target);
         self.stats.total_entries = self.memory.len();
         self.last_updated = Utc::now();
@@ -166,10 +192,8 @@ impl TranslationMemory {
 
     pub fn batch_add_translations(&mut self, translations: Vec<(String, String)>) {
         for (source, target) in translations {
-            self.memory.insert(source, target);
+            self.add_translation(source, target);
         }
-        self.stats.total_entries = self.memory.len();
-        self.last_updated = Utc::now();
     }
 
     pub fn get_hit_rate(&self) -> f64 {

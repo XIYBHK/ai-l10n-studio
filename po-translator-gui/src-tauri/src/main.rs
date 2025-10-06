@@ -3,6 +3,7 @@
 
 mod commands;
 mod services;
+mod utils;
 
 // use tauri::Manager;
 use commands::*;
@@ -25,7 +26,9 @@ fn main() {
                 get_app_config,
                 update_app_config,
                 get_provider_configs,
-                validate_config
+                validate_config,
+                get_app_logs,
+                clear_app_logs
             ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

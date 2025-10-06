@@ -12,14 +12,34 @@
     "Theme": "主题",
     "Undo": "撤销",
     "Light": "浅色",
-    "Processing...": "处理中..."
+    "Processing...": "处理中...",
+    "Parallel Batch Size": "并行批次大小",
+    "Method": "方法",
+    "X Asset Editor": "X资产编辑器",
+    "Excluded Folders": "排除的文件夹",
+    "Enable Debug Draw": "启用调试绘制",
+    "Performance": "性能",
+    "Target Actor": "目标角色",
+    "Project Default": "项目默认",
+    "Debug": "调试",
+    "Out Points": "输出点",
+    "World Context Object": "世界上下文对象",
+    "Optimization": "优化",
+    "Enable Debug Log": "启用调试日志",
+    "Sampling": "采样",
+    "Invalid Asset": "无效资产",
+    "Config": "配置",
+    "Noise": "噪声",
+    "Success": "成功",
+    "Simple And Complex": "简单和复杂",
+    "Bounding Box": "边界框"
   },
-  "last_updated": "2025-10-06T17:04:45.700573200+00:00",
+  "last_updated": "2025-10-06T18:15:59.778541+00:00",
   "stats": {
-    "total_entries": 21,
-    "learned_entries": 13,
+    "total_entries": 33,
+    "learned_entries": 33,
     "builtin_entries": 85,
-    "hits": 13,
-    "misses": 15
+    "hits": 35,
+    "misses": 68
   }
 }

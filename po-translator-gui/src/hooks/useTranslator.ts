@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { invoke } from '@tauri-apps/api/tauri';
-import { POEntry, TranslationReport, TranslationStats } from '../types/tauri';
+import { POEntry, TranslationStats } from '../types/tauri';
 
 interface BatchResult {
   translations: string[];
@@ -52,20 +52,26 @@ export const useTranslator = () => {
     setError(null);
     
     try {
+      const batchSize = 5; // 限制并发数，避免过多请求
       const translations: string[] = [];
       
-      // 逐个翻译以支持进度回调
-      for (let i = 0; i < texts.length; i++) {
-        const translation = await invoke<string>('translate_entry', { 
-          text: texts[i], 
-          apiKey 
-        });
-        translations.push(translation);
+      // 批量并行翻译
+      for (let i = 0; i < texts.length; i += batchSize) {
+        const batch = texts.slice(i, i + batchSize);
+        const batchResults = await Promise.all(
+          batch.map(text => invoke<string>('translate_entry', { text, apiKey }))
+        );
         
-        // 调用进度回调
-        if (onProgress) {
-          onProgress(i, translation);
-        }
+        // 处理结果和进度回调
+        batchResults.forEach((translation, batchIndex) => {
+          const globalIndex = i + batchIndex;
+          translations.push(translation);
+          
+          // 调用进度回调
+          if (onProgress) {
+            onProgress(globalIndex, translation);
+          }
+        });
       }
       
       return translations;

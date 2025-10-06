@@ -7,6 +7,7 @@ use std::path::{Path, PathBuf};
 
 use crate::commands::POEntry;
 use crate::services::{POParser, AITranslator, TranslationMemory, TokenStats};
+use crate::utils::common::is_simple_phrase;
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct TranslationReport {
@@ -195,7 +196,7 @@ impl BatchTranslator {
 
         // 更新翻译记忆库
         for (original, translation) in &translations_map {
-            if self.is_simple_phrase(original) && translation.len() <= 50 {
+            if is_simple_phrase(original) && translation.len() <= 50 {
                 self.translation_memory.add_translation(original.clone(), translation.clone());
             }
         }
@@ -401,63 +402,6 @@ impl BatchTranslator {
         println!("翻译报告已保存到: {}", report_file.display());
 
         Ok(())
-    }
-
-    /// 判断是否是简单短语（基于 Python 版本的严格规则）
-    fn is_simple_phrase(&self, text: &str) -> bool {
-        // 1. 长度检查（≤30字符，更严格）
-        if text.len() > 30 {
-            return false;
-        }
-        
-        // 2. 句子标点检查（包含句尾标点）
-        let sentence_endings = [". ", "! ", "? ", "。", "！", "？", ".", "!", "?"];
-        if sentence_endings.iter().any(|&e| text.ends_with(e)) {
-            return false;
-        }
-        
-        // 3. 单词数量检查（≤3个单词，避免采集完整句子）
-        if text.split_whitespace().count() > 3 {
-            return false;
-        }
-        
-        // 4. 占位符检查
-        if text.contains("{0}") || text.contains("{1}") || text.contains("{2}") {
-            return false;
-        }
-        
-        // 5. 转义字符检查
-        if text.contains("\\n") || text.contains("\\t") || text.contains("\\r") {
-            return false;
-        }
-        
-        // 6. 特殊符号检查
-        let special_symbols = ['(', ')', '[', ']', '→', '•', '|'];
-        if special_symbols.iter().any(|&c| text.contains(c)) {
-            return false;
-        }
-        
-        // 7. 疑问句开头检查
-        let question_starters = ["Whether", "How", "What", "When", "Where", "Why", "Which", "Who"];
-        let first_word = text.split_whitespace().next().unwrap_or("");
-        if question_starters.iter().any(|&q| first_word == q) {
-            return false;
-        }
-        
-        // 8. 介词短语检查
-        let text_lower = text.to_lowercase();
-        let preposition_phrases = ["for ", "of ", "in the ", "on the ", "at the ", "by the ", "with the "];
-        if preposition_phrases.iter().any(|&p| text_lower.contains(p)) {
-            return false;
-        }
-        
-        // 9. 描述性词汇检查
-        let descriptive_words = ["duration", "spacing", "radius", "distance", "example", "tips", "mappings", "examples"];
-        if descriptive_words.iter().any(|&w| text_lower.contains(w)) {
-            return false;
-        }
-        
-        true
     }
 
     pub fn get_reports(&self) -> &[TranslationReport] {

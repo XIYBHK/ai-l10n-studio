@@ -4,6 +4,7 @@ use serde::{Deserialize, Serialize};
 // use std::collections::HashMap;
 
 use crate::services::translation_memory::TranslationMemory;
+use crate::utils::common::is_simple_phrase;
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct TokenStats {
@@ -164,21 +165,21 @@ impl AITranslator {
         }
 
         // 计算去重节省的次数：待翻译总数 - unique数量
-        let untranslated_count = texts.len() - self.batch_stats.tm_hits;
+            let untranslated_count = texts.len() - self.batch_stats.tm_hits;
         let unique_count = unique_texts.len();
         self.batch_stats.deduplicated = untranslated_count - unique_count;
 
         // Step 2: 翻译去重后的文本
         if !unique_texts.is_empty() {
             let unique_list: Vec<String> = unique_texts.keys().cloned().collect();
-            println!("[预处理] 原始{}条 -> TM命中{}条 -> 待翻译{}条 -> 去重节省{}条", 
+            crate::app_log!("[预处理] 原始{}条 -> TM命中{}条 -> 待翻译{}条 -> 去重节省{}条", 
                 texts.len(), self.batch_stats.tm_hits, untranslated_count, self.batch_stats.deduplicated);
 
             let ai_translations = self.translate_with_ai(unique_list.clone()).await?;
             self.batch_stats.ai_translated = unique_list.len();
 
             // Step 3: 将翻译结果分发到所有对应的索引
-            for (j, (unique_text, translation)) in unique_list.iter().zip(ai_translations.iter()).enumerate() {
+            for (unique_text, translation) in unique_list.iter().zip(ai_translations.iter()) {
                 if let Some(indices) = unique_texts.get(unique_text) {
                     for &idx in indices {
                         result[idx] = translation.clone();
@@ -193,15 +194,27 @@ impl AITranslator {
                 // Step 4: 更新翻译记忆库（每个unique文本只学习一次）
                 if let Some(ref mut tm) = self.tm {
                     if is_simple_phrase(unique_text) && translation.len() <= 50 {
-                        tm.add_translation(unique_text.clone(), translation.clone());
-                        self.batch_stats.tm_learned += 1;
-                        println!("[TM学习] {} -> {}", unique_text, translation);
+                        // 检查是否已存在于learned或builtin中
+                        let builtin = crate::services::translation_memory::get_builtin_memory();
+                        let exists_in_learned = tm.memory.contains_key(unique_text);
+                        let exists_in_builtin = builtin.contains_key(unique_text);
+                        
+                        if !exists_in_learned && !exists_in_builtin {
+                            // 既不在learned也不在builtin中，才学习
+                            tm.add_translation(unique_text.clone(), translation.clone());
+                            self.batch_stats.tm_learned += 1;
+                            crate::app_log!("[TM学习] {} -> {}", unique_text, translation);
+                        } else if exists_in_builtin {
+                            crate::app_log!("[TM跳过] {} (已在内置词库)", unique_text);
+                        } else {
+                            crate::app_log!("[TM跳过] {} (已在学习记录)", unique_text);
+                        }
                     }
                 }
             }
         }
 
-        println!("[统计] 总{}条 | TM命中{}条 | 去重节省{}条 | AI翻译{}条 | 学习{}条", 
+        crate::app_log!("[统计] 总{}条 | TM命中{}条 | 去重节省{}条 | AI翻译{}条 | 学习{}条", 
             self.batch_stats.total, self.batch_stats.tm_hits, 
             self.batch_stats.deduplicated, self.batch_stats.ai_translated, 
             self.batch_stats.tm_learned);
@@ -233,22 +246,57 @@ impl AITranslator {
             msgs
         };
 
-        // 发送请求
+        // 发送请求（带重试机制）
         let request = ChatRequest {
             model: self.model.clone(),
             messages,
             temperature: 0.3,
         };
 
-        let response = self.client
-            .post(&format!("{}/chat/completions", self.base_url))
-            .header("Authorization", format!("Bearer {}", self.api_key))
-            .header("Content-Type", "application/json")
-            .json(&request)
-            .send()
-            .await?;
+        // 最多重试3次，指数退避策略
+        let max_retries = 3;
+        let mut chat_response: Option<ChatResponse> = None;
+        let mut last_error: Option<anyhow::Error> = None;
 
-        let chat_response: ChatResponse = response.json().await?;
+        for retry in 0..max_retries {
+            match self.client
+                .post(&format!("{}/chat/completions", self.base_url))
+                .header("Authorization", format!("Bearer {}", self.api_key))
+                .header("Content-Type", "application/json")
+                .json(&request)
+                .send()
+                .await
+            {
+                Ok(response) => {
+                    match response.json().await {
+                        Ok(parsed) => {
+                            chat_response = Some(parsed);
+                            break;
+                        }
+                        Err(e) => {
+                            last_error = Some(e.into());
+                            if retry < max_retries - 1 {
+                                let delay_secs = 2_u64.pow(retry as u32); // 1s, 2s, 4s
+                                crate::app_log!("[重试] 解析响应失败，{}秒后重试 ({}/{})", delay_secs, retry + 1, max_retries);
+                                tokio::time::sleep(tokio::time::Duration::from_secs(delay_secs)).await;
+                            }
+                        }
+                    }
+                }
+                Err(e) => {
+                    last_error = Some(e.into());
+                    if retry < max_retries - 1 {
+                        let delay_secs = 2_u64.pow(retry as u32); // 1s, 2s, 4s
+                        crate::app_log!("[重试] 网络请求失败，{}秒后重试 ({}/{})", delay_secs, retry + 1, max_retries);
+                        tokio::time::sleep(tokio::time::Duration::from_secs(delay_secs)).await;
+                    }
+                }
+            }
+        }
+
+        let chat_response = chat_response.ok_or_else(|| {
+            last_error.unwrap_or_else(|| anyhow!("翻译请求失败，已重试{}次", max_retries))
+        })?;
 
         // 更新token统计
         if let Some(usage) = chat_response.usage {
@@ -376,66 +424,6 @@ impl AITranslator {
         count
     }
 
-    fn is_simple_phrase(&self, text: &str) -> bool {
-        is_simple_phrase(text)
-    }
-}
-
-/// 判断是否是简单短语（基于 Python 版本的严格规则）
-fn is_simple_phrase(text: &str) -> bool {
-    // 1. 长度检查（≤20字符，防止学习长句）
-    if text.len() > 20 {
-        return false;
-    }
-    
-    // 2. 句子标点检查（包含句子内部的标点）
-    let sentence_endings = [". ", "! ", "? ", "。", "！", "？"];
-    if sentence_endings.iter().any(|&e| text.contains(e)) {
-        return false;
-    }
-    
-    // 3. 单词数量检查（≤3个单词，防止学习长句）
-    if text.split_whitespace().count() > 3 {
-        return false;
-    }
-    
-    // 4. 占位符检查
-    if text.contains("{0}") || text.contains("{1}") || text.contains("{2}") {
-        return false;
-    }
-    
-    // 5. 转义字符检查
-    if text.contains("\\n") || text.contains("\\t") || text.contains("\\r") {
-        return false;
-    }
-    
-    // 6. 特殊符号检查
-    let special_symbols = ['(', ')', '[', ']', '→', '•', '|'];
-    if special_symbols.iter().any(|&c| text.contains(c)) {
-        return false;
-    }
-    
-    // 7. 疑问句开头检查
-    let question_starters = ["Whether", "How", "What", "When", "Where", "Why", "Which", "Who"];
-    let first_word = text.split_whitespace().next().unwrap_or("");
-    if question_starters.iter().any(|&q| first_word == q) {
-        return false;
-    }
-    
-    // 8. 介词短语检查
-    let text_lower = text.to_lowercase();
-    let preposition_phrases = ["for ", "of ", "in the ", "on the ", "at the ", "by the ", "with the "];
-    if preposition_phrases.iter().any(|&p| text_lower.contains(p)) {
-        return false;
-    }
-    
-    // 9. 描述性词汇检查
-    let descriptive_words = ["duration", "spacing", "radius", "distance", "example", "tips", "mappings", "examples"];
-    if descriptive_words.iter().any(|&w| text_lower.contains(w)) {
-        return false;
-    }
-    
-    true
 }
 
 impl AITranslator {
