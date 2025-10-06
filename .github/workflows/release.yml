@@ -86,7 +86,6 @@ jobs:
         run: |
           mkdir -p release
           cp po-translator-gui/src-tauri/target/release/bundle/deb/*.deb release/ || true
-          cp po-translator-gui/src-tauri/target/release/bundle/appimage/*.AppImage release/ || true
 
       - name: Upload release assets
         uses: softprops/action-gh-release@v1
