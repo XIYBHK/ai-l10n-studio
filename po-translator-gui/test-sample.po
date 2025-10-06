@@ -1,0 +1,143 @@
+# Test PO File for Translation
+# Copyright (C) 2025
+# This file is distributed under the same license as the test package.
+msgid ""
+msgstr ""
+"Project-Id-Version: Test 1.0\n"
+"Report-Msgid-Bugs-To: \n"
+"POT-Creation-Date: 2025-01-06 12:00+0800\n"
+"PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
+"Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
+"Language-Team: LANGUAGE <LL@li.org>\n"
+"Language: zh_CN\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+
+#: src/main.cpp:10
+msgid "Hello"
+msgstr "你好"
+
+#: src/main.cpp:15
+msgid "World"
+msgstr "世界"
+
+#: src/main.cpp:20
+#. This is a developer comment
+msgid "Welcome to the application"
+msgstr ""
+
+#: src/main.cpp:25
+msgctxt "Menu|File"
+msgid "Open"
+msgstr ""
+
+#: src/main.cpp:30
+msgctxt "Menu|File"
+msgid "Save"
+msgstr ""
+
+#: src/main.cpp:35
+msgid "Exit"
+msgstr ""
+
+#: src/dialog.cpp:10
+#. Translation note: Keep it short
+msgid "Are you sure you want to delete this item?"
+msgstr ""
+
+#: src/dialog.cpp:15
+msgid "Yes"
+msgstr ""
+
+#: src/dialog.cpp:20
+msgid "No"
+msgstr ""
+
+#: src/dialog.cpp:25
+msgid "Cancel"
+msgstr ""
+
+#: src/settings.cpp:10
+msgid "Settings"
+msgstr ""
+
+#: src/settings.cpp:15
+msgid "Language"
+msgstr ""
+
+#: src/settings.cpp:20
+msgid "Theme"
+msgstr ""
+
+#: src/settings.cpp:25
+#. Context: Color theme selection
+msgctxt "Settings|Display"
+msgid "Light"
+msgstr ""
+
+#: src/settings.cpp:30
+msgctxt "Settings|Display"
+msgid "Dark"
+msgstr ""
+
+#: src/settings.cpp:35
+msgid "Auto"
+msgstr ""
+
+#: src/errors.cpp:10
+msgid "An error occurred. Please try again."
+msgstr ""
+
+#: src/errors.cpp:15
+msgid "File not found: {0}"
+msgstr ""
+
+#: src/errors.cpp:20
+msgid "Permission denied"
+msgstr ""
+
+#: src/network.cpp:10
+msgid "Connecting to server..."
+msgstr ""
+
+#: src/network.cpp:15
+msgid "Connection established"
+msgstr ""
+
+#: src/network.cpp:20
+msgid "Connection failed. Please check your network."
+msgstr ""
+
+#: src/ui/toolbar.cpp:10
+msgid "New"
+msgstr ""
+
+#: src/ui/toolbar.cpp:15
+msgid "Copy"
+msgstr ""
+
+#: src/ui/toolbar.cpp:20
+msgid "Paste"
+msgstr ""
+
+#: src/ui/toolbar.cpp:25
+msgid "Undo"
+msgstr ""
+
+#: src/ui/toolbar.cpp:30
+msgid "Redo"
+msgstr ""
+
+#: src/ui/statusbar.cpp:10
+msgid "Ready"
+msgstr ""
+
+#: src/ui/statusbar.cpp:15
+msgid "Processing..."
+msgstr ""
+
+#: src/ui/statusbar.cpp:20
+msgid "Done"
+msgstr ""
+
