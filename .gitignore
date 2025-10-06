@@ -227,8 +227,7 @@ dist/
 build/
 out/
 
-# Package managers
-package-lock.json
+# Package managers (keep package-lock.json for reproducible builds)
 yarn.lock
 pnpm-lock.yaml
 
@@ -252,7 +251,6 @@ po-translator-gui/src-tauri/target/
 po-translator-gui/.vite/
 po-translator-gui/.eslintcache
 po-translator-gui/*.tsbuildinfo
-po-translator-gui/package-lock.json
 po-translator-gui/yarn.lock
 po-translator-gui/pnpm-lock.yaml
 
