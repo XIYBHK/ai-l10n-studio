@@ -1,0 +1,85 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - 'v*'
+  workflow_dispatch:
+
+jobs:
+  release:
+    permissions:
+      contents: write
+    strategy:
+      fail-fast: false
+      matrix:
+        platform: [macos-latest, ubuntu-22.04, windows-latest]
+
+    runs-on: ${{ matrix.platform }}
+    
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+          cache-dependency-path: 'po-translator-gui/package-lock.json'
+
+      - name: Install Rust stable
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Rust cache
+        uses: swatinem/rust-cache@v2
+        with:
+          workspaces: 'po-translator-gui/src-tauri -> target'
+
+      - name: Install dependencies (Ubuntu only)
+        if: matrix.platform == 'ubuntu-22.04'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libgtk-3-dev libwebkit2gtk-4.0-dev libappindicator3-dev librsvg2-dev patchelf
+
+      - name: Install frontend dependencies
+        working-directory: po-translator-gui
+        run: npm ci
+
+      - name: Build Tauri app
+        working-directory: po-translator-gui
+        run: npm run tauri build
+        env:
+          TAURI_PRIVATE_KEY: ${{ secrets.TAURI_PRIVATE_KEY || '' }}
+          TAURI_KEY_PASSWORD: ${{ secrets.TAURI_KEY_PASSWORD || '' }}
+
+      - name: Prepare release files (Windows)
+        if: matrix.platform == 'windows-latest'
+        shell: pwsh
+        run: |
+          New-Item -ItemType Directory -Force -Path release
+          Get-ChildItem -Path po-translator-gui/src-tauri/target/release/bundle/msi -Filter *.msi | Copy-Item -Destination release/
+          Get-ChildItem -Path po-translator-gui/src-tauri/target/release/bundle/nsis -Filter *.exe | Copy-Item -Destination release/
+
+      - name: Prepare release files (macOS)
+        if: matrix.platform == 'macos-latest'
+        run: |
+          mkdir -p release
+          cp po-translator-gui/src-tauri/target/release/bundle/dmg/*.dmg release/ || true
+          tar -czf release/po-translator-macos.app.tar.gz -C po-translator-gui/src-tauri/target/release/bundle/macos . || true
+
+      - name: Prepare release files (Linux)
+        if: matrix.platform == 'ubuntu-22.04'
+        run: |
+          mkdir -p release
+          cp po-translator-gui/src-tauri/target/release/bundle/deb/*.deb release/ || true
+          cp po-translator-gui/src-tauri/target/release/bundle/appimage/*.AppImage release/ || true
+
+      - name: Upload release assets
+        uses: softprops/action-gh-release@v1
+        with:
+          files: release/*
+          draft: true
+          generate_release_notes: true
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
