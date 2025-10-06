@@ -1,13 +1,13 @@
 use anyhow::Result;
 use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
-use std::collections::HashMap;
+use indexmap::IndexMap;
 use std::fs;
 use std::path::Path;
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
 pub struct TranslationMemory {
-    pub memory: HashMap<String, String>,
+    pub memory: IndexMap<String, String>, // 使用 IndexMap 保持插入顺序
     pub stats: MemoryStats,
     pub last_updated: DateTime<Utc>,
 }
@@ -29,7 +29,7 @@ pub struct MemoryEntry {
 
 impl TranslationMemory {
     pub fn new() -> Self {
-        // 加载内置短语
+        // 只加载内置短语
         let builtin = get_builtin_memory();
         let total_entries = builtin.len();
         
@@ -44,6 +44,71 @@ impl TranslationMemory {
         }
     }
 
+    /// 从文件加载或创建新的TM（合并内置短语）
+    pub fn new_from_file<P: AsRef<Path>>(file_path: P) -> Result<Self> {
+        let path = file_path.as_ref();
+        
+        // 如果文件不存在，加载内置短语（首次使用）
+        if !path.exists() {
+            let memory = get_builtin_memory();
+            let total_entries = memory.len();
+            println!("[TM] 首次使用，加载内置短语: {} 条", total_entries);
+            return Ok(Self {
+                memory,
+                stats: MemoryStats {
+                    total_entries,
+                    hits: 0,
+                    misses: 0,
+                },
+                last_updated: Utc::now(),
+            });
+        }
+        
+        // 文件存在，只加载learned部分，不自动加载内置短语
+        let content = fs::read_to_string(path)?;
+        let data: serde_json::Value = serde_json::from_str(&content)?;
+        
+        let mut memory = IndexMap::new();
+        
+        // 尝试加载learned字段（Python格式）
+        if let Some(learned_obj) = data.get("learned") {
+            if let Some(learned_map) = learned_obj.as_object() {
+                for (k, v) in learned_map {
+                    if let Some(translation) = v.as_str() {
+                        memory.insert(k.clone(), translation.to_string());
+                    }
+                }
+                let learned_count = memory.len();
+                if learned_count > 0 {
+                    println!("[TM] 加载翻译记忆库: {} 条学习记录（不含内置短语）", learned_count);
+                } else {
+                    println!("[TM] 记忆库为空");
+                }
+            }
+        } else if let Some(memory_obj) = data.get("memory") {
+            // 兼容旧格式（直接保存整个memory）
+            if let Some(memory_map) = memory_obj.as_object() {
+                for (k, v) in memory_map {
+                    if let Some(translation) = v.as_str() {
+                        memory.insert(k.clone(), translation.to_string());
+                    }
+                }
+                println!("[TM] 加载翻译记忆库（旧格式）: {} 条", memory.len());
+            }
+        }
+        
+        let total_entries = memory.len();
+        Ok(Self {
+            memory,
+            stats: MemoryStats {
+                total_entries,
+                hits: 0,
+                misses: 0,
+            },
+            last_updated: Utc::now(),
+        })
+    }
+
     pub fn load_from_file<P: AsRef<Path>>(file_path: P) -> Result<Self> {
         let path = file_path.as_ref();
         if !path.exists() {
@@ -56,8 +121,30 @@ impl TranslationMemory {
     }
 
     pub fn save_to_file<P: AsRef<Path>>(&self, file_path: P) -> Result<()> {
-        let content = serde_json::to_string_pretty(self)?;
+        // 分离内置和学习的翻译（与Python版本保持一致）
+        let builtin = get_builtin_memory();
+        let learned: IndexMap<String, String> = self.memory.iter()
+            .filter(|(k, _)| !builtin.contains_key(k.as_str()))
+            .map(|(k, v)| (k.clone(), v.clone()))
+            .collect();
+        
+        // 构造保存的数据结构（与Python版本一致）
+        let data = serde_json::json!({
+            "learned": learned,
+            "last_updated": self.last_updated.to_rfc3339(),
+            "stats": {
+                "total_entries": self.stats.total_entries,
+                "learned_entries": learned.len(),
+                "builtin_entries": builtin.len(),
+                "hits": self.stats.hits,
+                "misses": self.stats.misses,
+            }
+        });
+        
+        let content = serde_json::to_string_pretty(&data)?;
         fs::write(file_path, content)?;
+        
+        println!("[TM] 保存翻译记忆库: {} 条学习记录", learned.len());
         Ok(())
     }
 
@@ -120,8 +207,8 @@ impl Default for TranslationMemory {
 }
 
 // 内置的常用翻译记忆（从 Python 版本迁移）
-pub fn get_builtin_memory() -> HashMap<String, String> {
-    let mut memory = HashMap::new();
+pub fn get_builtin_memory() -> IndexMap<String, String> {
+    let mut memory = IndexMap::new();
     
     // XTools 命名空间
     memory.insert("XTools|Random".to_string(), "XTools|随机".to_string());

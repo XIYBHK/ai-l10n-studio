@@ -1,0 +1,25 @@
+{
+  "learned": {
+    "Dark": "深色",
+    "Auto": "自动",
+    "Redo": "重做",
+    "Done": "完成",
+    "Permission denied": "权限被拒绝",
+    "Paste": "粘贴",
+    "Copy": "复制",
+    "Language": "语言",
+    "Ready": "就绪",
+    "Theme": "主题",
+    "Undo": "撤销",
+    "Light": "浅色",
+    "Processing...": "处理中..."
+  },
+  "last_updated": "2025-10-06T17:04:45.700573200+00:00",
+  "stats": {
+    "total_entries": 21,
+    "learned_entries": 13,
+    "builtin_entries": 85,
+    "hits": 13,
+    "misses": 15
+  }
+}

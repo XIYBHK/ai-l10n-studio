@@ -26,7 +26,7 @@ impl Default for AppConfig {
             model: "moonshot-v1-auto".to_string(),
             base_url: Some("https://api.moonshot.cn/v1".to_string()),
             use_translation_memory: true,
-            translation_memory_path: Some("data/translation_memory.json".to_string()),
+            translation_memory_path: Some("../data/translation_memory.json".to_string()),
             log_level: "info".to_string(),
             auto_save: true,
             batch_size: 10,

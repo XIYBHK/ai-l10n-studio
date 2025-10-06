@@ -26,6 +26,7 @@ thiserror = "1.0"
 nom = "7.0"
 encoding_rs = "0.8"
 dirs = "5.0"
+indexmap = { version = "2.0", features = ["serde"] }
 
 [features]
 # this feature is used for production builds or when `devPath` points to the filesystem

@@ -228,7 +228,7 @@ impl BatchTranslator {
         )?;
 
         // 保存翻译记忆库到文件
-        let memory_path = "data/translation_memory.json";
+        let memory_path = "../data/translation_memory.json";
         if let Some(parent) = std::path::Path::new(memory_path).parent() {
             std::fs::create_dir_all(parent)?;
         }
@@ -405,19 +405,19 @@ impl BatchTranslator {
 
     /// 判断是否是简单短语（基于 Python 版本的严格规则）
     fn is_simple_phrase(&self, text: &str) -> bool {
-        // 1. 长度检查（≤35字符）
-        if text.len() > 35 {
+        // 1. 长度检查（≤30字符，更严格）
+        if text.len() > 30 {
             return false;
         }
         
-        // 2. 句子标点检查
-        let sentence_endings = [". ", "! ", "? ", "。", "！", "？"];
-        if sentence_endings.iter().any(|&e| text.contains(e)) {
+        // 2. 句子标点检查（包含句尾标点）
+        let sentence_endings = [". ", "! ", "? ", "。", "！", "？", ".", "!", "?"];
+        if sentence_endings.iter().any(|&e| text.ends_with(e)) {
             return false;
         }
         
-        // 3. 单词数量检查（≤5个单词）
-        if text.split_whitespace().count() > 5 {
+        // 3. 单词数量检查（≤3个单词，避免采集完整句子）
+        if text.split_whitespace().count() > 3 {
             return false;
         }
         

@@ -4,7 +4,10 @@ import {
   SaveOutlined,
   SettingOutlined,
   TranslationOutlined,
+  BulbOutlined,
+  BulbFilled,
 } from '@ant-design/icons';
+import { useTheme } from '../hooks/useTheme';
 
 interface MenuBarProps {
   onOpenFile: () => void;
@@ -15,6 +18,8 @@ interface MenuBarProps {
   onApiKeyChange: (key: string) => void;
   isTranslating: boolean;
   hasEntries: boolean;
+  isDarkMode?: boolean;
+  onThemeToggle?: () => void;
 }
 
 export const MenuBar: React.FC<MenuBarProps> = ({
@@ -25,21 +30,25 @@ export const MenuBar: React.FC<MenuBarProps> = ({
   apiKey,
   isTranslating,
   hasEntries,
+  isDarkMode = false,
+  onThemeToggle,
 }) => {
+  const { colors } = useTheme();
+  
   return (
     <div style={{ 
       display: 'flex', 
       alignItems: 'center', 
       padding: '8px 16px',
-      background: '#fafafa',
-      borderBottom: '1px solid #d9d9d9',
+      background: colors.bgTertiary,
+      borderBottom: `1px solid ${colors.borderPrimary}`,
       gap: '8px'
     }}>
       <div style={{ 
         fontSize: '16px', 
         fontWeight: 600, 
         marginRight: '16px',
-        color: '#1890ff'
+        color: colors.statusUntranslated
       }}>
         🌐 PO 翻译工具
       </div>
@@ -82,6 +91,17 @@ export const MenuBar: React.FC<MenuBarProps> = ({
       
       <div style={{ flex: 1 }} />
       
+      {onThemeToggle && (
+        <Tooltip title={isDarkMode ? "切换到亮色模式" : "切换到暗色模式"}>
+          <Button 
+            icon={isDarkMode ? <BulbFilled /> : <BulbOutlined />}
+            onClick={onThemeToggle}
+            size="middle"
+            type="text"
+          />
+        </Tooltip>
+      )}
+      
       <Tooltip title="设置 API 密钥和翻译选项">
         <Button 
           icon={<SettingOutlined />}
@@ -95,11 +115,11 @@ export const MenuBar: React.FC<MenuBarProps> = ({
       {!apiKey && (
         <div style={{ 
           padding: '4px 12px', 
-          background: '#fff7e6', 
-          border: '1px solid #ffd591',
+          background: isDarkMode ? 'rgba(250, 173, 20, 0.15)' : '#fff7e6', 
+          border: `1px solid ${colors.statusNeedsReview}`,
           borderRadius: '4px',
           fontSize: '12px',
-          color: '#fa8c16'
+          color: colors.statusNeedsReview
         }}>
           ⚠️ 请先在设置中配置 API 密钥
         </div>

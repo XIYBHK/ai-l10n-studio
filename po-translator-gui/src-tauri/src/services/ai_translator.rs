@@ -56,6 +56,17 @@ pub struct AITranslator {
     token_stats: TokenStats,
     use_tm: bool,
     tm: Option<TranslationMemory>,
+    // 统计信息
+    pub batch_stats: BatchStats,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct BatchStats {
+    pub total: usize,
+    pub tm_hits: usize,
+    pub deduplicated: usize,
+    pub ai_translated: usize,
+    pub tm_learned: usize,
 }
 
 impl AITranslator {
@@ -63,6 +74,13 @@ impl AITranslator {
         let client = HttpClient::new();
         let base_url = base_url.unwrap_or_else(|| "https://api.moonshot.cn/v1".to_string());
         let system_prompt = Self::get_system_prompt();
+        
+        // 从文件加载TM（合并内置短语和已保存的翻译）
+        let tm = if use_tm {
+            Some(TranslationMemory::new_from_file("../data/translation_memory.json")?)
+        } else {
+            None
+        };
         
         Ok(Self {
             client,
@@ -79,7 +97,14 @@ impl AITranslator {
                 cost: 0.0,
             },
             use_tm,
-            tm: if use_tm { Some(TranslationMemory::new()) } else { None },
+            tm,
+            batch_stats: BatchStats {
+                total: 0,
+                tm_hits: 0,
+                deduplicated: 0,
+                ai_translated: 0,
+                tm_learned: 0,
+            },
         })
     }
 
@@ -106,53 +131,80 @@ impl AITranslator {
             return Ok(Vec::new());
         }
 
-        // 使用翻译记忆库进行预翻译
+        // 重置统计
+        self.batch_stats.total = texts.len();
+        self.batch_stats.tm_hits = 0;
+        self.batch_stats.deduplicated = 0;
+        self.batch_stats.ai_translated = 0;
+        self.batch_stats.tm_learned = 0;
+
+        // Step 1: 使用翻译记忆库进行预翻译 + 去重
         let mut result = vec![String::new(); texts.len()];
         let mut untranslated_indices = Vec::new();
+        let mut unique_texts: std::collections::HashMap<String, Vec<usize>> = std::collections::HashMap::new();
 
         if let Some(ref mut tm) = self.tm {
             for (i, text) in texts.iter().enumerate() {
                 if let Some(translation) = tm.get_translation(text) {
+                    // TM命中
                     result[i] = translation;
+                    self.batch_stats.tm_hits += 1;
                 } else {
+                    // TM未命中，记录到去重map
                     untranslated_indices.push(i);
+                    unique_texts.entry(text.clone()).or_insert_with(Vec::new).push(i);
                 }
             }
         } else {
-            untranslated_indices = (0..texts.len()).collect();
+            // 没有TM，直接去重
+            for (i, text) in texts.iter().enumerate() {
+                untranslated_indices.push(i);
+                unique_texts.entry(text.clone()).or_insert_with(Vec::new).push(i);
+            }
         }
 
-        // 翻译未命中记忆库的文本
-        if !untranslated_indices.is_empty() {
-            let untranslated_texts: Vec<String> = untranslated_indices
-                .iter()
-                .map(|&i| texts[i].clone())
-                .collect();
+        // 计算去重节省的次数：待翻译总数 - unique数量
+        let untranslated_count = texts.len() - self.batch_stats.tm_hits;
+        let unique_count = unique_texts.len();
+        self.batch_stats.deduplicated = untranslated_count - unique_count;
 
-            let ai_translations = self.translate_with_ai(untranslated_texts).await?;
+        // Step 2: 翻译去重后的文本
+        if !unique_texts.is_empty() {
+            let unique_list: Vec<String> = unique_texts.keys().cloned().collect();
+            println!("[预处理] 原始{}条 -> TM命中{}条 -> 待翻译{}条 -> 去重节省{}条", 
+                texts.len(), self.batch_stats.tm_hits, untranslated_count, self.batch_stats.deduplicated);
 
-            // 将AI翻译结果填入结果数组
-            for (j, translation) in ai_translations.iter().enumerate() {
-                let original_index = untranslated_indices[j];
-                result[original_index] = translation.clone();
+            let ai_translations = self.translate_with_ai(unique_list.clone()).await?;
+            self.batch_stats.ai_translated = unique_list.len();
 
-                // 调用进度回调
-                if let Some(ref callback) = progress_callback {
-                    callback(original_index, translation.clone());
+            // Step 3: 将翻译结果分发到所有对应的索引
+            for (j, (unique_text, translation)) in unique_list.iter().zip(ai_translations.iter()).enumerate() {
+                if let Some(indices) = unique_texts.get(unique_text) {
+                    for &idx in indices {
+                        result[idx] = translation.clone();
+
+                        // 调用进度回调
+                        if let Some(ref callback) = progress_callback {
+                            callback(idx, translation.clone());
+                        }
+                    }
                 }
-            }
 
-            // 更新翻译记忆库（在循环外进行）
-            if let Some(ref mut tm) = self.tm {
-                for (j, translation) in ai_translations.iter().enumerate() {
-                    let original_index = untranslated_indices[j];
-                    let original_text = &texts[original_index];
-                    if is_simple_phrase(original_text) && translation.len() <= 50 {
-                        tm.add_translation(original_text.clone(), translation.clone());
+                // Step 4: 更新翻译记忆库（每个unique文本只学习一次）
+                if let Some(ref mut tm) = self.tm {
+                    if is_simple_phrase(unique_text) && translation.len() <= 50 {
+                        tm.add_translation(unique_text.clone(), translation.clone());
+                        self.batch_stats.tm_learned += 1;
+                        println!("[TM学习] {} -> {}", unique_text, translation);
                     }
                 }
             }
         }
+
+        println!("[统计] 总{}条 | TM命中{}条 | 去重节省{}条 | AI翻译{}条 | 学习{}条", 
+            self.batch_stats.total, self.batch_stats.tm_hits, 
+            self.batch_stats.deduplicated, self.batch_stats.ai_translated, 
+            self.batch_stats.tm_learned);
 
         Ok(result)
     }
@@ -331,19 +383,19 @@ impl AITranslator {
 
 /// 判断是否是简单短语（基于 Python 版本的严格规则）
 fn is_simple_phrase(text: &str) -> bool {
-    // 1. 长度检查（≤35字符）
-    if text.len() > 35 {
+    // 1. 长度检查（≤20字符，防止学习长句）
+    if text.len() > 20 {
         return false;
     }
     
-    // 2. 句子标点检查
+    // 2. 句子标点检查（包含句子内部的标点）
     let sentence_endings = [". ", "! ", "? ", "。", "！", "？"];
     if sentence_endings.iter().any(|&e| text.contains(e)) {
         return false;
     }
     
-    // 3. 单词数量检查（≤5个单词）
-    if text.split_whitespace().count() > 5 {
+    // 3. 单词数量检查（≤3个单词，防止学习长句）
+    if text.split_whitespace().count() > 3 {
         return false;
     }
     

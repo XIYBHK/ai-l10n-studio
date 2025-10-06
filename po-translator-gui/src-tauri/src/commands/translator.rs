@@ -14,6 +14,16 @@ pub struct POEntry {
     pub line_start: usize,
 }
 
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct TranslationStats {
+    pub total: usize,
+    pub tm_hits: usize,
+    pub deduplicated: usize,
+    pub ai_translated: usize,
+    pub token_stats: crate::services::TokenStats,
+    pub tm_learned: usize,
+}
+
 // TranslationReport 已从 services 模块导入
 
 #[derive(Debug, Serialize, Deserialize)]
@@ -40,7 +50,23 @@ pub async fn translate_entry(
 ) -> Result<String, String> {
     let mut translator = AITranslator::new(api_key, None, true).map_err(|e| e.to_string())?;
     let result = translator.translate_batch(vec![text], None).await.map_err(|e| e.to_string())?;
+    
+    // 保存TM到文件
+    if let Some(tm) = translator.get_translation_memory() {
+        let tm_path = "../data/translation_memory.json";
+        if let Some(parent) = std::path::Path::new(tm_path).parent() {
+            let _ = std::fs::create_dir_all(parent);
+        }
+        let _ = tm.save_to_file(tm_path);
+    }
+    
     result.into_iter().next().ok_or_else(|| "No translation result".to_string())
+}
+
+#[derive(Debug, Serialize)]
+pub struct BatchResult {
+    pub translations: Vec<String>,
+    pub stats: TranslationStats,
 }
 
 #[tauri::command]
@@ -49,25 +75,82 @@ pub async fn translate_batch(
     api_key: String,
 ) -> Result<Vec<String>, String> {
     let mut translator = AITranslator::new(api_key, None, true).map_err(|e| e.to_string())?;
-    translator.translate_batch(texts, None).await.map_err(|e| e.to_string())
+    let result = translator.translate_batch(texts, None).await.map_err(|e| e.to_string())?;
+    
+    // 保存TM到文件
+    if let Some(tm) = translator.get_translation_memory() {
+        let tm_path = "../data/translation_memory.json";
+        if let Some(parent) = std::path::Path::new(tm_path).parent() {
+            let _ = std::fs::create_dir_all(parent);
+        }
+        let _ = tm.save_to_file(tm_path);
+    }
+    
+    Ok(result)
+}
+
+#[tauri::command]
+pub async fn translate_batch_with_stats(
+    texts: Vec<String>,
+    api_key: String,
+) -> Result<BatchResult, String> {
+    let mut translator = AITranslator::new(api_key, None, true).map_err(|e| e.to_string())?;
+    let translations = translator.translate_batch(texts, None).await.map_err(|e| e.to_string())?;
+    
+    // 获取统计信息
+    let batch_stats = translator.batch_stats.clone();
+    let token_stats = translator.get_token_stats().clone();
+    
+    let stats = TranslationStats {
+        total: batch_stats.total,
+        tm_hits: batch_stats.tm_hits,
+        deduplicated: batch_stats.deduplicated,
+        ai_translated: batch_stats.ai_translated,
+        token_stats,
+        tm_learned: batch_stats.tm_learned,
+    };
+    
+    // 保存TM到文件
+    if let Some(tm) = translator.get_translation_memory() {
+        let tm_path = "../data/translation_memory.json";
+        if let Some(parent) = std::path::Path::new(tm_path).parent() {
+            let _ = std::fs::create_dir_all(parent);
+        }
+        let _ = tm.save_to_file(tm_path);
+    }
+    
+    Ok(BatchResult {
+        translations,
+        stats,
+    })
 }
 
 #[tauri::command]
 pub async fn get_translation_memory() -> Result<TranslationMemory, String> {
-    let memory_path = "data/translation_memory.json";
+    let memory_path = "../data/translation_memory.json";
     
-    if std::path::Path::new(memory_path).exists() {
-        TranslationMemory::load_from_file(memory_path).map_err(|e| e.to_string())
-    } else {
-        Ok(TranslationMemory::new())
-    }
+    // 使用 new_from_file 而不是 load_from_file，因为它能正确处理Python格式的JSON
+    TranslationMemory::new_from_file(memory_path).map_err(|e| {
+        println!("[TM] 加载记忆库失败: {}", e);
+        format!("加载记忆库失败: {}", e)
+    })
+}
+
+#[tauri::command]
+pub async fn get_builtin_phrases() -> Result<serde_json::Value, String> {
+    let builtin = crate::services::translation_memory::get_builtin_memory();
+    let memory_map: std::collections::HashMap<String, String> = builtin.into_iter().collect();
+    
+    Ok(serde_json::json!({
+        "memory": memory_map
+    }))
 }
 
 #[tauri::command]
 pub async fn save_translation_memory(
     memory: TranslationMemory,
 ) -> Result<(), String> {
-    let memory_path = "data/translation_memory.json";
+    let memory_path = "../data/translation_memory.json";
     
     // 确保 data 目录存在
     if let Some(parent) = std::path::Path::new(memory_path).parent() {

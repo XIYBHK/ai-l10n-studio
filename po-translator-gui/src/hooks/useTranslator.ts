@@ -1,6 +1,11 @@
 import { useState } from 'react';
 import { invoke } from '@tauri-apps/api/tauri';
-import { POEntry, TranslationReport } from '../types/tauri';
+import { POEntry, TranslationReport, TranslationStats } from '../types/tauri';
+
+interface BatchResult {
+  translations: string[];
+  stats: TranslationStats;
+}
 
 export const useTranslator = () => {
   const [isLoading, setIsLoading] = useState(false);
@@ -47,8 +52,42 @@ export const useTranslator = () => {
     setError(null);
     
     try {
-      const translations = await invoke<string[]>('translate_batch', { texts, apiKey });
+      const translations: string[] = [];
+      
+      // 逐个翻译以支持进度回调
+      for (let i = 0; i < texts.length; i++) {
+        const translation = await invoke<string>('translate_entry', { 
+          text: texts[i], 
+          apiKey 
+        });
+        translations.push(translation);
+        
+        // 调用进度回调
+        if (onProgress) {
+          onProgress(i, translation);
+        }
+      }
+      
       return translations;
+    } catch (err) {
+      const errorMessage = err instanceof Error ? err.message : 'Unknown error';
+      setError(errorMessage);
+      throw new Error(errorMessage);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const translateBatchWithStats = async (
+    texts: string[],
+    apiKey: string
+  ): Promise<BatchResult> => {
+    setIsLoading(true);
+    setError(null);
+
+    try {
+      const result = await invoke<BatchResult>('translate_batch_with_stats', { texts, apiKey });
+      return result;
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : 'Unknown error';
       setError(errorMessage);
@@ -80,6 +119,7 @@ export const useTranslator = () => {
     parsePOFile,
     translateEntry,
     translateBatch,
+    translateBatchWithStats,
     getTranslationMemory,
   };
 };
