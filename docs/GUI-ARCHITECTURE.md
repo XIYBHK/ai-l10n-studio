@@ -1,6 +1,6 @@
 # PO 翻译工具 GUI 架构设计
 
-> 基于 Electron + React 的桌面应用版本
+> 基于 Tauri + React 的桌面应用版本
 
 ## 📋 目录
 
@@ -17,7 +17,8 @@
 ### 前端框架
 ```json
 {
-  "electron": "^28.0.0",           // 桌面应用框架
+  "@tauri-apps/api": "^1.5.0",    // Tauri API
+  "@tauri-apps/cli": "^1.5.0",    // Tauri CLI
   "react": "^18.2.0",              // UI 框架
   "react-dom": "^18.2.0",          // React DOM
   "typescript": "^5.3.0"           // 类型系统
@@ -45,15 +46,24 @@
 ```json
 {
   "vite": "^5.0.0",                // 快速构建工具
-  "electron-builder": "^24.9.0"    // 打包工具
+  "@tauri-apps/cli": "^1.5.0"      // Tauri 构建工具
 }
+```
+
+### Rust 后端
+```toml
+[dependencies]
+tauri = { version = "1.5", features = ["shell-all"] }
+serde = { version = "1.0", features = ["derive"] }
+serde_json = "1.0"
+tokio = { version = "1.0", features = ["full"] }
 ```
 
 ### Python 集成
 ```json
 {
-  "child_process": "built-in",     // 调用 Python 脚本
-  "electron-store": "^8.1.0"       // 配置存储
+  "@tauri-apps/plugin-shell": "^1.0.0",  // 调用 Python 脚本
+  "@tauri-apps/plugin-store": "^1.0.0"    // 配置存储
 }
 ```
 
@@ -63,77 +73,75 @@
 
 ```
 ue-po-ai-translator/
-├── electron-app/              # GUI 应用目录
+├── tauri-app/                 # GUI 应用目录
+│   ├── src-tauri/             # Tauri 后端（Rust）
+│   │   ├── src/
+│   │   │   ├── main.rs        # Rust 主程序
+│   │   │   ├── commands/      # Tauri 命令
+│   │   │   │   ├── translator.rs  # 翻译命令
+│   │   │   │   ├── file.rs        # 文件操作命令
+│   │   │   │   └── config.rs      # 配置命令
+│   │   │   ├── services/      # 服务层
+│   │   │   │   ├── python_bridge.rs  # Python 桥接
+│   │   │   │   └── po_parser.rs     # PO 文件解析
+│   │   │   └── utils.rs       # 工具函数
+│   │   ├── Cargo.toml         # Rust 依赖配置
+│   │   └── tauri.conf.json    # Tauri 配置
+│   │
+│   ├── src/                   # React 前端
+│   │   ├── App.tsx            # 应用根组件
+│   │   ├── main.tsx           # 前端入口
+│   │   │
+│   │   ├── components/        # UI 组件
+│   │   │   ├── Layout/
+│   │   │   │   ├── AppLayout.tsx      # 主布局
+│   │   │   │   ├── MenuBar.tsx        # 菜单栏
+│   │   │   │   ├── ToolBar.tsx        # 工具栏
+│   │   │   │   └── StatusBar.tsx      # 状态栏
+│   │   │   │
+│   │   │   ├── EntryList/
+│   │   │   │   ├── EntryList.tsx      # 条目列表
+│   │   │   │   ├── EntryItem.tsx      # 单个条目
+│   │   │   │   └── FilterBar.tsx      # 过滤器
+│   │   │   │
+│   │   │   ├── Editor/
+│   │   │   │   ├── EditorPane.tsx     # 编辑器面板
+│   │   │   │   ├── SourceText.tsx     # 原文显示
+│   │   │   │   ├── TranslationEditor.tsx  # 译文编辑
+│   │   │   │   └── ActionButtons.tsx  # 操作按钮
+│   │   │   │
+│   │   │   ├── Settings/
+│   │   │   │   └── SettingsModal.tsx  # 设置对话框
+│   │   │   │
+│   │   │   └── Common/
+│   │   │       ├── LoadingSpinner.tsx
+│   │   │       └── ProgressBar.tsx
+│   │   │
+│   │   ├── hooks/             # 自定义 Hooks
+│   │   │   ├── useTranslator.ts   # 翻译逻辑
+│   │   │   ├── useFileOps.ts      # 文件操作
+│   │   │   └── useKeyboard.ts     # 快捷键
+│   │   │
+│   │   ├── store/             # 状态管理
+│   │   │   ├── useAppStore.ts     # 应用状态
+│   │   │   ├── useEntryStore.ts   # 条目状态
+│   │   │   └── useSettingsStore.ts # 设置状态
+│   │   │
+│   │   ├── types/             # 类型定义
+│   │   │   ├── entry.ts
+│   │   │   ├── translation.ts
+│   │   │   └── tauri.ts
+│   │   │
+│   │   └── utils/             # 工具函数
+│   │       ├── format.ts
+│   │       └── validate.ts
+│   │
 │   ├── public/                # 静态资源
 │   │   └── icon.png
 │   │
-│   ├── src/
-│   │   ├── main/              # Electron 主进程
-│   │   │   ├── index.ts       # 主进程入口
-│   │   │   ├── ipc/           # IPC 通信
-│   │   │   │   ├── translator.ts  # 翻译 IPC
-│   │   │   │   ├── file.ts        # 文件操作 IPC
-│   │   │   │   └── config.ts      # 配置 IPC
-│   │   │   ├── services/      # 服务层
-│   │   │   │   ├── python-bridge.ts  # Python 桥接
-│   │   │   │   └── po-parser.ts     # PO 文件解析
-│   │   │   └── window.ts      # 窗口管理
-│   │   │
-│   │   ├── renderer/          # React 渲染进程
-│   │   │   ├── App.tsx        # 应用根组件
-│   │   │   ├── main.tsx       # 渲染进程入口
-│   │   │   │
-│   │   │   ├── components/    # UI 组件
-│   │   │   │   ├── Layout/
-│   │   │   │   │   ├── AppLayout.tsx      # 主布局
-│   │   │   │   │   ├── MenuBar.tsx        # 菜单栏
-│   │   │   │   │   ├── ToolBar.tsx        # 工具栏
-│   │   │   │   │   └── StatusBar.tsx      # 状态栏
-│   │   │   │   │
-│   │   │   │   ├── EntryList/
-│   │   │   │   │   ├── EntryList.tsx      # 条目列表
-│   │   │   │   │   ├── EntryItem.tsx      # 单个条目
-│   │   │   │   │   └── FilterBar.tsx      # 过滤器
-│   │   │   │   │
-│   │   │   │   ├── Editor/
-│   │   │   │   │   ├── EditorPane.tsx     # 编辑器面板
-│   │   │   │   │   ├── SourceText.tsx     # 原文显示
-│   │   │   │   │   ├── TranslationEditor.tsx  # 译文编辑
-│   │   │   │   │   └── ActionButtons.tsx  # 操作按钮
-│   │   │   │   │
-│   │   │   │   ├── Settings/
-│   │   │   │   │   └── SettingsModal.tsx  # 设置对话框
-│   │   │   │   │
-│   │   │   │   └── Common/
-│   │   │   │       ├── LoadingSpinner.tsx
-│   │   │   │       └── ProgressBar.tsx
-│   │   │   │
-│   │   │   ├── hooks/         # 自定义 Hooks
-│   │   │   │   ├── useTranslator.ts   # 翻译逻辑
-│   │   │   │   ├── useFileOps.ts      # 文件操作
-│   │   │   │   └── useKeyboard.ts     # 快捷键
-│   │   │   │
-│   │   │   ├── store/         # 状态管理
-│   │   │   │   ├── useAppStore.ts     # 应用状态
-│   │   │   │   ├── useEntryStore.ts   # 条目状态
-│   │   │   │   └── useSettingsStore.ts # 设置状态
-│   │   │   │
-│   │   │   ├── types/         # 类型定义
-│   │   │   │   ├── entry.ts
-│   │   │   │   ├── translation.ts
-│   │   │   │   └── ipc.ts
-│   │   │   │
-│   │   │   └── utils/         # 工具函数
-│   │   │       ├── format.ts
-│   │   │       └── validate.ts
-│   │   │
-│   │   └── preload/           # 预加载脚本
-│   │       └── index.ts
-│   │
 │   ├── package.json
 │   ├── tsconfig.json
-│   ├── vite.config.ts
-│   └── electron-builder.json
+│   └── vite.config.ts
 │
 ├── src/                       # Python 后端（保持原有）
 ├── tools/
@@ -190,7 +198,7 @@ ue-po-ai-translator/
 ```mermaid
 graph LR
 A[启动应用] --> B[加载配置]
-B --> C[初始化主进程]
+B --> C[初始化 Tauri 后端]
 C --> D[创建窗口]
 D --> E[渲染 React UI]
 E --> F[等待用户操作]
@@ -202,13 +210,13 @@ E --> F[等待用户操作]
 // 用户操作
 用户点击 [打开] 
   ↓
-前端调用: ipcRenderer.invoke('file:open')
+前端调用: invoke('file:open')
   ↓
-主进程: 显示文件选择对话框
+Tauri 后端: 显示文件选择对话框
   ↓
-主进程: 调用 Python 解析 PO 文件
+Tauri 后端: 调用 Python 解析 PO 文件
   ↓
-主进程: 返回解析结果
+Tauri 后端: 返回解析结果
   ↓
 前端: 更新 EntryStore
   ↓
@@ -223,11 +231,11 @@ E --> F[等待用户操作]
   ↓
 前端: 发送翻译请求 + 监听进度
   ↓
-主进程: 启动 Python 翻译脚本
+Tauri 后端: 启动 Python 翻译脚本
   ↓
 Python: 逐条翻译并发送进度事件
   ↓
-主进程: 转发进度 → 渲染进程
+Tauri 后端: 转发进度 → 前端
   ↓
 前端: 实时更新条目状态
   ↓
@@ -410,113 +418,144 @@ const EditorPane: React.FC<EditorPaneProps> = ({
 
 ### 4. Python Bridge（Python 桥接）
 
-```typescript
-// main/services/python-bridge.ts
-import { spawn } from 'child_process';
-import path from 'path';
+```rust
+// src-tauri/src/services/python_bridge.rs
+use std::process::{Command, Stdio};
+use std::io::{BufRead, BufReader, Write};
+use serde_json;
+use tauri::State;
 
-class PythonBridge {
-  private pythonPath: string;
-  private scriptPath: string;
-  
-  constructor() {
-    // 开发环境使用系统 Python，生产环境使用打包的 Python
-    this.pythonPath = process.env.NODE_ENV === 'production'
-      ? path.join(process.resourcesPath, 'python', 'python.exe')
-      : 'python';
-    
-    this.scriptPath = path.join(__dirname, '..', '..', 'src');
-  }
-  
-  /**
-   * 解析 PO 文件
-   */
-  async parsePOFile(filePath: string): Promise<Entry[]> {
-    return this.runScript('parse_po.py', [filePath]);
-  }
-  
-  /**
-   * 翻译单条
-   */
-  async translateEntry(
-    text: string, 
-    apiKey: string,
-    onProgress?: (progress: number) => void
-  ): Promise<string> {
-    return this.runScript('translate_single.py', [text, apiKey], onProgress);
-  }
-  
-  /**
-   * 批量翻译（实时进度）
-   */
-  async translateBatch(
-    texts: string[],
-    apiKey: string,
-    onProgress: (index: number, translation: string) => void
-  ): Promise<void> {
-    const process = spawn(this.pythonPath, [
-      path.join(this.scriptPath, 'batch_translate.py'),
-      '--api-key', apiKey,
-      '--stdin'
-    ]);
-    
-    // 发送待翻译文本
-    process.stdin.write(JSON.stringify(texts));
-    process.stdin.end();
-    
-    // 监听实时输出
-    process.stdout.on('data', (data) => {
-      const result = JSON.parse(data.toString());
-      onProgress(result.index, result.translation);
-    });
-    
-    return new Promise((resolve, reject) => {
-      process.on('close', (code) => {
-        code === 0 ? resolve() : reject(new Error('Translation failed'));
-      });
-    });
-  }
-  
-  private runScript(
-    scriptName: string, 
-    args: string[],
-    onProgress?: (progress: number) => void
-  ): Promise<any> {
-    return new Promise((resolve, reject) => {
-      const process = spawn(this.pythonPath, [
-        path.join(this.scriptPath, scriptName),
-        ...args
-      ]);
-      
-      let output = '';
-      
-      process.stdout.on('data', (data) => {
-        output += data.toString();
-        if (onProgress) {
-          // 解析进度信息
-          const match = output.match(/PROGRESS:(\d+)/);
-          if (match) {
-            onProgress(parseInt(match[1]));
-          }
-        }
-      });
-      
-      process.on('close', (code) => {
-        if (code === 0) {
-          try {
-            resolve(JSON.parse(output));
-          } catch (e) {
-            resolve(output);
-          }
-        } else {
-          reject(new Error(`Python script exited with code ${code}`));
-        }
-      });
-    });
-  }
+pub struct PythonBridge {
+    python_path: String,
+    script_path: String,
 }
 
-export default new PythonBridge();
+impl PythonBridge {
+    pub fn new() -> Self {
+        Self {
+            // 开发环境使用系统 Python，生产环境使用打包的 Python
+            python_path: if cfg!(debug_assertions) {
+                "python".to_string()
+            } else {
+                "python".to_string() // 生产环境需要配置正确的 Python 路径
+            },
+            script_path: "../src".to_string(),
+        }
+    }
+    
+    /// 解析 PO 文件
+    pub async fn parse_po_file(&self, file_path: &str) -> Result<Vec<Entry>, String> {
+        let output = Command::new(&self.python_path)
+            .args(&[
+                &format!("{}/parse_po.py", self.script_path),
+                file_path
+            ])
+            .output()
+            .map_err(|e| format!("Failed to execute Python script: {}", e))?;
+        
+        if output.status.success() {
+            let result: Vec<Entry> = serde_json::from_slice(&output.stdout)
+                .map_err(|e| format!("Failed to parse JSON: {}", e))?;
+            Ok(result)
+        } else {
+            Err(format!("Python script failed: {}", String::from_utf8_lossy(&output.stderr)))
+        }
+    }
+    
+    /// 翻译单条
+    pub async fn translate_entry(
+        &self,
+        text: &str,
+        api_key: &str,
+    ) -> Result<String, String> {
+        let output = Command::new(&self.python_path)
+            .args(&[
+                &format!("{}/translate_single.py", self.script_path),
+                text,
+                api_key
+            ])
+            .output()
+            .map_err(|e| format!("Failed to execute Python script: {}", e))?;
+        
+        if output.status.success() {
+            Ok(String::from_utf8_lossy(&output.stdout).trim().to_string())
+        } else {
+            Err(format!("Python script failed: {}", String::from_utf8_lossy(&output.stderr)))
+        }
+    }
+    
+    /// 批量翻译（实时进度）
+    pub async fn translate_batch(
+        &self,
+        texts: Vec<String>,
+        api_key: &str,
+        on_progress: impl Fn(usize, String) + Send + Sync + 'static,
+    ) -> Result<(), String> {
+        let mut child = Command::new(&self.python_path)
+            .args(&[
+                &format!("{}/batch_translate.py", self.script_path),
+                "--api-key", api_key,
+                "--stdin"
+            ])
+            .stdin(Stdio::piped())
+            .stdout(Stdio::piped())
+            .stderr(Stdio::piped())
+            .spawn()
+            .map_err(|e| format!("Failed to spawn Python process: {}", e))?;
+        
+        // 发送待翻译文本
+        if let Some(stdin) = child.stdin.as_mut() {
+            let input = serde_json::to_string(&texts)
+                .map_err(|e| format!("Failed to serialize input: {}", e))?;
+            stdin.write_all(input.as_bytes())
+                .map_err(|e| format!("Failed to write to stdin: {}", e))?;
+        }
+        
+        // 监听实时输出
+        if let Some(stdout) = child.stdout.take() {
+            let reader = BufReader::new(stdout);
+            for line in reader.lines() {
+                if let Ok(line) = line {
+                    if let Ok(result) = serde_json::from_str::<serde_json::Value>(&line) {
+                        if let (Some(index), Some(translation)) = (
+                            result.get("index").and_then(|v| v.as_u64()),
+                            result.get("translation").and_then(|v| v.as_str())
+                        ) {
+                            on_progress(index as usize, translation.to_string());
+                        }
+                    }
+                }
+            }
+        }
+        
+        let status = child.wait()
+            .map_err(|e| format!("Failed to wait for Python process: {}", e))?;
+        
+        if status.success() {
+            Ok(())
+        } else {
+            Err("Python translation process failed".to_string())
+        }
+    }
+}
+
+// Tauri 命令
+#[tauri::command]
+pub async fn parse_po_file(
+    file_path: String,
+    python_bridge: State<'_, PythonBridge>
+) -> Result<Vec<Entry>, String> {
+    python_bridge.parse_po_file(&file_path).await
+}
+
+#[tauri::command]
+pub async fn translate_entry(
+    text: String,
+    api_key: String,
+    python_bridge: State<'_, PythonBridge>
+) -> Result<String, String> {
+    python_bridge.translate_entry(&text, &api_key).await
+}
 ```
 
 ---
@@ -556,7 +595,7 @@ const shortcuts = {
 ## 📅 开发计划
 
 ### Phase 1: 基础框架（1周）
-- [ ] 初始化 Electron + React 项目
+- [ ] 初始化 Tauri + React 项目
 - [ ] 配置 TypeScript + Vite
 - [ ] 搭建基础 UI 布局
 - [ ] 实现基本的菜单和工具栏
@@ -605,20 +644,19 @@ const shortcuts = {
 ### 初始化项目
 
 ```bash
-# 创建 electron-app 目录
-mkdir electron-app
-cd electron-app
+# 创建 tauri-app 目录
+mkdir tauri-app
+cd tauri-app
 
-# 初始化项目
-npm create vite@latest . -- --template react-ts
+# 初始化 Tauri 项目
+npm create tauri-app@latest . -- --template react-ts
 
 # 安装依赖
-npm install electron electron-builder -D
 npm install antd zustand immer
 npm install @types/node -D
 
-# 配置 Electron
-npm install vite-plugin-electron -D
+# 安装 Tauri CLI
+npm install @tauri-apps/cli -D
 ```
 
 ### 项目配置文件
@@ -629,13 +667,13 @@ npm install vite-plugin-electron -D
 
 ## 📚 参考资源
 
-- [Electron 官方文档](https://www.electronjs.org/)
+- [Tauri 官方文档](https://tauri.app/)
 - [React 官方文档](https://react.dev/)
 - [Ant Design](https://ant.design/)
 - [Zustand](https://github.com/pmndrs/zustand)
-- [Vite Plugin Electron](https://github.com/electron-vite/vite-plugin-electron)
+- [Rust 官方文档](https://doc.rust-lang.org/)
 
 ---
 
-**下一步：** 创建详细的组件设计文档和 IPC 通信协议
+**下一步：** 创建详细的组件设计文档和 Tauri 命令协议
 
