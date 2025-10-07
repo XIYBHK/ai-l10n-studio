@@ -28,7 +28,13 @@ fn main() {
             get_provider_configs,
             validate_config,
             get_app_logs,
-            clear_app_logs
+            clear_app_logs,
+            // 术语库相关
+            get_term_library,
+            add_term_to_library,
+            remove_term_from_library,
+            generate_style_summary,
+            should_update_style_summary
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

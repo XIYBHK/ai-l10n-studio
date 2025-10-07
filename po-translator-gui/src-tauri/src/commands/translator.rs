@@ -5,7 +5,7 @@ use tauri::Manager;
 // use tauri::State;
 
 use crate::services::{
-    AITranslator, BatchTranslator, ConfigManager, POParser, TranslationMemory, TranslationReport,
+    AITranslator, BatchTranslator, ConfigManager, POParser, TermLibrary, TranslationMemory, TranslationReport,
 };
 use crate::utils::paths::get_translation_memory_path;
 
@@ -338,4 +338,94 @@ pub async fn get_app_logs() -> Result<Vec<String>, String> {
 pub async fn clear_app_logs() -> Result<(), String> {
     crate::utils::logger::clear_logs();
     Ok(())
+}
+
+// ==================== 术语库相关命令 ====================
+
+/// 获取术语库路径
+fn get_term_library_path() -> std::path::PathBuf {
+    let data_dir = std::env::current_exe()
+        .ok()
+        .and_then(|p| p.parent().map(|p| p.to_path_buf()))
+        .unwrap_or_else(|| std::path::PathBuf::from("."));
+    
+    data_dir.join("data").join("term_library.json")
+}
+
+/// 获取术语库
+#[tauri::command]
+pub async fn get_term_library() -> Result<TermLibrary, String> {
+    let path = get_term_library_path();
+    TermLibrary::load_from_file(path).map_err(|e| e.to_string())
+}
+
+/// 添加术语到术语库
+#[tauri::command]
+pub async fn add_term_to_library(
+    source: String,
+    user_translation: String,
+    ai_translation: String,
+    context: Option<String>,
+) -> Result<(), String> {
+    let path = get_term_library_path();
+    let mut library = TermLibrary::load_from_file(&path).map_err(|e| e.to_string())?;
+    
+    library
+        .add_term(source, user_translation, ai_translation, context)
+        .map_err(|e| e.to_string())?;
+    
+    library.save_to_file(&path).map_err(|e| e.to_string())?;
+    
+    Ok(())
+}
+
+/// 从术语库删除术语
+#[tauri::command]
+pub async fn remove_term_from_library(source: String) -> Result<(), String> {
+    let path = get_term_library_path();
+    let mut library = TermLibrary::load_from_file(&path).map_err(|e| e.to_string())?;
+    
+    library.remove_term(&source).map_err(|e| e.to_string())?;
+    
+    library.save_to_file(&path).map_err(|e| e.to_string())?;
+    
+    Ok(())
+}
+
+/// 生成风格总结（调用AI）
+#[tauri::command]
+pub async fn generate_style_summary(api_key: String) -> Result<String, String> {
+    let path = get_term_library_path();
+    let mut library = TermLibrary::load_from_file(&path).map_err(|e| e.to_string())?;
+    
+    if library.terms.is_empty() {
+        return Err("术语库为空，无法生成风格总结".to_string());
+    }
+    
+    // 构建分析提示
+    let analysis_prompt = library.build_analysis_prompt();
+    
+    // 调用AI生成总结
+    let mut translator = AITranslator::new(api_key, None, false).map_err(|e| e.to_string())?;
+    let summary = translator
+        .translate_batch(vec![analysis_prompt], None)
+        .await
+        .map_err(|e| e.to_string())?
+        .into_iter()
+        .next()
+        .ok_or_else(|| "生成风格总结失败".to_string())?;
+    
+    // 更新术语库
+    library.update_style_summary(summary.clone());
+    library.save_to_file(&path).map_err(|e| e.to_string())?;
+    
+    Ok(summary)
+}
+
+/// 检查是否需要更新风格总结
+#[tauri::command]
+pub async fn should_update_style_summary() -> Result<bool, String> {
+    let path = get_term_library_path();
+    let library = TermLibrary::load_from_file(&path).map_err(|e| e.to_string())?;
+    Ok(library.should_update_style_summary())
 }
