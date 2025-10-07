@@ -4,6 +4,7 @@ use serde::{Deserialize, Serialize};
 // use std::collections::HashMap;
 
 use crate::services::translation_memory::TranslationMemory;
+use crate::services::term_library::TermLibrary;
 use crate::utils::common::is_simple_phrase;
 use crate::utils::paths::get_translation_memory_path;
 
@@ -75,7 +76,17 @@ impl AITranslator {
     pub fn new(api_key: String, base_url: Option<String>, use_tm: bool) -> Result<Self> {
         let client = HttpClient::new();
         let base_url = base_url.unwrap_or_else(|| "https://api.moonshot.cn/v1".to_string());
-        let system_prompt = Self::get_system_prompt();
+        
+        // 加载术语库并构建系统提示词
+        let term_library_path = std::env::current_exe()
+            .ok()
+            .and_then(|p| p.parent().map(|p| p.to_path_buf()))
+            .unwrap_or_else(|| std::path::PathBuf::from("."))
+            .join("data")
+            .join("term_library.json");
+        
+        let term_library = TermLibrary::load_from_file(&term_library_path).ok();
+        let system_prompt = Self::get_system_prompt(term_library.as_ref());
 
         // 从文件加载TM（合并内置短语和已保存的翻译）
         let tm = if use_tm {
@@ -112,8 +123,8 @@ impl AITranslator {
         })
     }
 
-    fn get_system_prompt() -> String {
-        r#"你是一位专业的游戏开发和Unreal Engine本地化专家，精通中英文翻译。
+    fn get_system_prompt(term_library: Option<&TermLibrary>) -> String {
+        let base_prompt = r#"你是一位专业的游戏开发和Unreal Engine本地化专家，精通中英文翻译。
 
 【翻译规则】
 1. 术语保留英文: Actor/Blueprint/Component/Transform/Mesh/Material/Widget/Collision/Array/Float/Integer
@@ -121,9 +132,21 @@ impl AITranslator {
 3. Category翻译: 保持XTools等命名空间和|符号, 如 XTools|Sort|Actor → XTools|排序|Actor
 4. 格式保留: 必须保持|、{}、%%、[]、()、\n、\t、{0}、{1}等所有特殊符号和占位符
 5. 翻译风格: 准确(信)、流畅(达)、专业(雅), 无多余空格
-6. 特殊表达: in-place→原地, by value→按值, True→为True, False→为False
+6. 特殊表达: in-place→原地, by value→按值, True→为True, False→为False"#;
 
-请保持翻译风格一致，参考之前的翻译术语。"#.to_string()
+        // 如果有术语库的风格总结，注入到提示词中
+        if let Some(library) = term_library {
+            if let Some(style_summary) = &library.style_summary {
+                return format!(
+                    "{}\n\n【用户翻译风格偏好】（基于{}条术语学习）\n{}\n\n请参考以上风格指南进行翻译，保持一致性。",
+                    base_prompt,
+                    style_summary.based_on_terms,
+                    style_summary.prompt
+                );
+            }
+        }
+
+        format!("{}\n\n请保持翻译风格一致，参考之前的翻译术语。", base_prompt)
     }
 
     pub async fn translate_batch_with_callbacks(

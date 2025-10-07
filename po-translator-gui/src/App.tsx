@@ -41,6 +41,8 @@ function App() {
   const [translationStats, setTranslationStats] = useState<TranslationStats | null>(null);
   const [leftWidth, setLeftWidth] = useState(35); // 左侧栏宽度百分比
   const [isResizing, setIsResizing] = useState(false);
+  // 存储AI原译文，用于术语检测对比（key: 条目索引, value: AI译文）
+  const [aiTranslations, setAiTranslations] = useState<Map<number, string>>(new Map());
   
   const { themeConfig, algorithm, toggleTheme, isDark, colors } = useTheme();
 
@@ -185,6 +187,9 @@ function App() {
               msgstr: translation, 
               needsReview: true  // 标记为待确认
             });
+            
+            // 存储AI译文用于后续术语检测
+            setAiTranslations(prev => new Map(prev).set(entryIndex, translation));
             
             // 更新进度条
             completedCount++;
@@ -446,6 +451,8 @@ function App() {
           <EditorPane
             entry={currentEntry}
             onEntryUpdate={updateEntry}
+            aiTranslation={currentEntry ? aiTranslations.get(entries.indexOf(currentEntry)) : undefined}
+            apiKey={apiKey}
           />
         </div>
 

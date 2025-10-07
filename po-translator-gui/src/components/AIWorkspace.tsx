@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Card, Statistic, Row, Col, Progress, Tag, Divider, Button, Popconfirm } from 'antd';
+import { Card, Statistic, Row, Col, Progress, Tag, Divider, Button, Popconfirm, Collapse } from 'antd';
 import { 
   ThunderboltOutlined, 
   DatabaseOutlined, 
@@ -8,12 +8,15 @@ import {
   DollarOutlined,
   CheckCircleOutlined,
   SettingOutlined,
-  ReloadOutlined
+  ReloadOutlined,
+  BookOutlined
 } from '@ant-design/icons';
 import { TranslationStats } from '../types/tauri';
+import { TermLibrary } from '../types/termLibrary';
 import { MemoryManager } from './MemoryManager';
 import { useTheme } from '../hooks/useTheme';
 import { useAppStore } from '../store/useAppStore';
+import { invoke } from '@tauri-apps/api/tauri';
 
 interface AIWorkspaceProps {
   stats: TranslationStats | null;
@@ -23,10 +26,24 @@ interface AIWorkspaceProps {
 
 export const AIWorkspace: React.FC<AIWorkspaceProps> = ({ stats, isTranslating, onResetStats }) => {
   const [memoryManagerVisible, setMemoryManagerVisible] = useState(false);
+  const [termLibrary, setTermLibrary] = useState<TermLibrary | null>(null);
   const { colors } = useTheme();
   
   // 从 store 读取累计统计
   const { cumulativeStats, updateCumulativeStats, resetCumulativeStats } = useAppStore();
+
+  // 加载术语库
+  useEffect(() => {
+    const loadTermLibrary = async () => {
+      try {
+        const library = await invoke<TermLibrary>('get_term_library');
+        setTermLibrary(library);
+      } catch (error) {
+        console.error('加载术语库失败:', error);
+      }
+    };
+    loadTermLibrary();
+  }, []);
   
   // 当stats更新时累加到cumulative（使用store）
   useEffect(() => {
@@ -307,6 +324,47 @@ export const AIWorkspace: React.FC<AIWorkspaceProps> = ({ stats, isTranslating, 
         {renderCumulativeStats()}
         
         <Divider style={{ margin: '12px 0' }} />
+        
+        {/* 风格总结展示 */}
+        {termLibrary && termLibrary.style_summary && (
+          <>
+            <Collapse
+              ghost
+              size="small"
+              style={{ marginBottom: 12 }}
+              items={[
+                {
+                  key: 'style',
+                  label: (
+                    <span style={{ fontSize: '12px', fontWeight: 600 }}>
+                      <BookOutlined /> 学习到的翻译风格 ({termLibrary.style_summary.based_on_terms}条术语)
+                    </span>
+                  ),
+                  children: (
+                    <div style={{ 
+                      padding: '8px 12px',
+                      background: colors.bgTertiary,
+                      borderRadius: '4px',
+                      fontSize: '12px',
+                      lineHeight: '1.6',
+                      color: colors.textSecondary
+                    }}>
+                      {termLibrary.style_summary.prompt}
+                      <div style={{ 
+                        marginTop: 8, 
+                        fontSize: '11px', 
+                        color: colors.textTertiary 
+                      }}>
+                        版本 v{termLibrary.style_summary.version} · 最后更新: {new Date(termLibrary.style_summary.generated_at).toLocaleString('zh-CN')}
+                      </div>
+                    </div>
+                  ),
+                },
+              ]}
+            />
+            <Divider style={{ margin: '12px 0' }} />
+          </>
+        )}
         
         {/* 本次翻译 - 详细样式 */}
         {renderCurrentStats()}
