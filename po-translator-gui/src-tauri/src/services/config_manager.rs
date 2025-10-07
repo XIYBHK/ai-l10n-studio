@@ -3,8 +3,13 @@ use serde::{Deserialize, Serialize};
 use std::fs;
 use std::path::{Path, PathBuf};
 
+use crate::services::ai_translator::AIConfig;
+
+// ========== Phase 1: 配置管理扩展 ==========
+
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct AppConfig {
+    // 原有字段（保持向后兼容）
     pub api_key: String,
     pub provider: String,
     pub model: String,
@@ -16,6 +21,16 @@ pub struct AppConfig {
     pub batch_size: usize,
     pub max_concurrent: usize,
     pub timeout_seconds: u64,
+    
+    // Phase 1 新增字段
+    #[serde(default)]
+    pub ai_configs: Vec<AIConfig>,          // 多个AI配置
+    #[serde(default)]
+    pub active_config_index: Option<usize>, // 当前启用的配置索引
+    
+    // Phase 3 新增字段
+    #[serde(default)]
+    pub system_prompt: Option<String>,      // 自定义系统提示词（None使用默认）
 }
 
 impl Default for AppConfig {
@@ -35,6 +50,11 @@ impl Default for AppConfig {
             batch_size: 10,
             max_concurrent: 3,
             timeout_seconds: 30,
+            // Phase 1 新增字段默认值
+            ai_configs: Vec::new(),
+            active_config_index: None,
+            // Phase 3 新增字段默认值
+            system_prompt: None,  // None表示使用内置默认提示词
         }
     }
 }
@@ -59,6 +79,83 @@ impl AppConfig {
         path.push(".po-translator");
         path.push("translation_memory.json");
         path.to_string_lossy().to_string()
+    }
+
+    // ========== Phase 1: AI 配置管理方法 ==========
+    
+    /// 获取当前启用的AI配置
+    pub fn get_active_ai_config(&self) -> Option<&AIConfig> {
+        self.active_config_index
+            .and_then(|index| self.ai_configs.get(index))
+    }
+    
+    /// 获取当前启用的AI配置（可变）
+    pub fn get_active_ai_config_mut(&mut self) -> Option<&mut AIConfig> {
+        if let Some(index) = self.active_config_index {
+            self.ai_configs.get_mut(index)
+        } else {
+            None
+        }
+    }
+    
+    /// 添加AI配置
+    pub fn add_ai_config(&mut self, config: AIConfig) {
+        self.ai_configs.push(config);
+        // 如果是第一个配置，自动设为启用
+        if self.ai_configs.len() == 1 {
+            self.active_config_index = Some(0);
+        }
+    }
+    
+    /// 更新AI配置
+    pub fn update_ai_config(&mut self, index: usize, config: AIConfig) -> Result<()> {
+        if index < self.ai_configs.len() {
+            self.ai_configs[index] = config;
+            Ok(())
+        } else {
+            Err(anyhow!("配置索引超出范围: {}", index))
+        }
+    }
+    
+    /// 删除AI配置
+    pub fn remove_ai_config(&mut self, index: usize) -> Result<()> {
+        if index >= self.ai_configs.len() {
+            return Err(anyhow!("配置索引超出范围: {}", index));
+        }
+        
+        self.ai_configs.remove(index);
+        
+        // 调整启用索引
+        if let Some(active_index) = self.active_config_index {
+            if active_index == index {
+                // 删除的是当前启用的，设为None或第一个
+                self.active_config_index = if self.ai_configs.is_empty() {
+                    None
+                } else {
+                    Some(0)
+                };
+            } else if active_index > index {
+                // 启用索引在删除索引后面，需要调整
+                self.active_config_index = Some(active_index - 1);
+            }
+        }
+        
+        Ok(())
+    }
+    
+    /// 设置启用的AI配置
+    pub fn set_active_ai_config(&mut self, index: usize) -> Result<()> {
+        if index < self.ai_configs.len() {
+            self.active_config_index = Some(index);
+            Ok(())
+        } else {
+            Err(anyhow!("配置索引超出范围: {}", index))
+        }
+    }
+    
+    /// 获取所有AI配置
+    pub fn get_all_ai_configs(&self) -> &Vec<AIConfig> {
+        &self.ai_configs
     }
 }
 
@@ -120,6 +217,10 @@ impl ConfigManager {
 
     pub fn get_config(&self) -> &AppConfig {
         &self.config
+    }
+    
+    pub fn get_config_mut(&mut self) -> &mut AppConfig {
+        &mut self.config
     }
 
     pub fn update_config<F>(&mut self, updater: F) -> Result<()>

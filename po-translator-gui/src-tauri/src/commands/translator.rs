@@ -9,6 +9,15 @@ use crate::services::{
 };
 use crate::utils::paths::get_translation_memory_path;
 
+// ========== Phase 3: 辅助函数 - 获取自定义系统提示词 ==========
+
+/// 从配置中获取自定义系统提示词
+fn get_custom_system_prompt() -> Option<String> {
+    ConfigManager::new(None)
+        .ok()
+        .and_then(|manager| manager.get_config().system_prompt.clone())
+}
+
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct POEntry {
     pub comments: Vec<String>,
@@ -34,6 +43,16 @@ pub struct TranslationStats {
 pub struct TranslationPair {
     pub original: String,
     pub translation: String,
+}
+
+// Phase 7: Contextual Refine 请求结构体
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct ContextualRefineRequest {
+    pub msgid: String,
+    pub msgctxt: Option<String>,
+    pub comment: Option<String>,
+    pub previous_entry: Option<String>,
+    pub next_entry: Option<String>,
 }
 
 // TokenStats 已从 services 模块导入
@@ -64,8 +83,9 @@ pub async fn parse_po_file(file_path: String) -> Result<Vec<POEntry>, String> {
 }
 
 #[tauri::command]
-pub async fn translate_entry(text: String, api_key: String) -> Result<String, String> {
-    let mut translator = AITranslator::new(api_key, None, true).map_err(|e| e.to_string())?;
+pub async fn translate_entry(text: String, api_key: String, target_language: Option<String>) -> Result<String, String> {
+    let custom_prompt = get_custom_system_prompt();
+    let mut translator = AITranslator::new(api_key, None, true, custom_prompt.as_deref(), target_language).map_err(|e| e.to_string())?;
     let result = translator
         .translate_batch(vec![text], None)
         .await
@@ -87,8 +107,9 @@ pub struct BatchResult {
 }
 
 #[tauri::command]
-pub async fn translate_batch(texts: Vec<String>, api_key: String) -> Result<Vec<String>, String> {
-    let mut translator = AITranslator::new(api_key, None, true).map_err(|e| e.to_string())?;
+pub async fn translate_batch(texts: Vec<String>, api_key: String, target_language: Option<String>) -> Result<Vec<String>, String> {
+    let custom_prompt = get_custom_system_prompt();
+    let mut translator = AITranslator::new(api_key, None, true, custom_prompt.as_deref(), target_language).map_err(|e| e.to_string())?;
     let result = translator
         .translate_batch(texts, None)
         .await
@@ -105,8 +126,10 @@ pub async fn translate_batch_with_stats(
     app_handle: tauri::AppHandle,
     texts: Vec<String>,
     api_key: String,
+    target_language: Option<String>,
 ) -> Result<BatchResult, String> {
-    let mut translator = AITranslator::new(api_key, None, true).map_err(|e| e.to_string())?;
+    let custom_prompt = get_custom_system_prompt();
+    let mut translator = AITranslator::new(api_key, None, true, custom_prompt.as_deref(), target_language).map_err(|e| e.to_string())?;
     
     // 创建进度回调，实时推送翻译结果和统计信息
     let progress_callback: Option<Box<dyn Fn(usize, String) + Send + Sync>> = {
@@ -408,8 +431,8 @@ pub async fn generate_style_summary(api_key: String) -> Result<String, String> {
     crate::app_log!("[风格总结] 提示词已构建，长度: {} 字符", analysis_prompt.len());
     crate::app_log!("[风格总结] 完整提示词内容:\n{}", analysis_prompt);
     
-    // 调用AI生成总结
-    let mut translator = AITranslator::new(api_key, None, false).map_err(|e| e.to_string())?;
+    // 调用AI生成总结（风格总结不使用自定义提示词和目标语言，需要精确控制）
+    let mut translator = AITranslator::new(api_key, None, false, None, None).map_err(|e| e.to_string())?;
     let summary = translator
         .translate_batch(vec![analysis_prompt], None)
         .await
@@ -434,6 +457,156 @@ pub async fn generate_style_summary(api_key: String) -> Result<String, String> {
     crate::app_log!("[风格总结] 风格总结已保存 (v{})", library.style_summary.as_ref().map(|s| s.version).unwrap_or(0));
     
     Ok(summary)
+}
+
+// ========== Phase 7: Contextual Refine ==========
+
+/// 构建精翻上下文提示词
+fn build_contextual_prompt(
+    request: &ContextualRefineRequest, 
+    target_language: &str
+) -> String {
+    let mut context_parts = Vec::new();
+    
+    // 1. 添加上下文信息（如果有）
+    if let Some(msgctxt) = &request.msgctxt {
+        if !msgctxt.is_empty() {
+            context_parts.push(format!("【上下文】: {}", msgctxt));
+        }
+    }
+    
+    // 2. 添加注释信息（如果有）
+    if let Some(comment) = &request.comment {
+        if !comment.is_empty() {
+            context_parts.push(format!("【开发者注释】: {}", comment));
+        }
+    }
+    
+    // 3. 添加前后条目信息（提供语境连贯性）
+    if let Some(prev) = &request.previous_entry {
+        if !prev.is_empty() {
+            context_parts.push(format!("【前一条译文】: {}", prev));
+        }
+    }
+    if let Some(next) = &request.next_entry {
+        if !next.is_empty() {
+            context_parts.push(format!("【后一条译文】: {}", next));
+        }
+    }
+    
+    // 4. 目标语言指示
+    let target_lang_instruction = match target_language {
+        "zh-Hans" | "zh-CN" => "翻译成简体中文",
+        "zh-Hant" | "zh-TW" => "翻译成繁体中文",
+        "en" | "en-US" => "Translate to English",
+        "ja" | "ja-JP" => "日本語に翻訳",
+        "ko" | "ko-KR" => "한국어로 번역",
+        "fr" | "fr-FR" => "Traduire en français",
+        "de" | "de-DE" => "Ins Deutsche übersetzen",
+        "es" | "es-ES" => "Traducir al español",
+        "ru" | "ru-RU" => "Перевести на русский",
+        "ar" | "ar-SA" => "ترجم إلى العربية",
+        lang => &format!("Translate to {}", lang),
+    };
+    
+    // 5. 组装完整提示词
+    let mut prompt = String::new();
+    
+    // 添加精翻说明
+    prompt.push_str("这是一条需要精细翻译的文本。请仔细理解以下上下文信息，提供最准确、最符合语境的翻译：\n\n");
+    
+    // 添加所有上下文
+    if !context_parts.is_empty() {
+        for part in &context_parts {
+            prompt.push_str(&format!("{}\n", part));
+        }
+        prompt.push_str("\n");
+    }
+    
+    // 添加待翻译文本
+    prompt.push_str(&format!("【待翻译文本】: {}\n\n", request.msgid));
+    
+    // 添加翻译要求
+    prompt.push_str(&format!("请{}，只返回翻译结果，不要添加任何解释。", target_lang_instruction));
+    
+    prompt
+}
+
+/// Contextual Refine - 携带上下文的精细翻译
+/// 
+/// 用于对待确认条目进行高质量重翻，绕过翻译记忆库，
+/// 充分利用上下文（msgctxt、注释、前后条目）提供更准确的翻译
+#[tauri::command]
+pub async fn contextual_refine(
+    app: tauri::AppHandle,
+    requests: Vec<ContextualRefineRequest>,
+    api_key: String,
+    target_language: String,
+) -> Result<Vec<String>, String> {
+    crate::app_log!("[精翻] 开始精翻，共 {} 条", requests.len());
+    
+    if requests.is_empty() {
+        return Ok(Vec::new());
+    }
+    
+    // 1. 获取配置
+    let config_manager = ConfigManager::new(None).map_err(|e| e.to_string())?;
+    let config = config_manager.get_config();
+    
+    // 2. 获取活动的 AI 配置
+    let base_url = config.get_active_ai_config()
+        .and_then(|c| c.base_url.clone());
+    
+    // 3. 获取系统提示词
+    let custom_prompt = config.system_prompt.clone();
+    
+    // 4. 创建翻译器（关键：use_tm = false，绕过翻译记忆库）
+    let mut translator = AITranslator::new(
+        api_key,
+        base_url,
+        false, // 🔑 绕过翻译记忆库
+        custom_prompt.as_deref(),
+        Some(target_language.clone())
+    ).map_err(|e| {
+        crate::app_log!("[精翻] 创建翻译器失败: {}", e);
+        e.to_string()
+    })?;
+    
+    crate::app_log!("[精翻] 翻译器已创建（已绕过TM）");
+    
+    // 5. 构建所有精翻提示词
+    let prompts: Vec<String> = requests.iter()
+        .map(|req| build_contextual_prompt(req, &target_language))
+        .collect();
+    
+    crate::app_log!("[精翻] 已构建 {} 条精翻提示词", prompts.len());
+    
+    // 6. 发送进度事件：开始
+    let _ = app.emit_all("contextual-refine:start", serde_json::json!({
+        "count": requests.len()
+    }));
+    
+    // 7. 批量翻译
+    let results = translator.translate_batch(prompts, None).await.map_err(|e| {
+        crate::app_log!("[精翻] AI翻译失败: {}", e);
+        
+        // 发送错误事件
+        let _ = app.emit_all("contextual-refine:error", serde_json::json!({
+            "error": e.to_string()
+        }));
+        
+        e.to_string()
+    })?;
+    
+    crate::app_log!("[精翻] 翻译完成，获得 {} 条结果", results.len());
+    
+    // 8. 发送完成事件
+    let _ = app.emit_all("contextual-refine:complete", serde_json::json!({
+        "results": &results,
+        "count": results.len()
+    }));
+    
+    Ok(results)
 }
 
 /// 检查是否需要更新风格总结

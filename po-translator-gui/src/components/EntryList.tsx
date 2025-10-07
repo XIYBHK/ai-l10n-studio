@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { Progress, Button } from 'antd';
-import { CheckOutlined } from '@ant-design/icons';
+import { CheckOutlined, ThunderboltOutlined } from '@ant-design/icons'; // Phase 7: 添加精翻图标
 import { POEntry } from '../types/tauri';
 import { useAppStore } from '../store/useAppStore';
 import { useTheme } from '../hooks/useTheme';
@@ -15,6 +15,7 @@ interface EntryListProps {
   progress: number;
   onEntrySelect: (entry: POEntry) => void;
   onTranslateSelected?: (indices: number[]) => void;
+  onContextualRefine?: (indices: number[]) => void; // Phase 7: 精翻选中的条目
 }
 
 export const EntryList: React.FC<EntryListProps> = ({
@@ -24,6 +25,7 @@ export const EntryList: React.FC<EntryListProps> = ({
   progress,
   onEntrySelect,
   onTranslateSelected,
+  onContextualRefine, // Phase 7
 }) => {
   const { updateEntry } = useAppStore();
   const { colors } = useTheme();
@@ -67,6 +69,14 @@ export const EntryList: React.FC<EntryListProps> = ({
     if (onTranslateSelected) {
       const indices = selectedRowKeys.map(key => key as number);
       onTranslateSelected(indices);
+    }
+  };
+
+  // Phase 7: 精翻已选中条目
+  const handleContextualRefine = () => {
+    if (onContextualRefine) {
+      const indices = selectedRowKeys.map(key => key as number);
+      onContextualRefine(indices);
     }
   };
 
@@ -169,6 +179,22 @@ export const EntryList: React.FC<EntryListProps> = ({
       else if ((event.ctrlKey || event.metaKey) && event.key === 'd') {
         event.preventDefault();
         setSelectedRowKeys([]);
+      }
+      // Phase 7: Ctrl+Shift+R 精翻选中的待确认条目
+      else if ((event.ctrlKey || event.metaKey) && event.shiftKey && event.key === 'R') {
+        event.preventDefault();
+        if (selectedRowKeys.length > 0 && !isTranslating) {
+          // 检查是否有待确认条目
+          const hasNeedsReview = selectedRowKeys.some(key => {
+            const entry = entries[key as number];
+            return entry && getEntryStatus(entry) === 'needs-review';
+          });
+          
+          if (hasNeedsReview) {
+            handleContextualRefine();
+            log.info('快捷键触发精翻', { count: selectedRowKeys.length });
+          }
+        }
       }
     };
 
@@ -399,14 +425,27 @@ export const EntryList: React.FC<EntryListProps> = ({
             return (
               <>
                 {hasNeedsReview && (
-                  <Button 
-                    type="primary" 
-                    size="small" 
-                    onClick={handleConfirmSelected}
-                    icon={<CheckOutlined />}
-                  >
-                    确认已选中
-                  </Button>
+                  <>
+                    <Button 
+                      type="primary" 
+                      size="small" 
+                      onClick={handleConfirmSelected}
+                      icon={<CheckOutlined />}
+                    >
+                      确认已选中
+                    </Button>
+                    {/* Phase 7: 精翻按钮 */}
+                    <Button 
+                      type="default" 
+                      size="small" 
+                      onClick={handleContextualRefine}
+                      icon={<ThunderboltOutlined />}
+                      disabled={isTranslating}
+                      style={{ marginLeft: '8px' }}
+                    >
+                      精翻选中 (Ctrl+Shift+R)
+                    </Button>
+                  </>
                 )}
                 {hasUntranslated && (
                   <Button 

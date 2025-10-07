@@ -90,8 +90,51 @@ export function useTauriEventBridge() {
       );
       unlistenFunctions.push(unlistenFileDrop);
 
+      // Phase 7: 桥接 Contextual Refine 事件
+      const unlistenRefineStart = await listen<{ count: number }>(
+        'contextual-refine:start',
+        (event) => {
+          log.debug('🌉 桥接 Tauri 事件 -> EventDispatcher', {
+            event: 'contextual-refine:start',
+            payload: event.payload
+          });
+          eventDispatcher.emit('contextual-refine:start', event.payload);
+        }
+      );
+      unlistenFunctions.push(unlistenRefineStart);
+
+      const unlistenRefineComplete = await listen<{ results: string[]; count: number }>(
+        'contextual-refine:complete',
+        (event) => {
+          log.debug('🌉 桥接 Tauri 事件 -> EventDispatcher', {
+            event: 'contextual-refine:complete',
+            payload: event.payload
+          });
+          eventDispatcher.emit('contextual-refine:complete', event.payload);
+        }
+      );
+      unlistenFunctions.push(unlistenRefineComplete);
+
+      const unlistenRefineError = await listen<{ error: string }>(
+        'contextual-refine:error',
+        (event) => {
+          log.debug('🌉 桥接 Tauri 事件 -> EventDispatcher', {
+            event: 'contextual-refine:error',
+            payload: event.payload
+          });
+          eventDispatcher.emit('contextual-refine:error', event.payload);
+        }
+      );
+      unlistenFunctions.push(unlistenRefineError);
+
       log.info('✅ Tauri 事件桥接已建立', { 
-        bridgedEvents: ['translation-progress', 'translation-stats-update'] 
+        bridgedEvents: [
+          'translation-progress', 
+          'translation-stats-update',
+          'contextual-refine:start',
+          'contextual-refine:complete',
+          'contextual-refine:error'
+        ] 
       });
     };
 

@@ -204,33 +204,266 @@ export const logApi = {
  */
 export const translatorApi = {
   /**
-   * 翻译单个条目
+   * 翻译单个条目（Phase 5: 支持目标语言）
    */
-  async translateEntry(text: string, apiKey: string) {
-    return invoke<string>('translate_entry', { text, apiKey }, {
+  async translateEntry(text: string, apiKey: string, targetLanguage?: string) {
+    return invoke<string>('translate_entry', { 
+      text, 
+      apiKey, 
+      targetLanguage: targetLanguage || null 
+    }, {
       errorMessage: '翻译失败',
       silent: false
     });
   },
 
   /**
-   * 批量翻译（简单版本，不带统计）
+   * 批量翻译（简单版本，不带统计，Phase 5: 支持目标语言）
    */
-  async translateBatch(texts: string[], apiKey: string) {
-    return invoke<string[]>('translate_batch', { texts, apiKey }, {
+  async translateBatch(texts: string[], apiKey: string, targetLanguage?: string) {
+    return invoke<string[]>('translate_batch', { 
+      texts, 
+      apiKey,
+      targetLanguage: targetLanguage || null
+    }, {
       errorMessage: '批量翻译失败',
       silent: false
     });
   },
 
   /**
-   * 批量翻译（带统计信息）
+   * 批量翻译（带统计信息，Phase 5: 支持目标语言）
    * 注意：此函数不会等待翻译完成，需要监听事件获取进度
    */
-  async translateBatchWithStats(texts: string[], apiKey: string) {
-    return invoke<void>('translate_batch_with_stats', { texts, apiKey }, {
+  async translateBatchWithStats(texts: string[], apiKey: string, targetLanguage?: string) {
+    return invoke<void>('translate_batch_with_stats', { 
+      texts, 
+      apiKey,
+      targetLanguage: targetLanguage || null
+    }, {
       errorMessage: '批量翻译失败',
       silent: false
+    });
+  },
+
+  /**
+   * Contextual Refine - 携带上下文的精细翻译（Phase 7）
+   * 绕过翻译记忆库，充分利用上下文信息提供高质量翻译
+   */
+  async contextualRefine(
+    requests: import('../types/tauri').ContextualRefineRequest[],
+    apiKey: string,
+    targetLanguage: string
+  ) {
+    return invoke<string[]>('contextual_refine', {
+      requests,
+      apiKey,
+      targetLanguage
+    }, {
+      errorMessage: '精翻失败',
+      silent: false
+    });
+  },
+};
+
+// ========== Phase 1: AI 配置管理 API ==========
+
+import type { AIConfig, ProviderType } from '../types/aiProvider';
+
+/**
+ * AI 配置 API
+ */
+export const aiConfigApi = {
+  /**
+   * 获取所有AI配置
+   */
+  async getAllConfigs() {
+    return invoke<AIConfig[]>('get_all_ai_configs', {}, {
+      errorMessage: '获取AI配置失败',
+      silent: true,
+    });
+  },
+
+  /**
+   * 获取当前启用的AI配置
+   */
+  async getActiveConfig() {
+    return invoke<AIConfig | null>('get_active_ai_config', {}, {
+      errorMessage: '获取当前AI配置失败',
+      silent: true,
+    });
+  },
+
+  /**
+   * 添加AI配置
+   */
+  async addConfig(config: AIConfig) {
+    return invoke<void>('add_ai_config', { config }, {
+      errorMessage: '添加AI配置失败',
+    });
+  },
+
+  /**
+   * 更新AI配置
+   */
+  async updateConfig(index: number, config: AIConfig) {
+    return invoke<void>('update_ai_config', { index, config }, {
+      errorMessage: '更新AI配置失败',
+    });
+  },
+
+  /**
+   * 删除AI配置
+   */
+  async removeConfig(index: number) {
+    return invoke<void>('remove_ai_config', { index }, {
+      errorMessage: '删除AI配置失败',
+    });
+  },
+
+  /**
+   * 设置启用的AI配置
+   */
+  async setActiveConfig(index: number) {
+    return invoke<void>('set_active_ai_config', { index }, {
+      errorMessage: '设置启用配置失败',
+    });
+  },
+
+  /**
+   * 测试AI连接
+   */
+  async testConnection(provider: ProviderType, apiKey: string, baseUrl?: string, model?: string, proxy?: any) {
+    const request = {
+      provider,
+      apiKey,
+      baseUrl: baseUrl || null,
+      model: model || null,
+      proxy: proxy || null,
+    };
+    
+    return invoke<import('../types/aiProvider').TestConnectionResult>('test_ai_connection', { 
+      request
+    }, {
+      errorMessage: 'AI连接测试失败',
+      silent: true,  // 测试连接失败时不弹toast，由调用方处理
+    });
+  },
+};
+
+// ========== Phase 1: 文件格式 API（预留）==========
+
+import type { FileFormat, FileMetadata } from '../types/fileFormat';
+
+/**
+ * 文件格式 API（Phase 4 完整实现）
+ */
+export const fileFormatApi = {
+  /**
+   * 检测文件格式
+   */
+  async detectFormat(filePath: string) {
+    return invoke<FileFormat>('detect_file_format', { filePath }, {
+      errorMessage: '检测文件格式失败',
+      silent: true,
+    });
+  },
+
+  /**
+   * 获取文件元数据
+   */
+  async getFileMetadata(filePath: string) {
+    return invoke<FileMetadata>('get_file_metadata', { filePath }, {
+      errorMessage: '获取文件元数据失败',
+      silent: true,
+    });
+  },
+};
+
+// ========== Phase 3: 系统提示词管理 ==========
+
+export const systemPromptApi = {
+  /**
+   * 获取当前系统提示词（自定义或默认）
+   */
+  async getPrompt() {
+    return invoke<string>('get_system_prompt', {}, {
+      errorMessage: '获取系统提示词失败',
+    });
+  },
+
+  /**
+   * 更新系统提示词
+   */
+  async updatePrompt(prompt: string) {
+    return invoke<void>('update_system_prompt', { prompt }, {
+      errorMessage: '更新系统提示词失败',
+      showErrorMessage: true,
+    });
+  },
+
+  /**
+   * 重置为默认提示词
+   */
+  async resetPrompt() {
+    return invoke<void>('reset_system_prompt', {}, {
+      errorMessage: '重置系统提示词失败',
+      showErrorMessage: true,
+    });
+  },
+};
+
+// ========== Phase 5: 语言检测管理 ==========
+
+export interface LanguageInfo {
+  code: string;
+  displayName: string;
+  englishName: string;
+}
+
+export const languageApi = {
+  /**
+   * 检测文本语言
+   */
+  async detectLanguage(text: string) {
+    return invoke<LanguageInfo>('detect_text_language', { text }, {
+      errorMessage: '检测语言失败',
+      silent: true,
+    });
+  },
+
+  /**
+   * 获取默认目标语言
+   */
+  async getDefaultTargetLanguage(sourceLangCode: string) {
+    return invoke<LanguageInfo>('get_default_target_lang', { sourceLangCode }, {
+      errorMessage: '获取默认目标语言失败',
+      silent: true,
+    });
+  },
+
+  /**
+   * 获取所有支持的语言列表
+   */
+  async getSupportedLanguages() {
+    return invoke<LanguageInfo[]>('get_supported_langs', {}, {
+      errorMessage: '获取支持的语言列表失败',
+      silent: true,
+    });
+  },
+};
+
+// ========== Phase 6: 系统语言检测 API ==========
+
+export const systemApi = {
+  /**
+   * 获取系统语言
+   * 返回 BCP 47 语言标签（如 "zh-CN", "en-US"）
+   */
+  async getSystemLanguage() {
+    return invoke<string>('get_system_language', {}, {
+      errorMessage: '获取系统语言失败',
+      silent: true,
     });
   },
 };

@@ -98,6 +98,25 @@ export type EventMap = {
   'config:updated': {
     config: any;
   };
+
+  // ========== Phase 7: Contextual Refine 事件 ==========
+  'contextual-refine:start': {
+    count: number;
+  };
+
+  'contextual-refine:progress': {
+    current: number;
+    total: number;
+  };
+
+  'contextual-refine:complete': {
+    results: string[];
+    count: number;
+  };
+
+  'contextual-refine:error': {
+    error: string;
+  };
 };
 
 /**

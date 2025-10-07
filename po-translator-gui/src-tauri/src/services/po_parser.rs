@@ -4,6 +4,8 @@ use std::fs;
 use std::path::Path;
 
 use crate::commands::POEntry;
+use crate::services::file_chunker::FileAnalyzer;  // Phase 8: 性能优化
+use crate::app_log;
 
 #[derive(Debug, thiserror::Error)]
 pub enum POParseError {
@@ -34,6 +36,35 @@ impl POParser {
     }
 
     pub fn parse_file<P: AsRef<Path>>(&self, file_path: P) -> Result<Vec<POEntry>> {
+        let path = file_path.as_ref();
+        
+        // Phase 8: 文件大小分析和优化
+        match FileAnalyzer::analyze(path) {
+            Ok((size, category)) => {
+                let size_str = FileAnalyzer::format_size(size);
+                app_log!("[性能优化] 文件大小: {}, 类别: {:?}", size_str, category);
+                
+                if category.needs_warning() {
+                    app_log!(
+                        "[性能警告] {}",
+                        category.warning_message().unwrap_or_default()
+                    );
+                }
+                
+                // 估算条目数量
+                let estimated_entries = FileAnalyzer::estimate_entries(size);
+                if estimated_entries > 5000 {
+                    app_log!(
+                        "[性能提示] 预估条目数: ~{}, 建议分批处理",
+                        estimated_entries
+                    );
+                }
+            }
+            Err(e) => {
+                app_log!("[性能优化] 文件分析失败: {}, 继续正常处理", e);
+            }
+        }
+        
         let content = self.read_file_with_encoding(file_path)?;
         self.parse_content(&content)
     }

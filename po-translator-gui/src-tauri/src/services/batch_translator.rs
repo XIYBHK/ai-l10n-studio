@@ -56,7 +56,15 @@ pub struct BatchTranslator {
 impl BatchTranslator {
     pub fn new(api_key: String, base_url: Option<String>) -> Result<Self> {
         let parser = POParser::new()?;
-        let translator = AITranslator::new(api_key, base_url, true)?;
+        
+        // Phase 3: 从配置获取自定义系统提示词
+        use crate::services::ConfigManager;
+        let custom_prompt = ConfigManager::new(None)
+            .ok()
+            .and_then(|manager| manager.get_config().system_prompt.clone());
+        
+        // Phase 5: 批处理翻译器暂不支持目标语言（可在后续扩展）
+        let translator = AITranslator::new(api_key, base_url, true, custom_prompt.as_deref(), None)?;
         let translation_memory = TranslationMemory::new();
 
         Ok(Self {

@@ -1,4 +1,4 @@
-import { Button, Tooltip, Divider } from 'antd';
+import { Button, Tooltip, Divider, Space, Typography } from 'antd';
 import { 
   FolderOpenOutlined,
   SaveOutlined,
@@ -8,8 +8,13 @@ import {
   BulbFilled,
   BugOutlined,
   CodeOutlined,
+  GlobalOutlined,
 } from '@ant-design/icons';
 import { useTheme } from '../hooks/useTheme';
+import { LanguageSelector } from './LanguageSelector';
+import type { LanguageInfo } from '../services/api';
+
+const { Text } = Typography;
 
 interface MenuBarProps {
   onOpenFile: () => void;
@@ -24,6 +29,10 @@ interface MenuBarProps {
   hasEntries: boolean;
   isDarkMode?: boolean;
   onThemeToggle?: () => void;
+  // Phase 5: 语言选择
+  sourceLanguage?: string;
+  targetLanguage?: string;
+  onTargetLanguageChange?: (langCode: string, langInfo: LanguageInfo | undefined) => void;
 }
 
 export const MenuBar: React.FC<MenuBarProps> = ({
@@ -38,6 +47,9 @@ export const MenuBar: React.FC<MenuBarProps> = ({
   hasEntries,
   isDarkMode = false,
   onThemeToggle,
+  sourceLanguage,
+  targetLanguage,
+  onTargetLanguageChange,
 }) => {
   const { colors } = useTheme();
   
@@ -105,6 +117,29 @@ export const MenuBar: React.FC<MenuBarProps> = ({
           {isTranslating ? '翻译中...' : '批量翻译'}
         </Button>
       </Tooltip>
+      
+      {/* Phase 5: 语言选择器 */}
+      {hasEntries && (
+        <>
+          <Divider type="vertical" style={{ height: '24px', margin: '0 8px' }} />
+          <Space size="small" align="center">
+            <GlobalOutlined style={{ fontSize: '16px', color: colors.textSecondary }} />
+            {sourceLanguage && (
+              <Text type="secondary" style={{ fontSize: '13px' }}>
+                {sourceLanguage}
+              </Text>
+            )}
+            <Text type="secondary" style={{ fontSize: '13px' }}>→</Text>
+            <LanguageSelector
+              value={targetLanguage}
+              onChange={onTargetLanguageChange}
+              placeholder="目标语言"
+              disabled={isTranslating}
+              style={{ width: 180 }}
+            />
+          </Space>
+        </>
+      )}
       
       <div style={{ flex: 1 }} />
       

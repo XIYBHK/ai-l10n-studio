@@ -55,3 +55,12 @@ export interface AppConfig {
   batch_size: number;
   use_translation_memory: boolean;
 }
+
+// Phase 7: Contextual Refine 请求类型
+export interface ContextualRefineRequest {
+  msgid: string;
+  msgctxt?: string;
+  comment?: string;
+  previous_entry?: string;
+  next_entry?: string;
+}

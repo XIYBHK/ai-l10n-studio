@@ -1,0 +1,200 @@
+use serde::{Deserialize, Serialize};
+use crate::services::{AIConfig, AITranslator, ConfigManager};
+
+/// 获取所有 AI 配置
+#[tauri::command]
+pub async fn get_all_ai_configs() -> Result<Vec<AIConfig>, String> {
+    let config_manager = ConfigManager::new(None).map_err(|e| e.to_string())?;
+    let config = config_manager.get_config();
+    Ok(config.get_all_ai_configs().clone())
+}
+
+/// 获取当前启用的 AI 配置
+#[tauri::command]
+pub async fn get_active_ai_config() -> Result<Option<AIConfig>, String> {
+    let config_manager = ConfigManager::new(None).map_err(|e| e.to_string())?;
+    let config = config_manager.get_config();
+    Ok(config.get_active_ai_config().cloned())
+}
+
+/// 添加新的 AI 配置
+#[tauri::command]
+pub async fn add_ai_config(config: AIConfig) -> Result<(), String> {
+    let mut config_manager = ConfigManager::new(None).map_err(|e| e.to_string())?;
+    config_manager
+        .update_config(|c| {
+            c.add_ai_config(config);
+        })
+        .map_err(|e| e.to_string())?;
+    
+    crate::app_log!("✅ 新增 AI 配置成功");
+    Ok(())
+}
+
+/// 更新指定索引的 AI 配置
+#[tauri::command]
+pub async fn update_ai_config(index: usize, config: AIConfig) -> Result<(), String> {
+    let mut config_manager = ConfigManager::new(None).map_err(|e| e.to_string())?;
+    
+    // 直接更新配置
+    let app_config = config_manager.get_config_mut();
+    app_config.update_ai_config(index, config).map_err(|e| e.to_string())?;
+    
+    // 保存配置
+    config_manager.save().map_err(|e| e.to_string())?;
+    
+    crate::app_log!("✅ 更新 AI 配置成功，索引: {}", index);
+    Ok(())
+}
+
+/// 删除指定索引的 AI 配置
+#[tauri::command]
+pub async fn remove_ai_config(index: usize) -> Result<(), String> {
+    let mut config_manager = ConfigManager::new(None).map_err(|e| e.to_string())?;
+    
+    // 直接删除配置
+    let app_config = config_manager.get_config_mut();
+    app_config.remove_ai_config(index).map_err(|e| e.to_string())?;
+    
+    // 保存配置
+    config_manager.save().map_err(|e| e.to_string())?;
+    
+    crate::app_log!("✅ 删除 AI 配置成功，索引: {}", index);
+    Ok(())
+}
+
+/// 设置启用的 AI 配置
+#[tauri::command]
+pub async fn set_active_ai_config(index: usize) -> Result<(), String> {
+    let mut config_manager = ConfigManager::new(None).map_err(|e| e.to_string())?;
+    
+    // 直接设置启用配置
+    let app_config = config_manager.get_config_mut();
+    app_config.set_active_ai_config(index).map_err(|e| e.to_string())?;
+    
+    // 保存配置
+    config_manager.save().map_err(|e| e.to_string())?;
+    
+    crate::app_log!("✅ 设置启用配置成功，索引: {}", index);
+    Ok(())
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+pub struct TestConnectionRequest {
+    pub provider: crate::services::ProviderType,
+    pub api_key: String,
+    pub base_url: Option<String>,
+    pub model: Option<String>,
+    pub proxy: Option<crate::services::ProxyConfig>,
+}
+
+#[derive(Debug, Serialize)]
+pub struct TestConnectionResult {
+    pub success: bool,
+    pub message: String,
+    pub response_time_ms: Option<u64>,
+}
+
+/// 测试 AI 连接
+#[tauri::command]
+pub async fn test_ai_connection(request: TestConnectionRequest) -> Result<TestConnectionResult, String> {
+    use std::time::Instant;
+    
+    crate::app_log!("🔍 测试 AI 连接: {:?}", request.provider);
+    
+    let ai_config = AIConfig {
+        provider: request.provider,
+        api_key: request.api_key,
+        base_url: request.base_url,
+        model: request.model,
+        proxy: request.proxy,
+    };
+    
+    let start = Instant::now();
+    
+    // 测试连接时不使用自定义提示词和目标语言
+    match AITranslator::new_with_config(ai_config.clone(), false, None, None) {
+        Ok(mut translator) => {
+            // 发送一个简单的测试请求
+            let test_text = "Hello";
+            match translator.translate_batch(vec![test_text.to_string()], None).await {
+                Ok(_) => {
+                    let elapsed = start.elapsed().as_millis() as u64;
+                    crate::app_log!("✅ 连接测试成功，响应时间: {}ms", elapsed);
+                    Ok(TestConnectionResult {
+                        success: true,
+                        message: format!("连接成功 ({})", ai_config.provider.display_name()),
+                        response_time_ms: Some(elapsed),
+                    })
+                }
+                Err(e) => {
+                    crate::app_log!("❌ API 调用失败: {}", e);
+                    Ok(TestConnectionResult {
+                        success: false,
+                        message: format!("API 调用失败: {}", e),
+                        response_time_ms: None,
+                    })
+                }
+            }
+        }
+        Err(e) => {
+            crate::app_log!("❌ 创建翻译器失败: {}", e);
+            Ok(TestConnectionResult {
+                success: false,
+                message: format!("配置错误: {}", e),
+                response_time_ms: None,
+            })
+        }
+    }
+}
+
+// ========== Phase 3: 系统提示词管理 ==========
+
+/// 获取系统提示词（返回自定义提示词或默认提示词）
+#[tauri::command]
+pub async fn get_system_prompt() -> Result<String, String> {
+    use crate::services::ai_translator::DEFAULT_SYSTEM_PROMPT;
+    
+    let config_manager = ConfigManager::new(None).map_err(|e| e.to_string())?;
+    let config = config_manager.get_config();
+    
+    // 返回自定义提示词，如果没有则返回默认提示词
+    Ok(config.system_prompt
+        .clone()
+        .unwrap_or_else(|| DEFAULT_SYSTEM_PROMPT.to_string()))
+}
+
+/// 更新系统提示词
+#[tauri::command]
+pub async fn update_system_prompt(prompt: String) -> Result<(), String> {
+    let mut config_manager = ConfigManager::new(None).map_err(|e| e.to_string())?;
+    
+    // 如果提示词为空，设置为 None（使用默认）
+    let app_config = config_manager.get_config_mut();
+    app_config.system_prompt = if prompt.trim().is_empty() {
+        None
+    } else {
+        Some(prompt)
+    };
+    
+    // 保存配置
+    config_manager.save().map_err(|e| e.to_string())?;
+    
+    crate::app_log!("✅ 系统提示词已更新");
+    Ok(())
+}
+
+/// 重置系统提示词为默认值
+#[tauri::command]
+pub async fn reset_system_prompt() -> Result<(), String> {
+    let mut config_manager = ConfigManager::new(None).map_err(|e| e.to_string())?;
+    
+    let app_config = config_manager.get_config_mut();
+    app_config.system_prompt = None;
+    
+    config_manager.save().map_err(|e| e.to_string())?;
+    
+    crate::app_log!("✅ 系统提示词已重置为默认值");
+    Ok(())
+}
+

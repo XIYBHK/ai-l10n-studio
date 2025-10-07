@@ -15,7 +15,7 @@ import { useTauriEventBridge } from './hooks/useTauriEventBridge';
 import { TranslationStats, POEntry } from './types/tauri';
 import { createModuleLogger } from './utils/logger';
 import { eventDispatcher } from './services/eventDispatcher';
-import { configApi, poFileApi, dialogApi } from './services/api';
+import { configApi, poFileApi, dialogApi, languageApi, translatorApi, type LanguageInfo } from './services/api';
 import './i18n/config';
 import './App.css';
 
@@ -48,6 +48,10 @@ function App() {
   const [isResizing, setIsResizing] = useState(false);
   // 存储AI原译文，用于术语检测对比（key: 条目索引, value: AI译文）
   const [aiTranslations, setAiTranslations] = useState<Map<number, string>>(new Map());
+  
+  // Phase 5: 语言状态管理
+  const [sourceLanguage, setSourceLanguage] = useState<string>('');
+  const [targetLanguage, setTargetLanguage] = useState<string>('zh-Hans'); // 默认目标语言：简体中文
   
   const { themeConfig, algorithm, toggleTheme, isDark, colors } = useTheme();
   
@@ -138,6 +142,41 @@ function App() {
     }
   };
 
+  // Phase 5: 检测语言并设置默认目标语言
+  const detectAndSetLanguages = async (entries: POEntry[]) => {
+    try {
+      // 取前几个有效条目的文本进行检测
+      const sampleTexts = entries
+        .filter(e => e.msgid && e.msgid.trim())
+        .slice(0, 5)
+        .map(e => e.msgid)
+        .join(' ');
+      
+      if (sampleTexts) {
+        const detectedLang = await languageApi.detectLanguage(sampleTexts);
+        setSourceLanguage(detectedLang.displayName);
+        log.info('检测到源语言', { lang: detectedLang });
+        
+        // 获取默认目标语言
+        const defaultTarget = await languageApi.getDefaultTargetLanguage(detectedLang.code);
+        setTargetLanguage(defaultTarget.code);
+        log.info('设置默认目标语言', { lang: defaultTarget });
+      }
+    } catch (error) {
+      log.logError(error, '语言检测失败，使用默认设置');
+      setSourceLanguage('未知');
+      setTargetLanguage('zh-Hans'); // 默认中文
+    }
+  };
+
+  // Phase 5: 处理目标语言变更
+  const handleTargetLanguageChange = (langCode: string, langInfo: LanguageInfo | undefined) => {
+    setTargetLanguage(langCode);
+    if (langInfo) {
+      log.info('切换目标语言', { lang: langInfo });
+    }
+  };
+
   const openFile = async () => {
     try {
       const filePath = await dialogApi.openFile();
@@ -145,6 +184,9 @@ function App() {
         const entries = await parsePOFile(filePath) as POEntry[];
         setEntries(entries);
         setCurrentFilePath(filePath);
+        
+        // Phase 5: 检测源语言并设置默认目标语言
+        await detectAndSetLanguages(entries);
         
         // 触发文件加载事件
         await eventDispatcher.emit('file:loaded', { path: filePath, entries });
@@ -264,13 +306,6 @@ function App() {
     setDevToolsVisible(true);
   };
 
-  const handleSettingsSave = (newConfig: any) => {
-    setConfig(newConfig);
-    if (newConfig.api_key) {
-      setApiKey(newConfig.api_key);
-    }
-  };
-
   const handleResetStats = () => {
     setTranslationStats(null);
   };
@@ -341,8 +376,8 @@ function App() {
         setTranslationStats(stats);
       });
       
-      // 执行翻译
-      await translateBatchWithStats(texts, apiKey);
+      // 执行翻译（Phase 5: 传递目标语言）
+      await translateBatchWithStats(texts, apiKey, targetLanguage);
       
       // 清理订阅
       unsubProgress();
@@ -384,6 +419,68 @@ function App() {
     const success = await executeTranslation(selectedEntries, 'selected');
     if (success) {
       message.success(`翻译完成！共翻译 ${selectedEntries.length} 个条目`);
+    }
+  };
+
+  // Phase 7: 精翻选中的条目（Contextual Refine）
+  const handleContextualRefine = async (indices: number[]) => {
+    // 过滤出待确认的条目
+    const selectedEntries = indices
+      .map(i => ({ index: i, entry: entries[i] }))
+      .filter(({ entry }) => entry && entry.msgid && entry.needsReview);
+
+    if (selectedEntries.length === 0) {
+      message.info('选中的条目中没有待确认的项');
+      return;
+    }
+
+    if (!apiKey) {
+      message.error('请先在设置中配置 API Key');
+      setSettingsVisible(true);
+      return;
+    }
+
+    setTranslating(true);
+    
+    try {
+      // 构建精翻请求
+      const requests = selectedEntries.map(({ index, entry }) => ({
+        msgid: entry.msgid,
+        msgctxt: entry.msgctxt || undefined,
+        comment: entry.comments.join('\n') || undefined,
+        previous_entry: index > 0 ? entries[index - 1]?.msgstr : undefined,
+        next_entry: index < entries.length - 1 ? entries[index + 1]?.msgstr : undefined,
+      }));
+
+      log.info('[精翻] 开始精翻', { 
+        count: requests.length,
+        targetLanguage: targetLanguage 
+      });
+
+      // 调用精翻 API
+      const results = await translatorApi.contextualRefine(
+        requests,
+        apiKey,
+        targetLanguage
+      );
+
+      // 应用翻译结果
+      results.forEach((translation, i) => {
+        const { index } = selectedEntries[i];
+        updateEntry(index, { 
+          msgstr: translation,
+          needsReview: false  // 精翻后清除待确认标记
+        });
+      });
+
+      message.success(`精翻完成！共处理 ${results.length} 个条目`);
+      log.info('[精翻] 完成', { count: results.length });
+
+    } catch (error) {
+      log.error('[精翻] 失败', { error });
+      message.error('精翻失败：' + (error as Error).message);
+    } finally {
+      setTranslating(false);
     }
   };
 
@@ -449,6 +546,9 @@ function App() {
           hasEntries={entries.length > 0}
           isDarkMode={isDark}
           onThemeToggle={toggleTheme}
+          sourceLanguage={sourceLanguage}
+          targetLanguage={targetLanguage}
+          onTargetLanguageChange={handleTargetLanguageChange}
         />
       
       <Layout style={{ height: 'calc(100vh - 48px)', width: '100%', position: 'relative' }}>
@@ -469,6 +569,7 @@ function App() {
             progress={progress}
             onEntrySelect={setCurrentEntry}
             onTranslateSelected={handleTranslateSelected}
+            onContextualRefine={handleContextualRefine} /* Phase 7: 精翻 */
           />
           {/* 拖拽手柄 */}
           <div
@@ -535,7 +636,6 @@ function App() {
       <SettingsModal
         visible={settingsVisible}
         onClose={() => setSettingsVisible(false)}
-        onSave={handleSettingsSave}
       />
 
       <DevToolsModal

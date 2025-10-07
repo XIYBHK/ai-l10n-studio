@@ -8,6 +8,95 @@ use crate::services::term_library::TermLibrary;
 use crate::utils::common::is_simple_phrase;
 use crate::utils::paths::get_translation_memory_path;
 
+// ========== 默认系统提示词 (Phase 3) ==========
+
+pub const DEFAULT_SYSTEM_PROMPT: &str = r#"你是一位专业的游戏开发和Unreal Engine本地化专家，精通中英文翻译。
+
+【翻译规则】
+1. 术语保留英文: Actor/Blueprint/Component/Transform/Mesh/Material/Widget/Collision/Array/Float/Integer
+2. 固定翻译: Asset→资产, Unique→去重, Slice→截取, Primitives→基础类型, Constant Speed→匀速, Stream→流送, Ascending→升序, Descending→降序
+3. Category翻译: 保持XTools等命名空间和|符号, 如 XTools|Sort|Actor → XTools|排序|Actor
+4. 格式保留: 必须保持|、{}、%%、[]、()、\n、\t、{0}、{1}等所有特殊符号和占位符
+5. 翻译风格: 准确(信)、流畅(达)、专业(雅), 无多余空格
+6. 特殊表达: in-place→原地, by value→按值, True→为True, False→为False"#;
+
+// ========== Phase 1: AI 供应商配置系统 ==========
+
+/// AI 供应商类型
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+pub enum ProviderType {
+    Moonshot,
+    OpenAI,
+    SparkDesk,   // 讯飞星火
+    Wenxin,      // 百度文心一言
+    Qianwen,     // 阿里通义千问
+    GLM,         // 智谱AI
+    Claude,      // Anthropic
+    Gemini,      // Google
+}
+
+impl ProviderType {
+    /// 获取默认API地址
+    pub fn default_url(&self) -> &str {
+        match self {
+            Self::Moonshot => "https://api.moonshot.cn/v1",
+            Self::OpenAI => "https://api.openai.com/v1",
+            Self::SparkDesk => "https://spark-api.xf-yun.com/v1",
+            Self::Wenxin => "https://aip.baidubce.com/rpc/2.0/ai_custom/v1/wenxinworkshop",
+            Self::Qianwen => "https://dashscope.aliyuncs.com/api/v1",
+            Self::GLM => "https://open.bigmodel.cn/api/paas/v4",
+            Self::Claude => "https://api.anthropic.com/v1",
+            Self::Gemini => "https://generativelanguage.googleapis.com/v1",
+        }
+    }
+    
+    /// 获取显示名称
+    pub fn display_name(&self) -> &str {
+        match self {
+            Self::Moonshot => "Moonshot AI",
+            Self::OpenAI => "OpenAI",
+            Self::SparkDesk => "讯飞星火",
+            Self::Wenxin => "百度文心一言",
+            Self::Qianwen => "阿里通义千问",
+            Self::GLM => "智谱AI (GLM)",
+            Self::Claude => "Claude (Anthropic)",
+            Self::Gemini => "Google Gemini",
+        }
+    }
+    
+    /// 获取默认模型
+    pub fn default_model(&self) -> &str {
+        match self {
+            Self::Moonshot => "moonshot-v1-auto",
+            Self::OpenAI => "gpt-3.5-turbo",
+            Self::SparkDesk => "generalv3.5",
+            Self::Wenxin => "ernie-bot-turbo",
+            Self::Qianwen => "qwen-turbo",
+            Self::GLM => "glm-4",
+            Self::Claude => "claude-3-haiku-20240307",
+            Self::Gemini => "gemini-pro",
+        }
+    }
+}
+
+/// 代理配置
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct ProxyConfig {
+    pub host: String,
+    pub port: u16,
+    pub enabled: bool,
+}
+
+/// AI 配置（简化版）
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct AIConfig {
+    pub provider: ProviderType,
+    pub api_key: String,
+    pub base_url: Option<String>,      // 可选的自定义URL
+    pub model: Option<String>,          // 可选的自定义模型
+    pub proxy: Option<ProxyConfig>,
+}
+
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct TokenStats {
     pub input_tokens: u32,
@@ -59,6 +148,8 @@ pub struct AITranslator {
     token_stats: TokenStats,
     use_tm: bool,
     tm: Option<TranslationMemory>,
+    // Phase 5: 目标语言（用于生成翻译提示词）
+    target_language: Option<String>,
     // 统计信息
     pub batch_stats: BatchStats,
 }
@@ -73,7 +164,14 @@ pub struct BatchStats {
 }
 
 impl AITranslator {
-    pub fn new(api_key: String, base_url: Option<String>, use_tm: bool) -> Result<Self> {
+    /// 原有构造函数（Phase 3: 支持自定义提示词，Phase 5: 支持目标语言）
+    pub fn new(
+        api_key: String, 
+        base_url: Option<String>, 
+        use_tm: bool, 
+        custom_system_prompt: Option<&str>,
+        target_language: Option<String>
+    ) -> Result<Self> {
         let client = HttpClient::new();
         let base_url = base_url.unwrap_or_else(|| "https://api.moonshot.cn/v1".to_string());
         
@@ -86,7 +184,7 @@ impl AITranslator {
             .join("term_library.json");
         
         let term_library = TermLibrary::load_from_file(&term_library_path).ok();
-        let system_prompt = Self::get_system_prompt(term_library.as_ref());
+        let system_prompt = Self::get_system_prompt(custom_system_prompt, term_library.as_ref());
 
         // 从文件加载TM（合并内置短语和已保存的翻译）
         let tm = if use_tm {
@@ -113,6 +211,7 @@ impl AITranslator {
             },
             use_tm,
             tm,
+            target_language, // Phase 5: 目标语言
             batch_stats: BatchStats {
                 total: 0,
                 tm_hits: 0,
@@ -123,16 +222,104 @@ impl AITranslator {
         })
     }
 
-    fn get_system_prompt(term_library: Option<&TermLibrary>) -> String {
-        let base_prompt = r#"你是一位专业的游戏开发和Unreal Engine本地化专家，精通中英文翻译。
+    /// 使用 AIConfig 创建（Phase 3: 支持自定义提示词，Phase 5: 支持目标语言）
+    pub fn new_with_config(
+        config: AIConfig, 
+        use_tm: bool, 
+        custom_system_prompt: Option<&str>,
+        target_language: Option<String>
+    ) -> Result<Self> {
+        // 构建HTTP客户端（支持代理）
+        let client = Self::build_client_with_proxy(config.proxy.clone())?;
+        
+        // 使用自定义URL或默认URL
+        let base_url = config.base_url
+            .unwrap_or_else(|| config.provider.default_url().to_string());
+        
+        // 使用自定义模型或默认模型
+        let model = config.model
+            .unwrap_or_else(|| config.provider.default_model().to_string());
+        
+        // 加载术语库并构建系统提示词
+        let term_library_path = std::env::current_exe()
+            .ok()
+            .and_then(|p| p.parent().map(|p| p.to_path_buf()))
+            .unwrap_or_else(|| std::path::PathBuf::from("."))
+            .join("data")
+            .join("term_library.json");
+        
+        let term_library = TermLibrary::load_from_file(&term_library_path).ok();
+        let system_prompt = Self::get_system_prompt(custom_system_prompt, term_library.as_ref());
 
-【翻译规则】
-1. 术语保留英文: Actor/Blueprint/Component/Transform/Mesh/Material/Widget/Collision/Array/Float/Integer
-2. 固定翻译: Asset→资产, Unique→去重, Slice→截取, Primitives→基础类型, Constant Speed→匀速, Stream→流送, Ascending→升序, Descending→降序
-3. Category翻译: 保持XTools等命名空间和|符号, 如 XTools|Sort|Actor → XTools|排序|Actor
-4. 格式保留: 必须保持|、{}、%%、[]、()、\n、\t、{0}、{1}等所有特殊符号和占位符
-5. 翻译风格: 准确(信)、流畅(达)、专业(雅), 无多余空格
-6. 特殊表达: in-place→原地, by value→按值, True→为True, False→为False"#;
+        // 从文件加载TM
+        let tm = if use_tm {
+            Some(TranslationMemory::new_from_file(
+                &get_translation_memory_path(),
+            )?)
+        } else {
+            None
+        };
+
+        crate::app_log!(
+            "[AI翻译器] 使用配置创建: 供应商={}, 模型={}, 代理={}",
+            config.provider.display_name(),
+            model,
+            if config.proxy.as_ref().map(|p| p.enabled).unwrap_or(false) { "已启用" } else { "未启用" }
+        );
+
+        Ok(Self {
+            client,
+            api_key: config.api_key,
+            base_url,
+            model,
+            system_prompt,
+            conversation_history: Vec::new(),
+            max_history_tokens: 2000,
+            token_stats: TokenStats {
+                input_tokens: 0,
+                output_tokens: 0,
+                total_tokens: 0,
+                cost: 0.0,
+            },
+            use_tm,
+            tm,
+            target_language, // Phase 5: 目标语言
+            batch_stats: BatchStats {
+                total: 0,
+                tm_hits: 0,
+                deduplicated: 0,
+                ai_translated: 0,
+                tm_learned: 0,
+            },
+        })
+    }
+
+    /// 构建支持代理的HTTP客户端
+    fn build_client_with_proxy(proxy: Option<ProxyConfig>) -> Result<HttpClient> {
+        let mut builder = HttpClient::builder();
+        
+        if let Some(proxy_cfg) = proxy {
+            if proxy_cfg.enabled {
+                let proxy_url = format!("http://{}:{}", proxy_cfg.host, proxy_cfg.port);
+                crate::app_log!("[AI翻译器] 使用代理: {}", proxy_url);
+                
+                let proxy = reqwest::Proxy::all(&proxy_url)
+                    .map_err(|e| anyhow!("代理配置错误: {}", e))?;
+                builder = builder.proxy(proxy);
+            }
+        }
+        
+        builder.build()
+            .map_err(|e| anyhow!("HTTP客户端构建失败: {}", e))
+    }
+
+    /// Phase 3: 构建系统提示词（支持自定义 + 术语库拼接）
+    /// 
+    /// custom_prompt: 用户自定义的基础提示词（None则使用DEFAULT_SYSTEM_PROMPT）
+    /// term_library: 术语库（用于拼接风格总结）
+    fn get_system_prompt(custom_prompt: Option<&str>, term_library: Option<&TermLibrary>) -> String {
+        // 使用自定义提示词或默认提示词
+        let base_prompt = custom_prompt.unwrap_or(DEFAULT_SYSTEM_PROMPT);
 
         // 如果有术语库的风格总结，注入到提示词中
         if let Some(library) = term_library {
@@ -464,7 +651,23 @@ impl AITranslator {
     }
 
     fn build_user_prompt(&self, texts: &[String]) -> String {
-        let mut prompt = "请严格按以下格式翻译，每行一个结果，不要添加任何解释或额外文字：\n\n".to_string();
+        // Phase 5: 根据目标语言生成提示词
+        let target_lang_instruction = match self.target_language.as_deref() {
+            Some("zh-Hans") => "翻译成简体中文".to_string(),
+            Some("zh-Hant") => "翻译成繁体中文".to_string(),
+            Some("en") => "Translate to English".to_string(),
+            Some("ja") => "日本語に翻訳".to_string(),
+            Some("ko") => "한국어로 번역".to_string(),
+            Some("fr") => "Traduire en français".to_string(),
+            Some("de") => "Ins Deutsche übersetzen".to_string(),
+            Some("es") => "Traducir al español".to_string(),
+            Some("ru") => "Перевести на русский".to_string(),
+            Some("ar") => "ترجم إلى العربية".to_string(),
+            Some(lang) => format!("Translate to {}", lang),
+            None => "翻译".to_string(), // 默认（未指定语言）
+        };
+        
+        let mut prompt = format!("请{}，严格按以下格式返回，每行一个结果，不要添加任何解释或额外文字：\n\n", target_lang_instruction);
         for (i, text) in texts.iter().enumerate() {
             prompt.push_str(&format!("{}. {}\n", i + 1, text));
         }
