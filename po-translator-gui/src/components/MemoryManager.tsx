@@ -1,9 +1,12 @@
 import React, { useState, useEffect } from 'react';
 import { Modal, Table, Input, Button, message, Space, Popconfirm } from 'antd';
 import { DeleteOutlined, PlusOutlined, SearchOutlined, ClearOutlined, ExportOutlined, ImportOutlined } from '@ant-design/icons';
-import { invoke } from '@tauri-apps/api/tauri';
 import { save, open } from '@tauri-apps/api/dialog';
 import { writeTextFile, readTextFile } from '@tauri-apps/api/fs';
+import { translationMemoryApi } from '../services/api';
+import { createModuleLogger } from '../utils/logger';
+
+const log = createModuleLogger('MemoryManager');
 
 interface MemoryEntry {
   key: string;
@@ -53,7 +56,7 @@ export const MemoryManager: React.FC<MemoryManagerProps> = ({ visible, onClose }
   const loadMemories = async () => {
     setLoading(true);
     try {
-      const tm = await invoke('get_translation_memory') as any;
+      const tm = await translationMemoryApi.get() as any;
       if (tm && tm.memory) {
         const entries: MemoryEntry[] = Object.entries(tm.memory)
           .map(([source, target], index) => ({
@@ -62,13 +65,14 @@ export const MemoryManager: React.FC<MemoryManagerProps> = ({ visible, onClose }
             target: target as string,
           }));
         setMemories(entries);
+        log.info('记忆库加载成功', { count: entries.length });
       } else {
         // 空记忆库也是正常情况
         setMemories([]);
+        log.info('记忆库为空');
       }
     } catch (error) {
-      message.error('加载记忆库失败');
-      console.error(error);
+      log.logError(error, '加载记忆库失败');
       // 加载失败时至少显示空列表
       setMemories([]);
     } finally {
@@ -84,23 +88,21 @@ export const MemoryManager: React.FC<MemoryManagerProps> = ({ visible, onClose }
         memoryMap[entry.source] = entry.target;
       });
 
-      await invoke('save_translation_memory', {
-        memory: {
-          memory: memoryMap,
-          stats: {
-            total_entries: memories.length,
-            hits: 0,
-            misses: 0,
-          },
-          last_updated: new Date().toISOString(),
+      await translationMemoryApi.save({
+        memory: memoryMap,
+        stats: {
+          total_entries: memories.length,
+          hits: 0,
+          misses: 0,
         },
+        last_updated: new Date().toISOString(),
       });
 
       message.success('记忆库已保存');
+      log.info('记忆库保存成功', { count: memories.length });
       onClose();
     } catch (error) {
-      message.error('保存记忆库失败');
-      console.error(error);
+      log.logError(error, '保存记忆库失败');
     } finally {
       setLoading(false);
     }
@@ -117,22 +119,20 @@ export const MemoryManager: React.FC<MemoryManagerProps> = ({ visible, onClose }
       setMemories([]);
       
       // 保存空的记忆库到后端
-      await invoke('save_translation_memory', {
-        memory: {
-          memory: {}, // 空的memory字段
-          stats: {
-            total_entries: 0,
-            hits: 0,
-            misses: 0,
-          },
-          last_updated: new Date().toISOString(),
+      await translationMemoryApi.save({
+        memory: {}, // 空的memory字段
+        stats: {
+          total_entries: 0,
+          hits: 0,
+          misses: 0,
         },
+        last_updated: new Date().toISOString(),
       });
       
       message.success('已清空所有记忆');
+      log.info('记忆库已清空');
     } catch (error) {
-      message.error('清空失败');
-      console.error(error);
+      log.logError(error, '清空记忆库失败');
       // 失败时重新加载
       loadMemories();
     } finally {
@@ -145,7 +145,7 @@ export const MemoryManager: React.FC<MemoryManagerProps> = ({ visible, onClose }
       setLoading(true);
       
       // 调用后端接口获取内置词库
-      const response = await invoke('get_builtin_phrases') as any;
+      const response = await translationMemoryApi.getBuiltinPhrases() as any;
       
       if (response && response.memory) {
         // 合并当前记忆和内置短语
@@ -165,10 +165,10 @@ export const MemoryManager: React.FC<MemoryManagerProps> = ({ visible, onClose }
         
         setMemories(entries);
         message.success(`已加载 ${Object.keys(response.memory).length} 条内置短语`);
+        log.info('内置词库加载成功', { count: Object.keys(response.memory).length });
       }
     } catch (error) {
-      message.error('加载内置词库失败，该功能需要后端支持');
-      console.error(error);
+      log.logError(error, '加载内置词库失败');
     } finally {
       setLoading(false);
     }
@@ -201,10 +201,10 @@ export const MemoryManager: React.FC<MemoryManagerProps> = ({ visible, onClose }
 
         await writeTextFile(filePath, JSON.stringify(exportData, null, 2));
         message.success('记忆库已导出');
+        log.info('记忆库导出成功', { path: filePath, count: memories.length });
       }
     } catch (error) {
-      message.error('导出失败');
-      console.error(error);
+      log.logError(error, '导出记忆库失败');
     }
   };
 
@@ -230,11 +230,11 @@ export const MemoryManager: React.FC<MemoryManagerProps> = ({ visible, onClose }
           }));
           setMemories(entries);
           message.success(`已导入 ${entries.length} 条记忆`);
+          log.info('记忆库导入成功', { path: filePath, count: entries.length });
         }
       }
     } catch (error) {
-      message.error('导入失败');
-      console.error(error);
+      log.logError(error, '导入记忆库失败');
     }
   };
 
@@ -326,6 +326,8 @@ export const MemoryManager: React.FC<MemoryManagerProps> = ({ visible, onClose }
       okText="保存"
       cancelText="取消"
       confirmLoading={loading}
+      destroyOnClose={true}
+      mask={false}
       style={{ top: 20 }}
       bodyStyle={{ 
         maxHeight: 'calc(100vh - 200px)', 

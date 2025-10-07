@@ -1,8 +1,10 @@
 import React, { useEffect, useState } from 'react';
 import { Card, Typography, Tag, Space } from 'antd';
 import { listen } from '@tauri-apps/api/event';
+import { createModuleLogger } from '../utils/logger';
 
 const { Title, Text, Paragraph } = Typography;
+const log = createModuleLogger('FileDropTest');
 
 interface DropEvent {
   time: string;
@@ -15,13 +17,15 @@ export const FileDropTest: React.FC = () => {
   const [listenerStatus, setListenerStatus] = useState<'initializing' | 'ready' | 'error'>('initializing');
 
   useEffect(() => {
+    let cleanup: (() => void) | undefined;
+
     const setupListeners = async () => {
       try {
-        console.log('🔧 Setting up file drop listeners...');
+        log.info('设置文件拖放监听器');
 
         // 监听 tauri://file-drop
         const unlistenFileDrop = await listen<string[]>('tauri://file-drop', (event) => {
-          console.log('✅ tauri://file-drop event:', event);
+          log.debug('file-drop事件', event);
           setEvents(prev => [...prev, {
             time: new Date().toLocaleTimeString(),
             type: 'tauri://file-drop',
@@ -31,7 +35,7 @@ export const FileDropTest: React.FC = () => {
 
         // 监听 tauri://file-drop-hover
         const unlistenHover = await listen<string[]>('tauri://file-drop-hover', (event) => {
-          console.log('👆 tauri://file-drop-hover event:', event);
+          log.debug('file-drop-hover事件', event);
           setEvents(prev => [...prev, {
             time: new Date().toLocaleTimeString(),
             type: 'tauri://file-drop-hover',
@@ -41,7 +45,7 @@ export const FileDropTest: React.FC = () => {
 
         // 监听 tauri://file-drop-cancelled
         const unlistenCancel = await listen('tauri://file-drop-cancelled', (event) => {
-          console.log('❌ tauri://file-drop-cancelled event:', event);
+          log.debug('file-drop-cancelled事件', event);
           setEvents(prev => [...prev, {
             time: new Date().toLocaleTimeString(),
             type: 'tauri://file-drop-cancelled',
@@ -49,34 +53,42 @@ export const FileDropTest: React.FC = () => {
           }]);
         });
 
-        console.log('✅ All file drop listeners registered successfully!');
+        log.info('所有文件拖放监听器注册成功');
         setListenerStatus('ready');
 
-        return () => {
-          console.log('🧹 Cleaning up file drop listeners...');
+        // 保存清理函数
+        cleanup = () => {
+          log.debug('清理文件拖放监听器');
           unlistenFileDrop();
           unlistenHover();
           unlistenCancel();
         };
       } catch (error) {
-        console.error('❌ Failed to setup listeners:', error);
+        log.logError(error, '设置监听器失败');
         setListenerStatus('error');
       }
     };
 
     setupListeners();
+
+    // 返回清理函数
+    return () => {
+      if (cleanup) {
+        cleanup();
+      }
+    };
   }, []);
 
   // HTML5 拖拽事件监听（备用测试）
   useEffect(() => {
     const handleDragOver = (e: DragEvent) => {
       e.preventDefault();
-      console.log('📦 HTML5 dragover event');
+      log.debug('HTML5 dragover事件');
     };
 
     const handleDrop = (e: DragEvent) => {
       e.preventDefault();
-      console.log('📦 HTML5 drop event:', e.dataTransfer?.files);
+      log.debug('HTML5 drop事件', { files: e.dataTransfer?.files });
       
       if (e.dataTransfer?.files) {
         const files = Array.from(e.dataTransfer.files).map(f => f.name);

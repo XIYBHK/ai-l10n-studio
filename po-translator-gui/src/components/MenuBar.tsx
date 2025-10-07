@@ -7,6 +7,7 @@ import {
   BulbOutlined,
   BulbFilled,
   BugOutlined,
+  CodeOutlined,
 } from '@ant-design/icons';
 import { useTheme } from '../hooks/useTheme';
 
@@ -119,7 +120,7 @@ export const MenuBar: React.FC<MenuBarProps> = ({
       )}
       
       {onDevTools && (
-        <Tooltip title="开发者工具 - 查看日志和调试信息">
+        <Tooltip title="后端日志 - 查看Rust翻译引擎日志">
           <Button 
             icon={<BugOutlined />}
             onClick={onDevTools}
@@ -128,6 +129,18 @@ export const MenuBar: React.FC<MenuBarProps> = ({
           />
         </Tooltip>
       )}
+      
+      <Tooltip title="前端日志 - 按 F12 打开浏览器开发者工具">
+        <Button 
+          icon={<CodeOutlined />}
+          onClick={() => {
+            // 提示用户按 F12
+            alert('按 F12 键打开浏览器开发者工具查看前端日志\n\n或者右键点击页面 → 检查元素 → Console 标签');
+          }}
+          size="middle"
+          type="text"
+        />
+      </Tooltip>
       
       <Tooltip title="设置 API 密钥和翻译选项">
         <Button 

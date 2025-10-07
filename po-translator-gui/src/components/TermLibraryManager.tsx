@@ -10,8 +10,10 @@ import {
 import { invoke } from '@tauri-apps/api/tauri';
 import { TermLibrary, TermEntry } from '../types/termLibrary';
 import { useTheme } from '../hooks/useTheme';
+import { createModuleLogger } from '../utils/logger';
 
 const { TextArea } = Input;
+const log = createModuleLogger('TermLibraryManager');
 
 interface TermLibraryManagerProps {
   visible: boolean;
@@ -39,10 +41,12 @@ export const TermLibraryManager: React.FC<TermLibraryManagerProps> = ({
   const loadLibrary = async () => {
     setLoading(true);
     try {
-      const lib = await invoke<TermLibrary>('get_term_library');
+      const { termLibraryApi } = await import('../services/api');
+      const lib = await termLibraryApi.get() as TermLibrary;
       setLibrary(lib);
+      log.debug('术语库加载成功', { termCount: lib.terms.length });
     } catch (error) {
-      console.error('加载术语库失败:', error);
+      log.logError(error, '加载术语库失败');
       message.error('加载术语库失败');
     } finally {
       setLoading(false);
@@ -62,7 +66,7 @@ export const TermLibraryManager: React.FC<TermLibraryManagerProps> = ({
       message.success('术语已删除');
       loadLibrary();
     } catch (error) {
-      console.error('删除术语失败:', error);
+      log.logError(error, '删除术语失败');
       message.error('删除术语失败');
     }
   };
@@ -96,7 +100,7 @@ export const TermLibraryManager: React.FC<TermLibraryManagerProps> = ({
       setEditingTerm(null);
       loadLibrary();
     } catch (error) {
-      console.error('更新术语失败:', error);
+      log.logError(error, '更新术语失败');
       message.error('更新术语失败');
     }
   };
@@ -114,14 +118,16 @@ export const TermLibraryManager: React.FC<TermLibraryManagerProps> = ({
       return;
     }
 
+    log.info('开始生成风格总结', { termCount: library?.metadata.total_terms || 0 });
     setLoading(true);
     try {
-      await invoke('generate_style_summary', { apiKey });
+      const summary = await invoke<string>('generate_style_summary', { apiKey });
+      log.info('风格总结生成成功', { summary: summary.substring(0, 50) + '...' });
       message.success('风格总结已生成');
       loadLibrary();
     } catch (error) {
-      console.error('生成风格总结失败:', error);
-      message.error(`生成失败：${error}`);
+      log.logError(error, '生成风格总结失败');
+      message.error(`生成失败：${error instanceof Error ? error.message : String(error)}`);
     } finally {
       setLoading(false);
     }
@@ -232,6 +238,8 @@ export const TermLibraryManager: React.FC<TermLibraryManagerProps> = ({
       open={visible}
       onCancel={onClose}
       width={1000}
+      destroyOnClose={true}
+      mask={false}
       footer={[
         <Button key="refresh" icon={<ReloadOutlined />} onClick={loadLibrary}>
           刷新

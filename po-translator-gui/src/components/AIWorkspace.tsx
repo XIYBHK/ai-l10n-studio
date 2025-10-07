@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { Card, Statistic, Row, Col, Progress, Tag, Divider, Button, Popconfirm, Collapse } from 'antd';
 import { 
   ThunderboltOutlined, 
@@ -17,7 +17,10 @@ import { MemoryManager } from './MemoryManager';
 import { TermLibraryManager } from './TermLibraryManager';
 import { useTheme } from '../hooks/useTheme';
 import { useAppStore } from '../store/useAppStore';
-import { invoke } from '@tauri-apps/api/tauri';
+import { createModuleLogger } from '../utils/logger';
+import { eventDispatcher } from '../services/eventDispatcher';
+
+const log = createModuleLogger('AIWorkspace');
 
 interface AIWorkspaceProps {
   stats: TranslationStats | null;
@@ -31,6 +34,7 @@ export const AIWorkspace: React.FC<AIWorkspaceProps> = ({ stats, isTranslating, 
   const [termLibraryVisible, setTermLibraryVisible] = useState(false);
   const [termLibrary, setTermLibrary] = useState<TermLibrary | null>(null);
   const { colors } = useTheme();
+  const loadedRef = useRef(false); // 防止 StrictMode 重复加载
   
   // 从 store 读取累计统计
   const { cumulativeStats, updateCumulativeStats, resetCumulativeStats } = useAppStore();
@@ -38,15 +42,33 @@ export const AIWorkspace: React.FC<AIWorkspaceProps> = ({ stats, isTranslating, 
   // 加载术语库
   const loadTermLibrary = async () => {
     try {
-      const library = await invoke<TermLibrary>('get_term_library');
+      const { termLibraryApi } = await import('../services/api');
+      const library = await termLibraryApi.get() as TermLibrary;
       setTermLibrary(library);
+      log.debug('术语库加载成功', { termCount: library.terms.length });
     } catch (error) {
-      console.error('加载术语库失败:', error);
+      log.logError(error, '加载术语库失败');
     }
   };
 
+  // 组件加载时就加载术语库（类似累计统计，启用时就显示）
   useEffect(() => {
-    loadTermLibrary();
+    if (!loadedRef.current) {
+      loadedRef.current = true;
+      loadTermLibrary();
+    }
+  }, []);
+  
+  // 监听术语更新事件
+  useEffect(() => {
+    const unsubscribe = eventDispatcher.on('term:updated', () => {
+      log.debug('收到术语更新事件，重新加载术语库');
+      loadTermLibrary();
+    });
+    
+    return () => {
+      unsubscribe();
+    };
   }, []);
   
   // 当stats更新时累加到cumulative（使用store）

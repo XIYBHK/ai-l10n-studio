@@ -1,6 +1,9 @@
 import React, { useState, useEffect } from 'react';
 import { Modal, Form, Input, Switch, Select, InputNumber, message } from 'antd';
-import { invoke } from '@tauri-apps/api/tauri';
+import { configApi } from '../services/api';
+import { createModuleLogger } from '../utils/logger';
+
+const log = createModuleLogger('SettingsModal');
 
 interface SettingsModalProps {
   visible: boolean;
@@ -41,21 +44,22 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
 
   const loadConfig = async () => {
     try {
-      const config = await invoke<AppConfig>('get_app_config');
+      const config = await configApi.get() as AppConfig;
       form.setFieldsValue(config);
       setSelectedProvider(config.provider);
+      log.info('配置加载成功', { provider: config.provider });
     } catch (error) {
-      console.error('Failed to load config:', error);
-      message.error('加载配置失败');
+      log.logError(error, '加载配置失败');
     }
   };
 
   const loadProviders = async () => {
     try {
-      const providerList = await invoke<any[]>('get_provider_configs');
+      const providerList = await configApi.getProviders() as any[];
       setProviders(providerList);
+      log.info('服务商列表加载成功', { count: providerList.length });
     } catch (error) {
-      console.error('Failed to load providers:', error);
+      log.logError(error, '加载服务商列表失败');
     }
   };
 
@@ -76,16 +80,17 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
       const values = await form.validateFields();
       
       // 验证配置
-      await invoke('validate_config', { config: values });
+      await configApi.validate(values);
       
       // 保存配置
-      await invoke('update_app_config', { config: values });
+      await configApi.update(values);
       
       message.success('设置保存成功');
+      log.info('配置保存成功', { provider: values.provider, model: values.model });
       onSave(values);
       onClose();
     } catch (error: any) {
-      console.error('Failed to save config:', error);
+      log.logError(error, '保存配置失败');
       message.error(error?.message || '保存设置失败');
     } finally {
       setLoading(false);
@@ -104,6 +109,8 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
       width={600}
       okText="保存"
       cancelText="取消"
+      destroyOnClose={true}
+      mask={false}
     >
       <Form
         form={form}

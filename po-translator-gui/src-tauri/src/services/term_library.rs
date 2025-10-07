@@ -1,7 +1,6 @@
 use anyhow::{anyhow, Result};
 use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
-use std::collections::HashMap;
 use std::fs;
 use std::path::Path;
 
@@ -99,10 +98,8 @@ impl TermLibrary {
         let content = fs::read_to_string(path)?;
         let library: Self = serde_json::from_str(&content)?;
         
-        crate::app_log!(
-            "[术语库] 加载成功：{} 条术语",
-            library.terms.len()
-        );
+        // 只在调试时输出，减少日志噪音
+        // crate::app_log!("[术语库] 加载成功：{} 条术语", library.terms.len());
         
         Ok(library)
     }
@@ -171,6 +168,14 @@ impl TermLibrary {
         if self.terms.len() < initial_len {
             self.metadata.total_terms = self.terms.len();
             crate::app_log!("[术语库] 删除术语: {}", source);
+            
+            // 如果术语库被清空，清除风格总结
+            if self.terms.is_empty() {
+                self.style_summary = None;
+                self.metadata.terms_at_last_summary = 0;
+                crate::app_log!("[术语库] 术语库已清空，风格总结已清除");
+            }
+            
             Ok(())
         } else {
             Err(anyhow!("术语不存在: {}", source))
@@ -204,27 +209,45 @@ impl TermLibrary {
     /// 构建用于AI分析的提示词
     pub fn build_analysis_prompt(&self) -> String {
         let mut prompt = String::from(
-            "请分析以下用户术语偏好，总结出翻译风格指导（不超过150字）：\n\n"
+            "分析用户的翻译风格偏好，生成风格指导（不超过150字）。\n\n"
         );
         
         // 按频率排序，只取前30个高频术语
         let mut sorted_terms = self.terms.clone();
         sorted_terms.sort_by(|a, b| b.frequency.cmp(&a.frequency));
         
-        for term in sorted_terms.iter().take(30) {
+        prompt.push_str("【术语对照】\n");
+        for (idx, term) in sorted_terms.iter().take(30).enumerate() {
+            let label = if sorted_terms.len() > 1 {
+                format!("{}. ", idx + 1)
+            } else {
+                String::new()
+            };
+            
             prompt.push_str(&format!(
-                "- {} → {} (AI原译: {})\n",
+                "{}原文: {}\n   AI译: {}\n   用户译: {}\n\n",
+                label,
                 term.source,
-                term.user_translation,
-                term.ai_translation
+                term.ai_translation,
+                term.user_translation
             ));
         }
         
-        prompt.push_str("\n总结要点：\n");
-        prompt.push_str("1. 用户偏好的翻译风格特点\n");
-        prompt.push_str("2. 关键术语的翻译倾向\n");
-        prompt.push_str("3. 需要注意的翻译原则\n");
-        prompt.push_str("\n要求：用中文回答，不超过150字，直接给出总结内容，不要有多余的说明。");
+        prompt.push_str("【分析任务】\n");
+        prompt.push_str("对比上述每组「AI译」和「用户译」，找出所有差异。\n\n");
+        prompt.push_str("【检查清单】（逐一检查）\n");
+        prompt.push_str("1. 词汇替换：是否有词被替换？（如：接近→邻近）\n");
+        prompt.push_str("2. 下划线：用户译中是否添加了下划线_？\n");
+        prompt.push_str("3. 空格：空格使用是否有变化？\n");
+        prompt.push_str("4. 其他符号：是否有其他标点或符号变化？\n\n");
+        prompt.push_str("【输出格式】（单行，只写发现的差异）\n");
+        prompt.push_str("准确的技术翻译；词汇：[词汇偏好，无则不写]；符号：[符号偏好，无则不写]\n\n");
+        prompt.push_str("【示例1 - 只有词汇差异】\n");
+        prompt.push_str("准确的技术翻译；词汇偏好\"邻近\"（如：接近→邻近）\n\n");
+        prompt.push_str("【示例2 - 有下划线变化】\n");
+        prompt.push_str("准确的技术翻译；符号：空格改为下划线（如：资产编辑器→资产_编辑器）\n\n");
+        prompt.push_str("【示例3 - 词汇和符号都有】\n");
+        prompt.push_str("准确的技术翻译；词汇偏好\"移除\"（如：删除→移除）；符号：使用下划线连接");
         
         prompt
     }

@@ -1,11 +1,14 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { Modal, Input, Button, Space, message, Tabs } from 'antd';
-import { CopyOutlined, ReloadOutlined, ClearOutlined, FileOutlined, BugOutlined } from '@ant-design/icons';
-import { invoke } from '@tauri-apps/api/tauri';
+import { CopyOutlined, ReloadOutlined, ClearOutlined, FileOutlined, BugOutlined, DownloadOutlined, SaveOutlined } from '@ant-design/icons';
+import { logApi } from '../services/api';
 import Draggable from 'react-draggable';
 import { FileDropTest } from './FileDropTest';
+import { createModuleLogger } from '../utils/logger';
+import { frontendLogger } from '../utils/frontendLogger';
 
 const { TextArea } = Input;
+const log = createModuleLogger('DevToolsModal');
 
 interface DevToolsModalProps {
   visible: boolean;
@@ -17,6 +20,7 @@ export const DevToolsModal: React.FC<DevToolsModalProps> = ({
   onClose,
 }) => {
   const [logs, setLogs] = useState<string>('');
+  const [frontendLogs, setFrontendLogs] = useState<string>('');
   const [loading, setLoading] = useState(false);
   const [bounds, setBounds] = useState({ left: 0, top: 0, bottom: 0, right: 0 });
   const [disabled, setDisabled] = useState(true);
@@ -25,19 +29,32 @@ export const DevToolsModal: React.FC<DevToolsModalProps> = ({
   useEffect(() => {
     if (visible) {
       loadLogs();
-      // 定时刷新日志
+      // 定时刷新后端日志
       const interval = setInterval(loadLogs, 2000); // 每2秒刷新
       return () => clearInterval(interval);
     }
   }, [visible]);
 
+  // 加载前端日志（仅在打开时加载一次）
+  useEffect(() => {
+    if (visible) {
+      setFrontendLogs(frontendLogger.getLogs());
+    }
+  }, [visible]);
+
+  const refreshFrontendLogs = () => {
+    setFrontendLogs(frontendLogger.getLogs());
+  };
+
   const loadLogs = async () => {
     setLoading(true);
     try {
-      const logLines = await invoke<string[]>('get_app_logs');
-      setLogs(logLines.join('\n'));
+      const logContent = await logApi.get();
+      // 确保 logs 是字符串类型
+      setLogs(typeof logContent === 'string' ? logContent : JSON.stringify(logContent, null, 2));
     } catch (error) {
-      console.error('Failed to load logs:', error);
+      log.logError(error, '加载日志失败');
+      setLogs('加载日志失败: ' + (error instanceof Error ? error.message : String(error)));
     } finally {
       setLoading(false);
     }
@@ -51,13 +68,53 @@ export const DevToolsModal: React.FC<DevToolsModalProps> = ({
     });
   };
 
+  const handleExportLogs = () => {
+    try {
+      const timestamp = new Date().toISOString().replace(/[:.]/g, '-').slice(0, -5);
+      const filename = `backend-logs-${timestamp}.txt`;
+      
+      // 创建 Blob 对象
+      const blob = new Blob([logs], { type: 'text/plain;charset=utf-8' });
+      const url = URL.createObjectURL(blob);
+      
+      // 创建下载链接
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = filename;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      
+      // 清理
+      URL.revokeObjectURL(url);
+      
+      message.success(`后端日志已导出: ${filename}`);
+      log.info('后端日志已导出', { filename });
+    } catch (error) {
+      log.logError(error, '导出日志失败');
+      message.error('导出失败');
+    }
+  };
+
+  const handleSaveFrontendLogs = async () => {
+    try {
+      const filename = await frontendLogger.saveLogs();
+      message.success(`前端日志已保存到数据目录: ${filename}`);
+      log.info('前端日志已保存', { filename });
+    } catch (error) {
+      log.logError(error, '保存前端日志失败');
+      message.error('保存失败');
+    }
+  };
+
   const handleClear = async () => {
     try {
-      await invoke('clear_app_logs');
+      await logApi.clear();
       setLogs('');
       message.success('日志已清空');
+      log.info('日志已清空');
     } catch (error) {
-      message.error('清空失败');
+      log.logError(error, '清空日志失败');
     }
   };
 
@@ -101,6 +158,8 @@ export const DevToolsModal: React.FC<DevToolsModalProps> = ({
       onCancel={onClose}
       width={900}
       style={{ top: 20 }}
+      destroyOnClose={true}
+      mask={false}
       footer={[
         <Button key="close" onClick={onClose}>
           关闭
@@ -123,7 +182,7 @@ export const DevToolsModal: React.FC<DevToolsModalProps> = ({
             key: 'logs',
             label: (
               <span>
-                <BugOutlined /> 应用日志
+                <BugOutlined /> 后端日志
               </span>
             ),
             children: (
@@ -142,6 +201,12 @@ export const DevToolsModal: React.FC<DevToolsModalProps> = ({
                     </span>
                   </Space>
                   <Space>
+                    <Button
+                      icon={<DownloadOutlined />}
+                      onClick={handleExportLogs}
+                    >
+                      导出日志
+                    </Button>
                     <Button
                       icon={<ClearOutlined />}
                       onClick={handleClear}
@@ -185,6 +250,83 @@ export const DevToolsModal: React.FC<DevToolsModalProps> = ({
                 }}>
                   <span>日志行数: {logs.split('\n').filter(l => l.trim()).length}</span>
                   <span>字符数: {logs.length}</span>
+                  <span>最后更新: {new Date().toLocaleTimeString()}</span>
+                </div>
+              </div>
+            ),
+          },
+          {
+            key: 'frontend',
+            label: (
+              <span>
+                <BugOutlined /> 前端日志
+              </span>
+            ),
+            children: (
+              <div>
+                <Space style={{ marginBottom: 12 }}>
+                  <Button
+                    icon={<ReloadOutlined />}
+                    onClick={refreshFrontendLogs}
+                  >
+                    刷新
+                  </Button>
+                  <Button
+                    icon={<SaveOutlined />}
+                    onClick={handleSaveFrontendLogs}
+                    type="primary"
+                  >
+                    保存到数据目录
+                  </Button>
+                  <Button
+                    icon={<ClearOutlined />}
+                    onClick={() => {
+                      frontendLogger.clearLogs();
+                      setFrontendLogs('');
+                      message.success('前端日志已清空');
+                    }}
+                    danger
+                  >
+                    清空
+                  </Button>
+                </Space>
+
+            <div style={{
+              fontSize: '12px',
+              color: '#666',
+              marginBottom: 12,
+              padding: '8px 12px',
+              background: '#e6f7ff',
+              borderRadius: 4,
+              border: '1px solid #91d5ff'
+            }}>
+              💡 自动捕获：模块日志（[App]、[EditorPane] 等）+ 错误/警告，已过滤框架噪音
+              <br />
+              📁 文件管理：内存最多 500 条，保存到文件时自动保留最近 5 个文件
+            </div>
+
+                <TextArea
+                  value={frontendLogs}
+                  readOnly
+                  rows={20}
+                  placeholder="等待前端日志输出..."
+                  style={{
+                    fontFamily: 'Consolas, Monaco, "Courier New", monospace',
+                    fontSize: '12px',
+                    backgroundColor: '#1e1e1e',
+                    color: '#d4d4d4',
+                  }}
+                />
+
+                <div style={{ 
+                  marginTop: 12, 
+                  fontSize: '12px', 
+                  color: '#999',
+                  display: 'flex',
+                  justifyContent: 'space-between'
+                }}>
+                  <span>日志行数: {frontendLogs.split('\n').filter(l => l.trim()).length}</span>
+                  <span>字符数: {frontendLogs.length}</span>
                   <span>最后更新: {new Date().toLocaleTimeString()}</span>
                 </div>
               </div>

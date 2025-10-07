@@ -1,131 +1,54 @@
-import { useState } from 'react';
-import { invoke } from '@tauri-apps/api/tauri';
-import { POEntry, TranslationStats } from '../types/tauri';
+/**
+ * 翻译相关的 React Hook
+ * 使用统一的 API 层和 useAsync Hook
+ */
 
-interface BatchResult {
-  translations: string[];
-  stats: TranslationStats;
-}
+import { poFileApi, translatorApi, translationMemoryApi } from '../services/api';
+import { useAsync } from './useAsync';
 
+/**
+ * 翻译 Hook
+ * 
+ * @deprecated 建议直接使用 useAsync + API 函数的方式，更灵活
+ * 
+ * @example
+ * ```tsx
+ * // 旧方式（保留向后兼容）
+ * const { translateEntry, isLoading } = useTranslator();
+ * 
+ * // 新方式（推荐）
+ * const { execute: translateEntry, loading } = useAsync(translatorApi.translateEntry);
+ * ```
+ */
 export const useTranslator = () => {
-  const [isLoading, setIsLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-
-  const parsePOFile = async (filePath: string): Promise<POEntry[]> => {
-    setIsLoading(true);
-    setError(null);
-    
-    try {
-      const entries = await invoke<POEntry[]>('parse_po_file', { filePath });
-      return entries;
-    } catch (err) {
-      const errorMessage = err instanceof Error ? err.message : 'Unknown error';
-      setError(errorMessage);
-      throw new Error(errorMessage);
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
-  const translateEntry = async (text: string, apiKey: string): Promise<string> => {
-    setIsLoading(true);
-    setError(null);
-    
-    try {
-      const translation = await invoke<string>('translate_entry', { text, apiKey });
-      return translation;
-    } catch (err) {
-      const errorMessage = err instanceof Error ? err.message : 'Unknown error';
-      setError(errorMessage);
-      throw new Error(errorMessage);
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
-  const translateBatch = async (
-    texts: string[], 
-    apiKey: string,
-    onProgress?: (index: number, translation: string) => void
-  ): Promise<string[]> => {
-    setIsLoading(true);
-    setError(null);
-    
-    try {
-      const batchSize = 5; // 限制并发数，避免过多请求
-      const translations: string[] = [];
-      
-      // 批量并行翻译
-      for (let i = 0; i < texts.length; i += batchSize) {
-        const batch = texts.slice(i, i + batchSize);
-        const batchResults = await Promise.all(
-          batch.map(text => invoke<string>('translate_entry', { text, apiKey }))
-        );
-        
-        // 处理结果和进度回调
-        batchResults.forEach((translation, batchIndex) => {
-          const globalIndex = i + batchIndex;
-          translations.push(translation);
-          
-          // 调用进度回调
-          if (onProgress) {
-            onProgress(globalIndex, translation);
-          }
-        });
-      }
-      
-      return translations;
-    } catch (err) {
-      const errorMessage = err instanceof Error ? err.message : 'Unknown error';
-      setError(errorMessage);
-      throw new Error(errorMessage);
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
-  const translateBatchWithStats = async (
-    texts: string[],
-    apiKey: string
-  ): Promise<BatchResult> => {
-    setIsLoading(true);
-    setError(null);
-
-    try {
-      const result = await invoke<BatchResult>('translate_batch_with_stats', { texts, apiKey });
-      return result;
-    } catch (err) {
-      const errorMessage = err instanceof Error ? err.message : 'Unknown error';
-      setError(errorMessage);
-      throw new Error(errorMessage);
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
-  const getTranslationMemory = async () => {
-    setIsLoading(true);
-    setError(null);
-    
-    try {
-      const memory = await invoke('get_translation_memory');
-      return memory;
-    } catch (err) {
-      const errorMessage = err instanceof Error ? err.message : 'Unknown error';
-      setError(errorMessage);
-      throw new Error(errorMessage);
-    } finally {
-      setIsLoading(false);
-    }
-  };
+  const parsePOFile = useAsync(poFileApi.parse);
+  const translateEntry = useAsync(translatorApi.translateEntry);
+  const translateBatch = useAsync(translatorApi.translateBatch);
+  const translateBatchWithStats = useAsync(translatorApi.translateBatchWithStats);
+  const getTranslationMemory = useAsync(translationMemoryApi.get);
 
   return {
-    isLoading,
-    error,
-    parsePOFile,
-    translateEntry,
-    translateBatch,
-    translateBatchWithStats,
-    getTranslationMemory,
+    // 向后兼容的接口
+    isLoading: 
+      parsePOFile.loading || 
+      translateEntry.loading || 
+      translateBatch.loading || 
+      translateBatchWithStats.loading || 
+      getTranslationMemory.loading,
+    
+    error: 
+      parsePOFile.error?.message || 
+      translateEntry.error?.message || 
+      translateBatch.error?.message || 
+      translateBatchWithStats.error?.message || 
+      getTranslationMemory.error?.message || 
+      null,
+    
+    // API 方法
+    parsePOFile: parsePOFile.execute,
+    translateEntry: translateEntry.execute,
+    translateBatch: translateBatch.execute,
+    translateBatchWithStats: translateBatchWithStats.execute,
+    getTranslationMemory: getTranslationMemory.execute,
   };
 };

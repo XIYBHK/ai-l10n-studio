@@ -176,11 +176,11 @@ impl AITranslator {
             return Ok(Vec::new());
         }
 
-        // 🔍 调试：检查回调是否传入
+        // 🔍 调试：检查回调是否传入（风格总结等内部调用时为None是正常的）
         if progress_callback.is_some() {
             crate::app_log!("[translate_batch] ✅ progress_callback 已传入");
         } else {
-            crate::app_log!("[translate_batch] ❌ progress_callback 为 None！");
+            crate::app_log!("[translate_batch] ℹ️ progress_callback 为 None（内部调用）");
         }
 
         // 重置统计

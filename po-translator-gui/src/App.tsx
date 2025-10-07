@@ -1,6 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Layout, ConfigProvider } from 'antd';
-import { invoke } from '@tauri-apps/api/tauri';
+import { Layout, ConfigProvider, message } from 'antd';
 import { listen } from '@tauri-apps/api/event';
 import { throttle } from 'lodash';
 import { MenuBar } from './components/MenuBar';
@@ -12,16 +11,22 @@ import { AIWorkspace } from './components/AIWorkspace';
 import { useAppStore } from './store/useAppStore';
 import { useTranslator } from './hooks/useTranslator';
 import { useTheme } from './hooks/useTheme';
-import { TranslationStats } from './types/tauri';
+import { useTauriEventBridge } from './hooks/useTauriEventBridge';
+import { TranslationStats, POEntry } from './types/tauri';
+import { createModuleLogger } from './utils/logger';
+import { eventDispatcher } from './services/eventDispatcher';
+import { configApi, poFileApi, dialogApi } from './services/api';
 import './i18n/config';
 import './App.css';
 
 const { Sider } = Layout;
+const log = createModuleLogger('App');
 
 function App() {
   const {
     entries,
     currentEntry,
+    currentIndex,
     currentFilePath,
     isTranslating,
     progress,
@@ -45,6 +50,9 @@ function App() {
   const [aiTranslations, setAiTranslations] = useState<Map<number, string>>(new Map());
   
   const { themeConfig, algorithm, toggleTheme, isDark, colors } = useTheme();
+  
+  // 🌉 建立 Tauri 事件桥接
+  useTauriEventBridge();
 
   // 加载配置
   useEffect(() => {
@@ -81,20 +89,20 @@ function App() {
       // 使用 @tauri-apps/api/event 的 listen
       unlistenFn = await listen<string[]>('tauri://file-drop', async (event) => {
         const files = event.payload;
-        console.log('✅ File drop event received:', files);
+        log.info('文件拖放事件接收', { files });
         
         if (files && files.length > 0) {
           const filePath = files[0];
           // 检查是否为 .po 文件
           if (filePath.toLowerCase().endsWith('.po')) {
             try {
-              const entries = await parsePOFile(filePath);
+              const entries = await parsePOFile(filePath) as POEntry[];
               setEntries(entries);
               setCurrentFilePath(filePath);
-              console.log(`✅ 已通过拖放导入文件: ${filePath}`);
+              log.info('通过拖放导入文件成功', { filePath });
               alert(`成功导入文件: ${filePath.split(/[/\\]/).pop()}`);
             } catch (error) {
-              console.error('❌ Failed to parse dropped file:', error);
+              log.logError(error, '解析拖放文件失败');
               alert(`文件解析失败：${error instanceof Error ? error.message : '未知错误'}`);
             }
           } else {
@@ -103,7 +111,7 @@ function App() {
         }
       });
       
-      console.log('✅ File drop listener setup complete');
+      log.debug('文件拖放监听器设置完成');
     };
 
     setupListener();
@@ -117,7 +125,7 @@ function App() {
 
   const loadConfig = async () => {
     try {
-      const config = await invoke('get_app_config');
+      const config = await configApi.get();
       if (config && typeof config === 'object' && 'api_key' in config) {
         const apiKeyValue = (config as any).api_key;
         if (apiKeyValue) {
@@ -126,20 +134,29 @@ function App() {
         setConfig(config as any);
       }
     } catch (error) {
-      console.error('Failed to load config:', error);
+      log.logError(error, '加载配置失败');
     }
   };
 
   const openFile = async () => {
     try {
-      const filePath = await invoke<string | null>('open_file_dialog');
+      const filePath = await dialogApi.openFile();
       if (filePath) {
-        const entries = await parsePOFile(filePath);
+        const entries = await parsePOFile(filePath) as POEntry[];
         setEntries(entries);
-        setCurrentFilePath(filePath); // 记录当前打开的文件路径
+        setCurrentFilePath(filePath);
+        
+        // 触发文件加载事件
+        await eventDispatcher.emit('file:loaded', { path: filePath, entries });
+        log.info('文件加载成功', { filePath, entryCount: entries.length });
       }
     } catch (error) {
-      console.error('Failed to open file:', error);
+      log.logError(error, '打开文件失败');
+      await eventDispatcher.emit('file:error', { 
+        path: undefined, 
+        error: error as Error, 
+        operation: 'load' 
+      });
     }
   };
 
@@ -163,112 +180,79 @@ function App() {
       return;
     }
 
-    setTranslating(true);
-    setProgress(0);
-
-    try {
-      const texts = untranslatedEntries.map(entry => entry.msgid);
-      
-      // 🔔 监听翻译进度事件，实时更新界面
-      const { listen } = await import('@tauri-apps/api/event');
-      let completedCount = 0;
-      
-      const unlistenProgress = await listen<{ index: number; translation: string }>(
-        'translation-progress',
-        (event) => {
-          console.log('🔔 收到翻译进度事件:', event.payload);
-          const { index, translation } = event.payload;
-          const entry = untranslatedEntries[index];
-          const entryIndex = entries.indexOf(entry);
-          
-          if (entryIndex >= 0) {
-            // 实时更新条目
-            updateEntry(entryIndex, { 
-              msgstr: translation, 
-              needsReview: true  // 标记为待确认
-            });
-            
-            // 存储AI译文用于后续术语检测
-            setAiTranslations(prev => new Map(prev).set(entryIndex, translation));
-            
-            // 更新进度条
-            completedCount++;
-            setProgress((completedCount / texts.length) * 100);
-            console.log(`✅ 已更新条目 ${completedCount}/${texts.length}`);
-          } else {
-            console.warn(`⚠️ 未找到条目索引: entryIndex=${entryIndex}, index=${index}`);
-          }
-        }
-      );
-      
-      // 📊 监听统计更新事件，实时更新AI工作区
-      const unlistenStats = await listen<TranslationStats>(
-        'translation-stats-update',
-        (event) => {
-          console.log('📊 收到统计更新事件:', event.payload);
-          setTranslationStats(event.payload);
-        }
-      );
-      
-      // 使用带统计的批量翻译
-      const result = await translateBatchWithStats(texts, apiKey);
-      
-      // 取消监听
-      unlistenProgress();
-      unlistenStats();
-
-      // 更新统计信息
-      setTranslationStats(result.stats);
-
+    const success = await executeTranslation(untranslatedEntries, 'all');
+    
+    if (success && translationStats) {
       const statsMsg = `
 📊 翻译统计：
-- 总条目：${result.stats.total}
-- 记忆库命中：${result.stats.tm_hits} 条
-- 去重后：${result.stats.deduplicated} 条
-- AI翻译：${result.stats.ai_translated} 条
-- 新学习：${result.stats.tm_learned} 条短语
-- Token消耗：${result.stats.token_stats.total_tokens} (¥${result.stats.token_stats.cost.toFixed(4)})
+- 总条目：${translationStats.total}
+- 记忆库命中：${translationStats.tm_hits} 条
+- 去重后：${translationStats.deduplicated} 条
+- AI翻译：${translationStats.ai_translated} 条
+- 新学习：${translationStats.tm_learned} 条短语
+- Token消耗：${translationStats.token_stats.total_tokens} (¥${translationStats.token_stats.cost.toFixed(4)})
 
-节省了 ${result.stats.tm_hits + (result.stats.total - result.stats.deduplicated)} 次API调用！
+节省了 ${translationStats.tm_hits + (translationStats.total - translationStats.deduplicated)} 次API调用！
       `.trim();
 
       alert(`翻译完成！\n\n${statsMsg}\n\n这些条目已标记为"待确认"，请检查后确认。`);
-    } catch (error) {
-      console.error('Translation failed:', error);
-      alert(`翻译失败：${error instanceof Error ? error.message : '未知错误'}`);
-    } finally {
-      setTranslating(false);
     }
   };
 
   // 保存到原文件
   const saveFile = async () => {
     if (!currentFilePath) {
-      alert('没有打开的文件，请使用"另存为"');
+      message.warning('没有打开的文件，请使用"另存为"');
       return;
     }
     
     try {
-      await invoke('save_po_file', { filePath: currentFilePath, entries });
-      alert('保存成功！');
+      await poFileApi.save(currentFilePath, entries);
+      message.success('保存成功！');
+      
+      // 触发文件保存事件
+      await eventDispatcher.emit('file:saved', { 
+        path: currentFilePath, 
+        success: true 
+      });
+      log.info('文件保存成功', { filePath: currentFilePath });
     } catch (error) {
-      console.error('Failed to save file:', error);
-      alert(`保存失败：${error instanceof Error ? error.message : '未知错误'}`);
+      log.logError(error, '保存文件失败');
+      message.error(`保存失败：${error instanceof Error ? error.message : '未知错误'}`);
+      
+      await eventDispatcher.emit('file:error', { 
+        path: currentFilePath, 
+        error: error as Error, 
+        operation: 'save' 
+      });
     }
   };
   
   // 另存为
   const saveAsFile = async () => {
     try {
-      const filePath = await invoke('save_file_dialog');
+      const filePath = await dialogApi.saveFile();
       if (filePath) {
-        await invoke('save_po_file', { filePath, entries });
-        setCurrentFilePath(filePath as string); // 更新当前文件路径
-        alert('保存成功！');
+        await poFileApi.save(filePath, entries);
+        setCurrentFilePath(filePath);
+        message.success('保存成功！');
+        
+        // 触发文件保存事件
+        await eventDispatcher.emit('file:saved', { 
+          path: filePath, 
+          success: true 
+        });
+        log.info('文件另存为成功', { filePath });
       }
     } catch (error) {
-      console.error('Failed to save file:', error);
-      alert(`保存失败：${error instanceof Error ? error.message : '未知错误'}`);
+      log.logError(error, '另存为失败');
+      message.error(`保存失败：${error instanceof Error ? error.message : '未知错误'}`);
+      
+      await eventDispatcher.emit('file:error', { 
+        path: undefined, 
+        error: error as Error, 
+        operation: 'save' 
+      });
     }
   };
 
@@ -291,43 +275,115 @@ function App() {
     setTranslationStats(null);
   };
 
-  // 翻译选中的条目
-  const handleTranslateSelected = async (indices: number[]) => {
+  // 🔧 统一的翻译处理函数 - 使用事件分发器
+  const executeTranslation = async (
+    entriesToTranslate: POEntry[], 
+    sourceType: 'all' | 'selected' = 'all'
+  ) => {
     if (!apiKey) {
-      alert('请先设置API密钥');
-      return;
+      message.warning('请先设置API密钥');
+      return false;
     }
 
-    const selectedEntries = indices.map(i => entries[i]).filter(e => e && e.msgid && !e.msgstr);
-    if (selectedEntries.length === 0) {
-      alert('选中的条目都已翻译');
-      return;
-    }
-
-    const texts = selectedEntries.map(e => e.msgid);
+    const texts = entriesToTranslate.map(e => e.msgid);
+    let completedCount = 0;
     
     try {
       setTranslating(true);
-      const result = await translateBatchWithStats(texts, apiKey);
+      setProgress(0);
       
-      // 更新条目
-      result.translations.forEach((translation, index) => {
-        const entry = selectedEntries[index];
+      // 触发翻译开始事件
+      await eventDispatcher.emit('translation:before', { texts, source: sourceType });
+      log.info('开始翻译', { count: texts.length, source: sourceType });
+      
+      // 🎯 订阅翻译进度事件（使用事件分发器）
+      const unsubProgress = eventDispatcher.on('translation:progress', ({ index, translation }) => {
+        const logPrefix = sourceType === 'all' ? '全部翻译' : '选中翻译';
+        log.debug(`📥 收到翻译进度（${logPrefix}）`, { index, translation });
+        
+        const entry = entriesToTranslate[index];
         const entryIndex = entries.indexOf(entry);
+        
         if (entryIndex >= 0) {
-          updateEntry(entryIndex, { msgstr: translation, needsReview: true });
+          // 实时更新条目
+          updateEntry(entryIndex, { 
+            msgstr: translation, 
+            needsReview: true  // 标记为待确认
+          });
+          
+          // 存储AI译文用于后续术语检测
+          setAiTranslations(prev => {
+            const newMap = new Map(prev);
+            newMap.set(entryIndex, translation);
+            log.debug(`💾 存储AI译文（${logPrefix}）`, { 
+              entryIndex, 
+              translation,
+              totalAiTranslations: newMap.size 
+            });
+            return newMap;
+          });
+          
+          // 更新进度条
+          completedCount++;
+          setProgress((completedCount / texts.length) * 100);
+          log.debug(`✅ 已更新条目（${logPrefix}）`, { 
+            completed: completedCount, 
+            total: texts.length 
+          });
+        } else {
+          log.warn(`❌ 未找到条目索引（${logPrefix}）`, { entryIndex, index });
         }
       });
       
-      // 更新统计
-      setTranslationStats(result.stats);
+      // 📊 订阅统计更新事件
+      const unsubStats = eventDispatcher.on('translation:stats', (stats) => {
+        log.debug('📊 收到统计更新', stats);
+        setTranslationStats(stats);
+      });
       
-      alert(`翻译完成！共翻译 ${result.translations.length} 个条目`);
+      // 执行翻译
+      await translateBatchWithStats(texts, apiKey);
+      
+      // 清理订阅
+      unsubProgress();
+      unsubStats();
+      
+      // 触发翻译完成事件
+      await eventDispatcher.emit('translation:after', { 
+        success: true, 
+        stats: translationStats || undefined 
+      });
+      log.info('翻译完成', { count: completedCount });
+      
+      return true; // 成功
     } catch (error) {
-      console.error('Translation failed:', error);
-      alert(`翻译失败：${error instanceof Error ? error.message : '未知错误'}`);
+      log.logError(error, '翻译失败');
+      message.error(`翻译失败：${error instanceof Error ? error.message : '未知错误'}`);
+      
+      // 触发翻译错误事件
+      await eventDispatcher.emit('translation:error', { 
+        error: error as Error, 
+        phase: 'execution' 
+      });
+      
+      return false; // 失败
     } finally {
       setTranslating(false);
+      setProgress(0);
+    }
+  };
+
+  // 翻译选中的条目
+  const handleTranslateSelected = async (indices: number[]) => {
+    const selectedEntries = indices.map(i => entries[i]).filter(e => e && e.msgid && !e.msgstr);
+    if (selectedEntries.length === 0) {
+      message.info('选中的条目都已翻译');
+      return;
+    }
+
+    const success = await executeTranslation(selectedEntries, 'selected');
+    if (success) {
+      message.success(`翻译完成！共翻译 ${selectedEntries.length} 个条目`);
     }
   };
 
@@ -451,7 +507,7 @@ function App() {
           <EditorPane
             entry={currentEntry}
             onEntryUpdate={updateEntry}
-            aiTranslation={currentEntry ? aiTranslations.get(entries.indexOf(currentEntry)) : undefined}
+            aiTranslation={currentIndex >= 0 ? aiTranslations.get(currentIndex) : undefined}
             apiKey={apiKey}
           />
         </div>

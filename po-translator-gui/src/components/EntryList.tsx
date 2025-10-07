@@ -4,6 +4,9 @@ import { CheckOutlined } from '@ant-design/icons';
 import { POEntry } from '../types/tauri';
 import { useAppStore } from '../store/useAppStore';
 import { useTheme } from '../hooks/useTheme';
+import { createModuleLogger } from '../utils/logger';
+
+const log = createModuleLogger('EntryList');
 
 interface EntryListProps {
   entries: POEntry[];
@@ -154,7 +157,7 @@ export const EntryList: React.FC<EntryListProps> = ({
             .join('\n');
           
           navigator.clipboard.writeText(selectedTexts).then(() => {
-            console.log(`已复制 ${selectedRowKeys.length} 个条目到剪贴板`);
+            log.info(`已复制条目到剪贴板`, { count: selectedRowKeys.length });
           });
         }
       }

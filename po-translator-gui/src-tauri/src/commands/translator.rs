@@ -40,6 +40,22 @@ pub struct TranslationPair {
 
 // TranslationMemory 结构体已移至 services/translation_memory.rs
 
+// 🔧 辅助函数：自动保存翻译记忆库（内部使用）
+fn auto_save_translation_memory(translator: &AITranslator) {
+    if let Some(tm) = translator.get_translation_memory() {
+        let tm_path = get_translation_memory_path().to_string_lossy().to_string();
+        if let Some(parent) = std::path::Path::new(&tm_path).parent() {
+            let _ = std::fs::create_dir_all(parent);
+        }
+        let _ = tm.save_to_file(tm_path);
+    }
+}
+
+// 🔧 辅助函数：保存术语库
+fn save_term_library(library: &TermLibrary, path: &std::path::PathBuf) -> Result<(), String> {
+    library.save_to_file(path).map_err(|e| e.to_string())
+}
+
 // Tauri 命令
 #[tauri::command]
 pub async fn parse_po_file(file_path: String) -> Result<Vec<POEntry>, String> {
@@ -56,13 +72,7 @@ pub async fn translate_entry(text: String, api_key: String) -> Result<String, St
         .map_err(|e| e.to_string())?;
 
     // 保存TM到文件
-    if let Some(tm) = translator.get_translation_memory() {
-        let tm_path = get_translation_memory_path().to_string_lossy().to_string();
-        if let Some(parent) = std::path::Path::new(&tm_path).parent() {
-            let _ = std::fs::create_dir_all(parent);
-        }
-        let _ = tm.save_to_file(tm_path);
-    }
+    auto_save_translation_memory(&translator);
 
     result
         .into_iter()
@@ -85,13 +95,7 @@ pub async fn translate_batch(texts: Vec<String>, api_key: String) -> Result<Vec<
         .map_err(|e| e.to_string())?;
 
     // 保存TM到文件
-    if let Some(tm) = translator.get_translation_memory() {
-        let tm_path = get_translation_memory_path().to_string_lossy().to_string();
-        if let Some(parent) = std::path::Path::new(&tm_path).parent() {
-            let _ = std::fs::create_dir_all(parent);
-        }
-        let _ = tm.save_to_file(tm_path);
-    }
+    auto_save_translation_memory(&translator);
 
     Ok(result)
 }
@@ -161,13 +165,7 @@ pub async fn translate_batch_with_stats(
     };
 
     // 保存TM到文件
-    if let Some(tm) = translator.get_translation_memory() {
-        let tm_path = get_translation_memory_path().to_string_lossy().to_string();
-        if let Some(parent) = std::path::Path::new(&tm_path).parent() {
-            let _ = std::fs::create_dir_all(parent);
-        }
-        let _ = tm.save_to_file(tm_path);
-    }
+    auto_save_translation_memory(&translator);
 
     Ok(BatchResult {
         translations,
@@ -374,7 +372,7 @@ pub async fn add_term_to_library(
         .add_term(source, user_translation, ai_translation, context)
         .map_err(|e| e.to_string())?;
     
-    library.save_to_file(&path).map_err(|e| e.to_string())?;
+    save_term_library(&library, &path)?;
     
     Ok(())
 }
@@ -387,7 +385,7 @@ pub async fn remove_term_from_library(source: String) -> Result<(), String> {
     
     library.remove_term(&source).map_err(|e| e.to_string())?;
     
-    library.save_to_file(&path).map_err(|e| e.to_string())?;
+    save_term_library(&library, &path)?;
     
     Ok(())
 }
@@ -399,25 +397,41 @@ pub async fn generate_style_summary(api_key: String) -> Result<String, String> {
     let mut library = TermLibrary::load_from_file(&path).map_err(|e| e.to_string())?;
     
     if library.terms.is_empty() {
+        crate::app_log!("[风格总结] 术语库为空，无法生成");
         return Err("术语库为空，无法生成风格总结".to_string());
     }
     
+    crate::app_log!("[风格总结] 开始生成，基于 {} 条术语", library.terms.len());
+    
     // 构建分析提示
     let analysis_prompt = library.build_analysis_prompt();
+    crate::app_log!("[风格总结] 提示词已构建，长度: {} 字符", analysis_prompt.len());
+    crate::app_log!("[风格总结] 完整提示词内容:\n{}", analysis_prompt);
     
     // 调用AI生成总结
     let mut translator = AITranslator::new(api_key, None, false).map_err(|e| e.to_string())?;
     let summary = translator
         .translate_batch(vec![analysis_prompt], None)
         .await
-        .map_err(|e| e.to_string())?
+        .map_err(|e| {
+            crate::app_log!("[风格总结] AI调用失败: {}", e);
+            e.to_string()
+        })?
         .into_iter()
         .next()
-        .ok_or_else(|| "生成风格总结失败".to_string())?;
+        .ok_or_else(|| {
+            crate::app_log!("[风格总结] AI返回为空");
+            "生成风格总结失败".to_string()
+        })?;
+    
+    crate::app_log!("[风格总结] AI生成成功，总结长度: {} 字符", summary.len());
+    crate::app_log!("[风格总结] AI返回的完整内容:\n{}", summary);
     
     // 更新术语库
     library.update_style_summary(summary.clone());
-    library.save_to_file(&path).map_err(|e| e.to_string())?;
+    save_term_library(&library, &path)?;
+    
+    crate::app_log!("[风格总结] 风格总结已保存 (v{})", library.style_summary.as_ref().map(|s| s.version).unwrap_or(0));
     
     Ok(summary)
 }

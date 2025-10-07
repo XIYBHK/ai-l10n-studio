@@ -5,7 +5,6 @@ mod commands;
 mod services;
 mod utils;
 
-// use tauri::Manager;
 use commands::*;
 
 fn main() {
