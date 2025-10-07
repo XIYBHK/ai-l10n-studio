@@ -1,0 +1,56 @@
+# GitHub 语言检测配置
+Python
+*.py
+*.pyw
+*.pyi
+*.pyx
+
+TypeScript
+*.ts
+*.tsx
+*.d.ts
+
+JavaScript
+*.js
+*.jsx
+*.mjs
+*.cjs
+
+HTML
+*.html
+*.htm
+*.xhtml
+
+CSS
+*.css
+*.scss
+*.sass
+*.less
+
+JSON
+*.json
+*.jsonc
+
+Markdown
+*.md
+*.markdown
+
+Shell
+*.sh
+*.bash
+*.zsh
+*.fish
+
+Batch
+*.bat
+*.cmd
+*.ps1
+
+# 忽略的文件模式
+node_modules/** linguist-generated
+dist/** linguist-generated
+build/** linguist-generated
+target/** linguist-generated
+__pycache__/** linguist-generated
+*.min.js linguist-generated
+*.min.css linguist-generated
