@@ -471,6 +471,7 @@ function App() {
             stats={translationStats} 
             isTranslating={isTranslating}
             onResetStats={handleResetStats}
+            apiKey={apiKey}
           />
         </Sider>
       </Layout>

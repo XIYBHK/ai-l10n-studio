@@ -14,6 +14,7 @@ import {
 import { TranslationStats } from '../types/tauri';
 import { TermLibrary } from '../types/termLibrary';
 import { MemoryManager } from './MemoryManager';
+import { TermLibraryManager } from './TermLibraryManager';
 import { useTheme } from '../hooks/useTheme';
 import { useAppStore } from '../store/useAppStore';
 import { invoke } from '@tauri-apps/api/tauri';
@@ -22,10 +23,12 @@ interface AIWorkspaceProps {
   stats: TranslationStats | null;
   isTranslating: boolean;
   onResetStats?: () => void;
+  apiKey?: string; // 用于生成风格总结
 }
 
-export const AIWorkspace: React.FC<AIWorkspaceProps> = ({ stats, isTranslating, onResetStats }) => {
+export const AIWorkspace: React.FC<AIWorkspaceProps> = ({ stats, isTranslating, onResetStats, apiKey }) => {
   const [memoryManagerVisible, setMemoryManagerVisible] = useState(false);
+  const [termLibraryVisible, setTermLibraryVisible] = useState(false);
   const [termLibrary, setTermLibrary] = useState<TermLibrary | null>(null);
   const { colors } = useTheme();
   
@@ -33,15 +36,16 @@ export const AIWorkspace: React.FC<AIWorkspaceProps> = ({ stats, isTranslating, 
   const { cumulativeStats, updateCumulativeStats, resetCumulativeStats } = useAppStore();
 
   // 加载术语库
+  const loadTermLibrary = async () => {
+    try {
+      const library = await invoke<TermLibrary>('get_term_library');
+      setTermLibrary(library);
+    } catch (error) {
+      console.error('加载术语库失败:', error);
+    }
+  };
+
   useEffect(() => {
-    const loadTermLibrary = async () => {
-      try {
-        const library = await invoke<TermLibrary>('get_term_library');
-        setTermLibrary(library);
-      } catch (error) {
-        console.error('加载术语库失败:', error);
-      }
-    };
     loadTermLibrary();
   }, []);
   
@@ -340,22 +344,37 @@ export const AIWorkspace: React.FC<AIWorkspaceProps> = ({ stats, isTranslating, 
                       <BookOutlined /> 学习到的翻译风格 ({termLibrary.style_summary.based_on_terms}条术语)
                     </span>
                   ),
+                  extra: (
+                    <Button
+                      type="link"
+                      size="small"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setTermLibraryVisible(true);
+                      }}
+                      style={{ fontSize: '11px', padding: 0 }}
+                    >
+                      管理
+                    </Button>
+                  ),
                   children: (
-                    <div style={{ 
-                      padding: '8px 12px',
-                      background: colors.bgTertiary,
-                      borderRadius: '4px',
-                      fontSize: '12px',
-                      lineHeight: '1.6',
-                      color: colors.textSecondary
-                    }}>
-                      {termLibrary.style_summary.prompt}
+                    <div>
                       <div style={{ 
-                        marginTop: 8, 
-                        fontSize: '11px', 
-                        color: colors.textTertiary 
+                        padding: '8px 12px',
+                        background: colors.bgTertiary,
+                        borderRadius: '4px',
+                        fontSize: '12px',
+                        lineHeight: '1.6',
+                        color: colors.textSecondary
                       }}>
-                        版本 v{termLibrary.style_summary.version} · 最后更新: {new Date(termLibrary.style_summary.generated_at).toLocaleString('zh-CN')}
+                        {termLibrary.style_summary.prompt}
+                        <div style={{ 
+                          marginTop: 8, 
+                          fontSize: '11px', 
+                          color: colors.textTertiary 
+                        }}>
+                          版本 v{termLibrary.style_summary.version} · 最后更新: {new Date(termLibrary.style_summary.generated_at).toLocaleString('zh-CN')}
+                        </div>
                       </div>
                     </div>
                   ),
@@ -366,12 +385,48 @@ export const AIWorkspace: React.FC<AIWorkspaceProps> = ({ stats, isTranslating, 
           </>
         )}
         
+        {/* 如果有术语但没有风格总结，也显示管理入口 */}
+        {termLibrary && !termLibrary.style_summary && termLibrary.metadata.total_terms > 0 && (
+          <>
+            <div style={{
+              padding: '8px 12px',
+              background: colors.bgTertiary,
+              borderRadius: '4px',
+              marginBottom: 12,
+              display: 'flex',
+              justifyContent: 'space-between',
+              alignItems: 'center'
+            }}>
+              <span style={{ fontSize: '12px', color: colors.textSecondary }}>
+                <BookOutlined /> 术语库 ({termLibrary.metadata.total_terms}条)
+              </span>
+              <Button
+                type="link"
+                size="small"
+                onClick={() => setTermLibraryVisible(true)}
+                style={{ fontSize: '11px' }}
+              >
+                管理
+              </Button>
+            </div>
+            <Divider style={{ margin: '12px 0' }} />
+          </>
+        )}
+        
         {/* 本次翻译 - 详细样式 */}
         {renderCurrentStats()}
       </Card>
       <MemoryManager
         visible={memoryManagerVisible}
         onClose={() => setMemoryManagerVisible(false)}
+      />
+      <TermLibraryManager
+        visible={termLibraryVisible}
+        onClose={() => {
+          setTermLibraryVisible(false);
+          loadTermLibrary(); // 关闭后重新加载术语库
+        }}
+        apiKey={apiKey || ''}
       />
     </>
   );
