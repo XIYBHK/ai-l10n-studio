@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Input, Button, message } from 'antd';
-import { CopyOutlined } from '@ant-design/icons';
+import { CopyOutlined, SaveOutlined } from '@ant-design/icons';
 import { POEntry } from '../types/tauri';
 import { useAppStore } from '../store/useAppStore';
 import { useTheme } from '../hooks/useTheme';
@@ -23,6 +23,7 @@ export const EditorPane: React.FC<EditorPaneProps> = ({
   apiKey,
 }) => {
   const [translation, setTranslation] = useState('');
+  const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
   const [termModalVisible, setTermModalVisible] = useState(false);
   const [detectedDifference, setDetectedDifference] = useState<{
     original: string;
@@ -35,46 +36,52 @@ export const EditorPane: React.FC<EditorPaneProps> = ({
   useEffect(() => {
     if (entry) {
       setTranslation(entry.msgstr || '');
+      setHasUnsavedChanges(false);
     }
   }, [entry]);
 
   const handleTranslationChange = (value: string) => {
     setTranslation(value);
-    const { entries } = useAppStore.getState();
-    const index = entries.findIndex(e => e === entry);
-    if (entry && index >= 0) {
-      // 手动编辑时清除待确认标记
-      onEntryUpdate(index, { msgstr: value, needsReview: false });
-      console.log('手动翻译已保存:', index, value);
-    }
+    setHasUnsavedChanges(entry?.msgstr !== value);
   };
 
-  // 失焦时检测术语差异
-  const handleTranslationBlur = () => {
-    if (!entry || !aiTranslation || !translation) return;
+  // 保存译文
+  const handleSaveTranslation = () => {
+    if (!entry) return;
+
+    const { entries } = useAppStore.getState();
+    const index = entries.findIndex(e => e === entry);
     
-    // 如果译文没有改变，不检测
-    if (translation === aiTranslation) return;
-    
-    try {
-      const difference = analyzeTranslationDifference(
-        entry.msgid,
-        aiTranslation,
-        translation
-      );
-      
-      // 只有高置信度的差异才值得保存（confidence >= 0.6）
-      if (difference && difference.confidence >= 0.6) {
-        setDetectedDifference({
-          original: entry.msgid,
-          aiTranslation: aiTranslation,
-          userTranslation: translation,
-          difference: difference,
-        });
-        setTermModalVisible(true);
+    if (index >= 0) {
+      // 保存译文并清除待确认标记
+      onEntryUpdate(index, { msgstr: translation, needsReview: false });
+      setHasUnsavedChanges(false);
+      message.success('译文已保存');
+      console.log('译文已保存:', index, translation);
+
+      // 保存后检测术语差异
+      if (aiTranslation && translation && translation !== aiTranslation) {
+        try {
+          const difference = analyzeTranslationDifference(
+            entry.msgid,
+            aiTranslation,
+            translation
+          );
+          
+          // 只有高置信度的差异才值得保存（confidence >= 0.6）
+          if (difference && difference.confidence >= 0.6) {
+            setDetectedDifference({
+              original: entry.msgid,
+              aiTranslation: aiTranslation,
+              userTranslation: translation,
+              difference: difference,
+            });
+            setTermModalVisible(true);
+          }
+        } catch (error) {
+          console.error('术语检测失败:', error);
+        }
       }
-    } catch (error) {
-      console.error('术语检测失败:', error);
     }
   };
 
@@ -84,6 +91,19 @@ export const EditorPane: React.FC<EditorPaneProps> = ({
       message.success('原文已复制到剪贴板');
     }
   };
+
+  // 快捷键支持：Ctrl+Enter 保存译文
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if ((e.ctrlKey || e.metaKey) && e.key === 'Enter' && hasUnsavedChanges) {
+        e.preventDefault();
+        handleSaveTranslation();
+      }
+    };
+
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [hasUnsavedChanges, translation, entry, aiTranslation]);
 
   if (!entry) {
     return (
@@ -110,17 +130,33 @@ export const EditorPane: React.FC<EditorPaneProps> = ({
         borderBottom: `1px solid ${colors.borderSecondary}`,
         background: colors.bgTertiary,
         display: 'flex',
-        justifyContent: 'flex-end',
+        justifyContent: 'space-between',
         alignItems: 'center',
         gap: '8px'
       }}>
-        <Button 
-          size="small" 
-          icon={<CopyOutlined />}
-          onClick={handleCopyOriginal}
-        >
-          复制原文
-        </Button>
+        <div style={{ fontSize: '12px', color: colors.textTertiary }}>
+          {hasUnsavedChanges && (
+            <span style={{ color: colors.statusUntranslated }}>● 有未保存的修改</span>
+          )}
+        </div>
+        <div style={{ display: 'flex', gap: '8px' }}>
+          <Button 
+            size="small" 
+            icon={<CopyOutlined />}
+            onClick={handleCopyOriginal}
+          >
+            复制原文
+          </Button>
+          <Button 
+            size="small" 
+            type="primary"
+            icon={<SaveOutlined />}
+            onClick={handleSaveTranslation}
+            disabled={!hasUnsavedChanges}
+          >
+            保存译文 (Ctrl+Enter)
+          </Button>
+        </div>
       </div>
 
       {/* 双栏编辑区域 - Poedit 风格 */}
@@ -203,7 +239,6 @@ export const EditorPane: React.FC<EditorPaneProps> = ({
             <TextArea
               value={translation}
               onChange={(e) => handleTranslationChange(e.target.value)}
-              onBlur={handleTranslationBlur}
               placeholder="请输入翻译内容..."
               bordered={false}
               style={{ 
@@ -234,7 +269,7 @@ export const EditorPane: React.FC<EditorPaneProps> = ({
       </div>
 
       {/* 术语确认弹窗 */}
-      {detectedDifference && (
+      {termModalVisible && detectedDifference && (
         <TermConfirmModal
           visible={termModalVisible}
           original={detectedDifference.original}
@@ -267,9 +302,11 @@ export const EditorPane: React.FC<EditorPaneProps> = ({
               }
             }
             setTermModalVisible(false);
+            setDetectedDifference(null);
           }}
           onCancel={() => {
             setTermModalVisible(false);
+            setDetectedDifference(null);
           }}
         />
       )}
