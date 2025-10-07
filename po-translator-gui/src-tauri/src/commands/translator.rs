@@ -1,4 +1,5 @@
 use serde::{Deserialize, Serialize};
+use tauri::Manager;
 // use std::collections::HashMap;
 // use std::sync::Mutex;
 // use tauri::State;
@@ -6,6 +7,7 @@ use serde::{Deserialize, Serialize};
 use crate::services::{
     AITranslator, BatchTranslator, ConfigManager, POParser, TranslationMemory, TranslationReport,
 };
+use crate::utils::paths::get_translation_memory_path;
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct POEntry {
@@ -55,8 +57,8 @@ pub async fn translate_entry(text: String, api_key: String) -> Result<String, St
 
     // 保存TM到文件
     if let Some(tm) = translator.get_translation_memory() {
-        let tm_path = "../data/translation_memory.json";
-        if let Some(parent) = std::path::Path::new(tm_path).parent() {
+        let tm_path = get_translation_memory_path().to_string_lossy().to_string();
+        if let Some(parent) = std::path::Path::new(&tm_path).parent() {
             let _ = std::fs::create_dir_all(parent);
         }
         let _ = tm.save_to_file(tm_path);
@@ -84,8 +86,8 @@ pub async fn translate_batch(texts: Vec<String>, api_key: String) -> Result<Vec<
 
     // 保存TM到文件
     if let Some(tm) = translator.get_translation_memory() {
-        let tm_path = "../data/translation_memory.json";
-        if let Some(parent) = std::path::Path::new(tm_path).parent() {
+        let tm_path = get_translation_memory_path().to_string_lossy().to_string();
+        if let Some(parent) = std::path::Path::new(&tm_path).parent() {
             let _ = std::fs::create_dir_all(parent);
         }
         let _ = tm.save_to_file(tm_path);
@@ -96,12 +98,52 @@ pub async fn translate_batch(texts: Vec<String>, api_key: String) -> Result<Vec<
 
 #[tauri::command]
 pub async fn translate_batch_with_stats(
+    app_handle: tauri::AppHandle,
     texts: Vec<String>,
     api_key: String,
 ) -> Result<BatchResult, String> {
     let mut translator = AITranslator::new(api_key, None, true).map_err(|e| e.to_string())?;
+    
+    // 创建进度回调，实时推送翻译结果和统计信息
+    let progress_callback: Option<Box<dyn Fn(usize, String) + Send + Sync>> = {
+        let app = app_handle.clone();
+        Some(Box::new(move |index: usize, translation: String| {
+            // 向所有窗口广播翻译进度事件
+            let payload = serde_json::json!({
+                "index": index,
+                "translation": translation
+            });
+            
+            crate::app_log!("[进度推送] index={}, translation={}", index, &translation);
+            let _ = app.emit_all("translation-progress", payload);
+        }))
+    };
+    
+    // 创建统计信息回调，实时推送统计更新
+    let stats_callback: Option<Box<dyn Fn(crate::services::BatchStats, crate::services::TokenStats) + Send + Sync>> = {
+        let app = app_handle.clone();
+        Some(Box::new(move |batch_stats: crate::services::BatchStats, token_stats: crate::services::TokenStats| {
+            // 向所有窗口广播统计更新事件
+            let stats_payload = serde_json::json!({
+                "total": batch_stats.total,
+                "tm_hits": batch_stats.tm_hits,
+                "deduplicated": batch_stats.deduplicated,
+                "ai_translated": batch_stats.ai_translated,
+                "tm_learned": batch_stats.tm_learned,
+                "token_stats": {
+                    "input_tokens": token_stats.input_tokens,
+                    "output_tokens": token_stats.output_tokens,
+                    "total_tokens": token_stats.total_tokens,
+                    "cost": token_stats.cost
+                }
+            });
+            
+            let _ = app.emit_all("translation-stats-update", stats_payload);
+        }))
+    };
+    
     let translations = translator
-        .translate_batch(texts, None)
+        .translate_batch_with_callbacks(texts, progress_callback, stats_callback)
         .await
         .map_err(|e| e.to_string())?;
 
@@ -120,8 +162,8 @@ pub async fn translate_batch_with_stats(
 
     // 保存TM到文件
     if let Some(tm) = translator.get_translation_memory() {
-        let tm_path = "../data/translation_memory.json";
-        if let Some(parent) = std::path::Path::new(tm_path).parent() {
+        let tm_path = get_translation_memory_path().to_string_lossy().to_string();
+        if let Some(parent) = std::path::Path::new(&tm_path).parent() {
             let _ = std::fs::create_dir_all(parent);
         }
         let _ = tm.save_to_file(tm_path);
@@ -135,7 +177,7 @@ pub async fn translate_batch_with_stats(
 
 #[tauri::command]
 pub async fn get_translation_memory() -> Result<TranslationMemory, String> {
-    let memory_path = "../data/translation_memory.json";
+    let memory_path = get_translation_memory_path().to_string_lossy().to_string();
 
     // 使用 new_from_file 而不是 load_from_file，因为它能正确处理Python格式的JSON
     TranslationMemory::new_from_file(memory_path).map_err(|e| {
@@ -156,10 +198,10 @@ pub async fn get_builtin_phrases() -> Result<serde_json::Value, String> {
 
 #[tauri::command]
 pub async fn save_translation_memory(memory: TranslationMemory) -> Result<(), String> {
-    let memory_path = "../data/translation_memory.json";
+    let memory_path = get_translation_memory_path().to_string_lossy().to_string();
 
     // 确保 data 目录存在
-    if let Some(parent) = std::path::Path::new(memory_path).parent() {
+    if let Some(parent) = std::path::Path::new(&memory_path).parent() {
         std::fs::create_dir_all(parent).map_err(|e| e.to_string())?;
     }
 

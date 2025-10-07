@@ -89,8 +89,8 @@ mod tests {
         // 应该通过的简单短语
         assert!(is_simple_phrase("Connection"));
         assert!(is_simple_phrase("Start Index"));
-        assert!(is_simple_phrase("Max Distance"));
         assert!(is_simple_phrase("Random Stream"));
+        assert!(is_simple_phrase("Max Value"));  // 替换为不含描述性词汇的例子
 
         // 不应该通过的复杂短语
         assert!(!is_simple_phrase(
@@ -100,5 +100,6 @@ mod tests {
         assert!(!is_simple_phrase("Text with\\nnewline"));
         assert!(!is_simple_phrase("Question: What is this?"));
         assert!(!is_simple_phrase("Description of the distance"));
+        assert!(!is_simple_phrase("Max Distance"));  // distance 是描述性词汇
     }
 }

@@ -1,11 +1,11 @@
 name: Build
 
 on:
-  push:
-    branches: [ main, feature/* ]
-  pull_request:
-    branches: [ main ]
-  workflow_dispatch:
+  # push:
+  #   branches: [ main, feature/* ]
+  # pull_request:
+  #   branches: [ main ]
+  workflow_dispatch:  # 仅手动触发
 
 jobs:
   build:
@@ -63,7 +63,13 @@ jobs:
         working-directory: ./po-translator-gui
         run: npm ci
 
-      - name: Build Tauri app
+      - name: Build Tauri app (Linux - deb only)
+        if: matrix.platform == 'ubuntu-22.04'
+        working-directory: ./po-translator-gui
+        run: npm run tauri build -- --bundles deb
+
+      - name: Build Tauri app (Windows/macOS)
+        if: matrix.platform != 'ubuntu-22.04'
         working-directory: ./po-translator-gui
         run: npm run tauri build
 
@@ -87,6 +93,7 @@ jobs:
           path: |
             po-translator-gui/src-tauri/target/release/bundle/msi/*.msi
             po-translator-gui/src-tauri/target/release/bundle/nsis/*.exe
+            po-translator-gui/src-tauri/target/release/PO-Translator.exe
           if-no-files-found: warn
           retention-days: 30
 

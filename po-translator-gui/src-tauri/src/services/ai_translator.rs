@@ -5,6 +5,7 @@ use serde::{Deserialize, Serialize};
 
 use crate::services::translation_memory::TranslationMemory;
 use crate::utils::common::is_simple_phrase;
+use crate::utils::paths::get_translation_memory_path;
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct TokenStats {
@@ -79,7 +80,7 @@ impl AITranslator {
         // 从文件加载TM（合并内置短语和已保存的翻译）
         let tm = if use_tm {
             Some(TranslationMemory::new_from_file(
-                "../data/translation_memory.json",
+                &get_translation_memory_path(),
             )?)
         } else {
             None
@@ -125,13 +126,38 @@ impl AITranslator {
 请保持翻译风格一致，参考之前的翻译术语。"#.to_string()
     }
 
+    pub async fn translate_batch_with_callbacks(
+        &mut self,
+        texts: Vec<String>,
+        progress_callback: Option<Box<dyn Fn(usize, String) + Send + Sync>>,
+        stats_callback: Option<Box<dyn Fn(BatchStats, TokenStats) + Send + Sync>>,
+    ) -> Result<Vec<String>> {
+        self.translate_batch_internal(texts, progress_callback, Some(stats_callback)).await
+    }
+
     pub async fn translate_batch(
         &mut self,
         texts: Vec<String>,
         progress_callback: Option<Box<dyn Fn(usize, String) + Send + Sync>>,
     ) -> Result<Vec<String>> {
+        self.translate_batch_internal(texts, progress_callback, None).await
+    }
+
+    async fn translate_batch_internal(
+        &mut self,
+        texts: Vec<String>,
+        progress_callback: Option<Box<dyn Fn(usize, String) + Send + Sync>>,
+        stats_callback: Option<Option<Box<dyn Fn(BatchStats, TokenStats) + Send + Sync>>>,
+    ) -> Result<Vec<String>> {
         if texts.is_empty() {
             return Ok(Vec::new());
+        }
+
+        // 🔍 调试：检查回调是否传入
+        if progress_callback.is_some() {
+            crate::app_log!("[translate_batch] ✅ progress_callback 已传入");
+        } else {
+            crate::app_log!("[translate_batch] ❌ progress_callback 为 None！");
         }
 
         // 重置统计
@@ -141,22 +167,35 @@ impl AITranslator {
         self.batch_stats.ai_translated = 0;
         self.batch_stats.tm_learned = 0;
 
-        // Step 1: 使用翻译记忆库进行预翻译 + 去重
+        // Step 1: 使用翻译记忆库进行预翻译 + 去重（保持顺序）
         let mut result = vec![String::new(); texts.len()];
         let mut untranslated_indices = Vec::new();
-        let mut unique_texts: std::collections::HashMap<String, Vec<usize>> =
+        
+        // 🔧 使用Vec保持去重文本的顺序，而不是HashMap
+        let mut unique_texts_ordered: Vec<String> = Vec::new();
+        let mut unique_text_to_indices: std::collections::HashMap<String, Vec<usize>> =
             std::collections::HashMap::new();
 
         if let Some(ref mut tm) = self.tm {
             for (i, text) in texts.iter().enumerate() {
                 if let Some(translation) = tm.get_translation(text) {
                     // TM命中
-                    result[i] = translation;
+                    result[i] = translation.clone();
                     self.batch_stats.tm_hits += 1;
+                    
+                    // 🔔 实时推送TM命中结果
+                    if let Some(ref callback) = progress_callback {
+                        callback(i, translation);
+                    }
                 } else {
                     // TM未命中，记录到去重map
                     untranslated_indices.push(i);
-                    unique_texts
+                    
+                    // 如果是首次出现，加入ordered列表
+                    if !unique_text_to_indices.contains_key(text) {
+                        unique_texts_ordered.push(text.clone());
+                    }
+                    unique_text_to_indices
                         .entry(text.clone())
                         .or_insert_with(Vec::new)
                         .push(i);
@@ -166,7 +205,12 @@ impl AITranslator {
             // 没有TM，直接去重
             for (i, text) in texts.iter().enumerate() {
                 untranslated_indices.push(i);
-                unique_texts
+                
+                // 如果是首次出现，加入ordered列表
+                if !unique_text_to_indices.contains_key(text) {
+                    unique_texts_ordered.push(text.clone());
+                }
+                unique_text_to_indices
                     .entry(text.clone())
                     .or_insert_with(Vec::new)
                     .push(i);
@@ -175,12 +219,21 @@ impl AITranslator {
 
         // 计算去重节省的次数：待翻译总数 - unique数量
         let untranslated_count = texts.len() - self.batch_stats.tm_hits;
-        let unique_count = unique_texts.len();
+        let unique_count = unique_texts_ordered.len();
         self.batch_stats.deduplicated = untranslated_count - unique_count;
 
-        // Step 2: 翻译去重后的文本
-        if !unique_texts.is_empty() {
-            let unique_list: Vec<String> = unique_texts.keys().cloned().collect();
+        // 📊 TM处理完成后推送第一次统计更新
+        if let Some(ref stats_cb_opt) = stats_callback {
+            if let Some(ref stats_cb) = stats_cb_opt {
+                let current_stats = self.batch_stats.clone();
+                let current_token_stats = self.token_stats.clone();
+                stats_cb(current_stats, current_token_stats);
+            }
+        }
+
+        // Step 2: 分批翻译去重后的文本
+        if !unique_texts_ordered.is_empty() {
+            let unique_list = unique_texts_ordered.clone();
             crate::app_log!(
                 "[预处理] 原始{}条 -> TM命中{}条 -> 待翻译{}条 -> 去重节省{}条",
                 texts.len(),
@@ -189,12 +242,37 @@ impl AITranslator {
                 self.batch_stats.deduplicated
             );
 
-            let ai_translations = self.translate_with_ai(unique_list.clone()).await?;
+            // 🚀 分批翻译（每批最多25条，避免AI响应截断）
+            const BATCH_SIZE: usize = 25;
+            let mut ai_translations = Vec::new();
+            let total_batches = (unique_list.len() + BATCH_SIZE - 1) / BATCH_SIZE;
+
+            for (batch_idx, chunk) in unique_list.chunks(BATCH_SIZE).enumerate() {
+                crate::app_log!(
+                    "[分批翻译] 批次 {}/{}, 当前批{}条",
+                    batch_idx + 1,
+                    total_batches,
+                    chunk.len()
+                );
+                
+                let batch_translations = self.translate_with_ai(chunk.to_vec()).await?;
+                ai_translations.extend(batch_translations);
+                
+                // 📊 每个批次完成后推送统计更新
+                if let Some(ref stats_cb_opt) = stats_callback {
+                    if let Some(ref stats_cb) = stats_cb_opt {
+                        let current_stats = self.batch_stats.clone();
+                        let current_token_stats = self.token_stats.clone();
+                        stats_cb(current_stats, current_token_stats);
+                    }
+                }
+            }
+            
             self.batch_stats.ai_translated = unique_list.len();
 
             // Step 3: 将翻译结果分发到所有对应的索引
             for (unique_text, translation) in unique_list.iter().zip(ai_translations.iter()) {
-                if let Some(indices) = unique_texts.get(unique_text) {
+                if let Some(indices) = unique_text_to_indices.get(unique_text) {
                     for &idx in indices {
                         result[idx] = translation.clone();
 
@@ -236,6 +314,15 @@ impl AITranslator {
             self.batch_stats.ai_translated,
             self.batch_stats.tm_learned
         );
+
+        // 📊 最终统计更新（包含TM学习数量）
+        if let Some(ref stats_cb_opt) = stats_callback {
+            if let Some(ref stats_cb) = stats_cb_opt {
+                let final_stats = self.batch_stats.clone();
+                let final_token_stats = self.token_stats.clone();
+                stats_cb(final_stats, final_token_stats);
+            }
+        }
 
         Ok(result)
     }
@@ -354,10 +441,11 @@ impl AITranslator {
     }
 
     fn build_user_prompt(&self, texts: &[String]) -> String {
-        let mut prompt = "请翻译:\n".to_string();
+        let mut prompt = "请严格按以下格式翻译，每行一个结果，不要添加任何解释或额外文字：\n\n".to_string();
         for (i, text) in texts.iter().enumerate() {
             prompt.push_str(&format!("{}. {}\n", i + 1, text));
         }
+        prompt.push_str("\n注意：只返回翻译结果，每条前面加序号，不要有其他内容。");
         prompt
     }
 
@@ -402,35 +490,63 @@ impl AITranslator {
             .filter(|line| !line.is_empty())
             .collect();
 
+        // 优先提取以数字序号开头的行（支持多种格式）
+        let number_prefix_regex = regex::Regex::new(r"^\d+[\.\)、:\s]+(.+)$").unwrap();
         let mut translations = Vec::new();
-        for line in lines {
-            // 移除可能的序号前缀
-            let cleaned = regex::Regex::new(r"^\d+[\.\)、]\s*")
-                .unwrap()
-                .replace(line, "")
-                .to_string();
+        
+        for line in lines.iter() {
+            if let Some(captures) = number_prefix_regex.captures(line) {
+                if let Some(content) = captures.get(1) {
+                    let translation = content.as_str().trim().to_string();
+                    translations.push(translation);
+                }
+            }
+        }
 
-            translations.push(cleaned);
+        // 如果没有找到序号格式，降级为所有非空行（向后兼容）
+        if translations.is_empty() {
+            for line in lines {
+                translations.push(line.to_string());
+            }
+        }
+
+        // ⚠️ 验证翻译数量（只在出错时输出详细日志）
+        if translations.len() != original_texts.len() {
+            crate::app_log!(
+                "[解析错误] 期望{}条，实际{}条\n[AI响应]\n{}", 
+                original_texts.len(), 
+                translations.len(),
+                response
+            );
+            
+            return Err(anyhow!(
+                "翻译数量不匹配！请求 {} 条，实际返回 {} 条",
+                original_texts.len(),
+                translations.len()
+            ));
         }
 
         // 验证特殊字符保留
         for (i, translation) in translations.iter_mut().enumerate() {
-            if i < original_texts.len() {
-                let original = &original_texts[i];
+            let original = &original_texts[i];
 
-                // 检查换行符
-                if original.contains("\\n") && !translation.contains("\\n") {
-                    if original.ends_with("\\n") && !translation.ends_with("\\n") {
-                        translation.push_str("\\n");
-                    }
+            // 检查换行符
+            if original.contains("\\n") && !translation.contains("\\n") {
+                if original.ends_with("\\n") && !translation.ends_with("\\n") {
+                    translation.push_str("\\n");
                 }
+            }
 
-                // 检查占位符数量
-                let original_placeholders = self.count_placeholders(original);
-                let translation_placeholders = self.count_placeholders(translation);
-                if original_placeholders != translation_placeholders {
-                    println!("Warning: Placeholder count mismatch for '{}'", original);
-                }
+            // 检查占位符数量
+            let original_placeholders = self.count_placeholders(original);
+            let translation_placeholders = self.count_placeholders(translation);
+            if original_placeholders != translation_placeholders {
+                crate::app_log!(
+                    "[占位符警告] '{}' 占位符数量不匹配：原文{}个，译文{}个",
+                    original,
+                    original_placeholders,
+                    translation_placeholders
+                );
             }
         }
 

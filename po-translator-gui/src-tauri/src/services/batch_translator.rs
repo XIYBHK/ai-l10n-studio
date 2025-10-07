@@ -8,6 +8,7 @@ use std::path::{Path, PathBuf};
 use crate::commands::POEntry;
 use crate::services::{AITranslator, POParser, TokenStats, TranslationMemory};
 use crate::utils::common::is_simple_phrase;
+use crate::utils::paths::get_translation_memory_path;
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct TranslationReport {
@@ -244,8 +245,8 @@ impl BatchTranslator {
             .write_file(file_path.to_string_lossy().to_string(), &updated_entries)?;
 
         // 保存翻译记忆库到文件
-        let memory_path = "../data/translation_memory.json";
-        if let Some(parent) = std::path::Path::new(memory_path).parent() {
+        let memory_path = get_translation_memory_path().to_string_lossy().to_string();
+        if let Some(parent) = std::path::Path::new(&memory_path).parent() {
             std::fs::create_dir_all(parent)?;
         }
         self.translation_memory.save_to_file(memory_path)?;

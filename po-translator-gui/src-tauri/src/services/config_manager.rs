@@ -20,19 +20,45 @@ pub struct AppConfig {
 
 impl Default for AppConfig {
     fn default() -> Self {
+        // 获取默认的翻译记忆库路径
+        let default_tm_path = Self::get_default_tm_path();
+        
         Self {
             api_key: String::new(),
             provider: "moonshot".to_string(),
             model: "moonshot-v1-auto".to_string(),
             base_url: Some("https://api.moonshot.cn/v1".to_string()),
             use_translation_memory: true,
-            translation_memory_path: Some("../data/translation_memory.json".to_string()),
+            translation_memory_path: Some(default_tm_path),
             log_level: "info".to_string(),
             auto_save: true,
             batch_size: 10,
             max_concurrent: 3,
             timeout_seconds: 30,
         }
+    }
+}
+
+impl AppConfig {
+    /// 获取默认的翻译记忆库路径
+    /// 优先级：程序目录 > 用户目录
+    fn get_default_tm_path() -> String {
+        // 1. 优先使用程序目录（便携模式）
+        if let Ok(exe_path) = std::env::current_exe() {
+            if let Some(exe_dir) = exe_path.parent() {
+                let portable_tm = exe_dir.join("data").join("translation_memory.json");
+                // 检查便携路径是否存在或可创建
+                if portable_tm.exists() || exe_dir.join("data").exists() {
+                    return portable_tm.to_string_lossy().to_string();
+                }
+            }
+        }
+        
+        // 2. 使用用户目录（标准模式）
+        let mut path = dirs::home_dir().unwrap_or_else(|| PathBuf::from("."));
+        path.push(".po-translator");
+        path.push("translation_memory.json");
+        path.to_string_lossy().to_string()
     }
 }
 

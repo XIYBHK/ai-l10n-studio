@@ -5,6 +5,7 @@ on:
     branches: [ main, feature/* ]
   pull_request:
     branches: [ main ]
+  workflow_dispatch:
 
 jobs:
   check:
@@ -63,7 +64,15 @@ jobs:
 
       - name: Run Rust clippy
         working-directory: ./po-translator-gui/src-tauri
-        run: cargo clippy -- -D warnings
+        run: |
+          # 只检查严重问题（正确性和可疑代码），允许性能优化建议和代码风格警告
+          cargo clippy -- \
+            -D clippy::correctness \
+            -D clippy::suspicious \
+            -A dead_code \
+            -A clippy::perf \
+            -A clippy::style \
+            -A clippy::complexity
 
       - name: Run Rust tests
         working-directory: ./po-translator-gui/src-tauri

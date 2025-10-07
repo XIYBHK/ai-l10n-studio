@@ -7,7 +7,7 @@
     "withGlobalTauri": false
   },
   "package": {
-    "productName": "PO翻译工具",
+    "productName": "PO-Translator",
     "version": "0.0.0"
   },
   "tauri": {
@@ -60,7 +60,7 @@
       {
         "fullscreen": false,
         "resizable": true,
-        "title": "PO翻译工具",
+        "title": "PO 翻译工具",
         "width": 1200,
         "height": 800,
         "minWidth": 800,

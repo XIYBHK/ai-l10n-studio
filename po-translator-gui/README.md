@@ -213,7 +213,6 @@ npm run tauri:build
 - [测试指南](./TESTING_GUIDE.md) - 完整的测试流程
 - [UI 改进说明](./UI_IMPROVEMENTS.md) - 界面设计文档
 - [Rust 重构报告](./RUST_REFACTORING_REPORT.md) - 技术细节
-- [架构对比](./ARCHITECTURE_COMPARISON.md) - Python vs Rust
 
 ## 🐛 问题排查
 

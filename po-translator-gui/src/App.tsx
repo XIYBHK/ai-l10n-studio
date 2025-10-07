@@ -167,21 +167,50 @@ function App() {
     try {
       const texts = untranslatedEntries.map(entry => entry.msgid);
       
+      // 🔔 监听翻译进度事件，实时更新界面
+      const { listen } = await import('@tauri-apps/api/event');
+      let completedCount = 0;
+      
+      const unlistenProgress = await listen<{ index: number; translation: string }>(
+        'translation-progress',
+        (event) => {
+          console.log('🔔 收到翻译进度事件:', event.payload);
+          const { index, translation } = event.payload;
+          const entry = untranslatedEntries[index];
+          const entryIndex = entries.indexOf(entry);
+          
+          if (entryIndex >= 0) {
+            // 实时更新条目
+            updateEntry(entryIndex, { 
+              msgstr: translation, 
+              needsReview: true  // 标记为待确认
+            });
+            
+            // 更新进度条
+            completedCount++;
+            setProgress((completedCount / texts.length) * 100);
+            console.log(`✅ 已更新条目 ${completedCount}/${texts.length}`);
+          } else {
+            console.warn(`⚠️ 未找到条目索引: entryIndex=${entryIndex}, index=${index}`);
+          }
+        }
+      );
+      
+      // 📊 监听统计更新事件，实时更新AI工作区
+      const unlistenStats = await listen<TranslationStats>(
+        'translation-stats-update',
+        (event) => {
+          console.log('📊 收到统计更新事件:', event.payload);
+          setTranslationStats(event.payload);
+        }
+      );
+      
       // 使用带统计的批量翻译
       const result = await translateBatchWithStats(texts, apiKey);
       
-      // 更新所有条目 - 使用原始索引而非findIndex
-      untranslatedEntries.forEach((entry, index) => {
-        const translation = result.translations[index];
-        const entryIndex = entries.indexOf(entry);
-        if (entryIndex >= 0 && translation) {
-          updateEntry(entryIndex, { 
-            msgstr: translation, 
-            needsReview: true  // 标记为待确认
-          });
-        }
-        setProgress(((index + 1) / texts.length) * 100);
-      });
+      // 取消监听
+      unlistenProgress();
+      unlistenStats();
 
       // 更新统计信息
       setTranslationStats(result.stats);
