@@ -6,8 +6,10 @@ import { useAppStore } from '../store/useAppStore';
 import { useTheme } from '../hooks/useTheme';
 import { analyzeTranslationDifference } from '../utils/termAnalyzer';
 import { TermConfirmModal } from './TermConfirmModal';
+import { createModuleLogger } from '../utils/logger';
 
 const { TextArea } = Input;
+const log = createModuleLogger('EditorPane');
 
 interface EditorPaneProps {
   entry: POEntry | null;
@@ -57,10 +59,16 @@ export const EditorPane: React.FC<EditorPaneProps> = ({
       onEntryUpdate(index, { msgstr: translation, needsReview: false });
       setHasUnsavedChanges(false);
       message.success('译文已保存');
-      console.log('译文已保存:', index, translation);
+      log.info('译文已保存', { index, translation });
 
       // 保存后检测术语差异
       if (aiTranslation && translation && translation !== aiTranslation) {
+        log.debug('开始检测术语差异', {
+          original: entry.msgid,
+          aiTranslation,
+          userTranslation: translation
+        });
+        
         try {
           const difference = analyzeTranslationDifference(
             entry.msgid,
@@ -68,8 +76,12 @@ export const EditorPane: React.FC<EditorPaneProps> = ({
             translation
           );
           
+          log.debug('差异分析结果', difference);
+          
           // 只有高置信度的差异才值得保存（confidence >= 0.6）
           if (difference && difference.confidence >= 0.6) {
+            log.info('检测到高置信度差异，准备弹窗确认', { confidence: difference.confidence });
+            
             setDetectedDifference({
               original: entry.msgid,
               aiTranslation: aiTranslation,
@@ -77,10 +89,19 @@ export const EditorPane: React.FC<EditorPaneProps> = ({
               difference: difference,
             });
             setTermModalVisible(true);
+          } else {
+            log.debug('置信度不足，不触发弹窗', { confidence: difference?.confidence });
           }
         } catch (error) {
-          console.error('术语检测失败:', error);
+          log.logError(error, '术语检测失败');
+          message.error(`术语检测失败: ${error instanceof Error ? error.message : '未知错误'}`);
         }
+      } else {
+        log.debug('跳过术语检测', {
+          hasAiTranslation: !!aiTranslation,
+          hasTranslation: !!translation,
+          isDifferent: translation !== aiTranslation
+        });
       }
     }
   };
@@ -269,47 +290,67 @@ export const EditorPane: React.FC<EditorPaneProps> = ({
       </div>
 
       {/* 术语确认弹窗 */}
-      {termModalVisible && detectedDifference && (
-        <TermConfirmModal
-          visible={termModalVisible}
-          original={detectedDifference.original}
-          aiTranslation={detectedDifference.aiTranslation}
-          userTranslation={detectedDifference.userTranslation}
-          difference={detectedDifference.difference}
-          onConfirm={async (addToLibrary) => {
-            if (addToLibrary) {
-              try {
-                const { invoke } = await import('@tauri-apps/api/tauri');
-                await invoke('add_term_to_library', {
-                  source: detectedDifference.original,
-                  userTranslation: detectedDifference.userTranslation,
-                  aiTranslation: detectedDifference.aiTranslation,
-                  context: entry?.msgctxt || null,
-                });
-                
-                // 检查是否需要生成风格总结
-                const shouldUpdate = await invoke<boolean>('should_update_style_summary');
-                if (shouldUpdate && apiKey) {
-                  message.info('正在生成风格总结...', 1);
-                  await invoke('generate_style_summary', { apiKey });
-                  message.success('术语已添加，风格总结已更新');
-                } else {
-                  message.success('术语已添加到术语库');
+      {termModalVisible && detectedDifference && detectedDifference.difference && (() => {
+        try {
+          log.debug('准备渲染TermConfirmModal', detectedDifference);
+          return (
+            <TermConfirmModal
+              visible={termModalVisible}
+              original={detectedDifference.original}
+              aiTranslation={detectedDifference.aiTranslation}
+              userTranslation={detectedDifference.userTranslation}
+              difference={detectedDifference.difference}
+              onConfirm={async (addToLibrary) => {
+                log.info('用户确认术语弹窗', { addToLibrary });
+                if (addToLibrary) {
+                  try {
+                    const { invoke } = await import('@tauri-apps/api/tauri');
+                    const termData = {
+                      source: detectedDifference.original,
+                      userTranslation: detectedDifference.userTranslation,
+                      aiTranslation: detectedDifference.aiTranslation,
+                      context: entry?.msgctxt || null,
+                    };
+                    log.debug('添加术语到术语库', termData);
+                    
+                    await invoke('add_term_to_library', termData);
+                    
+                    log.info('术语添加成功');
+                    
+                    // 检查是否需要生成风格总结
+                    const shouldUpdate = await invoke<boolean>('should_update_style_summary');
+                    log.debug('检查是否需要更新风格总结', { shouldUpdate });
+                    
+                    if (shouldUpdate && apiKey) {
+                      message.info('正在生成风格总结...', 1);
+                      await invoke('generate_style_summary', { apiKey });
+                      message.success('术语已添加，风格总结已更新');
+                    } else {
+                      message.success('术语已添加到术语库');
+                    }
+                  } catch (error) {
+                    log.logError(error, '添加术语失败');
+                    message.error(`添加术语失败: ${error instanceof Error ? error.message : '未知错误'}`);
+                  }
                 }
-              } catch (error) {
-                console.error('添加术语失败:', error);
-                message.error('添加术语失败');
-              }
-            }
-            setTermModalVisible(false);
-            setDetectedDifference(null);
-          }}
-          onCancel={() => {
-            setTermModalVisible(false);
-            setDetectedDifference(null);
-          }}
-        />
-      )}
+                setTermModalVisible(false);
+                setDetectedDifference(null);
+              }}
+              onCancel={() => {
+                log.info('用户取消术语弹窗');
+                setTermModalVisible(false);
+                setDetectedDifference(null);
+              }}
+            />
+          );
+        } catch (error) {
+          log.logError(error, 'TermConfirmModal渲染失败');
+          setTermModalVisible(false);
+          setDetectedDifference(null);
+          message.error(`弹窗渲染失败: ${error instanceof Error ? error.message : '未知错误'}`);
+          return null;
+        }
+      })()}
     </div>
   );
 };

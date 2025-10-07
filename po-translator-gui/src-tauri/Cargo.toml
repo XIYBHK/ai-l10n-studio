@@ -28,6 +28,9 @@ encoding_rs = "0.8"
 dirs = "5.0"
 indexmap = { version = "2.0", features = ["serde"] }
 lazy_static = "1.4"
+# 日志系统
+tracing = "0.1"
+tracing-subscriber = { version = "0.3", features = ["env-filter", "fmt", "time"] }
 
 [features]
 # this feature is used for production builds or when `devPath` points to the filesystem
