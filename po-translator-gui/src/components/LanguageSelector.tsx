@@ -45,7 +45,7 @@ export const LanguageSelector: React.FC<LanguageSelectorProps> = ({
   const handleChange = (langCode: string) => {
     const langInfo = languages.find(lang => lang.code === langCode);
     onChange?.(langCode, langInfo);
-    log.info('选择语言', { code: langCode, name: langInfo?.displayName });
+    log.info('选择语言', { code: langCode, name: langInfo?.display_name });
   };
 
   return (
@@ -64,7 +64,7 @@ export const LanguageSelector: React.FC<LanguageSelectorProps> = ({
     >
       {languages.map(lang => (
         <Select.Option key={lang.code} value={lang.code}>
-          {lang.displayName} ({lang.englishName})
+          {lang.display_name} ({lang.english_name})
         </Select.Option>
       ))}
     </Select>

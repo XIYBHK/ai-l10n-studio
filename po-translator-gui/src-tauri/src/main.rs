@@ -18,24 +18,31 @@ fn main() {
         .init();
 
     tracing::info!("🚀 PO Translator GUI starting...");
+    
+    // 初始化提示词日志
+    services::init_prompt_logger();
 
     tauri::Builder::default()
+        .plugin(tauri_plugin_shell::init())
+        .plugin(tauri_plugin_dialog::init())
+        .plugin(tauri_plugin_fs::init())
+        .plugin(tauri_plugin_store::Builder::new().build())  // Tauri 2.x: Store Plugin
+        .plugin(tauri_plugin_notification::init())  // Tauri 2.x: Notification Plugin
+        // .plugin(tauri_plugin_updater::Builder::new().build())  // Tauri 2.x: Updater Plugin (开发阶段暂时禁用，生产环境时启用)
         .invoke_handler(tauri::generate_handler![
             parse_po_file,
             translate_entry,
             translate_batch,
-            translate_batch_with_stats,
+            translate_batch_with_channel,  // Tauri 2.x: Channel API 优化
             get_translation_memory,
             get_builtin_phrases,
             save_translation_memory,
-            get_config,
             open_file_dialog,
             save_file_dialog,
             save_po_file,
             translate_directory,
             get_app_config,
             update_app_config,
-            get_provider_configs,
             validate_config,
             get_app_logs,
             clear_app_logs,
@@ -67,7 +74,11 @@ fn main() {
         // 系统语言检测 (Phase 6)
         get_system_language,
         // Contextual Refine (Phase 7)
-        contextual_refine
+        contextual_refine,
+        // 提示词日志
+        get_prompt_logs,
+        clear_prompt_logs,
+        get_config_version
     ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

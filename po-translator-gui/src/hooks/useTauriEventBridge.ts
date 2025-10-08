@@ -92,37 +92,37 @@ export function useTauriEventBridge() {
 
       // Phase 7: 桥接 Contextual Refine 事件
       const unlistenRefineStart = await listen<{ count: number }>(
-        'contextual-refine:start',
+        'refine:start',
         (event) => {
           log.debug('🌉 桥接 Tauri 事件 -> EventDispatcher', {
-            event: 'contextual-refine:start',
+            event: 'refine:start',
             payload: event.payload
           });
-          eventDispatcher.emit('contextual-refine:start', event.payload);
+          eventDispatcher.emit('refine:start', event.payload);
         }
       );
       unlistenFunctions.push(unlistenRefineStart);
 
       const unlistenRefineComplete = await listen<{ results: string[]; count: number }>(
-        'contextual-refine:complete',
+        'refine:complete',
         (event) => {
           log.debug('🌉 桥接 Tauri 事件 -> EventDispatcher', {
-            event: 'contextual-refine:complete',
+            event: 'refine:complete',
             payload: event.payload
           });
-          eventDispatcher.emit('contextual-refine:complete', event.payload);
+          eventDispatcher.emit('refine:complete', event.payload);
         }
       );
       unlistenFunctions.push(unlistenRefineComplete);
 
       const unlistenRefineError = await listen<{ error: string }>(
-        'contextual-refine:error',
+        'refine:error',
         (event) => {
           log.debug('🌉 桥接 Tauri 事件 -> EventDispatcher', {
-            event: 'contextual-refine:error',
+            event: 'refine:error',
             payload: event.payload
           });
-          eventDispatcher.emit('contextual-refine:error', event.payload);
+          eventDispatcher.emit('refine:error', event.payload);
         }
       );
       unlistenFunctions.push(unlistenRefineError);
@@ -131,9 +131,9 @@ export function useTauriEventBridge() {
         bridgedEvents: [
           'translation-progress', 
           'translation-stats-update',
-          'contextual-refine:start',
-          'contextual-refine:complete',
-          'contextual-refine:error'
+        'refine:start',
+        'refine:complete',
+        'refine:error'
         ] 
       });
     };

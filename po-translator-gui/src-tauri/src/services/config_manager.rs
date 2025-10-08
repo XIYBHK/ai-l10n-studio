@@ -2,12 +2,29 @@ use anyhow::{anyhow, Result};
 use serde::{Deserialize, Serialize};
 use std::fs;
 use std::path::{Path, PathBuf};
+use chrono;
 
 use crate::services::ai_translator::AIConfig;
 
+#[cfg(feature = "ts-rs")]
+use ts_rs::TS;
+
 // ========== Phase 1: 配置管理扩展 ==========
 
+/// 配置版本信息（用于前后端同步验证）
 #[derive(Debug, Clone, Serialize, Deserialize)]
+#[cfg_attr(feature = "ts-rs", derive(TS))]
+#[cfg_attr(feature = "ts-rs", ts(export, export_to = "../src/types/generated/"))]
+pub struct ConfigVersionInfo {
+    pub version: u64,
+    pub timestamp: String,
+    pub active_config_index: Option<usize>,
+    pub config_count: usize,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[cfg_attr(feature = "ts-rs", derive(TS))]
+#[cfg_attr(feature = "ts-rs", ts(export, export_to = "../src/types/generated/"))]
 pub struct AppConfig {
     // 原有字段（保持向后兼容）
     pub api_key: String,
@@ -31,6 +48,12 @@ pub struct AppConfig {
     // Phase 3 新增字段
     #[serde(default)]
     pub system_prompt: Option<String>,      // 自定义系统提示词（None使用默认）
+    
+    // 配置版本控制（前后端同步）
+    #[serde(default)]
+    pub config_version: u64,                // 配置版本号，每次修改递增
+    #[serde(default)]
+    pub last_modified: Option<String>,      // 最后修改时间
 }
 
 impl Default for AppConfig {
@@ -55,6 +78,9 @@ impl Default for AppConfig {
             active_config_index: None,
             // Phase 3 新增字段默认值
             system_prompt: None,  // None表示使用内置默认提示词
+            // 配置版本控制
+            config_version: 0,
+            last_modified: None,
         }
     }
 }
@@ -214,6 +240,18 @@ impl ConfigManager {
 
         Ok(())
     }
+    
+    /// 保存配置并递增版本号（用于配置修改）
+    fn save_with_version_increment(&mut self) -> Result<()> {
+        // 递增版本号
+        self.config.config_version = self.config.config_version.wrapping_add(1);
+        
+        // 更新时间戳
+        let now = chrono::Local::now().to_rfc3339();
+        self.config.last_modified = Some(now);
+        
+        self.save()
+    }
 
     pub fn get_config(&self) -> &AppConfig {
         &self.config
@@ -228,8 +266,18 @@ impl ConfigManager {
         F: FnOnce(&mut AppConfig),
     {
         updater(&mut self.config);
-        self.save()?;
+        self.save_with_version_increment()?;
         Ok(())
+    }
+    
+    /// 获取配置版本信息（用于前后端同步）
+    pub fn get_config_version_info(&self) -> ConfigVersionInfo {
+        ConfigVersionInfo {
+            version: self.config.config_version,
+            timestamp: self.config.last_modified.clone().unwrap_or_else(|| "unknown".to_string()),
+            active_config_index: self.config.active_config_index,
+            config_count: self.config.ai_configs.len(),
+        }
     }
 
     pub fn set_api_key(&mut self, api_key: String) -> Result<()> {

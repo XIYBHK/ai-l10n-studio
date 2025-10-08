@@ -24,7 +24,6 @@ export const useTranslator = () => {
   const parsePOFile = useAsync(poFileApi.parse);
   const translateEntry = useAsync(translatorApi.translateEntry);
   const translateBatch = useAsync(translatorApi.translateBatch);
-  const translateBatchWithStats = useAsync(translatorApi.translateBatchWithStats);
   const getTranslationMemory = useAsync(translationMemoryApi.get);
 
   return {
@@ -33,14 +32,12 @@ export const useTranslator = () => {
       parsePOFile.loading || 
       translateEntry.loading || 
       translateBatch.loading || 
-      translateBatchWithStats.loading || 
       getTranslationMemory.loading,
     
     error: 
       parsePOFile.error?.message || 
       translateEntry.error?.message || 
       translateBatch.error?.message || 
-      translateBatchWithStats.error?.message || 
       getTranslationMemory.error?.message || 
       null,
     
@@ -48,7 +45,6 @@ export const useTranslator = () => {
     parsePOFile: parsePOFile.execute,
     translateEntry: translateEntry.execute,
     translateBatch: translateBatch.execute,
-    translateBatchWithStats: translateBatchWithStats.execute,
     getTranslationMemory: getTranslationMemory.execute,
   };
 };

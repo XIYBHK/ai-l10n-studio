@@ -2,7 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { Progress, Button } from 'antd';
 import { CheckOutlined, ThunderboltOutlined } from '@ant-design/icons'; // Phase 7: 添加精翻图标
 import { POEntry } from '../types/tauri';
-import { useAppStore } from '../store/useAppStore';
+import { useSessionStore } from '../store';
 import { useTheme } from '../hooks/useTheme';
 import { createModuleLogger } from '../utils/logger';
 
@@ -27,7 +27,7 @@ export const EntryList: React.FC<EntryListProps> = ({
   onTranslateSelected,
   onContextualRefine, // Phase 7
 }) => {
-  const { updateEntry } = useAppStore();
+  const { updateEntry } = useSessionStore();
   const { colors } = useTheme();
   const [selectedRowKeys, setSelectedRowKeys] = useState<React.Key[]>([]);
   const [lastClickedIndex, setLastClickedIndex] = useState<number | null>(null);

@@ -3,7 +3,7 @@
 
 use std::sync::Arc;
 use std::sync::atomic::{AtomicU64, Ordering};
-use std::time::{Duration, SystemTime, UNIX_EPOCH};
+use std::time::{SystemTime, UNIX_EPOCH};
 
 /// 进度节流器
 /// 
@@ -181,6 +181,7 @@ impl BatchProgressTracker {
 mod tests {
     use super::*;
     use std::thread::sleep;
+    use std::time::Duration;
 
     #[test]
     fn test_throttler_basic() {

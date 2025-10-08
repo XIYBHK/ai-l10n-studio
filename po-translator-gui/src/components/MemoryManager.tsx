@@ -1,8 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { Modal, Table, Input, Button, message, Space, Popconfirm } from 'antd';
 import { DeleteOutlined, PlusOutlined, SearchOutlined, ClearOutlined, ExportOutlined, ImportOutlined } from '@ant-design/icons';
-import { save, open } from '@tauri-apps/api/dialog';
-import { writeTextFile, readTextFile } from '@tauri-apps/api/fs';
+import { save, open } from '@tauri-apps/plugin-dialog';
+import { writeTextFile, readTextFile } from '@tauri-apps/plugin-fs';
 import { translationMemoryApi } from '../services/api';
 import { createModuleLogger } from '../utils/logger';
 
@@ -326,14 +326,16 @@ export const MemoryManager: React.FC<MemoryManagerProps> = ({ visible, onClose }
       okText="保存"
       cancelText="取消"
       confirmLoading={loading}
-      destroyOnClose={true}
+      destroyOnHidden={true}
       mask={false}
       style={{ top: 20 }}
-      bodyStyle={{ 
-        maxHeight: 'calc(100vh - 200px)', 
-        overflowY: 'auto',
-        display: 'flex',
-        flexDirection: 'column'
+      styles={{ 
+        body: {
+          maxHeight: 'calc(100vh - 200px)', 
+          overflowY: 'auto',
+          display: 'flex',
+          flexDirection: 'column'
+        }
       }}
     >
       <div style={{ marginBottom: 16 }}>

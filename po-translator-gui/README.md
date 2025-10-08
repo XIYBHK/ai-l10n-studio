@@ -191,7 +191,7 @@ npm run tauri:build
 - **Vite** - 构建工具
 
 ### 后端
-- **Tauri 1.5** - 桌面应用框架
+- **Tauri 2.x** - 桌面应用框架（权限系统）
 - **Rust** - 系统编程语言
 - **Tokio** - 异步运行时
 - **Reqwest** - HTTP 客户端

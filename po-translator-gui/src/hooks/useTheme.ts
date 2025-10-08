@@ -1,11 +1,11 @@
 import { useMemo } from 'react';
 import { theme as antTheme } from 'antd';
-import { useAppStore } from '../store/useAppStore';
+import { useSettingsStore } from '../store';
 import { lightTheme, darkTheme, semanticColors } from '../theme/config';
 
 export const useTheme = () => {
-  const theme = useAppStore((state) => state.theme);
-  const toggleTheme = useAppStore((state) => state.toggleTheme);
+  const theme = useSettingsStore((state) => state.theme);
+  const toggleTheme = useSettingsStore((state) => state.toggleTheme);
   
   const themeConfig = useMemo(() => {
     return theme === 'dark' ? darkTheme : lightTheme;

@@ -554,7 +554,7 @@ src-tauri/src/
 - i18next
 
 **Backend**:
-- Tauri 1.5
+- Tauri 2.x
 - Rust + Tokio
 - reqwest
 - serde

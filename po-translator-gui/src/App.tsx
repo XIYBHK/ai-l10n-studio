@@ -1,5 +1,5 @@
-import { useState, useEffect } from 'react';
-import { Layout, ConfigProvider, message } from 'antd';
+import { useState, useEffect, useRef } from 'react';
+import { Layout, ConfigProvider, message, Alert, Button, Space } from 'antd';
 import { listen } from '@tauri-apps/api/event';
 import { throttle } from 'lodash';
 import { MenuBar } from './components/MenuBar';
@@ -8,14 +8,19 @@ import { EditorPane } from './components/EditorPane';
 import { SettingsModal } from './components/SettingsModal';
 import { DevToolsModal } from './components/DevToolsModal';
 import { AIWorkspace } from './components/AIWorkspace';
-import { useAppStore } from './store/useAppStore';
+import { ErrorBoundary } from './components/ErrorBoundary';
+import { useSessionStore } from './store';
+// import { useSettingsStore, useStatsStore } from './store'; // 预留给未来使用
 import { useTranslator } from './hooks/useTranslator';
 import { useTheme } from './hooks/useTheme';
 import { useTauriEventBridge } from './hooks/useTauriEventBridge';
+import { useChannelTranslation } from './hooks/useChannelTranslation'; // Tauri 2.x: Channel API
 import { TranslationStats, POEntry } from './types/tauri';
 import { createModuleLogger } from './utils/logger';
 import { eventDispatcher } from './services/eventDispatcher';
-import { configApi, poFileApi, dialogApi, languageApi, translatorApi, type LanguageInfo } from './services/api';
+import { configApi, poFileApi, dialogApi, languageApi, translatorApi, aiConfigApi, apiClient, type LanguageInfo } from './services/api';
+import { ConfigSyncManager } from './services/configSync';
+import { notificationManager } from './utils/notificationManager'; // Tauri 2.x: Notification Plugin
 import './i18n/config';
 import './App.css';
 
@@ -23,6 +28,7 @@ const { Sider } = Layout;
 const log = createModuleLogger('App');
 
 function App() {
+  // 使用新的分离式 store
   const {
     entries,
     currentEntry,
@@ -36,10 +42,13 @@ function App() {
     updateEntry,
     setTranslating,
     setProgress,
-    setConfig,
-  } = useAppStore();
+  } = useSessionStore();
   
-  const { parsePOFile, translateBatchWithStats } = useTranslator();
+  // 注意：theme 由 useTheme hook 管理，language 由 i18n 管理
+  // const { cumulativeStats, updateCumulativeStats } = useStatsStore(); // 暂未使用
+  
+  const { parsePOFile } = useTranslator();
+  const channelTranslation = useChannelTranslation(); // Tauri 2.x: Channel API for high-performance batch translation
   const [apiKey, setApiKey] = useState('');
   const [settingsVisible, setSettingsVisible] = useState(false);
   const [devToolsVisible, setDevToolsVisible] = useState(false);
@@ -51,16 +60,103 @@ function App() {
   
   // Phase 5: 语言状态管理
   const [sourceLanguage, setSourceLanguage] = useState<string>('');
-  const [targetLanguage, setTargetLanguage] = useState<string>('zh-Hans'); // 默认目标语言：简体中文
+  const [targetLanguage, setTargetLanguage] = useState<string>('zh-CN'); // 默认目标语言：简体中文
   
   const { themeConfig, algorithm, toggleTheme, isDark, colors } = useTheme();
+  
+  // 使用 ref 防止重复检查AI配置
+  const hasCheckedAIConfig = useRef(false);
+  
+  // 配置同步管理器
+  const configSyncRef = useRef<ConfigSyncManager | null>(null);
+  const [configSyncIssues, setConfigSyncIssues] = useState<string[]>([]);
   
   // 🌉 建立 Tauri 事件桥接
   useTauriEventBridge();
 
-  // 加载配置
+  // 💾 Store 已在 main.tsx 中初始化，这里不需要重复初始化
+
+  // 全局错误处理 - 防止黑屏
   useEffect(() => {
-    loadConfig();
+    const handleError = (event: ErrorEvent) => {
+      log.error('全局错误捕获', {
+        message: event.message,
+        filename: event.filename,
+        lineno: event.lineno,
+        colno: event.colno,
+        error: event.error
+      });
+      message.error(`应用错误: ${event.message}`, 5);
+      event.preventDefault(); // 阻止默认的错误处理，避免黑屏
+    };
+
+    const handleUnhandledRejection = (event: PromiseRejectionEvent) => {
+      log.error('未处理的Promise拒绝', {
+        reason: event.reason,
+        promise: event.promise
+      });
+      message.error(`异步操作失败: ${event.reason}`, 5);
+      event.preventDefault(); // 阻止默认的错误处理
+    };
+
+    window.addEventListener('error', handleError);
+    window.addEventListener('unhandledrejection', handleUnhandledRejection);
+
+    return () => {
+      window.removeEventListener('error', handleError);
+      window.removeEventListener('unhandledrejection', handleUnhandledRejection);
+      // 组件卸载时取消所有待处理的 API 请求
+      apiClient.cancelAll();
+    };
+  }, []);
+
+  // 初始化配置同步管理器
+  useEffect(() => {
+    const syncManager = new ConfigSyncManager();
+    configSyncRef.current = syncManager;
+    
+    // 初始化配置同步
+    syncManager.initialize().catch((error: unknown) => {
+      log.error('配置同步管理器初始化失败', { error });
+    });
+    
+    // 监听配置不一致事件
+    const unsubscribe = eventDispatcher.on('config:out-of-sync', (data) => {
+      log.warn('⚠️ 检测到配置不一致', data);
+      setConfigSyncIssues(data.issues || []);
+    });
+    
+    return () => {
+      syncManager.destroy();
+      unsubscribe();
+    };
+  }, []);
+
+  // 加载配置并检查AI配置
+  useEffect(() => {
+    const initApp = async () => {
+      await loadConfig();
+      
+      // 检查AI配置（使用ref防止重复执行）
+      if (!hasCheckedAIConfig.current) {
+        hasCheckedAIConfig.current = true;
+        
+        setTimeout(async () => {
+          try {
+            const activeConfig = await aiConfigApi.getActiveConfig();
+            if (!activeConfig) {
+              // 直接打开设置窗口，不显示消息
+              setSettingsVisible(true);
+              log.info('未检测到AI配置，已自动打开设置窗口');
+            }
+          } catch (error) {
+            log.logError(error, '检查AI配置失败');
+          }
+        }, 500); // 延迟500ms执行
+      }
+    };
+    
+    initApp();
   }, []);
 
   // 全局快捷键监听
@@ -135,7 +231,7 @@ function App() {
         if (apiKeyValue) {
           setApiKey(apiKeyValue);
         }
-        setConfig(config as any);
+        // 配置现在由 ConfigSyncManager 管理，无需手动同步
       }
     } catch (error) {
       log.logError(error, '加载配置失败');
@@ -154,18 +250,18 @@ function App() {
       
       if (sampleTexts) {
         const detectedLang = await languageApi.detectLanguage(sampleTexts);
-        setSourceLanguage(detectedLang.displayName);
-        log.info('检测到源语言', { lang: detectedLang });
+        setSourceLanguage(detectedLang.display_name);
+        log.info('检测到源语言', { code: detectedLang.code, name: detectedLang.display_name });
         
         // 获取默认目标语言
         const defaultTarget = await languageApi.getDefaultTargetLanguage(detectedLang.code);
         setTargetLanguage(defaultTarget.code);
-        log.info('设置默认目标语言', { lang: defaultTarget });
+        log.info('设置默认目标语言', { code: defaultTarget.code, name: defaultTarget.display_name });
       }
     } catch (error) {
       log.logError(error, '语言检测失败，使用默认设置');
       setSourceLanguage('未知');
-      setTargetLanguage('zh-Hans'); // 默认中文
+      setTargetLanguage('zh-CN'); // 默认中文
     }
   };
 
@@ -173,7 +269,7 @@ function App() {
   const handleTargetLanguageChange = (langCode: string, langInfo: LanguageInfo | undefined) => {
     setTargetLanguage(langCode);
     if (langInfo) {
-      log.info('切换目标语言', { lang: langInfo });
+      log.info('切换目标语言', { code: langInfo.code, name: langInfo.display_name });
     }
   };
 
@@ -203,6 +299,20 @@ function App() {
   };
 
   const translateAll = async () => {
+    // 检查是否有启用的AI配置
+    try {
+      const activeConfig = await aiConfigApi.getActiveConfig();
+      if (!activeConfig) {
+        alert('请先在设置中配置并启用 AI 服务！');
+        setSettingsVisible(true);
+        return;
+      }
+    } catch (error) {
+      alert('无法获取AI配置，请先在设置中配置！');
+      setSettingsVisible(true);
+      return;
+    }
+
     if (!apiKey) {
       alert('请先在设置中配置 API 密钥！');
       return;
@@ -310,7 +420,7 @@ function App() {
     setTranslationStats(null);
   };
 
-  // 🔧 统一的翻译处理函数 - 使用事件分发器
+  // 🔧 统一的翻译处理函数 - 智能选择 Channel API 或 Event API
   const executeTranslation = async (
     entriesToTranslate: POEntry[], 
     sourceType: 'all' | 'selected' = 'all'
@@ -321,6 +431,9 @@ function App() {
     }
 
     const texts = entriesToTranslate.map(e => e.msgid);
+    const USE_CHANNEL_THRESHOLD = 100; // 超过此数量使用 Channel API
+    const useChannelAPI = texts.length >= USE_CHANNEL_THRESHOLD;
+    
     let completedCount = 0;
     
     try {
@@ -329,71 +442,133 @@ function App() {
       
       // 触发翻译开始事件
       await eventDispatcher.emit('translation:before', { texts, source: sourceType });
-      log.info('开始翻译', { count: texts.length, source: sourceType });
+      log.info(`🚀 开始翻译 (${useChannelAPI ? 'Channel API' : 'Event API'})`, { 
+        count: texts.length, 
+        source: sourceType 
+      });
       
-      // 🎯 订阅翻译进度事件（使用事件分发器）
-      const unsubProgress = eventDispatcher.on('translation:progress', ({ index, translation }) => {
-        const logPrefix = sourceType === 'all' ? '全部翻译' : '选中翻译';
-        log.debug(`📥 收到翻译进度（${logPrefix}）`, { index, translation });
+      if (useChannelAPI) {
+        // ========== Tauri 2.x: 使用 Channel API (高性能) ==========
+        const result = await channelTranslation.translateBatch(texts, targetLanguage, {
+          onProgress: (current, _total, percentage) => {
+            setProgress(percentage);
+            completedCount = current;
+          },
+          onStats: (stats) => {
+            // 转换 Channel API 的统计格式到 TranslationStats
+            setTranslationStats({
+              ...stats,
+              token_stats: {
+                total_tokens: stats.token_stats.total_tokens,
+                prompt_tokens: stats.token_stats.prompt_tokens,
+                completion_tokens: stats.token_stats.completion_tokens,
+                input_tokens: stats.token_stats.prompt_tokens, // Channel API uses prompt_tokens
+                output_tokens: stats.token_stats.completion_tokens, // Channel API uses completion_tokens
+                cost: stats.token_stats.cost,
+              },
+            } as TranslationStats);
+          },
+        });
         
-        const entry = entriesToTranslate[index];
-        const entryIndex = entries.indexOf(entry);
-        
-        if (entryIndex >= 0) {
-          // 实时更新条目
-          updateEntry(entryIndex, { 
-            msgstr: translation, 
-            needsReview: true  // 标记为待确认
-          });
+        // 应用翻译结果
+        Object.entries(result.translations).forEach(([indexStr, translation]) => {
+          const index = parseInt(indexStr, 10);
+          const entry = entriesToTranslate[index];
+          const entryIndex = entries.indexOf(entry);
           
-          // 存储AI译文用于后续术语检测
-          setAiTranslations(prev => {
-            const newMap = new Map(prev);
-            newMap.set(entryIndex, translation);
-            log.debug(`💾 存储AI译文（${logPrefix}）`, { 
-              entryIndex, 
-              translation,
-              totalAiTranslations: newMap.size 
+          if (entryIndex >= 0) {
+            updateEntry(entryIndex, { 
+              msgstr: translation, 
+              needsReview: true 
             });
-            return newMap;
-          });
-          
-          // 更新进度条
-          completedCount++;
-          setProgress((completedCount / texts.length) * 100);
-          log.debug(`✅ 已更新条目（${logPrefix}）`, { 
-            completed: completedCount, 
-            total: texts.length 
-          });
-        } else {
-          log.warn(`❌ 未找到条目索引（${logPrefix}）`, { entryIndex, index });
+            
+            setAiTranslations(prev => {
+              const newMap = new Map(prev);
+              newMap.set(entryIndex, translation);
+              return newMap;
+            });
+          }
+        });
+        
+        // 确保统计已设置（通过 onStats 回调）
+        if (!translationStats) {
+          setTranslationStats({
+            ...result.stats,
+            token_stats: {
+              total_tokens: result.stats.token_stats.total_tokens,
+              prompt_tokens: result.stats.token_stats.prompt_tokens,
+              completion_tokens: result.stats.token_stats.completion_tokens,
+              input_tokens: result.stats.token_stats.prompt_tokens,
+              output_tokens: result.stats.token_stats.completion_tokens,
+              cost: result.stats.token_stats.cost,
+            },
+          } as TranslationStats);
         }
-      });
-      
-      // 📊 订阅统计更新事件
-      const unsubStats = eventDispatcher.on('translation:stats', (stats) => {
-        log.debug('📊 收到统计更新', stats);
-        setTranslationStats(stats);
-      });
-      
-      // 执行翻译（Phase 5: 传递目标语言）
-      await translateBatchWithStats(texts, apiKey, targetLanguage);
-      
-      // 清理订阅
-      unsubProgress();
-      unsubStats();
+        
+      } else {
+        // ========== 传统: 使用 Event API ==========
+        const unsubProgress = eventDispatcher.on('translation:progress', ({ index, translation }) => {
+          const logPrefix = sourceType === 'all' ? '全部翻译' : '选中翻译';
+          log.debug(`📥 收到翻译进度（${logPrefix}）`, { index, translation });
+          
+          const entry = entriesToTranslate[index];
+          const entryIndex = entries.indexOf(entry);
+          
+          if (entryIndex >= 0) {
+            updateEntry(entryIndex, { 
+              msgstr: translation, 
+              needsReview: true 
+            });
+            
+            setAiTranslations(prev => {
+              const newMap = new Map(prev);
+              newMap.set(entryIndex, translation);
+              return newMap;
+            });
+            
+            completedCount++;
+            setProgress((completedCount / texts.length) * 100);
+          }
+        });
+        
+        const unsubStats = eventDispatcher.on('translation:stats', (stats) => {
+          setTranslationStats(stats);
+        });
+        
+        await translatorApi.translateBatch(texts, targetLanguage);
+        
+        unsubProgress();
+        unsubStats();
+      }
       
       // 触发翻译完成事件
       await eventDispatcher.emit('translation:after', { 
         success: true, 
         stats: translationStats || undefined 
       });
-      log.info('翻译完成', { count: completedCount });
+      log.info('✅ 翻译完成', { count: completedCount, api: useChannelAPI ? 'Channel' : 'Event' });
+      
+      // 📬 发送完成通知
+      if (translationStats) {
+        const failedCount = translationStats.total - translationStats.ai_translated - translationStats.tm_hits;
+        await notificationManager.batchTranslationComplete(
+          translationStats.total,
+          translationStats.ai_translated + translationStats.tm_hits,
+          failedCount
+        );
+      }
       
       return true; // 成功
     } catch (error) {
       log.logError(error, '翻译失败');
-      message.error(`翻译失败：${error instanceof Error ? error.message : '未知错误'}`);
+      
+      // 直接显示错误信息（后端已经处理成友好提示）
+      const errorMessage = error instanceof Error ? error.message : String(error);
+      
+      message.error({
+        content: errorMessage,
+        duration: 8,
+      });
       
       // 触发翻译错误事件
       await eventDispatcher.emit('translation:error', { 
@@ -410,6 +585,20 @@ function App() {
 
   // 翻译选中的条目
   const handleTranslateSelected = async (indices: number[]) => {
+    // 检查是否有启用的AI配置
+    try {
+      const activeConfig = await aiConfigApi.getActiveConfig();
+      if (!activeConfig) {
+        message.warning('请先在设置中配置并启用 AI 服务！');
+        setSettingsVisible(true);
+        return;
+      }
+    } catch (error) {
+      message.warning('无法获取AI配置，请先在设置中配置！');
+      setSettingsVisible(true);
+      return;
+    }
+    
     const selectedEntries = indices.map(i => entries[i]).filter(e => e && e.msgid && !e.msgstr);
     if (selectedEntries.length === 0) {
       message.info('选中的条目都已翻译');
@@ -424,6 +613,20 @@ function App() {
 
   // Phase 7: 精翻选中的条目（Contextual Refine）
   const handleContextualRefine = async (indices: number[]) => {
+    // 检查是否有启用的AI配置
+    try {
+      const activeConfig = await aiConfigApi.getActiveConfig();
+      if (!activeConfig) {
+        message.warning('请先在设置中配置并启用 AI 服务！');
+        setSettingsVisible(true);
+        return;
+      }
+    } catch (error) {
+      message.warning('无法获取AI配置，请先在设置中配置！');
+      setSettingsVisible(true);
+      return;
+    }
+    
     // 过滤出待确认的条目
     const selectedEntries = indices
       .map(i => ({ index: i, entry: entries[i] }))
@@ -458,9 +661,9 @@ function App() {
       });
 
       // 调用精翻 API
+      // 注意：后端会从配置管理器获取启用的AI配置
       const results = await translatorApi.contextualRefine(
         requests,
-        apiKey,
         targetLanguage
       );
 
@@ -469,7 +672,7 @@ function App() {
         const { index } = selectedEntries[i];
         updateEntry(index, { 
           msgstr: translation,
-          needsReview: false  // 精翻后清除待确认标记
+          needsReview: true  // 精翻后仍需手动确认
         });
       });
 
@@ -478,7 +681,14 @@ function App() {
 
     } catch (error) {
       log.error('[精翻] 失败', { error });
-      message.error('精翻失败：' + (error as Error).message);
+      
+      // 直接显示错误信息（后端已经处理成友好提示）
+      const errorMessage = error instanceof Error ? error.message : String(error);
+      
+      message.error({
+        content: errorMessage,
+        duration: 8,
+      });
     } finally {
       setTranslating(false);
     }
@@ -550,8 +760,45 @@ function App() {
           targetLanguage={targetLanguage}
           onTargetLanguageChange={handleTargetLanguageChange}
         />
+        
+        {/* 配置同步警告 */}
+        {configSyncIssues.length > 0 && (
+          <Alert
+            message="配置同步警告"
+            description={
+              <Space direction="vertical" size="small" style={{ width: '100%' }}>
+                <div>检测到前后端配置不一致：</div>
+                <ul style={{ margin: 0, paddingLeft: 20 }}>
+                  {configSyncIssues.map((issue, index) => (
+                    <li key={index}>{issue}</li>
+                  ))}
+                </ul>
+              </Space>
+            }
+            type="warning"
+            showIcon
+            closable
+            onClose={() => setConfigSyncIssues([])}
+            action={
+              <Button 
+                size="small" 
+                type="primary"
+                onClick={async () => {
+                  if (configSyncRef.current) {
+                    await configSyncRef.current.syncFromBackend();
+                    setConfigSyncIssues([]);
+                    message.success('配置已重新同步');
+                  }
+                }}
+              >
+                重新同步
+              </Button>
+            }
+            style={{ margin: '8px 16px', borderRadius: 4 }}
+          />
+        )}
       
-      <Layout style={{ height: 'calc(100vh - 48px)', width: '100%', position: 'relative' }}>
+      <Layout style={{ height: configSyncIssues.length > 0 ? 'calc(100vh - 128px)' : 'calc(100vh - 48px)', width: '100%', position: 'relative' }}>
         <div 
           style={{ 
             width: `${leftWidth}%`,
@@ -562,15 +809,26 @@ function App() {
             position: 'relative'
           }}
         >
-          <EntryList
-            entries={entries}
-            currentEntry={currentEntry}
-            isTranslating={isTranslating}
-            progress={progress}
-            onEntrySelect={setCurrentEntry}
-            onTranslateSelected={handleTranslateSelected}
-            onContextualRefine={handleContextualRefine} /* Phase 7: 精翻 */
-          />
+          <ErrorBoundary fallback={
+            <div style={{ padding: '20px', textAlign: 'center' }}>
+              <Alert 
+                message="条目列表加载失败" 
+                description="请尝试重新打开文件"
+                type="error" 
+                showIcon 
+              />
+            </div>
+          }>
+            <EntryList
+              entries={entries}
+              currentEntry={currentEntry}
+              isTranslating={isTranslating}
+              progress={progress}
+              onEntrySelect={setCurrentEntry}
+              onTranslateSelected={handleTranslateSelected}
+              onContextualRefine={handleContextualRefine} /* Phase 7: 精翻 */
+            />
+          </ErrorBoundary>
           {/* 拖拽手柄 */}
           <div
             onMouseDown={handleMouseDown}
@@ -605,12 +863,23 @@ function App() {
             flex: 1
           }}
         >
-          <EditorPane
-            entry={currentEntry}
-            onEntryUpdate={updateEntry}
-            aiTranslation={currentIndex >= 0 ? aiTranslations.get(currentIndex) : undefined}
-            apiKey={apiKey}
-          />
+          <ErrorBoundary fallback={
+            <div style={{ padding: '20px', textAlign: 'center' }}>
+              <Alert 
+                message="编辑器加载失败" 
+                description="请尝试选择其他条目"
+                type="error" 
+                showIcon 
+              />
+            </div>
+          }>
+            <EditorPane
+              entry={currentEntry}
+              onEntryUpdate={updateEntry}
+              aiTranslation={currentIndex >= 0 ? aiTranslations.get(currentIndex) : undefined}
+              apiKey={apiKey}
+            />
+          </ErrorBoundary>
         </div>
 
         <Sider
@@ -624,24 +893,39 @@ function App() {
             flex: '0 0 320px'
           }}
         >
-          <AIWorkspace 
-            stats={translationStats} 
-            isTranslating={isTranslating}
-            onResetStats={handleResetStats}
-            apiKey={apiKey}
-          />
+          <ErrorBoundary fallback={
+            <div style={{ padding: '20px', textAlign: 'center' }}>
+              <Alert 
+                message="AI工作区加载失败" 
+                description="部分功能可能无法使用"
+                type="warning" 
+                showIcon 
+              />
+            </div>
+          }>
+            <AIWorkspace 
+              stats={translationStats} 
+              isTranslating={isTranslating}
+              onResetStats={handleResetStats}
+              apiKey={apiKey}
+            />
+          </ErrorBoundary>
         </Sider>
       </Layout>
 
-      <SettingsModal
-        visible={settingsVisible}
-        onClose={() => setSettingsVisible(false)}
-      />
+      <ErrorBoundary>
+        <SettingsModal
+          visible={settingsVisible}
+          onClose={() => setSettingsVisible(false)}
+        />
+      </ErrorBoundary>
 
-      <DevToolsModal
-        visible={devToolsVisible}
-        onClose={() => setDevToolsVisible(false)}
-      />
+      <ErrorBoundary>
+        <DevToolsModal
+          visible={devToolsVisible}
+          onClose={() => setDevToolsVisible(false)}
+        />
+      </ErrorBoundary>
     </Layout>
     </div>
     </ConfigProvider>

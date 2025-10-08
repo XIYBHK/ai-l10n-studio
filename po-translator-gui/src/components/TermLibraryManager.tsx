@@ -7,7 +7,7 @@ import {
   BookOutlined,
   ThunderboltOutlined 
 } from '@ant-design/icons';
-import { invoke } from '@tauri-apps/api/tauri';
+import { invoke } from '@tauri-apps/api/core';
 import { TermLibrary, TermEntry } from '../types/termLibrary';
 import { useTheme } from '../hooks/useTheme';
 import { createModuleLogger } from '../utils/logger';
@@ -238,7 +238,7 @@ export const TermLibraryManager: React.FC<TermLibraryManagerProps> = ({
       open={visible}
       onCancel={onClose}
       width={1000}
-      destroyOnClose={true}
+      destroyOnHidden={true}
       mask={false}
       footer={[
         <Button key="refresh" icon={<ReloadOutlined />} onClick={loadLibrary}>

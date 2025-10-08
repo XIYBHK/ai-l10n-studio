@@ -6,7 +6,7 @@ import type { ContextualRefineRequest } from '../../types/tauri';
 
 // Mock Tauri invoke
 const mockInvoke = vi.fn();
-vi.mock('@tauri-apps/api/tauri', () => ({
+vi.mock('@tauri-apps/api/core', () => ({
   invoke: (...args: any[]) => mockInvoke(...args),
 }));
 
@@ -156,7 +156,7 @@ describe('Contextual Refine API', () => {
       for (const { lang, expected } of testCases) {
         mockInvoke.mockResolvedValue([expected]);
 
-        const results = await translatorApi.contextualRefine(
+        await translatorApi.contextualRefine(
           [request],
           'test-key',
           lang

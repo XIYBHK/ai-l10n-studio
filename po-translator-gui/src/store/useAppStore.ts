@@ -1,6 +1,6 @@
 import { create } from 'zustand';
-import { persist } from 'zustand/middleware';
 import { POEntry, TranslationReport, AppConfig, TranslationStats } from '../types/tauri';
+import { tauriStore } from './tauriStore';
 
 type ThemeMode = 'light' | 'dark';
 type Language = 'zh-CN' | 'en-US';
@@ -54,33 +54,31 @@ interface AppState {
   previousEntry: () => void;
 }
 
-export const useAppStore = create<AppState>()(
-  persist(
-    (set, get) => ({
-      // 初始状态
-      entries: [],
-      currentEntry: null,
-      currentIndex: -1,
-      currentFilePath: null,
-      isTranslating: false,
-      progress: 0,
-      report: null,
-      config: null,
-      theme: 'light',
-      language: 'zh-CN',
-      cumulativeStats: {
-        total: 0,
-        tm_hits: 0,
-        deduplicated: 0,
-        ai_translated: 0,
-        token_stats: {
-          input_tokens: 0,
-          output_tokens: 0,
-          total_tokens: 0,
-          cost: 0
-        },
-        tm_learned: 0
-      },
+export const useAppStore = create<AppState>()((set, get) => ({
+  // 初始状态
+  entries: [],
+  currentEntry: null,
+  currentIndex: -1,
+  currentFilePath: null,
+  isTranslating: false,
+  progress: 0,
+  report: null,
+  config: null,
+  theme: 'light',
+  language: 'zh-CN',
+  cumulativeStats: {
+    total: 0,
+    tm_hits: 0,
+    deduplicated: 0,
+    ai_translated: 0,
+    token_stats: {
+      input_tokens: 0,
+      output_tokens: 0,
+      total_tokens: 0,
+      cost: 0
+    },
+    tm_learned: 0
+  },
       
       // Actions
       setEntries: (entries) => {
@@ -128,52 +126,86 @@ export const useAppStore = create<AppState>()(
       setReport: (report) => set({ report }),
       setConfig: (config) => set({ config }),
       
-      // 主题和语言
-      setTheme: (theme) => set({ theme }),
+      // 主题和语言 (持久化到 TauriStore)
+      setTheme: (theme) => {
+        set({ theme });
+        // 异步保存到 TauriStore
+        tauriStore.setTheme(theme).catch(err => 
+          console.error('[useAppStore] 保存主题失败:', err)
+        );
+      },
       toggleTheme: () => {
         const newTheme = get().theme === 'light' ? 'dark' : 'light';
         set({ theme: newTheme });
+        // 异步保存到 TauriStore
+        tauriStore.setTheme(newTheme).catch(err => 
+          console.error('[useAppStore] 保存主题失败:', err)
+        );
       },
       setLanguage: (language) => {
         set({ language });
+        // 异步保存到 TauriStore
+        tauriStore.setLanguage(language).catch(err => 
+          console.error('[useAppStore] 保存语言失败:', err)
+        );
       },
       
-      // 累计统计
+      // 累计统计 (持久化到 TauriStore)
       updateCumulativeStats: (stats) => {
         const prev = get().cumulativeStats;
-        set({
-          cumulativeStats: {
-            total: prev.total + stats.total,
-            tm_hits: prev.tm_hits + stats.tm_hits,
-            deduplicated: prev.deduplicated + stats.deduplicated,
-            ai_translated: prev.ai_translated + stats.ai_translated,
-            token_stats: {
-              input_tokens: prev.token_stats.input_tokens + stats.token_stats.input_tokens,
-              output_tokens: prev.token_stats.output_tokens + stats.token_stats.output_tokens,
-              total_tokens: prev.token_stats.total_tokens + stats.token_stats.total_tokens,
-              cost: prev.token_stats.cost + stats.token_stats.cost
-            },
-            tm_learned: prev.tm_learned + stats.tm_learned
-          }
-        });
+        const newStats = {
+          total: prev.total + stats.total,
+          tm_hits: prev.tm_hits + stats.tm_hits,
+          deduplicated: prev.deduplicated + stats.deduplicated,
+          ai_translated: prev.ai_translated + stats.ai_translated,
+          token_stats: {
+            input_tokens: prev.token_stats.input_tokens + stats.token_stats.input_tokens,
+            output_tokens: prev.token_stats.output_tokens + stats.token_stats.output_tokens,
+            total_tokens: prev.token_stats.total_tokens + stats.token_stats.total_tokens,
+            cost: prev.token_stats.cost + stats.token_stats.cost
+          },
+          tm_learned: prev.tm_learned + stats.tm_learned
+        };
+        set({ cumulativeStats: newStats });
+        
+        // 异步保存到 TauriStore
+        tauriStore.updateCumulativeStats({
+          totalTranslated: newStats.total,
+          totalTokens: newStats.token_stats.total_tokens,
+          totalCost: newStats.token_stats.cost,
+          sessionCount: prev.total > 0 ? 1 : 0, // 简化处理
+          lastUpdated: Date.now(),
+        }).catch(err => 
+          console.error('[useAppStore] 保存累计统计失败:', err)
+        );
       },
       
       resetCumulativeStats: () => {
-        set({
-          cumulativeStats: {
-            total: 0,
-            tm_hits: 0,
-            deduplicated: 0,
-            ai_translated: 0,
-            token_stats: {
-              input_tokens: 0,
-              output_tokens: 0,
-              total_tokens: 0,
-              cost: 0
-            },
-            tm_learned: 0
-          }
-        });
+        const resetStats = {
+          total: 0,
+          tm_hits: 0,
+          deduplicated: 0,
+          ai_translated: 0,
+          token_stats: {
+            input_tokens: 0,
+            output_tokens: 0,
+            total_tokens: 0,
+            cost: 0
+          },
+          tm_learned: 0
+        };
+        set({ cumulativeStats: resetStats });
+        
+        // 异步保存到 TauriStore
+        tauriStore.updateCumulativeStats({
+          totalTranslated: 0,
+          totalTokens: 0,
+          totalCost: 0,
+          sessionCount: 0,
+          lastUpdated: Date.now(),
+        }).catch(err => 
+          console.error('[useAppStore] 重置累计统计失败:', err)
+        );
       },
       
       // 导航
@@ -190,14 +222,47 @@ export const useAppStore = create<AppState>()(
           get().setCurrentIndex(currentIndex - 1);
         }
       },
-    }),
-    {
-      name: 'app-storage',
-      partialize: (state) => ({
-        theme: state.theme,
-        language: state.language,
-        cumulativeStats: state.cumulativeStats,
-      }),
-    }
-  )
-);
+    }));
+
+/**
+ * 从 TauriStore 加载初始状态
+ * 应该在应用启动时调用
+ */
+export async function loadPersistedState() {
+  try {
+    console.log('[useAppStore] 加载持久化状态...');
+    
+    // 初始化 TauriStore
+    await tauriStore.init();
+    
+    // 加载主题
+    const theme = await tauriStore.getTheme();
+    useAppStore.getState().setTheme(theme);
+    
+    // 加载语言
+    const language = await tauriStore.getLanguage();
+    useAppStore.getState().setLanguage(language);
+    
+    // 加载累计统计
+    const stats = await tauriStore.getCumulativeStats();
+    useAppStore.setState({
+      cumulativeStats: {
+        total: stats.totalTranslated,
+        tm_hits: 0,
+        deduplicated: 0,
+        ai_translated: 0,
+        token_stats: {
+          input_tokens: 0,
+          output_tokens: 0,
+          total_tokens: stats.totalTokens,
+          cost: stats.totalCost
+        },
+        tm_learned: 0
+      }
+    });
+    
+    console.log('[useAppStore] 持久化状态加载成功', { theme, language, stats });
+  } catch (error) {
+    console.error('[useAppStore] 加载持久化状态失败:', error);
+  }
+}

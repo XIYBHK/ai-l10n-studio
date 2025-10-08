@@ -6,7 +6,21 @@ use crate::services::{AIConfig, AITranslator, ConfigManager};
 pub async fn get_all_ai_configs() -> Result<Vec<AIConfig>, String> {
     let config_manager = ConfigManager::new(None).map_err(|e| e.to_string())?;
     let config = config_manager.get_config();
-    Ok(config.get_all_ai_configs().clone())
+    let configs = config.get_all_ai_configs().clone();
+    
+    // 调试：打印配置内容
+    for (i, cfg) in configs.iter().enumerate() {
+        tracing::info!(
+            "配置 #{}: provider={:?}, has_api_key={}, base_url={:?}, model={:?}",
+            i,
+            cfg.provider,
+            !cfg.api_key.is_empty(),
+            cfg.base_url,
+            cfg.model
+        );
+    }
+    
+    Ok(configs)
 }
 
 /// 获取当前启用的 AI 配置
@@ -112,15 +126,57 @@ pub async fn test_ai_connection(request: TestConnectionRequest) -> Result<TestCo
     
     let start = Instant::now();
     
-    // 测试连接时不使用自定义提示词和目标语言
+    // 测试连接时不使用TM、自定义提示词和目标语言
     match AITranslator::new_with_config(ai_config.clone(), false, None, None) {
         Ok(mut translator) => {
-            // 发送一个简单的测试请求
-            let test_text = "Hello";
-            match translator.translate_batch(vec![test_text.to_string()], None).await {
-                Ok(_) => {
+            // 直接调用底层的translate_with_ai方法，绕过TM和去重逻辑
+            crate::app_log!("[连接测试] 直接调用AI API，绕过TM和去重");
+            let test_text = "The answer to life, universe and everything?";
+            
+            // 记录连接测试的完整AI请求（JSON格式）
+            let user_prompt = translator.build_user_prompt(&[test_text.to_string()]);
+            let request_json = serde_json::json!({
+                "model": ai_config.model,
+                "messages": [
+                    {
+                        "role": "system",
+                        "content": translator.current_system_prompt()
+                    },
+                    {
+                        "role": "user",
+                        "content": user_prompt
+                    }
+                ],
+                "temperature": 0.3
+            });
+            
+            let full_prompt = format!(
+                "【真实AI请求】:\n{}",
+                serde_json::to_string_pretty(&request_json).unwrap_or_else(|_| "JSON序列化失败".to_string())
+            );
+            
+            let metadata = serde_json::json!({
+                "provider": ai_config.provider.display_name(),
+                "model": ai_config.model.clone(),
+                "test_type": "connection_test",
+                "test_text": test_text,
+            });
+            crate::services::log_prompt("连接测试", full_prompt, Some(metadata));
+            
+            match translator.translate_with_ai(vec![test_text.to_string()]).await {
+                Ok(results) => {
                     let elapsed = start.elapsed().as_millis() as u64;
-                    crate::app_log!("✅ 连接测试成功，响应时间: {}ms", elapsed);
+                    crate::app_log!("✅ 连接测试成功，响应时间: {}ms, 结果: {:?}", elapsed, results);
+                    
+                    // 更新提示词日志的响应
+                    let logs = crate::services::get_prompt_logs();
+                    if let Some(last_idx) = logs.len().checked_sub(1) {
+                        if !results.is_empty() {
+                            let response = format!("✅ 测试成功 ({}ms)\n结果: {}", elapsed, results[0]);
+                            crate::services::update_prompt_response(last_idx, response);
+                        }
+                    }
+                    
                     Ok(TestConnectionResult {
                         success: true,
                         message: format!("连接成功 ({})", ai_config.provider.display_name()),

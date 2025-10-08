@@ -10,7 +10,12 @@ use crate::services::{AITranslator, POParser, TokenStats, TranslationMemory};
 use crate::utils::common::is_simple_phrase;
 use crate::utils::paths::get_translation_memory_path;
 
+#[cfg(feature = "ts-rs")]
+use ts_rs::TS;
+
 #[derive(Debug, Clone, Serialize, Deserialize)]
+#[cfg_attr(feature = "ts-rs", derive(TS))]
+#[cfg_attr(feature = "ts-rs", ts(export, export_to = "../src/types/generated/"))]
 pub struct TranslationReport {
     pub file: String,
     pub total_entries: usize,
@@ -24,6 +29,8 @@ pub struct TranslationReport {
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
+#[cfg_attr(feature = "ts-rs", derive(TS))]
+#[cfg_attr(feature = "ts-rs", ts(export, export_to = "../src/types/generated/"))]
 pub struct TranslationPair {
     pub original: String,
     pub translation: String,
@@ -32,6 +39,8 @@ pub struct TranslationPair {
 // TokenStats 已从 ai_translator 模块导入
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
+#[cfg_attr(feature = "ts-rs", derive(TS))]
+#[cfg_attr(feature = "ts-rs", ts(export, export_to = "../src/types/generated/"))]
 pub struct DeduplicationStats {
     pub unique_entries: usize,
     pub duplicate_entries: usize,
@@ -39,6 +48,8 @@ pub struct DeduplicationStats {
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
+#[cfg_attr(feature = "ts-rs", derive(TS))]
+#[cfg_attr(feature = "ts-rs", ts(export, export_to = "../src/types/generated/"))]
 pub struct TranslationMemoryStats {
     pub cache_hits: usize,
     pub total_queries: usize,

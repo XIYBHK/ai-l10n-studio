@@ -131,7 +131,7 @@ cd src-tauri && cargo clean && cd ..
 - i18next (internationalization)
 
 ### Backend
-- Tauri 1.5 (desktop app framework)
+- Tauri 2.x (desktop app framework)
 - Rust with Tokio (async runtime)
 - reqwest (HTTP client for AI APIs)
 - serde (JSON serialization)

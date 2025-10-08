@@ -1,0 +1,53 @@
+[package]
+name = "po-translator-gui"
+version = "0.0.0"
+description = "PO文件AI翻译工具"
+authors = ["you"]
+license = ""
+repository = ""
+edition = "2021"
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[build-dependencies]
+
+[dependencies]
+tauri = { version = "1.5", features = [ "dialog-message", "protocol-asset", "dialog-open", "dialog-save", "fs-copy-file", "fs-create-dir", "fs-exists", "fs-read-dir", "fs-read-file", "fs-remove-dir", "fs-remove-file", "fs-rename-file", "fs-write-file", "path-all", "shell-execute", "shell-open"] }
+serde = { version = "1.0", features = ["derive"] }
+serde_json = "1.0"
+tokio = { version = "1.0", features = ["full"] }
+reqwest = { version = "0.12", features = ["json"] }
+async-openai = "0.20"
+regex = "1.0"
+uuid = { version = "1.0", features = ["v4"] }
+chrono = { version = "0.4", features = ["serde"] }
+anyhow = "1.0"
+thiserror = "1.0"
+nom = "7.0"
+encoding_rs = "0.8"
+dirs = "5.0"
+indexmap = { version = "2.0", features = ["serde"] }
+lazy_static = "1.4"
+# 日志系统
+tracing = "0.1"
+tracing-subscriber = { version = "0.3", features = ["env-filter", "fmt", "time"] }
+# Phase 5: 语言检测
+whatlang = "0.16"
+# Phase 6: 系统语言检测
+sys-locale = "0.3"
+# 类型生成自动化
+ts-rs = { version = "7.1", optional = true }
+
+[features]
+# this feature is used for production builds or when `devPath` points to the filesystem
+# DO NOT REMOVE!!
+custom-protocol = ["tauri/custom-protocol"]
+# 启用类型生成
+ts-rs = ["dep:ts-rs"]
+
+[profile.release]
+opt-level = "z"     # 优化体积
+lto = true          # 链接时优化
+codegen-units = 1   # 单个代码生成单元
+strip = true        # 移除调试符号
+panic = "abort"     # 减小二进制体积

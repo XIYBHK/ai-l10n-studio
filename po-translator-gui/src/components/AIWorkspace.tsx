@@ -16,7 +16,7 @@ import { TermLibrary } from '../types/termLibrary';
 import { MemoryManager } from './MemoryManager';
 import { TermLibraryManager } from './TermLibraryManager';
 import { useTheme } from '../hooks/useTheme';
-import { useAppStore } from '../store/useAppStore';
+import { useStatsStore } from '../store';
 import { createModuleLogger } from '../utils/logger';
 import { eventDispatcher } from '../services/eventDispatcher';
 
@@ -37,7 +37,7 @@ export const AIWorkspace: React.FC<AIWorkspaceProps> = ({ stats, isTranslating, 
   const loadedRef = useRef(false); // 防止 StrictMode 重复加载
   
   // 从 store 读取累计统计
-  const { cumulativeStats, updateCumulativeStats, resetCumulativeStats } = useAppStore();
+  const { cumulativeStats, updateCumulativeStats, resetCumulativeStats } = useStatsStore();
 
   // 加载术语库
   const loadTermLibrary = async () => {

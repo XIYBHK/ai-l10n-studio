@@ -16,8 +16,7 @@ import {
   message,
   Row,
   Col,
-  Tabs,
-  Alert
+  Tabs
 } from 'antd';
 import { 
   PlusOutlined, 
@@ -28,13 +27,15 @@ import {
   FileTextOutlined,
   ApiOutlined,
   UndoOutlined,
-  GlobalOutlined
+  GlobalOutlined,
+  BellOutlined
 } from '@ant-design/icons';
 import { aiConfigApi, systemPromptApi } from '../services/api';
 import { AIConfig, ProviderType } from '../types/aiProvider';
 import { createModuleLogger } from '../utils/logger';
 import { useAsync } from '../hooks/useAsync';
 import i18n from '../i18n/config'; // Phase 6
+import { notificationManager } from '../utils/notificationManager'; // Tauri 2.x: Notification
 
 const log = createModuleLogger('SettingsModal');
 
@@ -113,6 +114,9 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
   // Phase 6: 语言设置状态
   const [currentLanguage, setCurrentLanguage] = useState<string>(i18n.language);
   
+  // Notification设置状态
+  const [notificationEnabled, setNotificationEnabled] = useState(notificationManager.isEnabled());
+  
   // 异步操作hooks
   const { execute: loadPrompt } = useAsync(systemPromptApi.getPrompt);
   const { execute: savePrompt, loading: savingPrompt } = useAsync(systemPromptApi.updatePrompt);
@@ -184,17 +188,33 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
     const config = configs[index];
     setEditingIndex(index);
     setIsAddingNew(false);
+    
+    log.info('编辑配置', { 
+      index, 
+      provider: config.provider,
+      hasApiKey: !!config.apiKey,
+      baseUrl: config.baseUrl,
+      model: config.model
+    });
+    
+    // 直接使用用户保存的值，不填充默认值
+    // 留空的字段在后端会自动使用默认值
     form.setFieldsValue({
       provider: config.provider,
-      apiKey: config.apiKey,
-      baseUrl: config.baseUrl,
-      model: config.model,
+      apiKey: config.apiKey || '',    // 确保显示实际值
+      baseUrl: config.baseUrl || '',  // 用户保存的值，空就是空
+      model: config.model || '',       // 用户保存的值，空就是空
       proxy: config.proxy || {
         enabled: false,
         host: '127.0.0.1',
         port: 7890,
       },
     });
+    
+    // 强制刷新表单显示
+    setTimeout(() => {
+      form.validateFields().catch(() => {});
+    }, 0);
   };
 
   const handleSaveConfig = async () => {
@@ -220,14 +240,22 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
         message.success('更新配置成功');
       }
 
-      await loadConfigs();
+      // 使用try-catch包裹配置重载，防止错误导致黑屏
+      try {
+        await loadConfigs();
+      } catch (reloadError) {
+        log.logError(reloadError, '重新加载配置失败');
+        // 即使重载失败也不影响用户操作
+      }
+      
       setIsAddingNew(false);
       setEditingIndex(null);
       form.resetFields();
       log.info('配置保存成功', { provider: config.provider });
     } catch (error) {
-      log.logError(error, '保存配置失败');
-      message.error('保存配置失败');
+      const errorMsg = error instanceof Error ? error.message : String(error);
+      log.error('保存配置失败', { error: errorMsg });
+      message.error(`保存配置失败: ${errorMsg}`);
     }
   };
 
@@ -235,6 +263,17 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
     try {
       await aiConfigApi.removeConfig(index);
       message.success('删除配置成功');
+      
+      // 重置编辑状态，防止索引超出范围
+      if (editingIndex === index) {
+        setEditingIndex(null);
+        setIsAddingNew(false);
+        form.resetFields();
+      } else if (editingIndex !== null && editingIndex > index) {
+        // 如果正在编辑的配置在被删除配置之后，索引需要减1
+        setEditingIndex(editingIndex - 1);
+      }
+      
       await loadConfigs();
       log.info('配置删除成功', { index });
     } catch (error) {
@@ -260,10 +299,21 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
       setTesting(true);
       const values = await form.validateFields();
       
+      // 只有在启用代理且配置完整时才传递 proxy
+      const proxyConfig = values.proxy?.enabled && values.proxy?.host && values.proxy?.port
+        ? {
+            enabled: values.proxy.enabled,
+            host: values.proxy.host,
+            port: values.proxy.port,
+          }
+        : undefined;
+      
       const result = await aiConfigApi.testConnection(
         values.provider,
         values.apiKey,
-        values.baseUrl || undefined
+        values.baseUrl || undefined,
+        values.model || undefined,      // ✅ 传递 model
+        proxyConfig                      // ✅ 传递完整的 proxy 或 undefined
       );
 
       if (result.success) {
@@ -318,8 +368,13 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
       await i18n.changeLanguage(language);
       setCurrentLanguage(language);
       localStorage.setItem('app-language', language);
-      message.success(`语言已切换为 ${language === 'zh-CN' ? '简体中文' : 'English'}`);
+      message.success(`语言已切换为 ${language === 'zh-CN' ? '简体中文' : 'English'}，正在刷新...`, 1);
       log.info('应用语言已切换', { language });
+      
+      // 延迟刷新以显示成功消息
+      setTimeout(() => {
+        window.location.reload();
+      }, 1000);
     } catch (error) {
       log.logError(error, '语言切换失败');
       message.error('语言切换失败');
@@ -369,6 +424,20 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
               renderItem={(config, index) => (
                 <List.Item
                   actions={[
+                    activeIndex !== index ? (
+                      <Button
+                        key="active"
+                        type="primary"
+                        size="small"
+                        onClick={() => handleSetActive(index)}
+                      >
+                        设为启用
+                      </Button>
+                    ) : (
+                      <Tag key="active-tag" color="green" icon={<CheckOutlined />}>
+                        启用中
+                      </Tag>
+                    ),
                     <Button
                       key="edit"
                       type="link"
@@ -394,33 +463,18 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                 >
                   <List.Item.Meta
                     title={
-                      <Space>
-                        <span>{getProviderLabel(config.provider)}</span>
-                        {activeIndex === index && (
-                          <Tag color="green" icon={<CheckOutlined />}>
-                            启用中
-                          </Tag>
-                        )}
-                      </Space>
+                      <span>{getProviderLabel(config.provider)}</span>
                     }
                     description={
                       <div style={{ fontSize: '12px', color: '#666' }}>
-                        <div>API: {config.apiKey.substring(0, 10)}...</div>
+                        <div>模型: {config.model || '(未设置)'}</div>
+                        <div>API: {config.baseUrl || '(使用默认)'}</div>
                         {config.proxy?.enabled && (
                           <div>代理: {config.proxy.host}:{config.proxy.port}</div>
                         )}
                       </div>
                     }
                   />
-                  {activeIndex !== index && (
-                    <Button
-                      type="text"
-                      size="small"
-                      onClick={() => handleSetActive(index)}
-                    >
-                      设为启用
-                    </Button>
-                  )}
                 </List.Item>
               )}
             />
@@ -457,16 +511,25 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                   label="API 密钥"
                   name="apiKey"
                   rules={[{ required: true, message: '请输入 API 密钥' }]}
+                  extra={editingIndex !== null ? "已保存的密钥会以掩码形式显示，留空则保持原值不变" : null}
                 >
-                  <Input.Password placeholder="请输入 API 密钥" />
+                  <Input.Password 
+                    placeholder="请输入 API 密钥"
+                    autoComplete="off"
+                    visibilityToggle
+                  />
                 </Form.Item>
 
                 <Form.Item
                   label="API 基础 URL"
                   name="baseUrl"
                   tooltip="留空使用默认 URL"
+                  extra={editingIndex !== null && !form.getFieldValue('baseUrl') ? "当前使用默认 URL" : null}
                 >
-                  <Input placeholder="https://api.example.com/v1" />
+                  <Input 
+                    placeholder="https://api.example.com/v1"
+                    autoComplete="off"
+                  />
                 </Form.Item>
 
                 <Form.Item
@@ -573,14 +636,6 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
       ),
       children: (
         <div>
-          <Alert
-            message="自定义系统提示词"
-            description="修改翻译提示词以适应不同领域的翻译需求。留空则使用默认提示词。提示词会自动与术语库风格总结拼接。"
-            type="info"
-            showIcon
-            style={{ marginBottom: 16 }}
-          />
-          
           <Card 
             size="small" 
             title="系统提示词编辑器" 
@@ -593,35 +648,6 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
               autoSize={{ minRows: 12, maxRows: 20 }}
               style={{ fontFamily: 'monospace' }}
             />
-          </Card>
-          
-          <Card 
-            size="small" 
-            title="💡 最终提示词组成说明" 
-            style={{ marginBottom: 16, background: '#f5f5f5' }}
-          >
-            <div style={{ fontSize: '13px', lineHeight: '1.8' }}>
-              <p><strong>实际发送给 AI 的提示词结构：</strong></p>
-              <div style={{ 
-                background: '#fff', 
-                padding: '12px', 
-                borderRadius: '4px',
-                fontFamily: 'monospace',
-                fontSize: '12px'
-              }}>
-                <div>1️⃣ <strong>基础提示词</strong>（你在上方编辑的内容，或默认提示词）</div>
-                <div style={{ marginTop: 8 }}>+</div>
-                <div style={{ marginTop: 8 }}>2️⃣ <strong>术语库风格总结</strong>（如果有，系统自动拼接）</div>
-                <div style={{ marginLeft: 20, color: '#666', marginTop: 4 }}>
-                  • 格式：【用户翻译风格偏好】（基于N条术语学习）
-                </div>
-                <div style={{ marginTop: 8 }}>=</div>
-                <div style={{ marginTop: 8 }}>📤 <strong>发送给 AI</strong></div>
-              </div>
-              <p style={{ marginTop: 12, color: '#666' }}>
-                ✨ 提示：术语库的风格总结会自动附加到你的提示词之后，无需手动添加
-              </p>
-            </div>
           </Card>
           
           <Space>
@@ -662,15 +688,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
       ),
       children: (
         <div>
-          <Alert
-            message="应用语言设置"
-            description="选择应用界面显示的语言。语言设置会立即生效并保存。"
-            type="info"
-            showIcon
-            style={{ marginBottom: 16 }}
-          />
-          
-          <Card size="small" title="当前语言" style={{ marginBottom: 16 }}>
+          <Card size="small" title="当前语言">
             <Select
               value={currentLanguage}
               onChange={handleLanguageChange}
@@ -680,30 +698,66 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
               <Select.Option value="en-US">English</Select.Option>
             </Select>
           </Card>
-          
-          <Card 
-            size="small" 
-            title="🌍 语言优先级说明" 
-            style={{ background: '#f5f5f5' }}
-          >
-            <div style={{ fontSize: '13px', lineHeight: '1.8' }}>
-              <p><strong>应用语言选择优先级：</strong></p>
-              <div style={{ 
-                background: '#fff', 
-                padding: '12px', 
-                borderRadius: '4px',
-                marginTop: 8
-              }}>
-                <div>1️⃣ <strong>用户手动设置</strong>（你在上方选择的语言）</div>
-                <div style={{ marginTop: 8 }}>↓</div>
-                <div style={{ marginTop: 8 }}>2️⃣ <strong>系统语言</strong>（首次启动时自动检测）</div>
-                <div style={{ marginTop: 8 }}>↓</div>
-                <div style={{ marginTop: 8 }}>3️⃣ <strong>默认中文</strong>（如果以上都失败）</div>
+        </div>
+      ),
+    },
+    {
+      key: 'notification',
+      label: (
+        <span>
+          <BellOutlined /> 通知设置
+        </span>
+      ),
+      children: (
+        <div>
+          <Card size="small" title="桌面通知">
+            <Space direction="vertical" style={{ width: '100%' }}>
+              <Row align="middle" gutter={16}>
+                <Col span={18}>
+                  <div>
+                    <div style={{ marginBottom: 8, fontWeight: 'bold' }}>启用桌面通知</div>
+                    <div style={{ fontSize: '12px', color: '#666' }}>
+                      接收批量翻译完成、错误提醒、文件保存等系统通知
+                    </div>
+                  </div>
+                </Col>
+                <Col span={6} style={{ textAlign: 'right' }}>
+                  <Switch
+                    checked={notificationEnabled}
+                    onChange={(checked) => {
+                      setNotificationEnabled(checked);
+                      notificationManager.setEnabled(checked);
+                      message.success(checked ? '通知已启用' : '通知已禁用');
+                    }}
+                  />
+                </Col>
+              </Row>
+              
+              <Divider style={{ margin: '16px 0' }} />
+              
+              <div style={{ fontSize: '12px', color: '#999' }}>
+                <div style={{ marginBottom: 8 }}>通知类型：</div>
+                <ul style={{ paddingLeft: 20, margin: 0 }}>
+                  <li>✅ 批量翻译完成通知</li>
+                  <li>❌ 翻译错误通知</li>
+                  <li>💾 文件保存成功通知</li>
+                  <li>📤 文件导出成功通知</li>
+                </ul>
               </div>
-              <p style={{ marginTop: 12, color: '#666' }}>
-                ✨ 提示：语言设置会保存在本地，下次启动时自动使用
-              </p>
-            </div>
+              
+              <Button
+                type="primary"
+                size="small"
+                disabled={!notificationEnabled}
+                onClick={async () => {
+                  await notificationManager.info('测试通知', '这是一条测试通知消息');
+                  message.success('测试通知已发送');
+                }}
+                style={{ marginTop: 16 }}
+              >
+                发送测试通知
+              </Button>
+            </Space>
           </Card>
         </div>
       ),
@@ -717,7 +771,14 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
       onCancel={onClose}
       footer={null}
       width={900}
-      destroyOnClose
+      style={{ top: 20 }}
+      styles={{ 
+        body: {
+          maxHeight: 'calc(100vh - 200px)',
+          overflowY: 'auto' 
+        }
+      }}
+      destroyOnHidden
       maskClosable={false}
     >
       <Tabs items={tabItems} defaultActiveKey="ai-config" />

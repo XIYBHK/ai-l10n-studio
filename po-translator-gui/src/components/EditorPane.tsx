@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Input, Button, message } from 'antd';
 import { CopyOutlined, SaveOutlined } from '@ant-design/icons';
 import { POEntry } from '../types/tauri';
-import { useAppStore } from '../store/useAppStore';
+import { useSessionStore } from '../store';
 import { useTheme } from '../hooks/useTheme';
 import { analyzeTranslationDifference } from '../utils/termAnalyzer';
 import { TermConfirmModal } from './TermConfirmModal';
@@ -66,7 +66,7 @@ export const EditorPane: React.FC<EditorPaneProps> = ({
   const handleSaveTranslation = () => {
     if (!entry) return;
 
-    const { entries } = useAppStore.getState();
+    const { entries } = useSessionStore.getState();
     const index = entries.findIndex(e => e === entry);
     
     log.info('🔍 准备保存译文', { 
@@ -349,7 +349,7 @@ export const EditorPane: React.FC<EditorPaneProps> = ({
               log.info('用户确认术语弹窗', { addToLibrary });
               try {
                 if (addToLibrary) {
-                  const { invoke } = await import('@tauri-apps/api/tauri');
+                  const { invoke } = await import('@tauri-apps/api/core');
                   const termData = {
                     source: detectedDifference.original,
                     userTranslation: detectedDifference.userTranslation,

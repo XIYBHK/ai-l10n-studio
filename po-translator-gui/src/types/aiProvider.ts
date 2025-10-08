@@ -77,7 +77,7 @@ export const PROVIDER_INFO_MAP: Record<ProviderType, Omit<ProviderInfo, 'type'>>
   [ProviderType.GLM]: {
     displayName: '智谱AI (GLM)',
     defaultUrl: 'https://open.bigmodel.cn/api/paas/v4',
-    defaultModel: 'glm-4',
+    defaultModel: 'glm-4.6',  // 根据官方文档: https://docs.bigmodel.cn/cn/api/introduction
   },
   [ProviderType.Claude]: {
     displayName: 'Claude (Anthropic)',

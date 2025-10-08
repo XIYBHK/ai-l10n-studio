@@ -3,8 +3,13 @@
 use anyhow::{Result, anyhow};
 use serde::{Deserialize, Serialize};
 
+#[cfg(feature = "ts-rs")]
+use ts_rs::TS;
+
 /// 支持的语言枚举
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[cfg_attr(feature = "ts-rs", derive(TS))]
+#[cfg_attr(feature = "ts-rs", ts(export, export_to = "../src/types/generated/"))]
 pub enum Language {
     #[serde(rename = "zh-Hans")]
     ChineseSimplified,
@@ -97,6 +102,8 @@ impl Language {
 
 /// 语言信息
 #[derive(Debug, Clone, Serialize, Deserialize)]
+#[cfg_attr(feature = "ts-rs", derive(TS))]
+#[cfg_attr(feature = "ts-rs", ts(export, export_to = "../src/types/generated/"))]
 pub struct LanguageInfo {
     pub code: String,
     pub display_name: String,

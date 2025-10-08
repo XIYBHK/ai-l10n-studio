@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { Modal, Input, Button, Space, message, Tabs } from 'antd';
-import { CopyOutlined, ReloadOutlined, ClearOutlined, FileOutlined, BugOutlined, DownloadOutlined, SaveOutlined } from '@ant-design/icons';
-import { logApi } from '../services/api';
+import { CopyOutlined, ReloadOutlined, ClearOutlined, FileOutlined, BugOutlined, DownloadOutlined, SaveOutlined, FileTextOutlined } from '@ant-design/icons';
+import { logApi, promptLogApi } from '../services/api';
 import Draggable from 'react-draggable';
 import { FileDropTest } from './FileDropTest';
 import { createModuleLogger } from '../utils/logger';
@@ -21,7 +21,9 @@ export const DevToolsModal: React.FC<DevToolsModalProps> = ({
 }) => {
   const [logs, setLogs] = useState<string>('');
   const [frontendLogs, setFrontendLogs] = useState<string>('');
+  const [promptLogs, setPromptLogs] = useState<string>('');
   const [loading, setLoading] = useState(false);
+  const [promptLoading, setPromptLoading] = useState(false);
   const [bounds, setBounds] = useState({ left: 0, top: 0, bottom: 0, right: 0 });
   const [disabled, setDisabled] = useState(true);
   const draggleRef = useRef<HTMLDivElement>(null);
@@ -29,9 +31,14 @@ export const DevToolsModal: React.FC<DevToolsModalProps> = ({
   useEffect(() => {
     if (visible) {
       loadLogs();
-      // 定时刷新后端日志
-      const interval = setInterval(loadLogs, 2000); // 每2秒刷新
-      return () => clearInterval(interval);
+      loadPromptLogs(); // 初始加载提示词日志
+      // 定时刷新后端日志和提示词日志
+      const logsInterval = setInterval(loadLogs, 2000); // 每2秒刷新
+      const promptLogsInterval = setInterval(loadPromptLogs, 2000); // 每2秒刷新提示词日志
+      return () => {
+        clearInterval(logsInterval);
+        clearInterval(promptLogsInterval);
+      };
     }
   }, [visible]);
 
@@ -44,6 +51,19 @@ export const DevToolsModal: React.FC<DevToolsModalProps> = ({
 
   const refreshFrontendLogs = () => {
     setFrontendLogs(frontendLogger.getLogs());
+  };
+
+  const loadPromptLogs = async () => {
+    setPromptLoading(true);
+    try {
+      const logContent = await promptLogApi.get();
+      setPromptLogs(typeof logContent === 'string' ? logContent : JSON.stringify(logContent, null, 2));
+    } catch (error) {
+      log.logError(error, '加载提示词日志失败');
+      setPromptLogs('加载提示词日志失败: ' + (error instanceof Error ? error.message : String(error)));
+    } finally {
+      setPromptLoading(false);
+    }
   };
 
   const loadLogs = async () => {
@@ -158,7 +178,7 @@ export const DevToolsModal: React.FC<DevToolsModalProps> = ({
       onCancel={onClose}
       width={900}
       style={{ top: 20 }}
-      destroyOnClose={true}
+      destroyOnHidden={true}
       mask={false}
       footer={[
         <Button key="close" onClick={onClose}>
@@ -170,6 +190,7 @@ export const DevToolsModal: React.FC<DevToolsModalProps> = ({
           disabled={disabled}
           bounds={bounds}
           onStart={(event, uiData) => onStart(event, uiData)}
+          nodeRef={draggleRef as unknown as React.RefObject<HTMLDivElement>}
         >
           <div ref={draggleRef}>{modal}</div>
         </Draggable>
@@ -340,6 +361,109 @@ export const DevToolsModal: React.FC<DevToolsModalProps> = ({
               </span>
             ),
             children: <FileDropTest />,
+          },
+          {
+            key: 'prompt-logs',
+            label: (
+              <span>
+                <FileTextOutlined /> AI 提示词日志
+              </span>
+            ),
+            children: (
+              <div>
+                <Space style={{ marginBottom: 12, width: '100%', justifyContent: 'space-between' }}>
+                  <Space>
+                    <Button
+                      icon={<ReloadOutlined />}
+                      onClick={loadPromptLogs}
+                      loading={promptLoading}
+                    >
+                      刷新
+                    </Button>
+                    <span style={{ fontSize: '12px', color: '#999' }}>
+                      (自动刷新: 每2秒)
+                    </span>
+                  </Space>
+                  <Space>
+                    <Button
+                      icon={<ClearOutlined />}
+                      onClick={async () => {
+                        try {
+                          await promptLogApi.clear();
+                          setPromptLogs('');
+                          message.success('提示词日志已清空');
+                          log.info('提示词日志已清空');
+                        } catch (error) {
+                          log.logError(error, '清空提示词日志失败');
+                        }
+                      }}
+                      danger
+                    >
+                      清空
+                    </Button>
+                    <Button
+                      icon={<CopyOutlined />}
+                      onClick={() => {
+                        navigator.clipboard.writeText(promptLogs).then(() => {
+                          message.success('提示词日志已复制到剪贴板');
+                        }).catch(() => {
+                          message.error('复制失败');
+                        });
+                      }}
+                      type="primary"
+                    >
+                      复制日志
+                    </Button>
+                  </Space>
+                </Space>
+
+                <div style={{
+                  fontSize: '12px',
+                  color: '#666',
+                  marginBottom: 12,
+                  padding: '8px 12px',
+                  background: '#e6fffb',
+                  borderRadius: 4,
+                  border: '1px solid #87e8de'
+                }}>
+                  💡 捕获精翻（Contextual Refine）和批量翻译时发送给 AI 的提示词及响应
+                  <br />
+                  📊 每个日志包含：时间、类型、完整提示词、AI响应、元数据
+                  <br />
+                  🔄 最多保留最近 100 条记录，可手动清空
+                </div>
+
+                <TextArea
+                  value={promptLogs}
+                  readOnly
+                  rows={20}
+                  placeholder="等待提示词日志输出...
+提示: 
+- 执行精翻或批量翻译时会自动记录
+- 包含完整的输入提示词和AI响应
+- 便于调试和优化翻译质量"
+                  style={{
+                    fontFamily: 'Consolas, Monaco, "Courier New", monospace',
+                    fontSize: '12px',
+                    backgroundColor: '#1e1e1e',
+                    color: '#d4d4d4',
+                    whiteSpace: 'pre-wrap',
+                  }}
+                />
+
+                <div style={{ 
+                  marginTop: 12, 
+                  fontSize: '12px', 
+                  color: '#999',
+                  display: 'flex',
+                  justifyContent: 'space-between'
+                }}>
+                  <span>日志行数: {promptLogs.split('\n').filter(l => l.trim()).length}</span>
+                  <span>字符数: {promptLogs.length}</span>
+                  <span>最后更新: {new Date().toLocaleTimeString()}</span>
+                </div>
+              </div>
+            ),
           },
         ]}
       />

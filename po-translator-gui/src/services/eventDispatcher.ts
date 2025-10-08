@@ -98,23 +98,35 @@ export type EventMap = {
   'config:updated': {
     config: any;
   };
+  
+  'config:synced': {
+    version: number;
+    timestamp: string;
+    activeConfigIndex: number | null;
+    configCount: number;
+  };
+  
+  'config:out-of-sync': {
+    issues: string[];
+    backendVersion?: any;
+  };
 
   // ========== Phase 7: Contextual Refine 事件 ==========
-  'contextual-refine:start': {
+  'refine:start': {
     count: number;
   };
 
-  'contextual-refine:progress': {
+  'refine:progress': {
     current: number;
     total: number;
   };
 
-  'contextual-refine:complete': {
+  'refine:complete': {
     results: string[];
     count: number;
   };
 
-  'contextual-refine:error': {
+  'refine:error': {
     error: string;
   };
 };

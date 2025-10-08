@@ -3,7 +3,7 @@
  * 拦截所有 console.* 调用并保存到文件
  */
 
-import { writeTextFile, BaseDirectory, createDir, readDir, removeFile } from '@tauri-apps/api/fs';
+import { writeTextFile, BaseDirectory, mkdir, readDir, remove } from '@tauri-apps/plugin-fs';
 
 class FrontendLogger {
   private logs: string[] = [];
@@ -187,29 +187,48 @@ class FrontendLogger {
 
   private async cleanOldLogFiles(maxFiles: number = 5) {
     try {
-      const entries = await readDir('data', { dir: BaseDirectory.AppData });
-      const logFiles = entries
-        .filter(entry => entry.name?.startsWith('frontend-logs-') && entry.name.endsWith('.txt'))
-        .sort((a, b) => (b.name || '').localeCompare(a.name || '')); // 按文件名降序（最新的在前）
+      // 读取 data 目录下的所有文件
+      const entries = await readDir('data', { baseDir: BaseDirectory.AppData });
       
-      // 删除超过限制的旧文件
-      if (logFiles.length >= maxFiles) {
-        const filesToDelete = logFiles.slice(maxFiles - 1); // 保留最新的 maxFiles-1 个，为新文件留位置
+      // 过滤出前端日志文件
+      const logFiles = entries
+        .filter(entry => entry.name?.startsWith('frontend-logs-') && entry.name?.endsWith('.txt'))
+        .sort((a, b) => {
+          // 按文件名（时间戳）倒序排序，最新的在前
+          return (b.name || '').localeCompare(a.name || '');
+        });
+
+      // 如果文件数超过限制，删除旧文件
+      if (logFiles.length > maxFiles) {
+        const filesToDelete = logFiles.slice(maxFiles);
         for (const file of filesToDelete) {
-          await removeFile(`data/${file.name}`, { dir: BaseDirectory.AppData });
-          this.originalConsole.log(`🗑️ 已删除旧日志: ${file.name}`);
+          if (file.name) {
+            await remove(`data/${file.name}`, { baseDir: BaseDirectory.AppData });
+            this.originalConsole.log(`🗑️ 清理旧日志: ${file.name}`);
+          }
         }
       }
     } catch (error) {
-      // 忽略清理错误，不影响保存
-      this.originalConsole.warn('清理旧日志失败:', error);
+      // 目录不存在或其他错误，忽略
+      if ((error as any)?.message?.includes('not found') || (error as any)?.message?.includes('No such file')) {
+        // 目录不存在是正常情况
+        return;
+      }
+      this.originalConsole.warn('清理旧日志文件失败:', error);
     }
   }
 
   async saveLogs() {
     try {
       // 确保 data 目录存在
-      await createDir('data', { dir: BaseDirectory.AppData, recursive: true }).catch(() => {});
+      try {
+        await mkdir('data', { baseDir: BaseDirectory.AppData, recursive: true });
+      } catch (error) {
+        // 目录已存在的错误可以忽略
+        if (!(error as any)?.message?.includes('already exists')) {
+          this.originalConsole.warn('创建 data 目录失败:', error);
+        }
+      }
 
       // 清理旧文件（保留最近5个）
       await this.cleanOldLogFiles(5);
@@ -219,7 +238,7 @@ class FrontendLogger {
       const content = this.logs.join('\n');
       const sizeKB = (new Blob([content]).size / 1024).toFixed(2);
 
-      await writeTextFile(`data/${filename}`, content, { dir: BaseDirectory.AppData });
+      await writeTextFile(`data/${filename}`, content, { baseDir: BaseDirectory.AppData });
       
       this.originalConsole.log(`✅ 前端日志已保存: ${filename} (${sizeKB} KB, ${this.logs.length} 条)`);
       return filename;

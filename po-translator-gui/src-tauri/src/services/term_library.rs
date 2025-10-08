@@ -4,6 +4,9 @@ use serde::{Deserialize, Serialize};
 use std::fs;
 use std::path::Path;
 
+#[cfg(feature = "ts-rs")]
+use ts_rs::TS;
+
 /// 术语库 - 存储用户翻译偏好
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct TermLibrary {
@@ -19,6 +22,8 @@ pub struct TermLibrary {
 
 /// 术语条目
 #[derive(Debug, Clone, Serialize, Deserialize)]
+#[cfg_attr(feature = "ts-rs", derive(TS))]
+#[cfg_attr(feature = "ts-rs", ts(export, export_to = "../src/types/generated/"))]
 pub struct TermEntry {
     /// 原文术语
     pub source: String,
@@ -36,11 +41,14 @@ pub struct TermEntry {
     pub frequency: u32,
     
     /// 创建时间
+    #[cfg_attr(feature = "ts-rs", ts(type = "string"))]
     pub created_at: DateTime<Utc>,
 }
 
 /// 风格总结
 #[derive(Debug, Clone, Serialize, Deserialize)]
+#[cfg_attr(feature = "ts-rs", derive(TS))]
+#[cfg_attr(feature = "ts-rs", ts(export, export_to = "../src/types/generated/"))]
 pub struct StyleSummary {
     /// 风格提示词文本
     pub prompt: String,
@@ -49,6 +57,7 @@ pub struct StyleSummary {
     pub based_on_terms: usize,
     
     /// 生成时间
+    #[cfg_attr(feature = "ts-rs", ts(type = "string"))]
     pub generated_at: DateTime<Utc>,
     
     /// 版本号（每次重新生成递增）
