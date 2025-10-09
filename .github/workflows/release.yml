@@ -103,7 +103,7 @@ jobs:
           cp po-translator-gui/src-tauri/target/release/bundle/deb/*.deb release/ || true
 
       - name: Upload release assets
-        uses: softprops/action-gh-release@v1
+        uses: softprops/action-gh-release@v2
         with:
           files: release/*
           draft: true
