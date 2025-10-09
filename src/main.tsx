@@ -9,7 +9,7 @@ import { autoMigrate } from './utils/storeMigration' // Tauri 2.x: 数据迁移
 import { SWRConfig } from 'swr'
 import { defaultSWRConfig } from './services/swr'
 import { initializeSWRRevalidators } from './services/swrEvents'
-import { initializeStatsManager } from './services/statsManager'
+import { initializeStatsManagerV2 } from './services/statsManagerV2'
 
 // Phase 6: 异步初始化 i18n 后再渲染应用
 async function bootstrap() {
@@ -31,7 +31,7 @@ async function bootstrap() {
     // 初始化 SWR 事件 revalidators（事件驱动刷新）
     initializeSWRRevalidators();
     // 初始化统一统计聚合管理器
-    initializeStatsManager();
+    initializeStatsManagerV2();
     
   } catch (error) {
     console.error('[Bootstrap] ⚠️ 初始化失败，使用默认值:', error);

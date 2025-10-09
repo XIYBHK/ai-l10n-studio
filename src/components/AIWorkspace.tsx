@@ -62,7 +62,10 @@ export const AIWorkspace: React.FC<AIWorkspaceProps> = ({ isTranslating, onReset
 
   // 📊 本次会话详细统计（记忆库、去重、AI调用等）
   const renderSessionStats = () => {
-    if (sessionStats.total === 0) {
+    // 🔧 修复：使用 ai_translated 判断是否有翻译数据，而不是 total
+    const hasData = (sessionStats.tm_hits ?? 0) > 0 || (sessionStats.ai_translated ?? 0) > 0;
+    
+    if (!hasData) {
       return (
         <div style={{ 
           padding: '12px', 
@@ -105,26 +108,17 @@ export const AIWorkspace: React.FC<AIWorkspaceProps> = ({ isTranslating, onReset
           marginBottom: 12,
           fontSize: '11px'
         }}>
-          <div style={{ textAlign: 'center', padding: '6px', background: colors.bgTertiary, borderRadius: '4px' }}>
-            <div style={{ color: colors.textTertiary }}>记忆库命中</div>
+          <div style={{ textAlign: 'center', padding: '8px', background: colors.bgTertiary, borderRadius: '4px' }}>
+            <div style={{ color: colors.textTertiary, marginBottom: '4px' }}>记忆库命中</div>
             <div style={{ fontSize: '16px', fontWeight: 600, color: colors.statusTranslated }}>{tmHits}</div>
-            <div style={{ fontSize: '10px', color: colors.textTertiary }}>
-              {total > 0 ? Math.round((tmHits / total) * 100) : 0}%
-            </div>
           </div>
-          <div style={{ textAlign: 'center', padding: '6px', background: colors.bgTertiary, borderRadius: '4px' }}>
-            <div style={{ color: colors.textTertiary }}>去重节省</div>
+          <div style={{ textAlign: 'center', padding: '8px', background: colors.bgTertiary, borderRadius: '4px' }}>
+            <div style={{ color: colors.textTertiary, marginBottom: '4px' }}>去重节省</div>
             <div style={{ fontSize: '16px', fontWeight: 600, color: colors.statusUntranslated }}>{deduplicated}</div>
-            <div style={{ fontSize: '10px', color: colors.textTertiary }}>
-              {total > 0 ? Math.round((deduplicated / total) * 100) : 0}%
-            </div>
           </div>
-          <div style={{ textAlign: 'center', padding: '6px', background: colors.bgTertiary, borderRadius: '4px' }}>
-            <div style={{ color: colors.textTertiary }}>AI调用</div>
+          <div style={{ textAlign: 'center', padding: '8px', background: colors.bgTertiary, borderRadius: '4px' }}>
+            <div style={{ color: colors.textTertiary, marginBottom: '4px' }}>AI调用</div>
             <div style={{ fontSize: '16px', fontWeight: 600, color: colors.textPrimary }}>{aiTranslated}</div>
-            <div style={{ fontSize: '10px', color: colors.textTertiary }}>
-              {total > 0 ? Math.round((aiTranslated / total) * 100) : 0}%
-            </div>
           </div>
         </div>
         
@@ -227,12 +221,13 @@ export const AIWorkspace: React.FC<AIWorkspaceProps> = ({ isTranslating, onReset
           </Popconfirm>
         </div>
         
-        {/* 精简数据展示 */}
+        {/* 精简数据展示 - 添加去重 */}
         <div style={{ 
           display: 'grid',
-          gridTemplateColumns: 'repeat(3, 1fr)',
+          gridTemplateColumns: 'repeat(2, 1fr)',
           gap: '8px',
-          fontSize: '11px'
+          fontSize: '11px',
+          marginBottom: 8
         }}>
           <div style={{ textAlign: 'center', padding: '6px', background: colors.bgTertiary, borderRadius: '4px' }}>
             <div style={{ color: colors.textTertiary }}>总计</div>
@@ -242,9 +237,20 @@ export const AIWorkspace: React.FC<AIWorkspaceProps> = ({ isTranslating, onReset
             <div style={{ color: colors.textTertiary }}>命中</div>
             <div style={{ fontSize: '16px', fontWeight: 600, color: colors.statusTranslated }}>{cumulativeStats.tm_hits}</div>
           </div>
+        </div>
+        <div style={{ 
+          display: 'grid',
+          gridTemplateColumns: 'repeat(2, 1fr)',
+          gap: '8px',
+          fontSize: '11px'
+        }}>
+          <div style={{ textAlign: 'center', padding: '6px', background: colors.bgTertiary, borderRadius: '4px' }}>
+            <div style={{ color: colors.textTertiary }}>去重</div>
+            <div style={{ fontSize: '16px', fontWeight: 600, color: colors.statusUntranslated }}>{cumulativeStats.deduplicated ?? 0}</div>
+          </div>
           <div style={{ textAlign: 'center', padding: '6px', background: colors.bgTertiary, borderRadius: '4px' }}>
             <div style={{ color: colors.textTertiary }}>AI调用</div>
-            <div style={{ fontSize: '16px', fontWeight: 600, color: colors.statusUntranslated }}>{cumulativeStats.ai_translated}</div>
+            <div style={{ fontSize: '16px', fontWeight: 600, color: colors.textPrimary }}>{cumulativeStats.ai_translated}</div>
           </div>
         </div>
         

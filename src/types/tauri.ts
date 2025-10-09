@@ -5,6 +5,7 @@ export interface POEntry {
   msgstr: string;
   line_start: number;
   needsReview?: boolean; // 标记是否需要确认（AI翻译后）
+  translationSource?: 'tm' | 'dedup' | 'ai'; // 翻译来源：TM命中、去重、AI翻译
 }
 
 export interface TranslationReport {

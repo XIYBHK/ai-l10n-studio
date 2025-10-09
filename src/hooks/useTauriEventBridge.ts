@@ -45,22 +45,10 @@ export function useTauriEventBridge() {
     const unlistenFunctions: UnlistenFn[] = [];
 
     const setupBridge = async () => {
-      // 桥接翻译进度事件
-      const unlistenProgress = await listen<{ index: number; translation: string }>(
-        'translation-progress',
-        (event) => {
-          log.debug('🌉 桥接 Tauri 事件 -> EventDispatcher', { 
-            event: 'translation-progress', 
-            payload: event.payload 
-          });
-          
-          // 转发到事件分发器
-          eventDispatcher.emit('translation:progress', event.payload);
-        }
-      );
-      unlistenFunctions.push(unlistenProgress);
+      // ❌ 已移除 'translation-progress' 事件桥接
+      // Event API 已废弃，Channel API 直接通过 useChannelTranslation Hook 处理进度
 
-      // 桥接翻译统计事件
+      // 桥接翻译统计事件（批量翻译的增量更新）
       const unlistenStats = await listen<TranslationStats>(
         'translation-stats-update',
         (event) => {
@@ -70,10 +58,25 @@ export function useTauriEventBridge() {
           });
           
           // 转发到事件分发器
-          eventDispatcher.emit('translation:stats', event.payload);
+          eventDispatcher.emit('translation-stats-update', event.payload);
         }
       );
       unlistenFunctions.push(unlistenStats);
+
+      // 🔧 桥接翻译完成事件（单条翻译、精翻的完整统计）
+      const unlistenAfter = await listen<{ stats: TranslationStats }>(
+        'translation:after',
+        (event) => {
+          log.debug('🌉 桥接 Tauri 事件 -> EventDispatcher', { 
+            event: 'translation:after', 
+            payload: event.payload 
+          });
+          
+          // 转发到事件分发器
+          eventDispatcher.emit('translation:after', event.payload);
+        }
+      );
+      unlistenFunctions.push(unlistenAfter);
 
       // 桥接文件拖放事件
       const unlistenFileDrop = await listen<string[]>(
@@ -129,11 +132,11 @@ export function useTauriEventBridge() {
 
       log.info('✅ Tauri 事件桥接已建立', { 
         bridgedEvents: [
-          'translation-progress', 
           'translation-stats-update',
-        'refine:start',
-        'refine:complete',
-        'refine:error'
+          'translation:after',
+          'refine:start',
+          'refine:complete',
+          'refine:error'
         ] 
       });
     };

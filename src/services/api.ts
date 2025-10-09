@@ -258,48 +258,6 @@ export const translatorApi = {
   },
 
   /**
-   * 批量翻译（带统计和进度，Phase 5: 支持目标语言）
-   * 注意：使用配置管理器中启用的AI配置，无需传入apiKey
-   * 返回翻译结果和统计信息，同时通过事件发送进度更新
-   */
-  async translateBatch(texts: string[], targetLanguage?: string) {
-    return invoke<{ translations: string[], stats: any }>('translate_batch', { 
-      texts, 
-      targetLanguage: targetLanguage || null
-    }, {
-      errorMessage: '翻译失败',
-      silent: false
-    });
-  },
-  
-  /**
-   * 批量翻译（Channel API 版本 - Tauri 2.x 高性能）
-   * 
-   * 相比传统 translateBatch:
-   * - 性能提升 ~40%
-   * - 内存占用降低 ~30%
-   * - 更适合大文件处理 (>1000 条目)
-   * 
-   * @deprecated 推荐使用 useChannelTranslation Hook 以获得更好的类型安全和状态管理
-   */
-  async translateBatchWithChannel(
-    texts: string[],
-    targetLanguage: string,
-    progressChannel: any,
-    statsChannel: any
-  ) {
-    return invoke<any>('translate_batch_with_channel', {
-      texts,
-      targetLanguage,
-      progressChannel,
-      statsChannel,
-    }, {
-      errorMessage: '批量翻译失败',
-      silent: false
-    });
-  },
-
-  /**
    * Contextual Refine - 携带上下文的精细翻译（Phase 7）
    * 注意：使用配置管理器中启用的AI配置，无需传入apiKey
    * 绕过翻译记忆库，充分利用上下文信息提供高质量翻译

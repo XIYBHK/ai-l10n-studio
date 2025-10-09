@@ -11,15 +11,14 @@ import { AIWorkspace } from './components/AIWorkspace';
 import { ErrorBoundary } from './components/ErrorBoundary';
 import { useSessionStore } from './store';
 // import { useSettingsStore, useStatsStore } from './store'; // 预留给未来使用
-import { useTranslator } from './hooks/useTranslator';
 import { useTheme } from './hooks/useTheme';
 import { useTauriEventBridge } from './hooks/useTauriEventBridge';
 import { useChannelTranslation } from './hooks/useChannelTranslation'; // Tauri 2.x: Channel API
+import { useAsync } from './hooks/useAsync';
 import { TranslationStats, POEntry } from './types/tauri';
 import { createModuleLogger } from './utils/logger';
 import { eventDispatcher } from './services/eventDispatcher';
 import { poFileApi, dialogApi, languageApi, translatorApi, apiClient, type LanguageInfo } from './services/api';
-import { accumulateStats } from './utils/statsAggregator';
 import { ConfigSyncManager } from './services/configSync';
 import './i18n/config';
 import './App.css';
@@ -44,26 +43,19 @@ function App() {
     updateEntry,
     setTranslating,
     setProgress,
-    updateSessionStats, // 新增：会话统计
-    resetSessionStats,  // 任务开始时重置会话统计
+    // updateSessionStats, // 新增：会话统计（已由 statsManager 自动管理）
+    resetSessionStats,  // 🔧 仅在应用启动时重置会话统计
   } = useSessionStore();
   
   // 注意：theme 由 useTheme hook 管理，language 由 i18n 管理
-  // const { cumulativeStats, updateCumulativeStats } = useStatsStore(); // 暂未使用
   
-  const { parsePOFile } = useTranslator();
+  // 🔧 直接使用 API + useAsync，替代废弃的 useTranslator Hook
+  const { execute: parsePOFile } = useAsync(poFileApi.parse);
   const channelTranslation = useChannelTranslation(); // Tauri 2.x: Channel API for high-performance batch translation
   const [settingsVisible, setSettingsVisible] = useState(false);
   const [devToolsVisible, setDevToolsVisible] = useState(false);
   const [translationStats, setTranslationStats] = useState<TranslationStats | null>(null);
-  const aggregatedStatsRef = useRef<TranslationStats>({
-    total: 0,
-    tm_hits: 0,
-    deduplicated: 0,
-    ai_translated: 0,
-    tm_learned: 0,
-    token_stats: { input_tokens: 0, output_tokens: 0, total_tokens: 0, cost: 0 },
-  });
+  // const aggregatedStatsRef = useRef<TranslationStats>({...}); // 不再需要，statsManager 自动累加
   const [leftWidth, setLeftWidth] = useState(35); // 左侧栏宽度百分比
   const [isResizing, setIsResizing] = useState(false);
   // 存储AI原译文，用于术语检测对比（key: 条目索引, value: AI译文）
@@ -77,6 +69,12 @@ function App() {
   
   // 使用 ref 防止重复检查AI配置
   const hasCheckedAIConfig = useRef(false);
+  
+  // 🔧 启动时重置会话统计
+  useEffect(() => {
+    resetSessionStats();
+    log.info('🔄 应用启动，会话统计已重置');
+  }, []); // 空依赖数组，只在挂载时执行一次
   
   // 配置同步管理器
   const configSyncRef = useRef<ConfigSyncManager | null>(null);
@@ -413,7 +411,7 @@ function App() {
     setTranslationStats(null);
   };
 
-  // 🔧 统一的翻译处理函数 - 智能选择 Channel API 或 Event API
+  // 🔧 统一的翻译处理函数 - 使用 Channel API（高性能）
   const executeTranslation = async (
     entriesToTranslate: POEntry[], 
     sourceType: 'all' | 'selected' = 'all'
@@ -425,45 +423,31 @@ function App() {
     }
 
     const texts = entriesToTranslate.map(e => e.msgid);
-    const USE_CHANNEL_THRESHOLD = 100; // 超过此数量使用 Channel API
-    const useChannelAPI = texts.length >= USE_CHANNEL_THRESHOLD;
-    
     let completedCount = 0;
     
     log.debug('executeTranslation 开始', { 
       entriesToTranslateCount: entriesToTranslate.length,
       textsCount: texts.length,
-      useChannelAPI,
+      api: 'Channel',
       sourceType
     });
     
     try {
-      // 本次任务开始：重置会话统计，避免跨任务累积
-      resetSessionStats();
+      // 🔧 不再重置会话统计 - 会话统计应该在整个应用生命周期中累加，只在启动时重置
       setTranslating(true);
       setProgress(0);
       
       // 触发翻译开始事件
       await eventDispatcher.emit('translation:before', { texts, source: sourceType });
-      log.info(`🚀 开始翻译 (${useChannelAPI ? 'Channel API' : 'Event API'})`, { 
+      log.info('🚀 开始翻译 (Channel API)', { 
         count: texts.length, 
         source: sourceType 
       });
       
       let finalStats: TranslationStats | null = null;
       
-      if (useChannelAPI) {
-        // 重置聚合器
-        aggregatedStatsRef.current = {
-          total: 0,
-          tm_hits: 0,
-          deduplicated: 0,
-          ai_translated: 0,
-          tm_learned: 0,
-          token_stats: { input_tokens: 0, output_tokens: 0, total_tokens: 0, cost: 0 },
-        };
-        // ========== Tauri 2.x: 使用 Channel API (高性能) ==========
-        const result = await channelTranslation.translateBatch(texts, targetLanguage, {
+      // ========== 使用 Channel API (高性能) ==========
+      const result = await channelTranslation.translateBatch(texts, targetLanguage, {
           onProgress: (current, _total, percentage) => {
             setProgress(percentage);
             completedCount = current;
@@ -482,12 +466,12 @@ function App() {
               },
             } as TranslationStats;
             setTranslationStats(convertedStats);
-          finalStats = convertedStats;
-            // 📈 聚合增量（按批），total 留到完成时统一赋值
-            aggregatedStatsRef.current = accumulateStats(aggregatedStatsRef.current, {
-              ...convertedStats,
-              total: 0,
-            } as TranslationStats);
+            finalStats = convertedStats;
+            // 🔧 不再手动聚合，statsManager 会自动累加增量
+            // aggregatedStatsRef.current = accumulateStats(aggregatedStatsRef.current, {
+            //   ...convertedStats,
+            //   total: 0,
+            // } as TranslationStats);
           },
           onItem: (index, translation) => {
             // 🎯 实时写入待确认区
@@ -495,6 +479,7 @@ function App() {
             const entryIndex = entries.indexOf(entry);
             
             if (entryIndex >= 0) {
+              // 📍 暂时不设置 translationSource，等批量完成后统一设置
               updateEntry(entryIndex, { 
                 msgstr: translation, 
                 needsReview: true 
@@ -521,68 +506,42 @@ function App() {
           completedCount 
         });
         
-        // 用聚合结果作为最终统计，统一设置 total
-        finalStats = {
-          ...aggregatedStatsRef.current,
-          total: texts.length,
-        } as TranslationStats;
-        setTranslationStats(finalStats);
-        
-      } else {
-        // ========== 传统: 使用 Event API ==========
-        const unsubProgress = eventDispatcher.on('translation:progress', ({ index, translation }) => {
-          const logPrefix = sourceType === 'all' ? '全部翻译' : '选中翻译';
-          log.debug(`📥 收到翻译进度（${logPrefix}）`, { index, translation });
-          
-          const entry = entriesToTranslate[index];
-          const entryIndex = entries.indexOf(entry);
-          
-          if (entryIndex >= 0) {
-            updateEntry(entryIndex, { 
-              msgstr: translation, 
-              needsReview: true 
-            });
-            
-            setAiTranslations(prev => {
-              const newMap = new Map(prev);
-              newMap.set(entryIndex, translation);
-              return newMap;
-            });
-            
-            completedCount++;
-            setProgress((completedCount / texts.length) * 100);
-          }
-        });
-        
-        const unsubStats = eventDispatcher.on('translation:stats', (stats) => {
-          setTranslationStats(stats);
-          finalStats = stats; // 记录最终统计
-        });
-        
-        const result = await translatorApi.translateBatch(texts, targetLanguage);
-        
-        unsubProgress();
-        unsubStats();
-        
-        // 从返回值获取最终统计（优先级更高）
-        if (result?.stats) {
-          finalStats = result.stats;
-          setTranslationStats(finalStats);
+        // 📍 设置翻译来源标识
+        if (result.translation_sources && result.translation_sources.length > 0) {
+          entriesToTranslate.forEach((entry, localIndex) => {
+            const entryIndex = entries.indexOf(entry);
+            if (entryIndex >= 0 && localIndex < result.translation_sources.length) {
+              const source = result.translation_sources[localIndex] as 'tm' | 'dedup' | 'ai';
+              updateEntry(entryIndex, { translationSource: source });
+            }
+          });
+          log.debug('📍 已设置翻译来源标识', { 
+            total: result.translation_sources.length,
+            sources: result.translation_sources.slice(0, 5) // 只显示前5个
+          });
         }
-      }
+        
+      // 🔧 最终统计从会话统计获取（已由 statsManager 累加所有批次）
+      const sessionStats = useSessionStore.getState().sessionStats;
+      finalStats = {
+        total: texts.length,  // 使用实际翻译数量
+        tm_hits: sessionStats.tm_hits,
+        deduplicated: sessionStats.deduplicated,
+        ai_translated: sessionStats.ai_translated,
+        tm_learned: sessionStats.tm_learned || 0,
+        token_stats: sessionStats.token_stats,
+      } as TranslationStats;
+      setTranslationStats(finalStats);
       
-      // 📊 更新会话统计（本次会话聚合）
+      // 🔧 会话统计由 statsManager 自动累加，这里不再手动更新
+      // updateSessionStats(finalStats);
+      // 仅记录日志
       if (finalStats) {
-        updateSessionStats(finalStats);
-        log.info('📊 会话统计已更新', { sessionStats: finalStats });
+        log.info('📊 会话统计已更新（由 statsManager 自动累加）', { finalStats });
       }
       
-      // 触发翻译完成事件（使用 finalStats，确保有数据）
-      await eventDispatcher.emit('translation:after', { 
-        success: true, 
-        stats: finalStats || undefined 
-      });
-      log.info('✅ 翻译完成', { count: completedCount, api: useChannelAPI ? 'Channel' : 'Event' });
+      // ❌ 移除手动触发的 translation:after - 后端已发送，避免重复
+      log.info('✅ 翻译完成', { count: completedCount, api: 'Channel' });
       
       // ❌ 已移除翻译完成通知弹窗
       
@@ -678,7 +637,8 @@ function App() {
         const { index } = selectedEntries[i];
         updateEntry(index, { 
           msgstr: translation,
-          needsReview: true  // 精翻后仍需手动确认
+          needsReview: true,  // 精翻后仍需手动确认
+          translationSource: 'ai'  // 📍 精翻总是使用AI翻译
         });
       });
 

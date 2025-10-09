@@ -7,44 +7,36 @@ import { tauriStore } from '../../store/tauriStore';
 
 // Mock @tauri-apps/plugin-store
 vi.mock('@tauri-apps/plugin-store', () => {
+  // Create an in-memory map to simulate the store's data
   const mockData = new Map<string, any>();
-  
-  return {
-    Store: vi.fn().mockImplementation(() => ({
-      load: vi.fn().mockResolvedValue(undefined),
-      get: vi.fn().mockImplementation((key: string) => {
-        return Promise.resolve(mockData.get(key) ?? null);
-      }),
-      set: vi.fn().mockImplementation((key: string, value: any) => {
-        mockData.set(key, value);
-        return Promise.resolve();
-      }),
-      has: vi.fn().mockImplementation((key: string) => {
-        return Promise.resolve(mockData.has(key));
-      }),
-      delete: vi.fn().mockImplementation((key: string) => {
-        mockData.delete(key);
-        return Promise.resolve();
-      }),
-      clear: vi.fn().mockImplementation(() => {
-        mockData.clear();
-        return Promise.resolve();
-      }),
-      save: vi.fn().mockResolvedValue(undefined),
-      keys: vi.fn().mockImplementation(() => {
-        return Promise.resolve(Array.from(mockData.keys()));
-      }),
-      values: vi.fn().mockImplementation(() => {
-        return Promise.resolve(Array.from(mockData.values()));
-      }),
-      length: vi.fn().mockImplementation(() => {
-        return Promise.resolve(mockData.size);
-      }),
-      entries: vi.fn().mockImplementation(() => {
-        return Promise.resolve(Array.from(mockData.entries()));
-      }),
-    })),
+
+  // This object simulates an instance of the Store
+  const storeInstance = {
+    get: vi.fn(async (key: string) => mockData.get(key) ?? null),
+    set: vi.fn(async (key: string, value: any) => {
+      mockData.set(key, value);
+    }),
+    has: vi.fn(async (key: string) => mockData.has(key)),
+    delete: vi.fn(async (key: string) => mockData.delete(key)),
+    clear: vi.fn(async () => mockData.clear()),
+    save: vi.fn(async () => { /* No-op for in-memory */ }),
+    entries: vi.fn(async () => Array.from(mockData.entries())),
+    keys: vi.fn(async () => Array.from(mockData.keys())),
+    values: vi.fn(async () => Array.from(mockData.values())),
+    onKeyChange: vi.fn(() => Promise.resolve(() => {})),
+    onChange: vi.fn(() => Promise.resolve(() => {})),
+    get length() {
+      return mockData.size;
+    }
   };
+
+  // This object simulates the static part of the Store class
+  const MockStore = {
+    load: vi.fn().mockResolvedValue(storeInstance),
+  };
+
+  // The module exports an object with a `Store` property
+  return { Store: MockStore };
 });
 
 describe('TauriStore', () => {
@@ -87,6 +79,13 @@ describe('TauriStore', () => {
         totalCost: 0,
         sessionCount: 0,
         lastUpdated: expect.any(Number),
+        // 🔧 新增字段
+        tmHits: 0,
+        deduplicated: 0,
+        aiTranslated: 0,
+        tmLearned: 0,
+        inputTokens: 0,
+        outputTokens: 0,
       });
     });
 

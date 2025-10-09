@@ -31,6 +31,7 @@ export const EntryList: React.FC<EntryListProps> = ({
   const { colors } = useTheme();
   const [selectedRowKeys, setSelectedRowKeys] = useState<React.Key[]>([]);
   const [lastClickedIndex, setLastClickedIndex] = useState<number | null>(null);
+  const [lastClickedColumn, setLastClickedColumn] = useState<'untranslated' | 'needsReview' | 'translated' | null>(null); // 记录上次点击的列
   const containerRef = useRef<HTMLDivElement>(null);
   
   // 三列宽度状态
@@ -219,15 +220,28 @@ export const EntryList: React.FC<EntryListProps> = ({
     return 'untranslated';
   };
 
-  const handleRowClick = (record: POEntry, index: number, event: React.MouseEvent) => {
+  const handleRowClick = (
+    record: POEntry, 
+    index: number, 
+    event: React.MouseEvent,
+    columnType: 'untranslated' | 'needsReview' | 'translated'
+  ) => {
     onEntrySelect(record);
 
-    if (event.shiftKey && lastClickedIndex !== null) {
-      // Shift + 点击：选择范围
-      const start = Math.min(lastClickedIndex, index);
-      const end = Math.max(lastClickedIndex, index);
-      const rangeKeys = Array.from({ length: end - start + 1 }, (_, i) => start + i);
-      setSelectedRowKeys(rangeKeys);
+    if (event.shiftKey && lastClickedIndex !== null && lastClickedColumn === columnType) {
+      // 🔧 Shift + 点击：只在同一列内选择范围
+      const columnEntries = groupedEntries[columnType];
+      const columnIndices = columnEntries.map(entry => entries.indexOf(entry));
+      
+      const lastIndexInColumn = columnIndices.indexOf(lastClickedIndex);
+      const currentIndexInColumn = columnIndices.indexOf(index);
+      
+      if (lastIndexInColumn !== -1 && currentIndexInColumn !== -1) {
+        const start = Math.min(lastIndexInColumn, currentIndexInColumn);
+        const end = Math.max(lastIndexInColumn, currentIndexInColumn);
+        const rangeKeys = columnIndices.slice(start, end + 1);
+        setSelectedRowKeys(rangeKeys);
+      }
     } else if (event.ctrlKey || event.metaKey) {
       // Ctrl/Cmd + 点击：切换选择状态
       if (selectedRowKeys.includes(index)) {
@@ -239,6 +253,7 @@ export const EntryList: React.FC<EntryListProps> = ({
       // 普通点击：单选
       setSelectedRowKeys([index]);
       setLastClickedIndex(index);
+      setLastClickedColumn(columnType); // 记录点击的列
     }
   };
 
@@ -305,7 +320,7 @@ export const EntryList: React.FC<EntryListProps> = ({
           return (
             <div
               key={globalIndex}
-              onClick={(event) => handleRowClick(entry, globalIndex, event)}
+              onClick={(event) => handleRowClick(entry, globalIndex, event, columnType)}
               style={{
                 padding: '8px 12px',
                 cursor: 'pointer',
@@ -348,9 +363,43 @@ export const EntryList: React.FC<EntryListProps> = ({
                   color: colors.textSecondary,
                   overflow: 'hidden',
                   textOverflow: 'ellipsis',
-                  whiteSpace: 'nowrap'
+                  whiteSpace: 'nowrap',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '6px'
                 }}>
-                  {entry.msgstr}
+                  <span style={{ flex: 1, overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                    {entry.msgstr}
+                  </span>
+                  {/* 翻译来源标识（仅在待确认栏显示） */}
+                  {status === 'needs-review' && entry.translationSource && (
+                    <span style={{ 
+                      fontSize: '10px', 
+                      padding: '2px 6px',
+                      borderRadius: '3px',
+                      whiteSpace: 'nowrap',
+                      fontWeight: 500,
+                      backgroundColor: entry.translationSource === 'tm' 
+                        ? 'rgba(82, 196, 26, 0.15)'
+                        : entry.translationSource === 'dedup'
+                          ? 'rgba(24, 144, 255, 0.15)'
+                          : 'rgba(250, 173, 20, 0.15)',
+                      color: entry.translationSource === 'tm'
+                        ? '#52c41a'
+                        : entry.translationSource === 'dedup'
+                          ? '#1890ff'
+                          : '#faad14',
+                      border: `1px solid ${
+                        entry.translationSource === 'tm'
+                          ? 'rgba(82, 196, 26, 0.3)'
+                          : entry.translationSource === 'dedup'
+                            ? 'rgba(24, 144, 255, 0.3)'
+                            : 'rgba(250, 173, 20, 0.3)'
+                      }`
+                    }}>
+                      {entry.translationSource === 'tm' ? '💾 TM' : entry.translationSource === 'dedup' ? '🔗 去重' : '🤖 AI'}
+                    </span>
+                  )}
                 </div>
               )}
               {entry.msgctxt && (

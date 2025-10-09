@@ -22,24 +22,135 @@
 - `DeduplicationStats` - 去重统计（原始/去重后/节省比例）
 - `TranslationReport` - 完整翻译报告（聚合所有指标）
 
-### 统计事件契约（前后端）
+### 统计事件契约 V2（Event Sourcing）
 
-Channel/Event 端字段存在差异：
-- Channel: `prompt_tokens` / `completion_tokens`
-- Event  : `input_tokens` / `output_tokens`
+#### **核心数据结构**
 
-归一化映射（由 `normalizeStats` 实现）：
+```typescript
+// 统计事件（StatsEvent）
+interface StatsEvent {
+  meta: StatsEventMeta;      // 事件元数据
+  data: TranslationStats;    // 标准统计数据
+}
+
+// 事件元数据
+interface StatsEventMeta {
+  eventId: string;           // 幂等性标识（去重用）
+  type: StatsEventType;      // 'batch_progress' | 'task_complete'
+  translationMode: string;   // 'channel' | 'single' | 'refine'
+  timestamp: number;         // 事件时间戳
+  taskId?: string;           // 任务ID（同任务共享）
+}
+
+// 标准统计数据（TranslationStats）
+interface TranslationStats {
+  total: number;             // 总条目数
+  tm_hits: number;           // 记忆库命中数
+  deduplicated: number;      // 去重数
+  ai_translated: number;     // AI翻译数
+  tm_learned: number;        // 新学习短语数
+  token_stats: TokenStats;   // Token统计
+}
+
+// Token 统计
+interface TokenStats {
+  input_tokens: number;      // 输入 Token
+  output_tokens: number;     // 输出 Token
+  total_tokens: number;      // 总 Token
+  cost: number;              // 预估成本（¥）
+}
 ```
-input_tokens  = prompt_tokens    | input_tokens  | 0
-output_tokens = completion_tokens| output_tokens | 0
-total_tokens  = total_tokens     | input+output  | 0
-cost          = cost             | 0
-total         = total            | fallbackTotal | 0
+
+#### **事件流（单一路径）**
+
+```
+Rust Backend (translate_batch_with_channel)
+  ├─ Channel 发送批量进度
+  │   └─ stats_tx.send(BatchStatsEvent)
+  │       → 前端 useChannelTranslation 接收
+  │       → eventDispatcher.emit('translation-stats-update')
+  │
+  └─ Tauri Event 发送任务完成
+      └─ emit('translation:after', final_stats)
+          → useTauriEventBridge 桥接
+          → eventDispatcher.emit('translation:after')
+
+StatsManagerV2 (事件编排)
+  ├─ translation:before
+  │   └─ 生成 taskId
+  │
+  ├─ translation-stats-update (批量进度)
+  │   ├─ 创建 StatsEvent { meta: { eventId, taskId, ... }, data }
+  │   ├─ statsEngine.processEvent(event, 'session')
+  │   └─ useSessionStore.setSessionStats(聚合结果)
+  │
+  └─ translation:after (任务完成)
+      ├─ statsEngine.processEvent(event, 'session')
+      └─ useStatsStore.updateCumulativeStats(data)  // 持久化
+
+StatsEngine (事件溯源核心)
+  ├─ EventStore.add(event)
+  │   └─ 幂等性检查（eventId 去重）
+  │
+  └─ 聚合器计算当前统计
+      └─ 累加所有事件的 data 字段
 ```
 
-事件流：
-- `translation:stats`（批次）→ 会话累计
-- `translation:after`（完成）→ 累计（持久化）
+#### **数据一致性保证**
+
+1. **单一数据源**: 所有统计来自 Rust 后端，前端不计算
+2. **幂等性**: 同 `eventId` 的事件只处理一次
+3. **可追溯**: 所有事件存储在 `EventStore`，可查询历史
+4. **双存储分离**:
+   - **会话统计**: `useSessionStore` (应用启动时重置)
+   - **累计统计**: `useStatsStore` (持久化到 TauriStore)
+
+#### **统一 API（仅 Channel API）**
+
+- ✅ **批量翻译**: `translate_batch_with_channel` (唯一路径)
+- ✅ **单条翻译**: `translate_entry` → 发送 `translation:after`
+- ✅ **精翻**: `contextual_refine` → 发送 `translation:after`
+- ❌ **已移除**: `translate_batch` (Event API)
+
+#### **翻译来源标识（Translation Source）**
+
+从 Phase 7+ 开始，每个翻译条目都标记其来源：
+
+```typescript
+// POEntry 扩展字段
+interface POEntry {
+  // ... 其他字段
+  translationSource?: 'tm' | 'dedup' | 'ai';  // 翻译来源
+  needsReview?: boolean;                       // 是否需要审核
+}
+```
+
+**来源类型**:
+- `tm`: 翻译记忆库命中（83+ 内置短语）
+- `dedup`: 去重处理（引用同批次已翻译内容）
+- `ai`: AI 翻译（调用 AI API）
+
+**UI 展示**:
+- 💾 TM - 绿色标签（记忆库命中）
+- 🔗 去重 - 蓝色标签（去重节省）
+- 🤖 AI - 紫色标签（AI翻译）
+
+**数据流**:
+```
+Rust Backend
+  └─ AITranslator::translate_batch_with_sources()
+      ├─ 返回 (translations: Vec<String>, sources: Vec<String>)
+      └─ BatchResult { translations, translation_sources }
+
+Frontend
+  └─ App.tsx: executeTranslation()
+      ├─ 接收 result.translation_sources
+      └─ updateEntry(index, { translationSource: sources[i] })
+
+UI Component
+  └─ EntryList.tsx: 待确认列
+      └─ 显示来源标签
+```
 
 **语言与元数据**:
 - `Language` - 语言枚举（10 种支持语言）

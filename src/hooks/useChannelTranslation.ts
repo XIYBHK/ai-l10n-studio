@@ -64,6 +64,7 @@ export interface TokenStatsEvent {
  */
 export interface BatchResult {
   translations: Record<number, string>;
+  translation_sources: string[]; // 每个翻译的来源：'tm', 'dedup', 'ai'
   stats: BatchStatsEvent;
 }
 
@@ -153,9 +154,9 @@ export const useChannelTranslation = () => {
       statsChannel.onmessage = (statsEvent) => {
         log.debug('📈 统计更新:', statsEvent);
         setStats(statsEvent);
-        // 广播批次统计事件（Channel 路径）
-        eventDispatcher.emit('translation:stats', {
-          total: 0,
+        // 🔧 广播批次统计事件到 statsManager（使用 translation-stats-update）
+        eventDispatcher.emit('translation-stats-update', {
+          total: 0,  // 批次统计不设置 total，避免重复累加
           tm_hits: statsEvent.tm_hits,
           deduplicated: statsEvent.deduplicated,
           ai_translated: statsEvent.ai_translated,
@@ -186,6 +187,11 @@ export const useChannelTranslation = () => {
         tm_hits: result.stats.tm_hits,
         ai_translated: result.stats.ai_translated,
         cost: result.stats.token_stats.cost,
+      });
+
+      // 🔧 发送任务完成统计事件（Channel API 后端无法发送事件）
+      eventDispatcher.emit('translation:after', {
+        stats: result.stats
       });
 
       return result;

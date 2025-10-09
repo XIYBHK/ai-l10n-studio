@@ -84,6 +84,9 @@ export const EditorPane: React.FC<EditorPaneProps> = ({
       message.success('译文已保存');
       log.info('译文已保存', { index, translation });
 
+      // ✨ 修复：手动保存后，立即触发术语更新事件，以激活术语库相关逻辑
+      eventDispatcher.emit('term:updated', { reason: 'manual_save' });
+
       // 保存后检测术语差异
       if (aiTranslation && translation && translation !== aiTranslation) {
         log.debug('开始检测术语差异', {

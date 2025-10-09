@@ -240,9 +240,6 @@ pnpm-lock.yaml
 # Vite
 .vite/
 
-# Tauri icons (if using default icons)
-src-tauri/icons/
-
 # Tauri + React GUI project - Keep source code, ignore build artifacts (rooted)
 node_modules/
 dist/

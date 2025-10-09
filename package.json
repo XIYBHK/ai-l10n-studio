@@ -29,15 +29,16 @@
     "i18next": "^25.5.3",
     "immer": "^10.0.3",
     "lodash": "^4.17.21",
+    "nanoid": "^5.1.6",
     "react": "^18.2.0",
     "react-dom": "^18.2.0",
     "react-draggable": "^4.5.0",
     "react-i18next": "^16.0.0",
     "react-window": "^2.2.0",
     "react-window-infinite-loader": "^2.0.0",
+    "swr": "^2.2.5",
     "vite-plugin-tauri": "^4.0.0",
-    "zustand": "^4.4.7",
-    "swr": "^2.2.5"
+    "zustand": "^4.4.7"
   },
   "devDependencies": {
     "@tauri-apps/cli": "^2.8.4",

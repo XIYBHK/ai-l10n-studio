@@ -18,7 +18,7 @@
 - `useConfig` - SWR 驱动的配置管理（自动缓存、重验证）
 - `useLanguage` - 语言状态与检测
 - `useTermLibrary` / `useTranslationMemory` - 专用数据管理
-- `useChannelTranslation` - 通道模式批量翻译（实时进度）
+- `useChannelTranslation` - Channel API 批量翻译（实时进度，高性能）
 
 ### 类型安全事件系统 (`eventDispatcher`)
 受 Unreal Engine 启发，全类型推断：
@@ -45,27 +45,101 @@ const { data, error, isLoading } = useSWR('config', configApi.loadConfig);
 
 ---
 
-## 统计聚合（StatsManager）
+## 统计系统 V2（Event Sourcing）
 
-统一入口：`src/services/statsManager.ts`
+### 架构概览
+```
+StatsEngine (事件溯源核心)
+  ├─ EventStore      - 存储所有统计事件（幂等性、可追溯）
+  ├─ 事件聚合器       - 实时计算会话统计
+  └─ 调试工具         - 事件历史、时间旅行
 
-订阅事件：
-- `translation:stats`（或 `translation-stats-update`）：批次统计 → 会话累计
-- `translation:after`：最终统计 → 累计（持久化）
-
-归一化工具：`src/utils/statsAggregator.ts`
-- `normalizeStats(raw)`：兼容 Channel/Event 字段（prompt/completion → input/output），补齐 total/cost 等
-- `accumulateStats(a,b)`：纯函数累加，保证数值安全（默认 0）
-
-使用示例：
-```ts
-import { initializeStatsManager } from '@/services/statsManager';
-
-initializeStatsManager(); // 在 main.tsx 启动（一次）
+StatsManagerV2 (事件桥接层)
+  ├─ 监听后端事件     - translation:before / translation-stats-update / translation:after
+  ├─ 转换为 StatsEvent - 附加元数据（eventId/taskId/timestamp）
+  └─ 更新 Zustand Store - useSessionStore / useStatsStore
 ```
 
-约定：
-- 会话统计 = 所有批次的和（应用运行期）
-- 累计统计 = 每次任务完成累加一次（跨会话持久化）
+### 核心特性
+
+#### 1️⃣ **事件溯源（Event Sourcing）**
+- 所有统计变更以**事件流**形式存储
+- 可追溯：查看完整历史，时间旅行调试
+- 可审计：每个统计数据都有来源事件
+
+#### 2️⃣ **幂等性保证**
+```typescript
+// 同一事件多次处理，结果一致
+statsEngine.processEvent(event, 'session'); // 首次
+statsEngine.processEvent(event, 'session'); // 重复 → 自动去重
+```
+
+#### 3️⃣ **双存储分离**
+- **会话统计**（`useSessionStore`）：应用启动时重置，聚合当前会话所有事件
+- **累计统计**（`useStatsStore`）：持久化到 TauriStore，跨会话累加
+
+#### 4️⃣ **统一翻译 API**
+- ✅ **仅 Channel API**：所有批量翻译使用 `translate_batch_with_channel`
+- ❌ 已移除 Event API (`translate_batch`)
+
+### 事件流
+
+```typescript
+// 1. 后端发送事件
+translation:before          // 任务开始 → 生成 taskId
+  ↓
+translation-stats-update    // 批量进度（Channel API）→ 增量统计
+  ↓  (可能多次)
+translation:after           // 任务完成 → 最终统计
+
+// 2. StatsManagerV2 处理
+eventDispatcher.on('translation-stats-update', (data) => {
+  const event = createStatsEvent(data, taskId); // 附加元数据
+  statsEngine.processEvent(event, 'session');   // 更新会话统计
+  useSessionStore.setState({ sessionStats });
+});
+
+eventDispatcher.on('translation:after', (data) => {
+  statsEngine.processEvent(event, 'session');          // 会话
+  useStatsStore.getState().updateCumulativeStats(data); // 累计（持久化）
+});
+```
+
+### 使用示例
+
+```typescript
+// main.tsx 启动时初始化
+import { initializeStatsManagerV2 } from '@/services/statsManagerV2';
+
+initializeStatsManagerV2(); // 一次性启动
+
+// 组件中读取统计
+const { sessionStats } = useSessionStore();
+const { cumulativeStats } = useStatsStore();
+
+// 调试：查看事件历史
+import { statsEngine } from '@/services/statsEngine';
+statsEngine.getEventHistory(); // 返回所有统计事件
+```
+
+### 数据契约
+```typescript
+interface StatsEvent {
+  meta: {
+    eventId: string;              // 幂等性标识
+    type: 'batch_progress' | 'task_complete';
+    translationMode: 'channel' | 'single' | 'refine';
+    timestamp: number;
+    taskId?: string;              // 同任务共享ID
+  };
+  data: TranslationStats;         // 标准统计数据
+}
+```
+
+### 优势
+- ✅ **无重复计数**：幂等性保证
+- ✅ **可调试**：完整事件历史
+- ✅ **类型安全**：编译时检查
+- ✅ **可扩展**：新增统计维度无需改动核心逻辑
 
 

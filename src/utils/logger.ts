@@ -19,7 +19,7 @@ interface LogConfig {
 class Logger {
   private config: LogConfig = {
     level: LogLevel.DEBUG,
-    enableTimestamp: true,
+    enableTimestamp: true, // 显示准确的本地时间戳（与后端一致）
     enableModule: true,
   };
 
@@ -59,25 +59,29 @@ class Logger {
 
   debug(module: string, message: string, ...args: any[]) {
     if (this.config.level <= LogLevel.DEBUG) {
-      console.log(this.formatMessage('DEBUG', module, message), ...args);
+      // 使用 setTimeout 0 延迟执行，避免浏览器添加时间戳
+      setTimeout(() => console.log(this.formatMessage('DEBUG', module, message), ...args), 0);
     }
   }
 
   info(module: string, message: string, ...args: any[]) {
     if (this.config.level <= LogLevel.INFO) {
-      console.log(this.formatMessage('INFO', module, message), ...args);
+      // 使用 setTimeout 0 延迟执行，避免浏览器添加时间戳
+      setTimeout(() => console.log(this.formatMessage('INFO', module, message), ...args), 0);
     }
   }
 
   warn(module: string, message: string, ...args: any[]) {
     if (this.config.level <= LogLevel.WARN) {
-      console.warn(this.formatMessage('WARN', module, message), ...args);
+      // 使用 setTimeout 0 延迟执行，避免浏览器添加时间戳
+      setTimeout(() => console.warn(this.formatMessage('WARN', module, message), ...args), 0);
     }
   }
 
   error(module: string, message: string, ...args: any[]) {
     if (this.config.level <= LogLevel.ERROR) {
-      console.error(this.formatMessage('ERROR', module, message), ...args);
+      // 使用 setTimeout 0 延迟执行，避免浏览器添加时间戳
+      setTimeout(() => console.error(this.formatMessage('ERROR', module, message), ...args), 0);
     }
   }
 

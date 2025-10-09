@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Modal, Input, Button, Space, message, Tabs, Card, Progress } from 'antd';
+import { Modal, Input, Button, Space, message, Tabs } from 'antd';
 import { CopyOutlined, ReloadOutlined, ClearOutlined, FileOutlined, BugOutlined, DownloadOutlined, SaveOutlined, FileTextOutlined } from '@ant-design/icons';
 import { logApi, promptLogApi } from '../services/api';
 import Draggable from 'react-draggable';
@@ -7,8 +7,6 @@ import { FileDropTest } from './FileDropTest';
 import { createModuleLogger } from '../utils/logger';
 import { frontendLogger } from '../utils/frontendLogger';
 import { useBackendLogs, usePromptLogs } from '../hooks/useLogs';
-import { eventDispatcher } from '../services/eventDispatcher';
-import { useSessionStore, useStatsStore } from '../store';
 
 const { TextArea } = Input;
 const log = createModuleLogger('DevToolsModal');
@@ -23,10 +21,6 @@ export const DevToolsModal: React.FC<DevToolsModalProps> = ({
   onClose,
 }) => {
   const [frontendLogs, setFrontendLogs] = useState<string>('');
-  const [traceItems, setTraceItems] = useState<Array<{ ts: string; type: string; payload: any }>>([]);
-  const [lastTotal, setLastTotal] = useState<number>(0);
-  const session = useSessionStore(s => s.sessionStats);
-  const cumulative = useStatsStore(s => s.cumulativeStats);
   // 只有在窗口打开时才启用 SWR 和轮询
   const { logs, isLoading: loading, refresh: refreshBackendLogs } = useBackendLogs({ 
     enabled: visible,
@@ -49,27 +43,6 @@ export const DevToolsModal: React.FC<DevToolsModalProps> = ({
     if (visible) {
       setFrontendLogs(frontendLogger.getLogs());
     }
-  }, [visible]);
-
-  // 统计跟踪 - 仅在打开时接入事件
-  useEffect(() => {
-    if (!visible) return;
-    const offBatch = eventDispatcher.on('translation:stats', (payload) => {
-      const ts = new Date().toLocaleTimeString();
-      setTraceItems(prev => [...prev.slice(-200), { ts, type: 'translation:stats', payload }]);
-    });
-    // 兼容桥接事件名：不走类型系统，采用 as any
-    // @ts-expect-error: 兼容桥接的自定义事件名
-    const offBatchCompat = eventDispatcher.on('translation-stats-update', (payload: any) => {
-      const ts = new Date().toLocaleTimeString();
-      setTraceItems(prev => [...prev.slice(-200), { ts, type: 'translation-stats-update', payload }]);
-    });
-    const offAfter = eventDispatcher.on('translation:after', (payload) => {
-      const ts = new Date().toLocaleTimeString();
-      setTraceItems(prev => [...prev.slice(-200), { ts, type: 'translation:after', payload }]);
-      if (payload?.stats?.total) setLastTotal(Number(payload.stats.total));
-    });
-    return () => { offBatch(); offBatchCompat(); offAfter(); };
   }, [visible]);
 
   const refreshFrontendLogs = () => {
@@ -462,61 +435,6 @@ export const DevToolsModal: React.FC<DevToolsModalProps> = ({
                 </div>
               </div>
             ),
-          },
-          {
-            key: 'trace',
-            label: (
-              <span>
-                <FileTextOutlined /> 统计跟踪
-              </span>
-            ),
-            children: (
-              <div style={{ display: 'flex', gap: 12 }}>
-                <div style={{ flex: 1 }}>
-                  <Card size="small" title="总体进度（本次任务）" style={{ marginBottom: 12 }}>
-                    <Progress
-                      percent={lastTotal > 0 ? Math.min(100, Math.round(((session.tm_hits + session.ai_translated) / lastTotal) * 100)) : 0}
-                      status={lastTotal > 0 ? 'active' : undefined}
-                    />
-                    <div style={{ fontSize: 12, opacity: 0.8 }}>
-                      命中+AI / 总计：{session.tm_hits + session.ai_translated} / {lastTotal || '-'}
-                    </div>
-                  </Card>
-
-                  <Card size="small" title="会话统计（实时累计）" style={{ marginBottom: 12 }}>
-                    <div style={{ fontSize: 12, lineHeight: 1.8 }}>
-                      <div>TM命中：{session.tm_hits}</div>
-                      <div>去重节省：{session.deduplicated}</div>
-                      <div>AI调用：{session.ai_translated}</div>
-                      <div>Token 输入/输出/总：{session.token_stats.input_tokens} / {session.token_stats.output_tokens} / {session.token_stats.total_tokens}</div>
-                      <div>费用：¥{session.token_stats.cost.toFixed(4)}</div>
-                    </div>
-                  </Card>
-
-                  <Card size="small" title="累计统计（完成时写入）">
-                    <div style={{ fontSize: 12, lineHeight: 1.8 }}>
-                      <div>总计：{cumulative.total}</div>
-                      <div>TM命中：{cumulative.tm_hits}</div>
-                      <div>AI调用：{cumulative.ai_translated}</div>
-                      <div>Token 总：{cumulative.token_stats.total_tokens}</div>
-                      <div>费用：¥{cumulative.token_stats.cost.toFixed(4)}</div>
-                    </div>
-                  </Card>
-                </div>
-
-                <div style={{ flex: 1 }}>
-                  <Card size="small" title="事件流（最近 200 条，全文本可复制）">
-                    <TextArea
-                      value={traceItems.map(it => `[${it.ts}] ${it.type}\n${JSON.stringify(it.payload)}\n`).join('\n')}
-                      spellCheck={false}
-                      readOnly
-                      autoSize={{ minRows: 20, maxRows: 20 }}
-                      style={{ fontFamily: 'ui-monospace, SFMono-Regular, Menlo, Consolas, monospace', fontSize: 12 }}
-                    />
-                  </Card>
-                </div>
-              </div>
-            )
           },
         ]}
       />

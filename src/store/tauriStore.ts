@@ -20,13 +20,20 @@ export interface AppStoreData {
   theme: 'light' | 'dark';
   language: string;
   
-  // 累计统计
+  // 累计统计（完整的 TranslationStats 字段）
   cumulativeStats: {
     totalTranslated: number;
     totalTokens: number;
     totalCost: number;
     sessionCount: number;
     lastUpdated: number;
+    // 🔧 新增：完整的统计字段
+    tmHits: number;
+    deduplicated: number;
+    aiTranslated: number;
+    tmLearned: number;
+    inputTokens: number;
+    outputTokens: number;
   };
   
   // 最近文件列表
@@ -286,6 +293,13 @@ class TauriStore {
       totalCost: 0,
       sessionCount: 0,
       lastUpdated: Date.now(),
+      // 🔧 新增字段的默认值
+      tmHits: 0,
+      deduplicated: 0,
+      aiTranslated: 0,
+      tmLearned: 0,
+      inputTokens: 0,
+      outputTokens: 0,
     };
   }
 

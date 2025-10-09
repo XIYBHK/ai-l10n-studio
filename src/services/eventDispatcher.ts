@@ -26,6 +26,9 @@ export type EventMap = {
   
   'translation:stats': TranslationStats;
   
+  // Tauri 事件桥接兼容（Channel API 发送此事件）
+  'translation-stats-update': TranslationStats;
+  
   'translation:after': { 
     success: boolean;
     stats?: TranslationStats;

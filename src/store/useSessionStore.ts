@@ -35,6 +35,7 @@ interface SessionState {
   
   // 会话统计
   updateSessionStats: (stats: TranslationStats) => void;
+  setSessionStats: (stats: TranslationStats) => void; // 直接设置（用于 StatsEngine）
   resetSessionStats: () => void;
   
   // 导航
@@ -141,6 +142,10 @@ export const useSessionStore = create<SessionState>((set, get) => ({
       tm_learned: (sessionStats.tm_learned ?? 0) + delta.tm_learned,
     };
     set({ sessionStats: newStats });
+  },
+  
+  setSessionStats: (stats) => {
+    set({ sessionStats: stats });
   },
   
   resetSessionStats: () => {
