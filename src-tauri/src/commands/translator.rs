@@ -104,7 +104,12 @@ pub async fn translate_entry(text: String, target_language: Option<String>) -> R
         .clone();
     
     let custom_prompt = config_manager.get_config().system_prompt.clone();
-    let mut translator = AITranslator::new_with_config(ai_config, true, custom_prompt.as_deref(), target_language)
+    let mut translator = AITranslator::new_with_config(
+        ai_config,
+        true,
+        custom_prompt.as_deref(),
+        target_language
+    )
         .map_err(|e| format!("AI翻译器初始化失败: {}", e))?;
     
     let result = translator
@@ -681,40 +686,55 @@ pub async fn translate_batch_with_channel(
     // 创建进度管理器
     let mut progress_mgr = BatchProgressManager::new(texts.len());
     
-    // 翻译处理
+    // 翻译处理（按批次）
     let mut translations = Vec::with_capacity(texts.len());
-    for (i, text) in texts.iter().enumerate() {
-        // 执行翻译
+    let batch_size = 20; // 单批 20 条
+    let mut global_index = 0; // 全局索引，用于追踪整体进度
+    let total_count = texts.len(); // 提前保存总数，避免闭包中借用
+    
+    for chunk in texts.chunks(batch_size) {
+        let chunk_vec = chunk.to_vec();
+        let chunk_start_index = global_index;
+        
+        // 🔔 创建 progress_callback，实时推送 TM 命中和 AI 翻译结果
+        let progress_channel_clone = progress_channel.clone();
+        let progress_callback = Box::new(move |local_idx: usize, translation: String| {
+            let global_idx = chunk_start_index + local_idx;
+            let event = crate::services::BatchProgressEvent::with_index(
+                global_idx + 1,
+                total_count,
+                Some(translation.clone()),
+                global_idx,
+            );
+            let _ = progress_channel_clone.send(event);
+        });
+        
         let result = translator
-            .translate_batch(vec![text.clone()], None)
+            .translate_batch(chunk_vec.clone(), Some(progress_callback))
             .await
             .map_err(|e| e.to_string())?;
-        
-        if let Some(translation) = result.into_iter().next() {
-            translations.push(translation);
+
+        // 收集翻译结果
+        for translation in result.iter() {
+            translations.push(translation.clone());
+            global_index += 1;
         }
-        
-        // 通过 Channel 发送进度（高性能）
-        progress_mgr.update(&progress_channel, Some(text.clone()));
-        
-        // 定期发送统计信息（每10项）
-        if (i + 1) % 10 == 0 || i == texts.len() - 1 {
-            let batch_stats = &translator.batch_stats;
-            let token_stats = translator.get_token_stats();
-            
-            let stats_event = BatchStatsEvent {
-                tm_hits: batch_stats.tm_hits,
-                deduplicated: batch_stats.deduplicated,
-                ai_translated: batch_stats.ai_translated,
-                token_stats: TokenStatsEvent {
-                    prompt_tokens: token_stats.input_tokens as usize,
-                    completion_tokens: token_stats.output_tokens as usize,
-                    total_tokens: token_stats.total_tokens as usize,
-                },
-            };
-            
-            let _ = stats_channel.send(stats_event);
-        }
+
+        // 每批发送一次统计事件
+        let batch_stats = &translator.batch_stats;
+        let token_stats = translator.get_token_stats();
+        let stats_event = BatchStatsEvent {
+            tm_hits: batch_stats.tm_hits,
+            deduplicated: batch_stats.deduplicated,
+            ai_translated: batch_stats.ai_translated,
+            token_stats: TokenStatsEvent {
+                prompt_tokens: token_stats.input_tokens as usize,
+                completion_tokens: token_stats.output_tokens as usize,
+                total_tokens: token_stats.total_tokens as usize,
+                cost: token_stats.cost,
+            },
+        };
+        let _ = stats_channel.send(stats_event);
     }
     
     // 保存翻译记忆库

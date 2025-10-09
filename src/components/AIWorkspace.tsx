@@ -1,88 +1,189 @@
-import React, { useState, useEffect, useRef } from 'react';
-import { Card, Statistic, Row, Col, Progress, Tag, Divider, Button, Popconfirm, Collapse } from 'antd';
+import React, { useState, useEffect } from 'react';
+import { Card, Tag, Divider, Button, Popconfirm, Collapse } from 'antd';
 import { 
-  ThunderboltOutlined, 
-  DatabaseOutlined, 
-  DeleteOutlined,
   RobotOutlined,
-  DollarOutlined,
-  CheckCircleOutlined,
   SettingOutlined,
   ReloadOutlined,
   BookOutlined
 } from '@ant-design/icons';
 import { TranslationStats } from '../types/tauri';
-import { TermLibrary } from '../types/termLibrary';
 import { MemoryManager } from './MemoryManager';
 import { TermLibraryManager } from './TermLibraryManager';
 import { useTheme } from '../hooks/useTheme';
-import { useStatsStore } from '../store';
+import { useStatsStore, useSessionStore } from '../store';
 import { createModuleLogger } from '../utils/logger';
 import { eventDispatcher } from '../services/eventDispatcher';
+import { useTermLibrary } from '../hooks/useTermLibrary';
 
 const log = createModuleLogger('AIWorkspace');
 
 interface AIWorkspaceProps {
-  stats: TranslationStats | null;
+  stats: TranslationStats | null; // ❌ 已废弃，改用 sessionStats
   isTranslating: boolean;
   onResetStats?: () => void;
   apiKey?: string; // 用于生成风格总结
 }
 
-export const AIWorkspace: React.FC<AIWorkspaceProps> = ({ stats, isTranslating, onResetStats, apiKey }) => {
+export const AIWorkspace: React.FC<AIWorkspaceProps> = ({ isTranslating, onResetStats, apiKey }) => {
   const [memoryManagerVisible, setMemoryManagerVisible] = useState(false);
   const [termLibraryVisible, setTermLibraryVisible] = useState(false);
-  const [termLibrary, setTermLibrary] = useState<TermLibrary | null>(null);
+  const [shouldLoadTerms, setShouldLoadTerms] = useState(false); // 控制是否加载术语库
+  const { termLibrary, mutate: mutateTermLibrary } = useTermLibrary({ enabled: shouldLoadTerms });
   const { colors } = useTheme();
-  const loadedRef = useRef(false); // 防止 StrictMode 重复加载
   
-  // 从 store 读取累计统计
+  // 📊 三层统计数据
+  // 1. stats (prop): 本次翻译详情（实时更新）
+  // 2. sessionStats: 本次会话聚合（当前文件打开后的所有翻译）
+  // 3. cumulativeStats: 累计统计（跨文件跨会话）
   const { cumulativeStats, updateCumulativeStats, resetCumulativeStats } = useStatsStore();
+  const { sessionStats } = useSessionStore();
 
-  // 加载术语库
-  const loadTermLibrary = async () => {
-    try {
-      const { termLibraryApi } = await import('../services/api');
-      const library = await termLibraryApi.get() as TermLibrary;
-      setTermLibrary(library);
-      log.debug('术语库加载成功', { termCount: library.terms.length });
-    } catch (error) {
-      log.logError(error, '加载术语库失败');
-    }
-  };
-
-  // 组件加载时就加载术语库（类似累计统计，启用时就显示）
-  useEffect(() => {
-    if (!loadedRef.current) {
-      loadedRef.current = true;
-      loadTermLibrary();
-    }
-  }, []);
-  
-  // 监听术语更新事件
+  // 监听术语更新事件（说明有术语了，开始加载）
   useEffect(() => {
     const unsubscribe = eventDispatcher.on('term:updated', () => {
-      log.debug('收到术语更新事件，重新加载术语库');
-      loadTermLibrary();
+      log.debug('收到术语更新事件，启用术语库加载');
+      setShouldLoadTerms(true);
+      mutateTermLibrary();
     });
     
     return () => {
       unsubscribe();
     };
-  }, []);
+  }, [mutateTermLibrary]);
   
-  // 当stats更新时累加到cumulative（使用store）
-  useEffect(() => {
-    if (stats) {
-      updateCumulativeStats(stats);
-    }
-  }, [stats, updateCumulativeStats]);
+  // ❌ 移除在视图层的累计累加，统一在 App.tsx 的聚合器处处理
   
   const handleReset = () => {
     resetCumulativeStats();
     if (onResetStats) {
       onResetStats();
     }
+  };
+
+  // 📊 本次会话详细统计（记忆库、去重、AI调用等）
+  const renderSessionStats = () => {
+    if (sessionStats.total === 0) {
+      return (
+        <div style={{ 
+          padding: '12px', 
+          textAlign: 'center', 
+          color: colors.textTertiary,
+          fontSize: '12px'
+        }}>
+          暂无数据
+        </div>
+      );
+    }
+    
+    // 安全访问所有字段，防止 NaN
+    const cost = sessionStats.token_stats?.cost ?? 0;
+    const totalTokens = sessionStats.token_stats?.total_tokens ?? 0;
+    const inputTokens = sessionStats.token_stats?.input_tokens ?? 0;
+    const outputTokens = sessionStats.token_stats?.output_tokens ?? 0;
+    const tmHits = sessionStats.tm_hits ?? 0;
+    const deduplicated = sessionStats.deduplicated ?? 0;
+    const aiTranslated = sessionStats.ai_translated ?? 0;
+    const total = sessionStats.total ?? 0;
+    const estimatedCost = `¥${cost.toFixed(4)}`;
+    
+    return (
+      <div>
+        <div style={{ 
+          fontSize: '12px', 
+          color: colors.textSecondary, 
+          fontWeight: 600,
+          marginBottom: 12 
+        }}>
+          💼 本次会话统计
+        </div>
+        
+        {/* 效率指标 */}
+        <div style={{ 
+          display: 'grid',
+          gridTemplateColumns: 'repeat(3, 1fr)',
+          gap: '8px',
+          marginBottom: 12,
+          fontSize: '11px'
+        }}>
+          <div style={{ textAlign: 'center', padding: '6px', background: colors.bgTertiary, borderRadius: '4px' }}>
+            <div style={{ color: colors.textTertiary }}>记忆库命中</div>
+            <div style={{ fontSize: '16px', fontWeight: 600, color: colors.statusTranslated }}>{tmHits}</div>
+            <div style={{ fontSize: '10px', color: colors.textTertiary }}>
+              {total > 0 ? Math.round((tmHits / total) * 100) : 0}%
+            </div>
+          </div>
+          <div style={{ textAlign: 'center', padding: '6px', background: colors.bgTertiary, borderRadius: '4px' }}>
+            <div style={{ color: colors.textTertiary }}>去重节省</div>
+            <div style={{ fontSize: '16px', fontWeight: 600, color: colors.statusUntranslated }}>{deduplicated}</div>
+            <div style={{ fontSize: '10px', color: colors.textTertiary }}>
+              {total > 0 ? Math.round((deduplicated / total) * 100) : 0}%
+            </div>
+          </div>
+          <div style={{ textAlign: 'center', padding: '6px', background: colors.bgTertiary, borderRadius: '4px' }}>
+            <div style={{ color: colors.textTertiary }}>AI调用</div>
+            <div style={{ fontSize: '16px', fontWeight: 600, color: colors.textPrimary }}>{aiTranslated}</div>
+            <div style={{ fontSize: '10px', color: colors.textTertiary }}>
+              {total > 0 ? Math.round((aiTranslated / total) * 100) : 0}%
+            </div>
+          </div>
+        </div>
+        
+        {/* Token消耗 */}
+        <div style={{ 
+          display: 'grid',
+          gridTemplateColumns: 'repeat(3, 1fr)',
+          gap: '8px',
+          marginBottom: 8,
+          fontSize: '11px'
+        }}>
+          <div style={{ textAlign: 'center', padding: '6px', background: colors.bgTertiary, borderRadius: '4px' }}>
+            <div style={{ color: colors.textTertiary }}>输入</div>
+            <div style={{ fontSize: '14px', fontWeight: 600 }}>{inputTokens.toLocaleString()}</div>
+          </div>
+          <div style={{ textAlign: 'center', padding: '6px', background: colors.bgTertiary, borderRadius: '4px' }}>
+            <div style={{ color: colors.textTertiary }}>输出</div>
+            <div style={{ fontSize: '14px', fontWeight: 600 }}>{outputTokens.toLocaleString()}</div>
+          </div>
+          <div style={{ textAlign: 'center', padding: '6px', background: colors.bgTertiary, borderRadius: '4px' }}>
+            <div style={{ color: colors.textTertiary }}>总计</div>
+            <div style={{ fontSize: '14px', fontWeight: 600 }}>{totalTokens.toLocaleString()}</div>
+          </div>
+        </div>
+        
+        {/* 费用 */}
+        <div style={{ 
+          padding: '8px',
+          background: colors.bgTertiary,
+          borderRadius: '4px',
+          display: 'flex',
+          justifyContent: 'space-between',
+          alignItems: 'center',
+          fontSize: '12px'
+        }}>
+          <span style={{ color: colors.textSecondary }}>
+            💰 预估费用
+          </span>
+          <span style={{ fontWeight: 600, color: colors.statusTranslated, fontSize: '16px' }}>
+            {estimatedCost}
+          </span>
+        </div>
+        
+        {/* 效率提示 */}
+        {(tmHits + deduplicated) > 0 && (
+          <div style={{ 
+            marginTop: 8,
+            padding: '6px 8px',
+            background: colors.bgTertiary,
+            borderRadius: '4px',
+            fontSize: '11px',
+            color: colors.statusTranslated,
+            textAlign: 'center'
+          }}>
+            ⚡ 节省了 {tmHits + deduplicated} 次 API 调用
+          </div>
+        )}
+      </div>
+    );
   };
 
   // 简化的累计统计渲染
@@ -100,7 +201,10 @@ export const AIWorkspace: React.FC<AIWorkspaceProps> = ({ stats, isTranslating, 
       );
     }
     
-    const estimatedCost = `¥${cumulativeStats.token_stats.cost.toFixed(4)}`;
+    // 安全访问 token_stats
+    const cost = cumulativeStats.token_stats?.cost ?? 0;
+    const totalTokens = cumulativeStats.token_stats?.total_tokens ?? 0;
+    const estimatedCost = `¥${cost.toFixed(4)}`;
     
     return (
       <div>
@@ -156,7 +260,7 @@ export const AIWorkspace: React.FC<AIWorkspaceProps> = ({ stats, isTranslating, 
           fontSize: '11px'
         }}>
           <span style={{ color: colors.textSecondary }}>
-            Token: {cumulativeStats.token_stats.total_tokens.toLocaleString()}
+            Token: {totalTokens.toLocaleString()}
           </span>
           <span style={{ fontWeight: 600, color: colors.statusTranslated }}>
             {estimatedCost}
@@ -166,163 +270,7 @@ export const AIWorkspace: React.FC<AIWorkspaceProps> = ({ stats, isTranslating, 
     );
   };
 
-  // 详细的本次翻译渲染
-  const renderCurrentStats = () => {
-    if (!stats || stats.total === 0) {
-      return (
-        <div style={{ 
-          padding: '20px', 
-          textAlign: 'center', 
-          color: colors.textTertiary,
-          fontSize: '13px'
-        }}>
-          暂无数据
-        </div>
-      );
-    }
-    
-    const estimatedCost = `¥${stats.token_stats.cost.toFixed(4)}`;
-    // 正确计算：记忆库命中 + 去重节省
-    const savedApiCalls = stats.tm_hits + stats.deduplicated;
-    
-    return (
-      <div>
-        <div style={{ 
-          fontSize: '12px', 
-          color: colors.textSecondary, 
-          fontWeight: 600,
-          marginBottom: 12 
-        }}>
-          ⚡ 本次翻译
-        </div>
-        
-        {/* 处理效率 */}
-        <Row gutter={16}>
-          <Col span={12}>
-            <Statistic
-              title={
-                <span style={{ fontSize: '12px' }}>
-                  <DatabaseOutlined /> 记忆库命中
-                </span>
-              }
-              value={stats.tm_hits}
-              suffix={`/ ${stats.total}`}
-              valueStyle={{ fontSize: '20px' }}
-            />
-            <Progress 
-              percent={stats.total > 0 ? Math.round((stats.tm_hits / stats.total) * 100) : 0} 
-              strokeColor={colors.statusTranslated}
-              size="small"
-              showInfo={true}
-            />
-          </Col>
-          <Col span={12}>
-            <Statistic
-              title={
-                <span style={{ fontSize: '12px' }}>
-                  <DeleteOutlined /> 去重优化
-                </span>
-              }
-              value={stats.deduplicated}
-              suffix={`/ ${stats.total}`}
-              valueStyle={{ fontSize: '20px' }}
-            />
-            <Progress 
-              percent={stats.total > 0 ? Math.round((stats.deduplicated / stats.total) * 100) : 0} 
-              strokeColor={colors.statusUntranslated}
-              size="small"
-              showInfo={true}
-            />
-          </Col>
-        </Row>
-
-        {/* AI翻译 */}
-        <Row gutter={16} style={{ marginTop: 16 }}>
-          <Col span={12}>
-            <Statistic
-              title={
-                <span style={{ fontSize: '12px' }}>
-                  <ThunderboltOutlined /> AI调用次数
-                </span>
-              }
-              value={stats.ai_translated}
-              valueStyle={{ fontSize: '20px' }}
-            />
-          </Col>
-          <Col span={12}>
-            <Statistic
-              title={
-                <span style={{ fontSize: '12px' }}>
-                  <CheckCircleOutlined /> 新学习短语
-                </span>
-              }
-              value={stats.tm_learned}
-              valueStyle={{ fontSize: '20px', color: colors.statusTranslated }}
-            />
-          </Col>
-        </Row>
-
-        {/* Token消耗 */}
-        <Row gutter={16} style={{ marginTop: 16 }}>
-          <Col span={8}>
-            <Statistic
-              title={<span style={{ fontSize: '11px' }}>输入</span>}
-              value={stats.token_stats.input_tokens}
-              valueStyle={{ fontSize: '16px' }}
-            />
-          </Col>
-          <Col span={8}>
-            <Statistic
-              title={<span style={{ fontSize: '11px' }}>输出</span>}
-              value={stats.token_stats.output_tokens}
-              valueStyle={{ fontSize: '16px' }}
-            />
-          </Col>
-          <Col span={8}>
-            <Statistic
-              title={<span style={{ fontSize: '11px' }}>总计</span>}
-              value={stats.token_stats.total_tokens}
-              valueStyle={{ fontSize: '16px' }}
-            />
-          </Col>
-        </Row>
-
-        {/* 预估费用 */}
-        <div style={{ 
-          marginTop: 12, 
-          padding: '8px 12px', 
-          background: colors.bgTertiary, 
-          border: `1px solid ${colors.borderSecondary}`,
-          borderRadius: '4px',
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'space-between'
-        }}>
-          <span style={{ fontSize: '12px', color: colors.textSecondary }}>
-            <DollarOutlined /> 预估费用
-          </span>
-          <span style={{ fontSize: '16px', fontWeight: 600, color: colors.statusTranslated }}>
-            {estimatedCost}
-          </span>
-        </div>
-
-        {/* 效率提示 */}
-        {savedApiCalls > 0 && (
-          <div style={{ 
-            marginTop: 12, 
-            padding: '8px 12px', 
-            background: colors.bgTertiary, 
-            border: `1px solid ${colors.borderSecondary}`,
-            borderRadius: '4px',
-            fontSize: '12px',
-            color: colors.textSecondary
-          }}>
-            💡 记忆库命中 <strong>{stats.tm_hits}</strong> 条，去重节省 <strong>{stats.deduplicated}</strong> 次，共节省 <strong>{savedApiCalls}</strong> 次API调用
-          </div>
-        )}
-      </div>
-    );
-  };
+  // ❌ 已删除 renderCurrentStats - "本次翻译"详细统计已移除，统一使用"本次会话统计"
 
   return (
     <>
@@ -351,6 +299,13 @@ export const AIWorkspace: React.FC<AIWorkspaceProps> = ({ stats, isTranslating, 
         
         <Divider style={{ margin: '12px 0' }} />
         
+        {/* 本次会话统计 */}
+        {renderSessionStats()}
+        
+        <Divider style={{ margin: '12px 0' }} />
+        
+        {/* ❌ 已移除"本次翻译"详细统计，统一使用"本次会话统计"展示 */}
+        
         {/* 风格总结展示 */}
         {termLibrary && termLibrary.style_summary && (
           <>
@@ -367,11 +322,12 @@ export const AIWorkspace: React.FC<AIWorkspaceProps> = ({ stats, isTranslating, 
                     </span>
                   ),
                   extra: (
-                    <Button
-                      type="link"
+                    <Button 
+                      type="link" 
                       size="small"
                       onClick={(e) => {
                         e.stopPropagation();
+                        setShouldLoadTerms(true);
                         setTermLibraryVisible(true);
                       }}
                       style={{ fontSize: '11px', padding: 0 }}
@@ -425,7 +381,10 @@ export const AIWorkspace: React.FC<AIWorkspaceProps> = ({ stats, isTranslating, 
               <Button
                 type="link"
                 size="small"
-                onClick={() => setTermLibraryVisible(true)}
+                onClick={() => {
+                  setShouldLoadTerms(true);
+                  setTermLibraryVisible(true);
+                }}
                 style={{ fontSize: '11px' }}
               >
                 管理
@@ -434,9 +393,6 @@ export const AIWorkspace: React.FC<AIWorkspaceProps> = ({ stats, isTranslating, 
             <Divider style={{ margin: '12px 0' }} />
           </>
         )}
-        
-        {/* 本次翻译 - 详细样式 */}
-        {renderCurrentStats()}
       </Card>
       <MemoryManager
         visible={memoryManagerVisible}
@@ -446,7 +402,7 @@ export const AIWorkspace: React.FC<AIWorkspaceProps> = ({ stats, isTranslating, 
         visible={termLibraryVisible}
         onClose={() => {
           setTermLibraryVisible(false);
-          loadTermLibrary(); // 关闭后重新加载术语库
+          mutateTermLibrary(); // 关闭后重新加载术语库
         }}
         apiKey={apiKey || ''}
       />

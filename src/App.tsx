@@ -18,11 +18,13 @@ import { useChannelTranslation } from './hooks/useChannelTranslation'; // Tauri 
 import { TranslationStats, POEntry } from './types/tauri';
 import { createModuleLogger } from './utils/logger';
 import { eventDispatcher } from './services/eventDispatcher';
-import { configApi, poFileApi, dialogApi, languageApi, translatorApi, aiConfigApi, apiClient, type LanguageInfo } from './services/api';
+import { poFileApi, dialogApi, languageApi, translatorApi, apiClient, type LanguageInfo } from './services/api';
+import { accumulateStats } from './utils/statsAggregator';
 import { ConfigSyncManager } from './services/configSync';
-import { notificationManager } from './utils/notificationManager'; // Tauri 2.x: Notification Plugin
 import './i18n/config';
 import './App.css';
+import { FileInfoBar } from './components/FileInfoBar';
+import { useAIConfigs } from './hooks/useConfig';
 
 const { Sider } = Layout;
 const log = createModuleLogger('App');
@@ -42,6 +44,8 @@ function App() {
     updateEntry,
     setTranslating,
     setProgress,
+    updateSessionStats, // 新增：会话统计
+    resetSessionStats,  // 任务开始时重置会话统计
   } = useSessionStore();
   
   // 注意：theme 由 useTheme hook 管理，language 由 i18n 管理
@@ -49,10 +53,17 @@ function App() {
   
   const { parsePOFile } = useTranslator();
   const channelTranslation = useChannelTranslation(); // Tauri 2.x: Channel API for high-performance batch translation
-  const [apiKey, setApiKey] = useState('');
   const [settingsVisible, setSettingsVisible] = useState(false);
   const [devToolsVisible, setDevToolsVisible] = useState(false);
   const [translationStats, setTranslationStats] = useState<TranslationStats | null>(null);
+  const aggregatedStatsRef = useRef<TranslationStats>({
+    total: 0,
+    tm_hits: 0,
+    deduplicated: 0,
+    ai_translated: 0,
+    tm_learned: 0,
+    token_stats: { input_tokens: 0, output_tokens: 0, total_tokens: 0, cost: 0 },
+  });
   const [leftWidth, setLeftWidth] = useState(35); // 左侧栏宽度百分比
   const [isResizing, setIsResizing] = useState(false);
   // 存储AI原译文，用于术语检测对比（key: 条目索引, value: AI译文）
@@ -69,6 +80,7 @@ function App() {
   
   // 配置同步管理器
   const configSyncRef = useRef<ConfigSyncManager | null>(null);
+  const configSyncInitialized = useRef(false); // 防止 StrictMode 重复初始化
   const [configSyncIssues, setConfigSyncIssues] = useState<string[]>([]);
   
   // 🌉 建立 Tauri 事件桥接
@@ -112,6 +124,13 @@ function App() {
 
   // 初始化配置同步管理器
   useEffect(() => {
+    // 防止 StrictMode 重复初始化
+    if (configSyncInitialized.current) {
+      log.debug('ConfigSync 已初始化，跳过重复初始化');
+      return;
+    }
+    configSyncInitialized.current = true;
+    
     const syncManager = new ConfigSyncManager();
     configSyncRef.current = syncManager;
     
@@ -121,43 +140,54 @@ function App() {
     });
     
     // 监听配置不一致事件
-    const unsubscribe = eventDispatcher.on('config:out-of-sync', (data) => {
+    const unsubscribe = eventDispatcher.on('config:out-of-sync', async (data) => {
       log.warn('⚠️ 检测到配置不一致', data);
       setConfigSyncIssues(data.issues || []);
+      // 自动触发一次后台→前端同步，避免用户手动点击
+      try {
+        if (configSyncRef.current) {
+          await configSyncRef.current.syncFromBackend();
+          setConfigSyncIssues([]);
+          message.success('配置已自动同步');
+        }
+      } catch (e) {
+        log.logError(e, '自动同步配置失败');
+      }
     });
     
     return () => {
-      syncManager.destroy();
+      // StrictMode 清理时不重置标志，避免重复初始化
+      // configSyncInitialized.current = false;
+      if (configSyncRef.current) {
+        configSyncRef.current.destroy();
+        configSyncRef.current = null;
+      }
       unsubscribe();
     };
   }, []);
 
-  // 加载配置并检查AI配置
+  // 使用 SWR 获取 AI 启用配置
+  const { active, loading: aiConfigLoading } = useAIConfigs();
+
+  // 注意：API Key 现在存储在 active.apiKey 中，不再使用顶层的 api_key
+
+  // 检查 AI 启用配置（等待 SWR 加载完成后再检查，避免误判）
   useEffect(() => {
-    const initApp = async () => {
-      await loadConfig();
-      
-      // 检查AI配置（使用ref防止重复执行）
-      if (!hasCheckedAIConfig.current) {
-        hasCheckedAIConfig.current = true;
-        
-        setTimeout(async () => {
-          try {
-            const activeConfig = await aiConfigApi.getActiveConfig();
-            if (!activeConfig) {
-              // 直接打开设置窗口，不显示消息
-              setSettingsVisible(true);
-              log.info('未检测到AI配置，已自动打开设置窗口');
-            }
-          } catch (error) {
-            log.logError(error, '检查AI配置失败');
-          }
-        }, 500); // 延迟500ms执行
-      }
-    };
+    // 只有在加载完成后才检查
+    if (aiConfigLoading) return;
     
-    initApp();
-  }, []);
+    // 如果还没检查过，且没有启用配置，则弹窗
+    if (!hasCheckedAIConfig.current && !active) {
+      hasCheckedAIConfig.current = true;
+      setSettingsVisible(true);
+      log.info('未检测到AI配置，已自动打开设置窗口');
+    }
+    
+    // 如果检测到有启用配置，标记为已检查
+    if (active) {
+      hasCheckedAIConfig.current = true;
+    }
+  }, [active, aiConfigLoading]);
 
   // 全局快捷键监听
   useEffect(() => {
@@ -200,13 +230,14 @@ function App() {
               setEntries(entries);
               setCurrentFilePath(filePath);
               log.info('通过拖放导入文件成功', { filePath });
-              alert(`成功导入文件: ${filePath.split(/[/\\]/).pop()}`);
+              // 静默提示，避免阻塞弹窗
+              console.info(`[DragDrop] 成功导入文件: ${filePath.split(/[/\\]/).pop()}`);
             } catch (error) {
               log.logError(error, '解析拖放文件失败');
-              alert(`文件解析失败：${error instanceof Error ? error.message : '未知错误'}`);
+              console.error('[DragDrop] 文件解析失败:', error);
             }
           } else {
-            alert('⚠️ 仅支持 .po 文件！');
+            console.warn('仅支持 .po 文件');
           }
         }
       });
@@ -223,20 +254,7 @@ function App() {
     };
   }, []); // 空依赖数组，只在组件挂载时设置一次监听器
 
-  const loadConfig = async () => {
-    try {
-      const config = await configApi.get();
-      if (config && typeof config === 'object' && 'api_key' in config) {
-        const apiKeyValue = (config as any).api_key;
-        if (apiKeyValue) {
-          setApiKey(apiKeyValue);
-        }
-        // 配置现在由 ConfigSyncManager 管理，无需手动同步
-      }
-    } catch (error) {
-      log.logError(error, '加载配置失败');
-    }
-  };
+  // 通过 SWR 读取配置，无需手动加载函数
 
   // Phase 5: 检测语言并设置默认目标语言
   const detectAndSetLanguages = async (entries: POEntry[]) => {
@@ -281,6 +299,8 @@ function App() {
         setEntries(entries);
         setCurrentFilePath(filePath);
         
+        // 按需求：会话仅在软件关闭时重置，这里不再清零
+        
         // Phase 5: 检测源语言并设置默认目标语言
         await detectAndSetLanguages(entries);
         
@@ -300,21 +320,9 @@ function App() {
 
   const translateAll = async () => {
     // 检查是否有启用的AI配置
-    try {
-      const activeConfig = await aiConfigApi.getActiveConfig();
-      if (!activeConfig) {
-        alert('请先在设置中配置并启用 AI 服务！');
-        setSettingsVisible(true);
-        return;
-      }
-    } catch (error) {
-      alert('无法获取AI配置，请先在设置中配置！');
+    if (!active || !active.apiKey) {
+      // 静默打开设置，避免阻塞弹窗
       setSettingsVisible(true);
-      return;
-    }
-
-    if (!apiKey) {
-      alert('请先在设置中配置 API 密钥！');
       return;
     }
 
@@ -323,32 +331,17 @@ function App() {
     );
 
     if (untranslatedEntries.length === 0) {
-      alert('没有需要翻译的条目！');
+      // ❌ 已移除提示弹窗，静默返回
       return;
     }
 
-    const confirmed = confirm(`即将翻译 ${untranslatedEntries.length} 个未翻译条目，是否继续？`);
-    if (!confirmed) {
-      return;
-    }
+    log.info('准备批量翻译', { 
+      totalEntries: entries.length, 
+      untranslatedCount: untranslatedEntries.length 
+    });
 
-    const success = await executeTranslation(untranslatedEntries, 'all');
-    
-    if (success && translationStats) {
-      const statsMsg = `
-📊 翻译统计：
-- 总条目：${translationStats.total}
-- 记忆库命中：${translationStats.tm_hits} 条
-- 去重后：${translationStats.deduplicated} 条
-- AI翻译：${translationStats.ai_translated} 条
-- 新学习：${translationStats.tm_learned} 条短语
-- Token消耗：${translationStats.token_stats.total_tokens} (¥${translationStats.token_stats.cost.toFixed(4)})
-
-节省了 ${translationStats.tm_hits + (translationStats.total - translationStats.deduplicated)} 次API调用！
-      `.trim();
-
-      alert(`翻译完成！\n\n${statsMsg}\n\n这些条目已标记为"待确认"，请检查后确认。`);
-    }
+    await executeTranslation(untranslatedEntries, 'all');
+    // ❌ 已移除翻译完成弹窗
   };
 
   // 保存到原文件
@@ -425,8 +418,9 @@ function App() {
     entriesToTranslate: POEntry[], 
     sourceType: 'all' | 'selected' = 'all'
   ) => {
-    if (!apiKey) {
-      message.warning('请先设置API密钥');
+    if (!active || !active.apiKey) {
+      message.warning('请先设置并启用AI配置');
+      setSettingsVisible(true);
       return false;
     }
 
@@ -436,7 +430,16 @@ function App() {
     
     let completedCount = 0;
     
+    log.debug('executeTranslation 开始', { 
+      entriesToTranslateCount: entriesToTranslate.length,
+      textsCount: texts.length,
+      useChannelAPI,
+      sourceType
+    });
+    
     try {
+      // 本次任务开始：重置会话统计，避免跨任务累积
+      resetSessionStats();
       setTranslating(true);
       setProgress(0);
       
@@ -447,7 +450,18 @@ function App() {
         source: sourceType 
       });
       
+      let finalStats: TranslationStats | null = null;
+      
       if (useChannelAPI) {
+        // 重置聚合器
+        aggregatedStatsRef.current = {
+          total: 0,
+          tm_hits: 0,
+          deduplicated: 0,
+          ai_translated: 0,
+          tm_learned: 0,
+          token_stats: { input_tokens: 0, output_tokens: 0, total_tokens: 0, cost: 0 },
+        };
         // ========== Tauri 2.x: 使用 Channel API (高性能) ==========
         const result = await channelTranslation.translateBatch(texts, targetLanguage, {
           onProgress: (current, _total, percentage) => {
@@ -456,54 +470,63 @@ function App() {
           },
           onStats: (stats) => {
             // 转换 Channel API 的统计格式到 TranslationStats
-            setTranslationStats({
+            const convertedStats = {
               ...stats,
               token_stats: {
                 total_tokens: stats.token_stats.total_tokens,
                 prompt_tokens: stats.token_stats.prompt_tokens,
                 completion_tokens: stats.token_stats.completion_tokens,
-                input_tokens: stats.token_stats.prompt_tokens, // Channel API uses prompt_tokens
-                output_tokens: stats.token_stats.completion_tokens, // Channel API uses completion_tokens
+                input_tokens: stats.token_stats.prompt_tokens, // map
+                output_tokens: stats.token_stats.completion_tokens, // map
                 cost: stats.token_stats.cost,
               },
+            } as TranslationStats;
+            setTranslationStats(convertedStats);
+          finalStats = convertedStats;
+            // 📈 聚合增量（按批），total 留到完成时统一赋值
+            aggregatedStatsRef.current = accumulateStats(aggregatedStatsRef.current, {
+              ...convertedStats,
+              total: 0,
             } as TranslationStats);
+          },
+          onItem: (index, translation) => {
+            // 🎯 实时写入待确认区
+            const entry = entriesToTranslate[index];
+            const entryIndex = entries.indexOf(entry);
+            
+            if (entryIndex >= 0) {
+              updateEntry(entryIndex, { 
+                msgstr: translation, 
+                needsReview: true 
+              });
+              
+              setAiTranslations(prev => {
+                const newMap = new Map(prev);
+                newMap.set(entryIndex, translation);
+                return newMap;
+              });
+              
+              log.debug('📝 实时写入待确认区', { 
+                index: entryIndex, 
+                msgid: entry.msgid.substring(0, 30) + '...',
+                translation: translation.substring(0, 30) + '...'
+              });
+            }
           },
         });
         
-        // 应用翻译结果
-        Object.entries(result.translations).forEach(([indexStr, translation]) => {
-          const index = parseInt(indexStr, 10);
-          const entry = entriesToTranslate[index];
-          const entryIndex = entries.indexOf(entry);
-          
-          if (entryIndex >= 0) {
-            updateEntry(entryIndex, { 
-              msgstr: translation, 
-              needsReview: true 
-            });
-            
-            setAiTranslations(prev => {
-              const newMap = new Map(prev);
-              newMap.set(entryIndex, translation);
-              return newMap;
-            });
-          }
+        // ✅ onItem 已实时写入，这里只确保统计完整
+        log.info('📦 Channel API 批量翻译完成', { 
+          totalTranslations: Object.keys(result.translations).length,
+          completedCount 
         });
         
-        // 确保统计已设置（通过 onStats 回调）
-        if (!translationStats) {
-          setTranslationStats({
-            ...result.stats,
-            token_stats: {
-              total_tokens: result.stats.token_stats.total_tokens,
-              prompt_tokens: result.stats.token_stats.prompt_tokens,
-              completion_tokens: result.stats.token_stats.completion_tokens,
-              input_tokens: result.stats.token_stats.prompt_tokens,
-              output_tokens: result.stats.token_stats.completion_tokens,
-              cost: result.stats.token_stats.cost,
-            },
-          } as TranslationStats);
-        }
+        // 用聚合结果作为最终统计，统一设置 total
+        finalStats = {
+          ...aggregatedStatsRef.current,
+          total: texts.length,
+        } as TranslationStats;
+        setTranslationStats(finalStats);
         
       } else {
         // ========== 传统: 使用 Event API ==========
@@ -533,30 +556,35 @@ function App() {
         
         const unsubStats = eventDispatcher.on('translation:stats', (stats) => {
           setTranslationStats(stats);
+          finalStats = stats; // 记录最终统计
         });
         
-        await translatorApi.translateBatch(texts, targetLanguage);
+        const result = await translatorApi.translateBatch(texts, targetLanguage);
         
         unsubProgress();
         unsubStats();
+        
+        // 从返回值获取最终统计（优先级更高）
+        if (result?.stats) {
+          finalStats = result.stats;
+          setTranslationStats(finalStats);
+        }
       }
       
-      // 触发翻译完成事件
+      // 📊 更新会话统计（本次会话聚合）
+      if (finalStats) {
+        updateSessionStats(finalStats);
+        log.info('📊 会话统计已更新', { sessionStats: finalStats });
+      }
+      
+      // 触发翻译完成事件（使用 finalStats，确保有数据）
       await eventDispatcher.emit('translation:after', { 
         success: true, 
-        stats: translationStats || undefined 
+        stats: finalStats || undefined 
       });
       log.info('✅ 翻译完成', { count: completedCount, api: useChannelAPI ? 'Channel' : 'Event' });
       
-      // 📬 发送完成通知
-      if (translationStats) {
-        const failedCount = translationStats.total - translationStats.ai_translated - translationStats.tm_hits;
-        await notificationManager.batchTranslationComplete(
-          translationStats.total,
-          translationStats.ai_translated + translationStats.tm_hits,
-          failedCount
-        );
-      }
+      // ❌ 已移除翻译完成通知弹窗
       
       return true; // 成功
     } catch (error) {
@@ -586,15 +614,8 @@ function App() {
   // 翻译选中的条目
   const handleTranslateSelected = async (indices: number[]) => {
     // 检查是否有启用的AI配置
-    try {
-      const activeConfig = await aiConfigApi.getActiveConfig();
-      if (!activeConfig) {
-        message.warning('请先在设置中配置并启用 AI 服务！');
-        setSettingsVisible(true);
-        return;
-      }
-    } catch (error) {
-      message.warning('无法获取AI配置，请先在设置中配置！');
+    if (!active) {
+      message.warning('请先在设置中配置并启用 AI 服务！');
       setSettingsVisible(true);
       return;
     }
@@ -605,24 +626,15 @@ function App() {
       return;
     }
 
-    const success = await executeTranslation(selectedEntries, 'selected');
-    if (success) {
-      message.success(`翻译完成！共翻译 ${selectedEntries.length} 个条目`);
-    }
+    await executeTranslation(selectedEntries, 'selected');
+    // ❌ 已移除翻译完成提示
   };
 
   // Phase 7: 精翻选中的条目（Contextual Refine）
   const handleContextualRefine = async (indices: number[]) => {
     // 检查是否有启用的AI配置
-    try {
-      const activeConfig = await aiConfigApi.getActiveConfig();
-      if (!activeConfig) {
-        message.warning('请先在设置中配置并启用 AI 服务！');
-        setSettingsVisible(true);
-        return;
-      }
-    } catch (error) {
-      message.warning('无法获取AI配置，请先在设置中配置！');
+    if (!active || !active.apiKey) {
+      message.warning('请先在设置中配置并启用 AI 服务！');
       setSettingsVisible(true);
       return;
     }
@@ -634,12 +646,6 @@ function App() {
 
     if (selectedEntries.length === 0) {
       message.info('选中的条目中没有待确认的项');
-      return;
-    }
-
-    if (!apiKey) {
-      message.error('请先在设置中配置 API Key');
-      setSettingsVisible(true);
       return;
     }
 
@@ -676,7 +682,7 @@ function App() {
         });
       });
 
-      message.success(`精翻完成！共处理 ${results.length} 个条目`);
+      // ❌ 已移除精翻完成提示
       log.info('[精翻] 完成', { count: results.length });
 
     } catch (error) {
@@ -750,8 +756,8 @@ function App() {
           onTranslateAll={translateAll}
           onSettings={handleSettings}
           onDevTools={handleDevTools}
-          apiKey={apiKey}
-          onApiKeyChange={setApiKey}
+          apiKey={active?.apiKey || ''}
+          onApiKeyChange={() => {}} // API Key 现在由配置管理，不再支持直接修改
           isTranslating={isTranslating}
           hasEntries={entries.length > 0}
           isDarkMode={isDark}
@@ -877,7 +883,7 @@ function App() {
               entry={currentEntry}
               onEntryUpdate={updateEntry}
               aiTranslation={currentIndex >= 0 ? aiTranslations.get(currentIndex) : undefined}
-              apiKey={apiKey}
+              apiKey={active?.apiKey || ''}
             />
           </ErrorBoundary>
         </div>
@@ -907,7 +913,7 @@ function App() {
               stats={translationStats} 
               isTranslating={isTranslating}
               onResetStats={handleResetStats}
-              apiKey={apiKey}
+              apiKey={active?.apiKey || ''}
             />
           </ErrorBoundary>
         </Sider>
@@ -926,6 +932,8 @@ function App() {
           onClose={() => setDevToolsVisible(false)}
         />
       </ErrorBoundary>
+      {/* 文件信息栏：展示格式与元数据 */}
+      <FileInfoBar filePath={currentFilePath} />
     </Layout>
     </div>
     </ConfigProvider>

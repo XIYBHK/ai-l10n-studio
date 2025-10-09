@@ -8,6 +8,9 @@
 import { create } from 'zustand';
 import { TranslationStats } from '../types/tauri';
 import { tauriStore } from './tauriStore';
+import { createModuleLogger } from '../utils/logger';
+
+const log = createModuleLogger('useStatsStore');
 
 interface StatsState {
   // 累计统计
@@ -39,20 +42,50 @@ export const useStatsStore = create<StatsState>()((set, get) => ({
   // Actions (持久化到 TauriStore)
   updateCumulativeStats: (stats) => {
     const { cumulativeStats } = get();
-    const newStats = {
-      total: cumulativeStats.total + stats.total,
-      tm_hits: cumulativeStats.tm_hits + stats.tm_hits,
-      deduplicated: cumulativeStats.deduplicated + stats.deduplicated,
-      ai_translated: cumulativeStats.ai_translated + stats.ai_translated,
+    // 防御：确保所有字段有默认值，避免 NaN
+    const delta = {
+      total: stats.total ?? 0,
+      tm_hits: stats.tm_hits ?? 0,
+      deduplicated: stats.deduplicated ?? 0,
+      ai_translated: stats.ai_translated ?? 0,
       token_stats: {
-        input_tokens: cumulativeStats.token_stats.input_tokens + stats.token_stats.input_tokens,
-        output_tokens: cumulativeStats.token_stats.output_tokens + stats.token_stats.output_tokens,
-        total_tokens: cumulativeStats.token_stats.total_tokens + stats.token_stats.total_tokens,
-        cost: cumulativeStats.token_stats.cost + stats.token_stats.cost,
+        input_tokens: stats.token_stats?.input_tokens ?? 0,
+        output_tokens: stats.token_stats?.output_tokens ?? 0,
+        total_tokens: stats.token_stats?.total_tokens ?? 0,
+        cost: stats.token_stats?.cost ?? 0,
       },
-      tm_learned: cumulativeStats.tm_learned + stats.tm_learned,
+      tm_learned: stats.tm_learned ?? 0,
+    } as TranslationStats;
+    log.debug('累计统计 +delta', {
+      total: delta.total,
+      tm_hits: delta.tm_hits,
+      deduplicated: delta.deduplicated,
+      ai_translated: delta.ai_translated,
+      tokens: delta.token_stats.total_tokens,
+      cost: delta.token_stats.cost,
+    });
+    const newStats = {
+      total: cumulativeStats.total + delta.total,
+      tm_hits: cumulativeStats.tm_hits + delta.tm_hits,
+      deduplicated: cumulativeStats.deduplicated + delta.deduplicated,
+      ai_translated: cumulativeStats.ai_translated + delta.ai_translated,
+      token_stats: {
+        input_tokens: cumulativeStats.token_stats.input_tokens + delta.token_stats.input_tokens,
+        output_tokens: cumulativeStats.token_stats.output_tokens + delta.token_stats.output_tokens,
+        total_tokens: cumulativeStats.token_stats.total_tokens + delta.token_stats.total_tokens,
+        cost: cumulativeStats.token_stats.cost + delta.token_stats.cost,
+      },
+      tm_learned: cumulativeStats.tm_learned + delta.tm_learned,
     };
     set({ cumulativeStats: newStats });
+    log.info('累计统计 => new', {
+      total: newStats.total,
+      tm_hits: newStats.tm_hits,
+      deduplicated: newStats.deduplicated,
+      ai_translated: newStats.ai_translated,
+      tokens: newStats.token_stats.total_tokens,
+      cost: newStats.token_stats.cost,
+    });
     
     // 异步保存到 TauriStore
     tauriStore.updateCumulativeStats({
@@ -68,6 +101,7 @@ export const useStatsStore = create<StatsState>()((set, get) => ({
   
   resetCumulativeStats: () => {
     set({ cumulativeStats: initialStats });
+    log.warn('累计统计已重置为 0');
     // 异步保存到 TauriStore
     tauriStore.updateCumulativeStats({
       totalTranslated: 0,

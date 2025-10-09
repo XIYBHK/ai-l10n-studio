@@ -169,8 +169,8 @@ export const MenuBar: React.FC<MenuBarProps> = ({
         <Button 
           icon={<CodeOutlined />}
           onClick={() => {
-            // 提示用户按 F12
-            alert('按 F12 键打开浏览器开发者工具查看前端日志\n\n或者右键点击页面 → 检查元素 → Console 标签');
+            // 仅日志提示，避免阻塞弹窗
+            console.info('[DevTools] 按 F12 打开开发者工具，或右键 → 检查 → Console');
           }}
           size="middle"
           type="text"

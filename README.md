@@ -24,20 +24,69 @@
 
 ### 环境要求
 
-- **Node.js** >= 18.0.0
-- **Rust** >= 1.70.0
-- **npm/pnpm/yarn**
+- **Node.js** >= 18.18.0（建议 20 LTS）
+- **npm** >= 9 或 **pnpm**/**yarn**（任选其一）
+- **Rust toolchain**（stable；Windows 建议通过 Rustup 安装）
+- **Tauri 2 依赖**：
+  - Windows: Microsoft Visual Studio C++ 生成工具（含 Desktop development with C++）
+  - macOS: Xcode（含命令行工具）
+  - Linux: `libgtk-3-dev`、`webkit2gtk` 等（参考 Tauri 官方）
 
 ### 安装
 
 ```bash
 # 克隆仓库
 git clone <repository-url>
-cd po-translator-gui
+cd ai-l10n-studio
 
 # 安装依赖
 npm install
+
+# 如需指定国内镜像
+# npm config set registry https://registry.npmmirror.com
 ```
+
+### 安装 Rust 与平台依赖（必读）
+
+> 首次开发前，请完成本节。Tauri 需要 Rust 和平台原生依赖。
+
+1) 安装 Rust（使用 rustup）
+
+- Windows（PowerShell）
+```powershell
+winget install --id Rustlang.Rustup -e
+rustup default stable
+rustup update
+```
+
+- macOS / Linux（终端）
+```bash
+curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh
+rustup default stable
+rustup update
+```
+
+2) 安装平台依赖（Tauri 2）
+
+- Windows：安装 Visual Studio Build Tools，并勾选「使用 C++ 的桌面开发」工作负载。
+- macOS：安装 Xcode 与命令行工具：
+```bash
+xcode-select --install
+```
+- Linux（以 Debian/Ubuntu 为例）：
+```bash
+sudo apt update
+sudo apt install -y libwebkit2gtk-4.1-dev libgtk-3-dev libayatana-appindicator3-dev librsvg2-dev build-essential
+```
+（其他发行版请参考 Tauri 官方文档，确保安装 WebKitGTK 与 GTK3 等开发包）
+
+3) 验证安装
+```bash
+node --version
+rustc --version
+cargo --version
+```
+若 `rustc` / `cargo` 未找到，Windows 请确认 PATH 包含 `%USERPROFILE%\.cargo\bin`，并重启终端/IDE。
 
 ### 开发模式
 
@@ -51,6 +100,14 @@ npm run tauri:dev
 ```bash
 # 构建可执行文件
 npm run tauri:build
+```
+### 常见环境问题
+
+1) Windows 缺少 C++ 构建工具：请安装 Visual Studio Build Tools，选择 “使用 C++ 的桌面开发”。
+2) macOS 缺少 CLT：运行 `xcode-select --install`。
+3) Linux 缺少 GTK/WebKit：参考 Tauri 文档安装 `webkit2gtk`、`libgtk-3-dev` 等。
+4) Rust 版本过旧：`rustup update stable`。
+
 ```
 
 ## 📖 使用指南
@@ -143,7 +200,7 @@ npm run tauri:build
 ## 🏗️ 项目结构
 
 ```
-po-translator-gui/
+ai-l10n-studio/
 ├── src/                    # 前端代码 (React + TypeScript)
 │   ├── components/        # UI 组件
 │   │   ├── MenuBar.tsx   # 工具栏
@@ -171,15 +228,15 @@ po-translator-gui/
 
 ## 🧪 测试
 
-详细测试指南请参考 [TESTING_GUIDE.md](./TESTING_GUIDE.md)
-
 ```bash
-# 运行开发模式
-npm run tauri:dev
-
-# 构建测试
-npm run tauri:build
+# 前端单测（Vitest）
+npm run test
+npm run test:ui
+npm run test:run
+npm run test:coverage
 ```
+
+更多说明参见 docs/README.md 与 docs/API.md。
 
 ## 📚 技术栈
 
@@ -294,7 +351,7 @@ cargo clean
 
 ## 📝 许可证
 
-[MIT License](../LICENSE)
+[MIT License](./LICENSE)
 
 ## 🙏 致谢
 

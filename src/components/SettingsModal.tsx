@@ -34,6 +34,7 @@ import { aiConfigApi, systemPromptApi } from '../services/api';
 import { AIConfig, ProviderType } from '../types/aiProvider';
 import { createModuleLogger } from '../utils/logger';
 import { useAsync } from '../hooks/useAsync';
+import { useAIConfigs, useSystemPrompt } from '../hooks/useConfig';
 import i18n from '../i18n/config'; // Phase 6
 import { notificationManager } from '../utils/notificationManager'; // Tauri 2.x: Notification
 
@@ -101,7 +102,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
   onClose,
 }) => {
   const [form] = Form.useForm();
-  const [configs, setConfigs] = useState<AIConfig[]>([]);
+  const { configs, active, mutateAll, mutateActive } = useAIConfigs();
   const [activeIndex, setActiveIndex] = useState<number | null>(null);
   const [editingIndex, setEditingIndex] = useState<number | null>(null);
   const [isAddingNew, setIsAddingNew] = useState(false);
@@ -118,45 +119,26 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
   const [notificationEnabled, setNotificationEnabled] = useState(notificationManager.isEnabled());
   
   // 异步操作hooks
-  const { execute: loadPrompt } = useAsync(systemPromptApi.getPrompt);
+  const { prompt, mutate: mutatePrompt } = useSystemPrompt();
   const { execute: savePrompt, loading: savingPrompt } = useAsync(systemPromptApi.updatePrompt);
   const { execute: resetPrompt, loading: resettingPrompt } = useAsync(systemPromptApi.resetPrompt);
 
   useEffect(() => {
     if (visible) {
-      loadConfigs();
-      loadSystemPrompt();
-    }
-  }, [visible]);
-  
-  const loadSystemPrompt = async () => {
-    try {
-      const prompt = await loadPrompt();
+      // SWR 自动加载
       setSystemPrompt(prompt || '');
       setIsPromptModified(false);
-    } catch (error) {
-      log.logError(error, '加载系统提示词失败');
-    }
-  };
-
-  const loadConfigs = async () => {
-    try {
-      const allConfigs = await aiConfigApi.getAllConfigs();
-      setConfigs(allConfigs);
-      
-      const activeConfig = await aiConfigApi.getActiveConfig();
-      if (activeConfig) {
-        const index = allConfigs.findIndex(
-          c => c.provider === activeConfig.provider && c.apiKey === activeConfig.apiKey
-        );
-        setActiveIndex(index >= 0 ? index : null);
+      // 计算当前 activeIndex
+      if (active) {
+        const idx = configs.findIndex(c => c.provider === active.provider && c.apiKey === active.apiKey);
+        setActiveIndex(idx >= 0 ? idx : null);
+      } else {
+        setActiveIndex(null);
       }
-      
-      log.info('配置加载成功', { count: allConfigs.length, activeIndex });
-    } catch (error) {
-      log.logError(error, '加载配置失败');
     }
-  };
+  }, [visible, prompt, active, configs]);
+  
+  // 加载由 SWR 负责
 
   const handleProviderChange = (provider: ProviderType) => {
     const providerConfig = PROVIDER_CONFIGS.find(p => p.value === provider);
@@ -189,12 +171,14 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
     setEditingIndex(index);
     setIsAddingNew(false);
     
+    // 安全日志：不输出敏感信息
     log.info('编辑配置', { 
       index, 
       provider: config.provider,
       hasApiKey: !!config.apiKey,
+      apiKeyLength: config.apiKey?.length || 0,
       baseUrl: config.baseUrl,
-      model: config.model
+      model: config.model,
     });
     
     // 直接使用用户保存的值，不填充默认值
@@ -214,7 +198,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
     // 强制刷新表单显示
     setTimeout(() => {
       form.validateFields().catch(() => {});
-    }, 0);
+    }, 100);
   };
 
   const handleSaveConfig = async () => {
@@ -222,7 +206,8 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
       const values = await form.validateFields();
       const config: AIConfig = {
         provider: values.provider,
-        apiKey: values.apiKey,
+        // 留空表示不变，避免把密钥覆盖为空字符串
+        apiKey: values.apiKey || undefined,
         baseUrl: values.baseUrl || undefined,
         model: values.model || undefined,
         proxy: values.proxy?.enabled ? {
@@ -235,17 +220,24 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
       if (isAddingNew) {
         await aiConfigApi.addConfig(config);
         message.success('添加配置成功');
+        
+        // 刷新配置列表
+        await mutateAll();
+        
+        // 如果是第一个配置，自动设为启用
+        const updatedConfigs = await aiConfigApi.getAllConfigs();
+        if (updatedConfigs.length === 1) {
+          await aiConfigApi.setActiveConfig(0);
+          setActiveIndex(0);
+          await mutateActive();
+          message.success('已自动设为启用配置', 2);
+        }
       } else if (editingIndex !== null) {
         await aiConfigApi.updateConfig(editingIndex, config);
         message.success('更新配置成功');
-      }
-
-      // 使用try-catch包裹配置重载，防止错误导致黑屏
-      try {
-        await loadConfigs();
-      } catch (reloadError) {
-        log.logError(reloadError, '重新加载配置失败');
-        // 即使重载失败也不影响用户操作
+        
+        await mutateAll();
+        await mutateActive();
       }
       
       setIsAddingNew(false);
@@ -258,6 +250,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
       message.error(`保存配置失败: ${errorMsg}`);
     }
   };
+
 
   const handleDelete = async (index: number) => {
     try {
@@ -274,7 +267,8 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
         setEditingIndex(editingIndex - 1);
       }
       
-      await loadConfigs();
+      await mutateAll();
+      await mutateActive();
       log.info('配置删除成功', { index });
     } catch (error) {
       log.logError(error, '删除配置失败');
@@ -288,6 +282,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
       setActiveIndex(index);
       message.success('设置启用配置成功');
       log.info('设置启用配置成功', { index });
+      await mutateActive();
     } catch (error) {
       log.logError(error, '设置启用配置失败');
       message.error('设置启用配置失败');
@@ -346,6 +341,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
       setIsPromptModified(false);
       message.success('系统提示词已保存');
       log.info('系统提示词已保存');
+      await mutatePrompt();
     } catch (error) {
       log.logError(error, '保存系统提示词失败');
     }
@@ -354,7 +350,8 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
   const handleResetPrompt = async () => {
     try {
       await resetPrompt();
-      await loadSystemPrompt();
+      await mutatePrompt();
+      setSystemPrompt(prompt || '');
       message.success('系统提示词已重置为默认值');
       log.info('系统提示词已重置');
     } catch (error) {
@@ -468,7 +465,6 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                     description={
                       <div style={{ fontSize: '12px', color: '#666' }}>
                         <div>模型: {config.model || '(未设置)'}</div>
-                        <div>API: {config.baseUrl || '(使用默认)'}</div>
                         {config.proxy?.enabled && (
                           <div>代理: {config.proxy.host}:{config.proxy.port}</div>
                         )}

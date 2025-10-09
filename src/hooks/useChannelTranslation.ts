@@ -21,6 +21,7 @@ import { useState, useCallback, useRef } from 'react';
 import { Channel } from '@tauri-apps/api/core';
 import { invoke } from '@tauri-apps/api/core';
 import { createModuleLogger } from '../utils/logger';
+import { eventDispatcher } from '../services/eventDispatcher';
 
 const log = createModuleLogger('useChannelTranslation');
 
@@ -72,6 +73,7 @@ export interface BatchResult {
 export interface TranslationCallbacks {
   onProgress?: (current: number, total: number, percentage: number) => void;
   onStats?: (stats: BatchStatsEvent) => void;
+  onItem?: (index: number, translation: string) => void;
 }
 
 // ========== Hook ==========
@@ -116,16 +118,34 @@ export const useChannelTranslation = () => {
       const statsChannel = new Channel<BatchStatsEvent>();
 
       // 监听进度更新
-      progressChannel.onmessage = (progressEvent) => {
-        log.debug('📊 进度更新:', progressEvent);
-        setProgress(progressEvent);
+      progressChannel.onmessage = (progressEvent: any) => {
+        // 兼容后端字段：processed/current、current_item/text
+        const currentRaw = (progressEvent.current ?? progressEvent.processed ?? 0) as number;
+        const total = (progressEvent.total ?? 0) as number;
+        const percentage = (progressEvent.percentage ?? 0) as number;
+        const text = (progressEvent.text ?? progressEvent.current_item) as string | undefined;
+        const index = (progressEvent.index ?? null) as number | null;
+
+        // 进度单调递增，避免回退
+        const monotonicCurrent = Math.max(progress.current ?? 0, currentRaw);
+        const normalized = { current: monotonicCurrent, total, percentage, text } as any;
+        log.debug('📊 进度更新:', normalized);
+        setProgress(normalized);
+        // 向全局事件总线广播，便于 DevTools/StatsManager 监听
+        eventDispatcher.emit('translation:progress', {
+          current: monotonicCurrent,
+          total,
+          percentage,
+          index: index ?? -1,
+          text,
+        });
         
         if (callbacksRef.current.onProgress) {
-          callbacksRef.current.onProgress(
-            progressEvent.current,
-            progressEvent.total,
-            progressEvent.percentage
-          );
+          callbacksRef.current.onProgress(monotonicCurrent, total, percentage);
+        }
+
+        if (callbacksRef.current.onItem && index !== null && typeof text === 'string') {
+          callbacksRef.current.onItem(index, text);
         }
       };
 
@@ -133,6 +153,20 @@ export const useChannelTranslation = () => {
       statsChannel.onmessage = (statsEvent) => {
         log.debug('📈 统计更新:', statsEvent);
         setStats(statsEvent);
+        // 广播批次统计事件（Channel 路径）
+        eventDispatcher.emit('translation:stats', {
+          total: 0,
+          tm_hits: statsEvent.tm_hits,
+          deduplicated: statsEvent.deduplicated,
+          ai_translated: statsEvent.ai_translated,
+          tm_learned: 0,
+          token_stats: {
+            input_tokens: statsEvent.token_stats.prompt_tokens,
+            output_tokens: statsEvent.token_stats.completion_tokens,
+            total_tokens: statsEvent.token_stats.total_tokens,
+            cost: statsEvent.token_stats.cost,
+          },
+        } as any);
         
         if (callbacksRef.current.onStats) {
           callbacksRef.current.onStats(statsEvent);

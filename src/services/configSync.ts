@@ -31,6 +31,7 @@ interface ConfigValidationResult {
 class ConfigSyncManager {
   private currentVersion: ConfigVersion | null = null;
   private validationInterval: number | null = null;
+  private unsubscribeConfigChanges: (() => void) | null = null;
   private readonly VALIDATION_INTERVAL_MS = 5000; // 5秒验证一次
 
   /**
@@ -169,7 +170,7 @@ class ConfigSyncManager {
    */
   private subscribeToConfigChanges(): void {
     // 当配置被修改时，立即同步
-    eventDispatcher.on('config:updated', async () => {
+    this.unsubscribeConfigChanges = eventDispatcher.on('config:updated', async () => {
       log.info('🔄 检测到配置变更，正在同步...');
       await this.syncFromBackend();
     });
@@ -187,6 +188,10 @@ class ConfigSyncManager {
    */
   destroy(): void {
     this.stopValidation();
+    if (this.unsubscribeConfigChanges) {
+      this.unsubscribeConfigChanges();
+      this.unsubscribeConfigChanges = null;
+    }
     log.info('🧹 配置同步管理器已清理');
   }
 }

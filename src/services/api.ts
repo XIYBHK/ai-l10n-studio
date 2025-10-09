@@ -56,7 +56,17 @@ export async function invoke<T>(
     });
 
     if (!silent) {
-      log.debug(`📥 API响应: ${command}`, result);
+      // 对于大型数组响应，只打印摘要信息
+      if (Array.isArray(result) && result.length > 10) {
+        log.debug(`📥 API响应: ${command}`, {
+          type: 'Array',
+          length: result.length,
+          first: result[0],
+          last: result[result.length - 1]
+        });
+      } else {
+        log.debug(`📥 API响应: ${command}`, result);
+      }
     }
 
     return result;

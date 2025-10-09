@@ -26,6 +26,8 @@ pub struct BatchProgressEvent {
     pub percentage: f32,
     /// 预估剩余时间（秒）
     pub estimated_remaining_seconds: Option<f32>,
+    /// 当前项索引（用于实时写入待确认区）
+    pub index: Option<usize>,
 }
 
 impl BatchProgressEvent {
@@ -43,6 +45,25 @@ impl BatchProgressEvent {
             current_item,
             percentage,
             estimated_remaining_seconds: None,
+            index: None,
+        }
+    }
+    
+    /// 创建带索引的进度事件
+    pub fn with_index(processed: usize, total: usize, current_item: Option<String>, index: usize) -> Self {
+        let percentage = if total > 0 {
+            (processed as f32 / total as f32) * 100.0
+        } else {
+            0.0
+        };
+
+        Self {
+            processed,
+            total,
+            current_item,
+            percentage,
+            estimated_remaining_seconds: None,
+            index: Some(index),
         }
     }
 
@@ -75,6 +96,8 @@ pub struct TokenStatsEvent {
     pub prompt_tokens: usize,
     pub completion_tokens: usize,
     pub total_tokens: usize,
+    /// 费用（人民币元）
+    pub cost: f64,
 }
 
 /// 批量翻译进度管理器

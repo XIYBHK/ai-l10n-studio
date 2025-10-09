@@ -5,6 +5,7 @@ import { save, open } from '@tauri-apps/plugin-dialog';
 import { writeTextFile, readTextFile } from '@tauri-apps/plugin-fs';
 import { translationMemoryApi } from '../services/api';
 import { createModuleLogger } from '../utils/logger';
+import { useTranslationMemory } from '../hooks/useTranslationMemory';
 
 const log = createModuleLogger('MemoryManager');
 
@@ -22,6 +23,7 @@ interface MemoryManagerProps {
 export const MemoryManager: React.FC<MemoryManagerProps> = ({ visible, onClose }) => {
   const [memories, setMemories] = useState<MemoryEntry[]>([]);
   const [loading, setLoading] = useState(false);
+  const { tm, isLoading: loadingTM, mutate } = useTranslationMemory();
   const [searchText, setSearchText] = useState('');
   const [newSource, setNewSource] = useState('');
   const [newTarget, setNewTarget] = useState('');
@@ -29,9 +31,16 @@ export const MemoryManager: React.FC<MemoryManagerProps> = ({ visible, onClose }
 
   useEffect(() => {
     if (visible) {
-      loadMemories();
+      if (tm && (tm as any).memory) {
+        const entries: MemoryEntry[] = Object.entries((tm as any).memory)
+          .map(([source, target], index) => ({ key: `${index}`, source, target: target as string }));
+        setMemories(entries);
+        log.info('记忆库加载成功', { count: entries.length });
+      } else if (!loadingTM) {
+        setMemories([]);
+      }
     }
-  }, [visible]);
+  }, [visible, tm, loadingTM]);
 
   // 计算Table高度，根据窗口高度自适应
   useEffect(() => {
@@ -53,32 +62,7 @@ export const MemoryManager: React.FC<MemoryManagerProps> = ({ visible, onClose }
     }
   }, [visible]);
 
-  const loadMemories = async () => {
-    setLoading(true);
-    try {
-      const tm = await translationMemoryApi.get() as any;
-      if (tm && tm.memory) {
-        const entries: MemoryEntry[] = Object.entries(tm.memory)
-          .map(([source, target], index) => ({
-            key: `${index}`,
-            source,
-            target: target as string,
-          }));
-        setMemories(entries);
-        log.info('记忆库加载成功', { count: entries.length });
-      } else {
-        // 空记忆库也是正常情况
-        setMemories([]);
-        log.info('记忆库为空');
-      }
-    } catch (error) {
-      log.logError(error, '加载记忆库失败');
-      // 加载失败时至少显示空列表
-      setMemories([]);
-    } finally {
-      setLoading(false);
-    }
-  };
+  // 读取交由 SWR；此处保留写操作
 
   const handleSave = async () => {
     setLoading(true);
@@ -100,6 +84,7 @@ export const MemoryManager: React.FC<MemoryManagerProps> = ({ visible, onClose }
 
       message.success('记忆库已保存');
       log.info('记忆库保存成功', { count: memories.length });
+      await mutate();
       onClose();
     } catch (error) {
       log.logError(error, '保存记忆库失败');
@@ -133,8 +118,7 @@ export const MemoryManager: React.FC<MemoryManagerProps> = ({ visible, onClose }
       log.info('记忆库已清空');
     } catch (error) {
       log.logError(error, '清空记忆库失败');
-      // 失败时重新加载
-      loadMemories();
+      await mutate();
     } finally {
       setLoading(false);
     }

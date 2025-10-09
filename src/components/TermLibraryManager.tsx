@@ -7,10 +7,11 @@ import {
   BookOutlined,
   ThunderboltOutlined 
 } from '@ant-design/icons';
-import { invoke } from '@tauri-apps/api/core';
-import { TermLibrary, TermEntry } from '../types/termLibrary';
+import { TermEntry } from '../types/termLibrary';
+import { useTermLibrary } from '../hooks/useTermLibrary';
 import { useTheme } from '../hooks/useTheme';
 import { createModuleLogger } from '../utils/logger';
+import { termLibraryApi } from '../services/api';
 
 const { TextArea } = Input;
 const log = createModuleLogger('TermLibraryManager');
@@ -31,40 +32,24 @@ export const TermLibraryManager: React.FC<TermLibraryManagerProps> = ({
   onClose,
   apiKey,
 }) => {
-  const [library, setLibrary] = useState<TermLibrary | null>(null);
+  const { termLibrary: library, refresh, mutate } = useTermLibrary({ enabled: visible });
   const [loading, setLoading] = useState(false);
   const [editingKey, setEditingKey] = useState<string>('');
   const [editingTerm, setEditingTerm] = useState<EditingTerm | null>(null);
   const { colors } = useTheme();
 
-  // 加载术语库
-  const loadLibrary = async () => {
-    setLoading(true);
-    try {
-      const { termLibraryApi } = await import('../services/api');
-      const lib = await termLibraryApi.get() as TermLibrary;
-      setLibrary(lib);
-      log.debug('术语库加载成功', { termCount: lib.terms.length });
-    } catch (error) {
-      log.logError(error, '加载术语库失败');
-      message.error('加载术语库失败');
-    } finally {
-      setLoading(false);
-    }
-  };
-
   useEffect(() => {
     if (visible) {
-      loadLibrary();
+      refresh();
     }
-  }, [visible]);
+  }, [visible, refresh]);
 
   // 删除术语
   const handleDelete = async (source: string) => {
     try {
-      await invoke('remove_term_from_library', { source });
+      await termLibraryApi.removeTerm(source);
       message.success('术语已删除');
-      loadLibrary();
+      await mutate();
     } catch (error) {
       log.logError(error, '删除术语失败');
       message.error('删除术语失败');
@@ -85,10 +70,10 @@ export const TermLibraryManager: React.FC<TermLibraryManagerProps> = ({
     if (!editingTerm) return;
 
     try {
-      const original = library?.terms.find(t => t.source === editingKey);
+      const original = library?.terms.find((t: TermEntry) => t.source === editingKey);
       if (!original) return;
 
-      await invoke('add_term_to_library', {
+      await termLibraryApi.addTerm({
         source: editingTerm.source,
         userTranslation: editingTerm.user_translation,
         aiTranslation: original.ai_translation,
@@ -98,7 +83,7 @@ export const TermLibraryManager: React.FC<TermLibraryManagerProps> = ({
       message.success('术语已更新');
       setEditingKey('');
       setEditingTerm(null);
-      loadLibrary();
+      await mutate();
     } catch (error) {
       log.logError(error, '更新术语失败');
       message.error('更新术语失败');
@@ -121,10 +106,11 @@ export const TermLibraryManager: React.FC<TermLibraryManagerProps> = ({
     log.info('开始生成风格总结', { termCount: library?.metadata.total_terms || 0 });
     setLoading(true);
     try {
-      const summary = await invoke<string>('generate_style_summary', { apiKey });
-      log.info('风格总结生成成功', { summary: summary.substring(0, 50) + '...' });
+      const summary = await termLibraryApi.generateStyleSummary(apiKey);
+      const summaryText = typeof summary === 'string' ? summary : String(summary);
+      log.info('风格总结生成成功', { summary: summaryText.substring(0, 50) + '...' });
       message.success('风格总结已生成');
-      loadLibrary();
+      await mutate();
     } catch (error) {
       log.logError(error, '生成风格总结失败');
       message.error(`生成失败：${error instanceof Error ? error.message : String(error)}`);
@@ -241,7 +227,7 @@ export const TermLibraryManager: React.FC<TermLibraryManagerProps> = ({
       destroyOnHidden={true}
       mask={false}
       footer={[
-        <Button key="refresh" icon={<ReloadOutlined />} onClick={loadLibrary}>
+        <Button key="refresh" icon={<ReloadOutlined />} onClick={() => refresh()}>
           刷新
         </Button>,
         <Button
