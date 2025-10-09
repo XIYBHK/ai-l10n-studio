@@ -120,13 +120,14 @@ pub fn detect_file_format(file_path: &str) -> Result<FileFormat> {
         }
     };
     
-    crate::app_log!("[文件格式检测] {} → {:?}", file_path, verified_format);
+    // 注意：日志已移至 command 层，避免重复
     Ok(verified_format)
 }
 
 /// 获取文件元数据
 pub fn get_file_metadata(file_path: &str) -> Result<FileMetadata> {
     let format = detect_file_format(file_path)?;
+    // 注意：不再记录日志，避免与 detect_file_format 重复
     
     // 根据格式提取元数据
     let metadata = match format {

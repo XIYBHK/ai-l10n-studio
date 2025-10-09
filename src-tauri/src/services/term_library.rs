@@ -126,8 +126,9 @@ impl TermLibrary {
         fs::write(path, content)?;
         
         crate::app_log!(
-            "[术语库] 保存成功：{} 条术语",
-            self.terms.len()
+            "[术语库] 保存成功：{} 条术语，风格总结: {}",
+            self.terms.len(),
+            if self.style_summary.is_some() { "有" } else { "无" }
         );
         
         Ok(())
@@ -176,13 +177,15 @@ impl TermLibrary {
         
         if self.terms.len() < initial_len {
             self.metadata.total_terms = self.terms.len();
-            crate::app_log!("[术语库] 删除术语: {}", source);
+            crate::app_log!("[术语库] 删除术语: {} (剩余 {} 条)", source, self.terms.len());
             
             // 如果术语库被清空，清除风格总结
             if self.terms.is_empty() {
                 self.style_summary = None;
                 self.metadata.terms_at_last_summary = 0;
                 crate::app_log!("[术语库] 术语库已清空，风格总结已清除");
+            } else {
+                crate::app_log!("[术语库] 剩余术语列表: {:?}", self.terms.iter().map(|t| &t.source).collect::<Vec<_>>());
             }
             
             Ok(())

@@ -84,27 +84,36 @@ pub fn format_prompt_logs() -> String {
     }
     
     let mut output = String::new();
-    output.push_str(&format!("===== 提示词日志 (共 {} 条) =====\n\n", logs.len()));
+    output.push_str(&format!("========== 提示词日志 ({} 条) ==========\n\n", logs.len()));
     
     for (idx, entry) in logs.iter().enumerate() {
-        output.push_str(&format!("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n"));
-        output.push_str(&format!("【日志 #{}】\n", idx + 1));
-        output.push_str(&format!("时间: {}\n", entry.timestamp));
-        output.push_str(&format!("类型: {}\n", entry.log_type));
+        output.push_str(&format!("┌─ 日志 #{} ─────────────────\n", idx + 1));
+        output.push_str(&format!("│ 时间: {}  类型: {}\n", entry.timestamp, entry.log_type));
         
+        // 紧凑的元数据显示（单行）
         if let Some(ref metadata) = entry.metadata {
-            output.push_str(&format!("元数据: {}\n", serde_json::to_string_pretty(metadata).unwrap_or_default()));
+            if let Ok(meta_str) = serde_json::to_string(metadata) {
+                // 只显示关键信息
+                output.push_str(&format!("│ 元数据: {}\n", meta_str));
+            }
         }
         
-        output.push_str(&format!("\n【输入提示词】:\n{}\n", entry.prompt));
+        output.push_str(&format!("├─ 提示词 ─────────────────\n"));
+        // 缩进提示词内容
+        for line in entry.prompt.lines() {
+            output.push_str(&format!("│ {}\n", line));
+        }
         
+        output.push_str(&format!("├─ AI 响应 ────────────────\n"));
         if let Some(ref response) = entry.response {
-            output.push_str(&format!("\n【AI响应】:\n{}\n", response));
+            for line in response.lines() {
+                output.push_str(&format!("│ {}\n", line));
+            }
         } else {
-            output.push_str(&format!("\n【AI响应】: (暂无)\n"));
+            output.push_str("│ (暂无)\n");
         }
         
-        output.push_str(&format!("\n"));
+        output.push_str(&format!("└───────────────────────────\n\n"));
     }
     
     output

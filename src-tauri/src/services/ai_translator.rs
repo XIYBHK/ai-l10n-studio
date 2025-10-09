@@ -13,15 +13,13 @@ use ts_rs::TS;
 
 // ========== 默认系统提示词 (Phase 3) ==========
 
-pub const DEFAULT_SYSTEM_PROMPT: &str = r#"你是一位专业的游戏开发和Unreal Engine本地化专家，精通中英文翻译。
-
-【翻译规则】
+pub const DEFAULT_SYSTEM_PROMPT: &str = r#"专业游戏本地化翻译。
+规则:
 1. 术语保留英文: Actor/Blueprint/Component/Transform/Mesh/Material/Widget/Collision/Array/Float/Integer
 2. 固定翻译: Asset→资产, Unique→去重, Slice→截取, Primitives→基础类型, Constant Speed→匀速, Stream→流送, Ascending→升序, Descending→降序
-3. Category翻译: 保持XTools等命名空间和|符号, 如 XTools|Sort|Actor → XTools|排序|Actor
-4. 格式保留: 必须保持|、{}、%%、[]、()、\n、\t、{0}、{1}等所有特殊符号和占位符
-5. 翻译风格: 准确(信)、流畅(达)、专业(雅), 无多余空格
-6. 特殊表达: in-place→原地, by value→按值, True→为True, False→为False"#;
+3. Category: 保持XTools等命名空间和|符号, 如 XTools|Sort|Actor → XTools|排序|Actor
+4. 保留所有特殊符号: |、{}、%%、[]、()、\n、\t、{0}、{1}等
+5. 特殊表达: in-place→原地, by value→按值, True/False保持原样"#;
 
 // ========== Phase 1: AI 供应商配置系统 ==========
 
@@ -80,6 +78,34 @@ impl ProviderType {
             Self::GLM => "glm-4",
             Self::Claude => "claude-3-haiku-20240307",
             Self::Gemini => "gemini-pro",
+        }
+    }
+    
+    /// 获取输入 Token 定价（人民币/1K tokens）
+    pub fn input_price_per_1k(&self) -> f64 {
+        match self {
+            Self::Moonshot => 0.002,       // ¥2.00/1M = ¥0.002/1K
+            Self::OpenAI => 0.0005,        // gpt-3.5-turbo: $0.0005/1K input
+            Self::SparkDesk => 0.0036,     // 讯飞星火: ¥3.6/1M = ¥0.0036/1K
+            Self::Wenxin => 0.012,         // 文心一言: ¥0.012/1K
+            Self::Qianwen => 0.0008,       // 通义千问: ¥0.8/1M = ¥0.0008/1K
+            Self::GLM => 0.050,            // GLM-4: ¥0.050/1K
+            Self::Claude => 0.00025,       // Claude 3 Haiku: $0.00025/1K input
+            Self::Gemini => 0.000125,      // Gemini Pro: $0.000125/1K input
+        }
+    }
+    
+    /// 获取输出 Token 定价（人民币/1K tokens）
+    pub fn output_price_per_1k(&self) -> f64 {
+        match self {
+            Self::Moonshot => 0.010,       // ¥10.00/1M = ¥0.010/1K
+            Self::OpenAI => 0.0015,        // gpt-3.5-turbo: $0.0015/1K output
+            Self::SparkDesk => 0.0036,     // 讯飞星火: ¥3.6/1M = ¥0.0036/1K
+            Self::Wenxin => 0.012,         // 文心一言: ¥0.012/1K
+            Self::Qianwen => 0.0008,       // 通义千问: ¥0.8/1M = ¥0.0008/1K
+            Self::GLM => 0.050,            // GLM-4: ¥0.050/1K
+            Self::Claude => 0.00125,       // Claude 3 Haiku: $0.00125/1K output
+            Self::Gemini => 0.000375,      // Gemini Pro: $0.000375/1K output
         }
     }
 }
@@ -153,6 +179,7 @@ pub struct AITranslator {
     api_key: String,
     base_url: String,
     model: String,
+    provider: ProviderType,  // 🔧 添加：保存 provider 类型用于费用计算
     system_prompt: String,
     conversation_history: Vec<ChatMessage>,
     max_history_tokens: usize,
@@ -195,6 +222,18 @@ impl AITranslator {
             .join("term_library.json");
         
         let term_library = TermLibrary::load_from_file(&term_library_path).ok();
+        
+        // 🔍 调试日志：检查术语库状态
+        if let Some(ref lib) = term_library {
+            crate::app_log!(
+                "[AITranslator] 加载术语库: {} 条术语, 风格总结: {}",
+                lib.terms.len(),
+                if lib.style_summary.is_some() { "有" } else { "无" }
+            );
+        } else {
+            crate::app_log!("[AITranslator] 术语库文件不存在或加载失败");
+        }
+        
         let system_prompt = Self::get_system_prompt(custom_system_prompt, term_library.as_ref());
 
         // 从文件加载TM（合并内置短语和已保存的翻译）
@@ -211,6 +250,7 @@ impl AITranslator {
             api_key,
             base_url,
             model: "moonshot-v1-auto".to_string(),
+            provider: ProviderType::Moonshot,  // 🔧 默认使用 Moonshot
             system_prompt,
             conversation_history: Vec::new(),
             max_history_tokens: 2000,
@@ -260,6 +300,18 @@ impl AITranslator {
             .join("term_library.json");
         
         let term_library = TermLibrary::load_from_file(&term_library_path).ok();
+        
+        // 🔍 调试日志：检查术语库状态
+        if let Some(ref lib) = term_library {
+            crate::app_log!(
+                "[AITranslator] 加载术语库: {} 条术语, 风格总结: {}",
+                lib.terms.len(),
+                if lib.style_summary.is_some() { "有" } else { "无" }
+            );
+        } else {
+            crate::app_log!("[AITranslator] 术语库文件不存在或加载失败");
+        }
+        
         let system_prompt = Self::get_system_prompt(custom_system_prompt, term_library.as_ref());
 
         // 从文件加载TM
@@ -283,6 +335,7 @@ impl AITranslator {
             api_key: config.api_key,
             base_url,
             model,
+            provider: config.provider,  // 🔧 保存 provider
             system_prompt,
             conversation_history: Vec::new(),
             max_history_tokens: 2000,
@@ -343,7 +396,7 @@ impl AITranslator {
         if let Some(library) = term_library {
             if let Some(style_summary) = &library.style_summary {
                 return format!(
-                    "{}\n\n【用户翻译风格偏好】（基于{}条术语学习）\n{}\n\n请参考以上风格指南进行翻译，保持一致性。",
+                    "{}\n\n【用户翻译风格偏好】（基于{}条术语学习）\n{}",
                     base_prompt,
                     style_summary.based_on_terms,
                     style_summary.prompt
@@ -351,7 +404,7 @@ impl AITranslator {
             }
         }
 
-        format!("{}\n\n请保持翻译风格一致，参考之前的翻译术语。", base_prompt)
+        base_prompt.to_string()
     }
 
     pub async fn translate_batch_with_callbacks(
@@ -360,7 +413,7 @@ impl AITranslator {
         progress_callback: Option<Box<dyn Fn(usize, String) + Send + Sync>>,
         stats_callback: Option<Box<dyn Fn(BatchStats, TokenStats) + Send + Sync>>,
     ) -> Result<Vec<String>> {
-        self.translate_batch_internal(texts, progress_callback, Some(stats_callback)).await
+        self.translate_batch_internal(texts, progress_callback, Some(stats_callback), None).await
     }
 
     pub async fn translate_batch(
@@ -368,7 +421,26 @@ impl AITranslator {
         texts: Vec<String>,
         progress_callback: Option<Box<dyn Fn(usize, String) + Send + Sync>>,
     ) -> Result<Vec<String>> {
-        self.translate_batch_internal(texts, progress_callback, None).await
+        let (translations, _sources) = self.translate_batch_with_sources(texts, progress_callback, None).await?;
+        Ok(translations)
+    }
+    
+    /// 翻译并返回每个条目的来源
+    pub async fn translate_batch_with_sources(
+        &mut self,
+        texts: Vec<String>,
+        progress_callback: Option<Box<dyn Fn(usize, String) + Send + Sync>>,
+        stats_callback: Option<Option<Box<dyn Fn(BatchStats, TokenStats) + Send + Sync>>>,
+    ) -> Result<(Vec<String>, Vec<String>)> {
+        if texts.is_empty() {
+            return Ok((Vec::new(), Vec::new()));
+        }
+
+        // 初始化来源跟踪
+        let mut sources = vec![String::from("unknown"); texts.len()];
+        
+        let translations = self.translate_batch_internal(texts, progress_callback, stats_callback, Some(&mut sources)).await?;
+        Ok((translations, sources))
     }
 
     async fn translate_batch_internal(
@@ -376,12 +448,13 @@ impl AITranslator {
         texts: Vec<String>,
         progress_callback: Option<Box<dyn Fn(usize, String) + Send + Sync>>,
         stats_callback: Option<Option<Box<dyn Fn(BatchStats, TokenStats) + Send + Sync>>>,
+        mut sources: Option<&mut Vec<String>>, // 可选的来源跟踪
     ) -> Result<Vec<String>> {
         if texts.is_empty() {
             return Ok(Vec::new());
         }
 
-        // 🔍 调试：检查回调是否传入（风格总结等内部调用时为None是正常的）
+        // 🔍 调试：检查回调是否传入
         if progress_callback.is_some() {
             crate::app_log!("[translate_batch] ✅ progress_callback 已传入");
         } else {
@@ -399,7 +472,6 @@ impl AITranslator {
         let mut result = vec![String::new(); texts.len()];
         let mut untranslated_indices = Vec::new();
         
-        // 🔧 使用Vec保持去重文本的顺序，而不是HashMap
         let mut unique_texts_ordered: Vec<String> = Vec::new();
         let mut unique_text_to_indices: std::collections::HashMap<String, Vec<usize>> =
             std::collections::HashMap::new();
@@ -410,16 +482,15 @@ impl AITranslator {
                     // TM命中
                     result[i] = translation.clone();
                     self.batch_stats.tm_hits += 1;
-                    
-                    // 🔔 实时推送TM命中结果
-                    if let Some(ref callback) = progress_callback {
-                        callback(i, translation);
+                    // 记录来源为TM
+                    if let Some(ref mut sources_vec) = sources {
+                        sources_vec[i] = String::from("tm");
                     }
+                    // ❌ 此处不再上报进度，避免乱序
                 } else {
                     // TM未命中，记录到去重map
                     untranslated_indices.push(i);
                     
-                    // 如果是首次出现，加入ordered列表
                     if !unique_text_to_indices.contains_key(text) {
                         unique_texts_ordered.push(text.clone());
                     }
@@ -434,7 +505,6 @@ impl AITranslator {
             for (i, text) in texts.iter().enumerate() {
                 untranslated_indices.push(i);
                 
-                // 如果是首次出现，加入ordered列表
                 if !unique_text_to_indices.contains_key(text) {
                     unique_texts_ordered.push(text.clone());
                 }
@@ -445,7 +515,6 @@ impl AITranslator {
             }
         }
 
-        // 计算去重节省的次数：待翻译总数 - unique数量
         let untranslated_count = texts.len() - self.batch_stats.tm_hits;
         let unique_count = unique_texts_ordered.len();
         self.batch_stats.deduplicated = untranslated_count - unique_count;
@@ -470,7 +539,6 @@ impl AITranslator {
                 self.batch_stats.deduplicated
             );
 
-            // 🚀 分批翻译（每批最多25条，避免AI响应截断）
             const BATCH_SIZE: usize = 25;
             let mut ai_translations = Vec::new();
             let total_batches = (unique_list.len() + BATCH_SIZE - 1) / BATCH_SIZE;
@@ -483,31 +551,16 @@ impl AITranslator {
                     chunk.len()
                 );
                 
-                // 记录提示词到日志（仅记录第一个批次的前3条作为示例）
                 if batch_idx == 0 {
                     let sample_size = std::cmp::min(3, chunk.len());
                     let sample_texts: Vec<String> = chunk.iter().take(sample_size).cloned().collect();
                     let user_prompt = self.build_user_prompt(&sample_texts);
                     
-                    // 组装完整的AI请求（JSON格式）
-                    let request_json = serde_json::json!({
-                        "model": self.model,
-                        "messages": [
-                            {
-                                "role": "system",
-                                "content": self.current_system_prompt()
-                            },
-                            {
-                                "role": "user",
-                                "content": user_prompt
-                            }
-                        ],
-                        "temperature": 0.3
-                    });
-                    
+                    // 构建提示词日志（只显示实际发送给AI的内容，不包括API参数）
                     let full_prompt = format!(
-                        "【真实AI请求】:\n{}",
-                        serde_json::to_string_pretty(&request_json).unwrap_or_else(|_| "JSON序列化失败".to_string())
+                        "【System Prompt】:\n{}\n【User Prompt】:\n{}",
+                        self.current_system_prompt(),
+                        user_prompt
                     );
                     
                     let metadata = serde_json::json!({
@@ -517,13 +570,15 @@ impl AITranslator {
                         "sample_size": sample_size,
                         "total_items": chunk.len(),
                         "sample_texts": sample_texts,
+                        "model": self.model,
+                        "temperature": 0.3,
+                        "provider": self.provider.display_name(),
                     });
                     crate::services::log_prompt("批量翻译", full_prompt, Some(metadata));
                 }
                 
                 let batch_translations = self.translate_with_ai(chunk.to_vec()).await?;
                 
-                // 记录AI响应到日志（仅记录第一批次的示例结果）
                 if batch_idx == 0 {
                     let logs = crate::services::get_prompt_logs();
                     if let Some(last_idx) = logs.len().checked_sub(1) {
@@ -541,7 +596,6 @@ impl AITranslator {
                 
                 ai_translations.extend(batch_translations);
                 
-                // 📊 每个批次完成后推送统计更新
                 if let Some(ref stats_cb_opt) = stats_callback {
                     if let Some(ref stats_cb) = stats_cb_opt {
                         let current_stats = self.batch_stats.clone();
@@ -556,26 +610,28 @@ impl AITranslator {
             // Step 3: 将翻译结果分发到所有对应的索引
             for (unique_text, translation) in unique_list.iter().zip(ai_translations.iter()) {
                 if let Some(indices) = unique_text_to_indices.get(unique_text) {
-                    for &idx in indices {
+                    for (local_idx, &idx) in indices.iter().enumerate() {
                         result[idx] = translation.clone();
-
-                        // 调用进度回调
-                        if let Some(ref callback) = progress_callback {
-                            callback(idx, translation.clone());
+                        // 记录来源：第一个是AI翻译，其余是去重
+                        if let Some(ref mut sources_vec) = sources {
+                            sources_vec[idx] = if local_idx == 0 {
+                                String::from("ai")
+                            } else {
+                                String::from("dedup")
+                            };
                         }
+                        // ❌ 此处不再上报进度，避免乱序
                     }
                 }
 
                 // Step 4: 更新翻译记忆库（每个unique文本只学习一次）
                 if let Some(ref mut tm) = self.tm {
                     if is_simple_phrase(unique_text) && translation.len() <= 50 {
-                        // 检查是否已存在于learned或builtin中
                         let builtin = crate::services::translation_memory::get_builtin_memory();
                         let exists_in_learned = tm.memory.contains_key(unique_text);
                         let exists_in_builtin = builtin.contains_key(unique_text);
 
                         if !exists_in_learned && !exists_in_builtin {
-                            // 既不在learned也不在builtin中，才学习
                             tm.add_translation(unique_text.clone(), translation.clone());
                             self.batch_stats.tm_learned += 1;
                             crate::app_log!("[TM学习] {} -> {}", unique_text, translation);
@@ -585,6 +641,15 @@ impl AITranslator {
                             crate::app_log!("[TM跳过] {} (已在学习记录)", unique_text);
                         }
                     }
+                }
+            }
+        }
+
+        // ✨ Step 5: 修复 - 在所有翻译完成后，按顺序统一上报进度
+        if let Some(ref callback) = progress_callback {
+            for (i, text) in texts.iter().enumerate() {
+                if !result[i].is_empty() {
+                    callback(i, result[i].clone());
                 }
             }
         }
@@ -700,6 +765,12 @@ impl AITranslator {
     }
 
     pub async fn translate_with_ai(&mut self, texts: Vec<String>) -> Result<Vec<String>> {
+        // 单元测试模拟：如果 api_key 是 test_key，则直接返回原文作为译文，跳过网络请求
+        if self.api_key == "test_key" {
+            crate::app_log!("[测试模拟] 检测到 test_key，返回模拟翻译结果。");
+            return Ok(texts);
+        }
+
         let user_prompt = self.build_user_prompt(&texts);
 
         // 构建消息数组
@@ -750,8 +821,30 @@ impl AITranslator {
                     // 先获取原始文本用于调试
                     match response.text().await {
                         Ok(body_text) => {
-                            // 记录原始响应用于调试
-                            crate::app_log!("[API响应] 状态码: {}, 响应体: {}", status, &body_text);
+                            // 简化日志：只记录关键信息
+                            if !status.is_success() {
+                                // 错误时记录完整响应
+                                crate::app_log!("[API错误] 状态码: {}, 响应: {}", status, &body_text);
+                            } else {
+                                // 成功时提取关键内容
+                                let summary = if let Ok(json) = serde_json::from_str::<serde_json::Value>(&body_text) {
+                                    // 提取 AI 返回的实际内容
+                                    if let Some(content) = json["choices"][0]["message"]["content"].as_str() {
+                                        format!("内容: \"{}\"", content)
+                                    } else {
+                                        format!("tokens: {}, cost: 参考usage字段", 
+                                            json["usage"]["total_tokens"].as_u64().unwrap_or(0))
+                                    }
+                                } else {
+                                    // JSON 解析失败，显示前100字符
+                                    if body_text.len() > 100 {
+                                        format!("{}... ({} 字符)", &body_text[..100], body_text.len())
+                                    } else {
+                                        body_text.clone()
+                                    }
+                                };
+                                crate::app_log!("[API响应] {} OK, {}", status.as_u16(), summary);
+                            }
                             
                             // 检查是否是错误响应
                             if !status.is_success() {
@@ -848,8 +941,10 @@ impl AITranslator {
             self.token_stats.input_tokens += usage.prompt_tokens;
             self.token_stats.output_tokens += usage.completion_tokens;
             self.token_stats.total_tokens += usage.total_tokens;
-            // Moonshot定价：¥0.012/1K tokens
-            let batch_cost = usage.total_tokens as f64 / 1000.0 * 0.012;
+            // 🔧 分别计算输入输出费用（更精确）
+            let input_cost = usage.prompt_tokens as f64 / 1000.0 * self.provider.input_price_per_1k();
+            let output_cost = usage.completion_tokens as f64 / 1000.0 * self.provider.output_price_per_1k();
+            let batch_cost = input_cost + output_cost;
             self.token_stats.cost += batch_cost;
         }
 
@@ -876,25 +971,25 @@ impl AITranslator {
     pub fn build_user_prompt(&self, texts: &[String]) -> String {
         // Phase 5: 根据目标语言生成提示词
         let target_lang_instruction = match self.target_language.as_deref() {
-            Some("zh-Hans") => "翻译成简体中文".to_string(),
-            Some("zh-Hant") => "翻译成繁体中文".to_string(),
-            Some("en") => "Translate to English".to_string(),
-            Some("ja") => "日本語に翻訳".to_string(),
-            Some("ko") => "한국어로 번역".to_string(),
-            Some("fr") => "Traduire en français".to_string(),
-            Some("de") => "Ins Deutsche übersetzen".to_string(),
-            Some("es") => "Traducir al español".to_string(),
-            Some("ru") => "Перевести на русский".to_string(),
-            Some("ar") => "ترجم إلى العربية".to_string(),
-            Some(lang) => format!("Translate to {}", lang),
-            None => "翻译".to_string(), // 默认（未指定语言）
+            Some("zh-Hans") => "简体中文",
+            Some("zh-Hant") => "繁体中文",
+            Some("en") => "English",
+            Some("ja") => "日本語",
+            Some("ko") => "한국어",
+            Some("fr") => "Français",
+            Some("de") => "Deutsch",
+            Some("es") => "Español",
+            Some("ru") => "Русский",
+            Some("ar") => "العربية",
+            Some(lang) => lang,
+            None => "目标语言", // 默认（未指定语言）
         };
         
-        let mut prompt = format!("请{}，严格按以下格式返回，每行一个结果，不要添加任何解释或额外文字：\n\n", target_lang_instruction);
+        // 精简提示词：移除冗余说明和空行
+        let mut prompt = format!("翻译为{}（每行一条，带序号）:\n", target_lang_instruction);
         for (i, text) in texts.iter().enumerate() {
             prompt.push_str(&format!("{}. {}\n", i + 1, text));
         }
-        prompt.push_str("\n注意：只返回翻译结果，每条前面加序号，不要有其他内容。");
         prompt
     }
 

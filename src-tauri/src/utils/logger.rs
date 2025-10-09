@@ -8,7 +8,7 @@ lazy_static! {
 
 /// 添加日志到缓冲区
 pub fn log(message: String) {
-    let timestamp = Local::now().format("%Y-%m-%d %H:%M:%S");
+    let timestamp = Local::now().format("%H:%M:%S");
     let log_entry = format!("[{}] {}", timestamp, message);
 
     // 打印到控制台（保持原有行为）

@@ -32,8 +32,7 @@ fn main() {
         .invoke_handler(tauri::generate_handler![
             parse_po_file,
             translate_entry,
-            translate_batch,
-            translate_batch_with_channel,  // Tauri 2.x: Channel API 优化
+            translate_batch_with_channel,  // Tauri 2.x: Channel API (统一翻译入口)
             get_translation_memory,
             get_builtin_phrases,
             save_translation_memory,

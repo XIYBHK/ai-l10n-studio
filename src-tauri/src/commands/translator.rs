@@ -96,7 +96,11 @@ pub async fn parse_po_file(file_path: String) -> Result<Vec<POEntry>, String> {
 }
 
 #[tauri::command]
-pub async fn translate_entry(text: String, target_language: Option<String>) -> Result<String, String> {
+pub async fn translate_entry(
+    app_handle: tauri::AppHandle,
+    text: String, 
+    target_language: Option<String>
+) -> Result<String, String> {
     // 从配置管理器获取启用的AI配置
     let config_manager = ConfigManager::new(None).map_err(|e| format!("配置管理器初始化失败: {}", e))?;
     let ai_config = config_manager.get_config().get_active_ai_config()
@@ -119,6 +123,26 @@ pub async fn translate_entry(text: String, target_language: Option<String>) -> R
 
     // 保存TM到文件
     auto_save_translation_memory(&translator);
+    
+    // 🔧 发送统计事件（单条翻译）- 使用 translation:after 而不是 translation-stats-update
+    let batch_stats = &translator.batch_stats;
+    let token_stats = translator.get_token_stats();
+    let stats_payload = serde_json::json!({
+        "stats": {
+            "total": 1,
+            "tm_hits": batch_stats.tm_hits,
+            "deduplicated": batch_stats.deduplicated,
+            "ai_translated": batch_stats.ai_translated,
+            "tm_learned": batch_stats.tm_learned,
+            "token_stats": {
+                "input_tokens": token_stats.input_tokens,
+                "output_tokens": token_stats.output_tokens,
+                "total_tokens": token_stats.total_tokens,
+                "cost": token_stats.cost
+            }
+        }
+    });
+    let _ = app_handle.emit("translation:after", stats_payload);
 
     result
         .into_iter()
@@ -127,92 +151,20 @@ pub async fn translate_entry(text: String, target_language: Option<String>) -> R
 }
 
 #[derive(Debug, Serialize)]
+pub struct TranslationResult {
+    pub translation: String,
+    pub source: String, // 'tm', 'dedup', 'ai'
+}
+
+#[derive(Debug, Serialize)]
 pub struct BatchResult {
     pub translations: Vec<String>,
+    pub translation_sources: Vec<String>, // 每个翻译的来源：'tm', 'dedup', 'ai'
     pub stats: TranslationStats,
 }
 
-// 批量翻译（带统计和进度）
-#[tauri::command]
-pub async fn translate_batch(
-    app_handle: tauri::AppHandle,
-    texts: Vec<String>,
-    target_language: Option<String>,
-) -> Result<BatchResult, String> {
-    // 从配置管理器获取启用的AI配置
-    let config_manager = ConfigManager::new(None).map_err(|e| format!("配置管理器初始化失败: {}", e))?;
-    let ai_config = config_manager.get_config().get_active_ai_config()
-        .ok_or_else(|| "未找到启用的AI配置，请在设置中配置并启用AI服务".to_string())?
-        .clone();
-    
-    let custom_prompt = config_manager.get_config().system_prompt.clone();
-    let mut translator = AITranslator::new_with_config(ai_config, true, custom_prompt.as_deref(), target_language)
-        .map_err(|e| format!("AI翻译器初始化失败: {}", e))?;
-    
-    // 创建进度回调，实时推送翻译结果和统计信息
-    let progress_callback: Option<Box<dyn Fn(usize, String) + Send + Sync>> = {
-        let app = app_handle.clone();
-        Some(Box::new(move |index: usize, translation: String| {
-            // 向所有窗口广播翻译进度事件
-            let payload = serde_json::json!({
-                "index": index,
-                "translation": translation
-            });
-            
-            crate::app_log!("[进度推送] index={}, translation={}", index, &translation);
-            let _ = app.emit("translation-progress", payload);
-        }))
-    };
-    
-    // 创建统计信息回调，实时推送统计更新
-    let stats_callback: Option<Box<dyn Fn(crate::services::BatchStats, crate::services::TokenStats) + Send + Sync>> = {
-        let app = app_handle.clone();
-        Some(Box::new(move |batch_stats: crate::services::BatchStats, token_stats: crate::services::TokenStats| {
-            // 向所有窗口广播统计更新事件
-            let stats_payload = serde_json::json!({
-                "total": batch_stats.total,
-                "tm_hits": batch_stats.tm_hits,
-                "deduplicated": batch_stats.deduplicated,
-                "ai_translated": batch_stats.ai_translated,
-                "tm_learned": batch_stats.tm_learned,
-                "token_stats": {
-                    "input_tokens": token_stats.input_tokens,
-                    "output_tokens": token_stats.output_tokens,
-                    "total_tokens": token_stats.total_tokens,
-                    "cost": token_stats.cost
-                }
-            });
-            
-            let _ = app.emit("translation-stats-update", stats_payload);
-        }))
-    };
-    
-    let translations = translator
-        .translate_batch_with_callbacks(texts, progress_callback, stats_callback)
-        .await
-        .map_err(|e| e.to_string())?;
-
-    // 获取统计信息
-    let batch_stats = translator.batch_stats.clone();
-    let token_stats = translator.get_token_stats().clone();
-
-    let stats = TranslationStats {
-        total: batch_stats.total,
-        tm_hits: batch_stats.tm_hits,
-        deduplicated: batch_stats.deduplicated,
-        ai_translated: batch_stats.ai_translated,
-        token_stats,
-        tm_learned: batch_stats.tm_learned,
-    };
-
-    // 保存TM到文件
-    auto_save_translation_memory(&translator);
-
-    Ok(BatchResult {
-        translations,
-        stats,
-    })
-}
+// ❌ translate_batch (Event API) 已移除
+// ✅ 统一使用 translate_batch_with_channel (Channel API)
 
 #[tauri::command]
 pub async fn get_translation_memory() -> Result<TranslationMemory, String> {
@@ -590,30 +542,19 @@ pub async fn contextual_refine(
     let mut results = Vec::new();
     for (idx, prompt) in prompts.iter().enumerate() {
         // 记录完整的AI请求（JSON格式）
-        let request_json = serde_json::json!({
-            "model": "auto",  // 模型由配置决定
-            "messages": [
-                {
-                    "role": "system",
-                    "content": translator.current_system_prompt()
-                },
-                {
-                    "role": "user",
-                    "content": prompt
-                }
-            ],
-            "temperature": 0.3
-        });
-        
+        // 构建提示词日志（只显示实际发送给AI的内容）
         let full_prompt = format!(
-            "【真实AI请求】:\n{}",
-            serde_json::to_string_pretty(&request_json).unwrap_or_else(|_| "JSON序列化失败".to_string())
+            "【System Prompt】:\n{}\n【User Prompt】:\n{}",
+            translator.current_system_prompt(),
+            prompt
         );
         
         let metadata = serde_json::json!({
             "index": idx,
             "msgid": requests.get(idx).map(|r| &r.msgid),
             "target_language": &target_language,
+            "model": "auto",
+            "temperature": 0.3,
         });
         crate::services::log_prompt("精翻", full_prompt, Some(metadata));
         
@@ -638,6 +579,26 @@ pub async fn contextual_refine(
     }
     
     crate::app_log!("[精翻] 翻译完成，获得 {} 条结果", results.len());
+    
+    // 🔧 发送统计事件（精翻）- 使用 translation:after 而不是 translation-stats-update
+    let batch_stats = &translator.batch_stats;
+    let token_stats = translator.get_token_stats();
+    let stats_payload = serde_json::json!({
+        "stats": {
+            "total": requests.len(),
+            "tm_hits": batch_stats.tm_hits,
+            "deduplicated": batch_stats.deduplicated,
+            "ai_translated": batch_stats.ai_translated,
+            "tm_learned": batch_stats.tm_learned,
+            "token_stats": {
+                "input_tokens": token_stats.input_tokens,
+                "output_tokens": token_stats.output_tokens,
+                "total_tokens": token_stats.total_tokens,
+                "cost": token_stats.cost
+            }
+        }
+    });
+    let _ = app.emit("translation:after", stats_payload);
     
     // 8. 发送完成事件
     let _ = app.emit("refine:complete", serde_json::json!({
@@ -683,14 +644,27 @@ pub async fn translate_batch_with_channel(
     let mut translator = AITranslator::new_with_config(ai_config, true, custom_prompt.as_deref(), target_language)
         .map_err(|e| format!("AI翻译器初始化失败: {}", e))?;
     
-    // 创建进度管理器
-    let mut progress_mgr = BatchProgressManager::new(texts.len());
+    // 创建进度管理器（暂未使用，保留以备后续优化）
+    let _progress_mgr = BatchProgressManager::new(texts.len());
     
     // 翻译处理（按批次）
     let mut translations = Vec::with_capacity(texts.len());
+    let mut translation_sources = Vec::with_capacity(texts.len()); // 📍 收集翻译来源
     let batch_size = 20; // 单批 20 条
     let mut global_index = 0; // 全局索引，用于追踪整体进度
     let total_count = texts.len(); // 提前保存总数，避免闭包中借用
+    
+    // 🔧 记录上一批的 token 统计，用于计算增量
+    let mut prev_token_input = 0u32;
+    let mut prev_token_output = 0u32;
+    let mut prev_token_total = 0u32;
+    let mut prev_token_cost = 0f64;
+    
+    // 🔧 累加所有批次的统计（因为每次 translate_batch 都会重置 batch_stats）
+    let mut total_tm_hits = 0usize;
+    let mut total_deduplicated = 0usize;
+    let mut total_ai_translated = 0usize;
+    let mut total_tm_learned = 0usize;
     
     for chunk in texts.chunks(batch_size) {
         let chunk_vec = chunk.to_vec();
@@ -709,50 +683,70 @@ pub async fn translate_batch_with_channel(
             let _ = progress_channel_clone.send(event);
         });
         
-        let result = translator
-            .translate_batch(chunk_vec.clone(), Some(progress_callback))
+        // 📍 使用 translate_batch_with_sources 获取翻译和来源
+        let (result, sources) = translator
+            .translate_batch_with_sources(chunk_vec.clone(), Some(progress_callback), None)
             .await
             .map_err(|e| e.to_string())?;
 
-        // 收集翻译结果
-        for translation in result.iter() {
+        // 收集翻译结果和来源
+        for (translation, source) in result.iter().zip(sources.iter()) {
             translations.push(translation.clone());
+            translation_sources.push(source.clone()); // 📍 收集来源
             global_index += 1;
         }
 
-        // 每批发送一次统计事件
+        // 🔧 每批发送一次统计事件（batch_stats 是当前批次增量，token_stats 需计算增量）
         let batch_stats = &translator.batch_stats;
         let token_stats = translator.get_token_stats();
+        
+        // 🔧 累加批次统计
+        total_tm_hits += batch_stats.tm_hits;
+        total_deduplicated += batch_stats.deduplicated;
+        total_ai_translated += batch_stats.ai_translated;
+        total_tm_learned += batch_stats.tm_learned;
+        
         let stats_event = BatchStatsEvent {
             tm_hits: batch_stats.tm_hits,
             deduplicated: batch_stats.deduplicated,
             ai_translated: batch_stats.ai_translated,
             token_stats: TokenStatsEvent {
-                prompt_tokens: token_stats.input_tokens as usize,
-                completion_tokens: token_stats.output_tokens as usize,
-                total_tokens: token_stats.total_tokens as usize,
-                cost: token_stats.cost,
+                // 🔧 发送 Token 增量，而非累计值
+                prompt_tokens: (token_stats.input_tokens - prev_token_input) as usize,
+                completion_tokens: (token_stats.output_tokens - prev_token_output) as usize,
+                total_tokens: (token_stats.total_tokens - prev_token_total) as usize,
+                cost: token_stats.cost - prev_token_cost,
             },
         };
         let _ = stats_channel.send(stats_event);
+        
+        // 🔧 保存当前累计值，用于下一批计算增量
+        prev_token_input = token_stats.input_tokens;
+        prev_token_output = token_stats.output_tokens;
+        prev_token_total = token_stats.total_tokens;
+        prev_token_cost = token_stats.cost;
     }
     
     // 保存翻译记忆库
     auto_save_translation_memory(&translator);
     
-    // 返回最终结果
-    let batch_stats = translator.batch_stats.clone();
+    // 🔧 发送任务完成统计事件 - 与其他翻译方式保持一致
+    // 注意：需要从上下文获取 app_handle，但 Channel API 没有传入
+    // 这是一个架构问题，暂时通过返回值让前端处理
+    
+    // 返回最终结果（使用累加的统计，而不是最后一个批次的统计）
     let token_stats = translator.get_token_stats().clone();
     
     Ok(BatchResult {
         translations,
+        translation_sources, // 📍 返回翻译来源
         stats: TranslationStats {
-            total: batch_stats.total,
-            tm_hits: batch_stats.tm_hits,
-            deduplicated: batch_stats.deduplicated,
-            ai_translated: batch_stats.ai_translated,
+            total: texts.len(),  // 使用总数，而不是 batch_stats.total
+            tm_hits: total_tm_hits,            // 🔧 使用累加值
+            deduplicated: total_deduplicated,  // 🔧 使用累加值
+            ai_translated: total_ai_translated, // 🔧 使用累加值
             token_stats,
-            tm_learned: batch_stats.tm_learned,
+            tm_learned: total_tm_learned,      // 🔧 使用累加值
         },
     })
 }
