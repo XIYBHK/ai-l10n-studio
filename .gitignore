@@ -243,16 +243,15 @@ pnpm-lock.yaml
 # Tauri icons (if using default icons)
 src-tauri/icons/
 
-# Tauri + React GUI project - Keep source code, ignore build artifacts
-po-translator-gui/node_modules/
-po-translator-gui/dist/
-po-translator-gui/target/
-po-translator-gui/src-tauri/target/
-po-translator-gui/.vite/
-po-translator-gui/.eslintcache
-po-translator-gui/*.tsbuildinfo
-po-translator-gui/yarn.lock
-po-translator-gui/pnpm-lock.yaml
+# Tauri + React GUI project - Keep source code, ignore build artifacts (rooted)
+node_modules/
+dist/
+public/
+.vite/
+.eslintcache
+*.tsbuildinfo
+yarn.lock
+pnpm-lock.yaml
 
 # Project-specific patterns
 # Translation backup files
@@ -263,9 +262,12 @@ po-translator-gui/pnpm-lock.yaml
 log/*.txt
 log/*.log
 
-# Translation memory and data files (optional - uncomment if you want to ignore them)
-# data/*.json
-# localization/*/*.json
+# Archived backups and prototypes
+archive/backups/**
+archive/python-prototype/**
+
+# Translation memory and data examples (ignore if not needed in VCS)
+docs/examples/data/*.json
 
 # Python cache in subdirectories
 **/__pycache__/
