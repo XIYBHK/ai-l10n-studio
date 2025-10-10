@@ -77,7 +77,13 @@ fn main() {
         // 提示词日志
         get_prompt_logs,
         clear_prompt_logs,
-        get_config_version
+        get_config_version,
+        // 🆕 AI 模型查询命令
+        get_provider_models,
+        get_model_info,
+        estimate_translation_cost,
+        calculate_precise_cost,
+        get_all_providers
     ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

@@ -6,6 +6,7 @@
 import { message } from 'antd';
 import { createModuleLogger } from '../utils/logger';
 import { apiClient } from './apiClient';
+import type { ModelInfo, CostBreakdown } from '../types/generated/ModelInfo';
 
 const log = createModuleLogger('API');
 
@@ -524,5 +525,82 @@ export const systemApi = {
       silent: true,
     });
   },
+};
+
+// ========== AI 模型 API ==========
+
+export const aiModelApi = {
+  /**
+   * 获取指定供应商的所有模型
+   */
+  async getProviderModels(provider: string): Promise<ModelInfo[]> {
+    return invoke<ModelInfo[]>('get_provider_models', { providerType: provider }, {
+      errorMessage: '获取模型列表失败',
+    });
+  },
+
+  /**
+   * 获取指定模型的详细信息
+   */
+  async getModelInfo(provider: string, modelId: string): Promise<ModelInfo | null> {
+    return invoke<ModelInfo | null>('get_model_info', { 
+      providerType: provider, 
+      modelId 
+    }, {
+      errorMessage: '获取模型信息失败',
+    });
+  },
+
+  /**
+   * 估算翻译成本（基于字符数）
+   */
+  async estimateTranslationCost(
+    provider: string,
+    modelId: string,
+    totalChars: number,
+    cacheHitRate?: number
+  ): Promise<number> {
+    return invoke<number>('estimate_translation_cost', {
+      providerType: provider,
+      modelId,
+      totalChars,
+      cacheHitRate: cacheHitRate ?? null
+    }, {
+      errorMessage: '估算成本失败',
+    });
+  },
+
+  /**
+   * 精确计算翻译成本（基于 token 数）
+   */
+  async calculatePreciseCost(
+    provider: string,
+    modelId: string,
+    inputTokens: number,
+    outputTokens: number,
+    cacheWriteTokens?: number,
+    cacheReadTokens?: number
+  ): Promise<CostBreakdown> {
+    return invoke<CostBreakdown>('calculate_precise_cost', {
+      providerType: provider,
+      modelId,
+      inputTokens,
+      outputTokens,
+      cacheWriteTokens: cacheWriteTokens ?? null,
+      cacheReadTokens: cacheReadTokens ?? null
+    }, {
+      errorMessage: '计算成本失败',
+    });
+  },
+
+  /**
+   * 获取所有可用供应商列表
+   */
+  async getAllProviders(): Promise<string[]> {
+    return invoke<string[]>('get_all_providers', {}, {
+      errorMessage: '获取供应商列表失败',
+      silent: true,
+    });
+  }
 };
 

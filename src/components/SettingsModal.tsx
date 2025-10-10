@@ -16,7 +16,9 @@ import {
   message,
   Row,
   Col,
-  Tabs
+  Tabs,
+  Alert,
+  Descriptions
 } from 'antd';
 import { 
   PlusOutlined, 
@@ -28,15 +30,17 @@ import {
   ApiOutlined,
   UndoOutlined,
   GlobalOutlined,
-  BellOutlined
+  BellOutlined,
+  InfoCircleOutlined
 } from '@ant-design/icons';
-import { aiConfigApi, systemPromptApi } from '../services/api';
+import { aiConfigApi, systemPromptApi, aiModelApi } from '../services/api';
 import { AIConfig, ProviderType } from '../types/aiProvider';
 import { createModuleLogger } from '../utils/logger';
 import { useAsync } from '../hooks/useAsync';
 import { useAIConfigs, useSystemPrompt } from '../hooks/useConfig';
 import i18n from '../i18n/config'; // Phase 6
 import { notificationManager } from '../utils/notificationManager'; // Tauri 2.x: Notification
+import type { ModelInfo } from '../types/generated/ModelInfo';
 
 const log = createModuleLogger('SettingsModal');
 
@@ -107,6 +111,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
   const [editingIndex, setEditingIndex] = useState<number | null>(null);
   const [isAddingNew, setIsAddingNew] = useState(false);
   const [testing, setTesting] = useState(false);
+  const [currentModelInfo, setCurrentModelInfo] = useState<ModelInfo | null>(null);
   
   // Phase 3: 系统提示词状态
   const [systemPrompt, setSystemPrompt] = useState<string>('');
@@ -533,8 +538,50 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                   name="model"
                   tooltip="留空使用默认模型"
                 >
-                  <Input placeholder="模型名称" />
+                  <Input 
+                    placeholder="模型名称" 
+                    onBlur={async (e) => {
+                      const provider = form.getFieldValue('provider');
+                      const modelId = e.target.value;
+                      if (provider && modelId) {
+                        try {
+                          const modelInfo = await aiModelApi.getModelInfo(provider, modelId);
+                          setCurrentModelInfo(modelInfo);
+                        } catch {
+                          setCurrentModelInfo(null);
+                        }
+                      } else {
+                        setCurrentModelInfo(null);
+                      }
+                    }}
+                  />
                 </Form.Item>
+
+                {/* 模型信息显示 */}
+                {currentModelInfo && (
+                  <Alert
+                    message={
+                      <Space direction="vertical" size={4} style={{ width: '100%' }}>
+                        <div style={{ fontWeight: 600 }}>{currentModelInfo.name}</div>
+                        <Descriptions size="small" column={2} style={{ fontSize: '12px' }}>
+                          <Descriptions.Item label="上下文">{(currentModelInfo.context_window / 1000).toFixed(0)}K</Descriptions.Item>
+                          <Descriptions.Item label="输出">{(currentModelInfo.max_output_tokens / 1000).toFixed(0)}K</Descriptions.Item>
+                          <Descriptions.Item label="输入价格">${currentModelInfo.input_price.toFixed(2)}/1M</Descriptions.Item>
+                          <Descriptions.Item label="输出价格">${currentModelInfo.output_price.toFixed(2)}/1M</Descriptions.Item>
+                        </Descriptions>
+                        {currentModelInfo.supports_cache && currentModelInfo.cache_reads_price && (
+                          <div style={{ fontSize: '12px', color: '#722ed1' }}>
+                            💾 缓存价格: ${currentModelInfo.cache_reads_price.toFixed(2)}/1M 
+                            (省 {Math.round(((currentModelInfo.input_price - currentModelInfo.cache_reads_price) / currentModelInfo.input_price) * 100)}%)
+                          </div>
+                        )}
+                      </Space>
+                    }
+                    type="info"
+                    icon={<InfoCircleOutlined />}
+                    style={{ marginBottom: 16 }}
+                  />
+                )}
 
                 <Divider orientation="left" plain style={{ margin: '12px 0' }}>
                   代理设置

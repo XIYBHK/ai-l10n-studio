@@ -6,6 +6,7 @@
 **核心 API 模块**：
 - 📄 `poFileApi.*` - 文件解析/保存（PO/JSON/XLIFF/YAML）
 - 🤖 `translatorApi.*` - AI 翻译（8 厂商，单条/批量/通道模式）
+- 🎯 `aiModelApi.*` - **多AI供应商**（模型查询、精确成本计算、USD定价）
 - 💾 `translationMemoryApi.*` - 翻译记忆库（83+ 内置短语，模式匹配）
 - 📚 `termLibraryApi.*` - 术语库管理（风格分析、批量导入）
 - ⚙️ `configApi.*` - 配置管理（AI/代理/系统设置，实时校验）
@@ -40,6 +41,39 @@ eventDispatcher.getEventHistory();
 ```typescript
 const { data, error, isLoading } = useSWR('config', configApi.loadConfig);
 ```
+
+### 🆕 多AI供应商架构 (`aiModelApi`)
+
+**核心能力**：
+- **精确成本计算** - 基于 ModelInfo，支持缓存定价（节省高达90%）
+- **统一定价** - USD per 1M tokens，强制 ModelInfo 存在
+- **10个预定义模型** - OpenAI (4), Moonshot (4), DeepSeek (2)
+
+**API 方法**：
+```typescript
+// 获取供应商模型列表
+aiModelApi.getProviderModels(provider: string): Promise<ModelInfo[]>
+
+// 获取模型详情（上下文、定价、能力）
+aiModelApi.getModelInfo(provider: string, modelId: string): Promise<ModelInfo | null>
+
+// 精确成本计算（基于 token）
+aiModelApi.calculatePreciseCost(
+  provider: string, modelId: string,
+  inputTokens: number, outputTokens: number,
+  cacheWriteTokens?: number, cacheReadTokens?: number
+): Promise<CostBreakdown>
+
+// 批量成本估算（基于字符数）
+aiModelApi.estimateTranslationCost(
+  provider: string, modelId: string,
+  totalChars: number, cacheHitRate?: number
+): Promise<number>
+```
+
+**数据类型** (自动生成)：
+- `ModelInfo` - 模型参数、定价、能力
+- `CostBreakdown` - 精确成本分解（含缓存节省）
 
 **完整参考**: `CLAUDE.md` §Architecture Overview
 

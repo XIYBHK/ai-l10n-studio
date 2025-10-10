@@ -81,32 +81,26 @@ impl ProviderType {
         }
     }
     
-    /// 获取输入 Token 定价（人民币/1K tokens）
-    pub fn input_price_per_1k(&self) -> f64 {
+    /// 获取该供应商的所有可用模型
+    pub fn get_models(&self) -> Vec<crate::services::ai::ModelInfo> {
+        use crate::services::ai::models;
         match self {
-            Self::Moonshot => 0.002,       // ¥2.00/1M = ¥0.002/1K
-            Self::OpenAI => 0.0005,        // gpt-3.5-turbo: $0.0005/1K input
-            Self::SparkDesk => 0.0036,     // 讯飞星火: ¥3.6/1M = ¥0.0036/1K
-            Self::Wenxin => 0.012,         // 文心一言: ¥0.012/1K
-            Self::Qianwen => 0.0008,       // 通义千问: ¥0.8/1M = ¥0.0008/1K
-            Self::GLM => 0.050,            // GLM-4: ¥0.050/1K
-            Self::Claude => 0.00025,       // Claude 3 Haiku: $0.00025/1K input
-            Self::Gemini => 0.000125,      // Gemini Pro: $0.000125/1K input
+            Self::OpenAI => models::get_openai_models(),
+            Self::Moonshot => models::get_moonshot_models(),
+            Self::SparkDesk => models::get_deepseek_models(), // TODO: 创建独立的 SparkDesk 模型定义
+            Self::Wenxin => models::get_deepseek_models(),     // TODO: 创建独立的 Wenxin 模型定义
+            Self::Qianwen => models::get_deepseek_models(),    // TODO: 创建独立的 Qianwen 模型定义
+            Self::GLM => models::get_deepseek_models(),        // TODO: 创建独立的 GLM 模型定义
+            Self::Claude => models::get_deepseek_models(),     // TODO: 创建独立的 Claude 模型定义
+            Self::Gemini => models::get_deepseek_models(),     // TODO: 创建独立的 Gemini 模型定义
         }
     }
     
-    /// 获取输出 Token 定价（人民币/1K tokens）
-    pub fn output_price_per_1k(&self) -> f64 {
-        match self {
-            Self::Moonshot => 0.010,       // ¥10.00/1M = ¥0.010/1K
-            Self::OpenAI => 0.0015,        // gpt-3.5-turbo: $0.0015/1K output
-            Self::SparkDesk => 0.0036,     // 讯飞星火: ¥3.6/1M = ¥0.0036/1K
-            Self::Wenxin => 0.012,         // 文心一言: ¥0.012/1K
-            Self::Qianwen => 0.0008,       // 通义千问: ¥0.8/1M = ¥0.0008/1K
-            Self::GLM => 0.050,            // GLM-4: ¥0.050/1K
-            Self::Claude => 0.00125,       // Claude 3 Haiku: $0.00125/1K output
-            Self::Gemini => 0.000375,      // Gemini Pro: $0.000375/1K output
-        }
+    /// 根据模型ID获取模型信息
+    pub fn get_model_info(&self, model_id: &str) -> Option<crate::services::ai::ModelInfo> {
+        self.get_models()
+            .into_iter()
+            .find(|m| m.id == model_id)
     }
 }
 
@@ -936,16 +930,25 @@ impl AITranslator {
             last_error.unwrap_or_else(|| anyhow!("翻译请求失败，已重试{}次", max_retries))
         })?;
 
-        // 更新token统计
+        // 更新token统计（使用新架构精确计算）
         if let Some(usage) = chat_response.usage {
             self.token_stats.input_tokens += usage.prompt_tokens;
             self.token_stats.output_tokens += usage.completion_tokens;
             self.token_stats.total_tokens += usage.total_tokens;
-            // 🔧 分别计算输入输出费用（更精确）
-            let input_cost = usage.prompt_tokens as f64 / 1000.0 * self.provider.input_price_per_1k();
-            let output_cost = usage.completion_tokens as f64 / 1000.0 * self.provider.output_price_per_1k();
-            let batch_cost = input_cost + output_cost;
-            self.token_stats.cost += batch_cost;
+            
+            // 使用 ModelInfo 计算精确成本
+            let model_info = self.provider.get_model_info(&self.model)
+                .expect("模型信息必须存在，请检查 models/ 目录中的模型定义");
+            
+            use crate::services::ai::CostCalculator;
+            let breakdown = CostCalculator::calculate_openai(
+                &model_info,
+                usage.prompt_tokens as usize,
+                usage.completion_tokens as usize,
+                0, // TODO: 支持从 API 响应中提取缓存 token
+                0,
+            );
+            self.token_stats.cost += breakdown.total_cost;
         }
 
         let assistant_response = chat_response

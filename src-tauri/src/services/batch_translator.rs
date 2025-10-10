@@ -402,7 +402,7 @@ impl BatchTranslator {
         content.push_str(&format!("  输入tokens: {}\n", total_input_tokens));
         content.push_str(&format!("  输出tokens: {}\n", total_output_tokens));
         content.push_str(&format!("  总计tokens: {}\n", total_tokens));
-        content.push_str(&format!("  实际费用: ¥{:.4}\n", total_cost));
+        content.push_str(&format!("  实际费用: ${:.4}\n", total_cost));
         content.push_str(&format!("{}\n\n", "=".repeat(80)));
 
         // 每个文件的详细报告
@@ -442,7 +442,7 @@ impl BatchTranslator {
             }
 
             content.push_str(&format!(
-                "Token使用: {} (¥{:.4})\n",
+                "Token使用: {} (${:.4})\n",
                 report.token_stats.total_tokens, report.token_stats.cost
             ));
         }

@@ -11,6 +11,10 @@
 - `ProxyConfig` - 代理设置（HTTP/SOCKS5）
 - `ProviderType` - AI 提供商枚举（8 种）
 
+**🆕 多AI供应商类型**:
+- `ModelInfo` - 模型信息（上下文窗口、定价、能力、缓存支持）
+- `CostBreakdown` - 成本分解（输入/输出/缓存 token、费用、节省率）
+
 **翻译数据**:
 - `POEntry` - PO 文件条目（msgid/msgstr/注释/位置）
 - `TranslationPair` - 翻译对（源文本 → 目标文本 + 元数据）
@@ -57,7 +61,7 @@ interface TokenStats {
   input_tokens: number;      // 输入 Token
   output_tokens: number;     // 输出 Token
   total_tokens: number;      // 总 Token
-  cost: number;              // 预估成本（¥）
+  cost: number;              // 精确成本（USD）
 }
 ```
 
@@ -156,6 +160,79 @@ UI Component
 - `Language` - 语言枚举（10 种支持语言）
 - `LanguageInfo` - 语言信息（名称/代码/方向/脚本）
 - `StyleSummary` - 术语风格分析（正式度/长度/类别）
+
+### 🆕 多AI供应商数据契约
+
+#### **ModelInfo（模型信息）**
+```typescript
+interface ModelInfo {
+  id: string;                    // 模型ID（如 "gpt-4o-mini"）
+  name: string;                  // 显示名称
+  provider: string;              // 供应商（"OpenAI", "Moonshot"）
+  
+  // 技术参数
+  context_window: number;        // 上下文窗口（tokens）
+  max_output_tokens: number;     // 最大输出长度
+  
+  // 💰 定价（USD per 1M tokens）
+  input_price: number;           // 输入价格
+  output_price: number;          // 输出价格
+  cache_reads_price?: number;    // 缓存读取价格（省90%）
+  cache_writes_price?: number;   // 缓存写入价格
+  
+  // 能力标识
+  supports_cache: boolean;       // 是否支持缓存
+  supports_images: boolean;      // 是否支持图像
+  
+  // UI 展示
+  description?: string;          // 模型描述
+  recommended: boolean;          // 是否推荐
+}
+```
+
+#### **CostBreakdown（成本分解）**
+```typescript
+interface CostBreakdown {
+  // Token 数量
+  input_tokens: number;          // 普通输入
+  output_tokens: number;         // 输出
+  cache_write_tokens: number;    // 缓存写入
+  cache_read_tokens: number;     // 缓存读取
+  
+  // 成本（USD）
+  input_cost: number;            // 输入成本
+  output_cost: number;           // 输出成本
+  cache_write_cost: number;      // 缓存写入成本
+  cache_read_cost: number;       // 缓存读取成本
+  total_cost: number;            // 总成本
+  
+  // 缓存优化
+  cache_savings: number;         // 节省金额
+  cache_hit_rate: number;        // 命中率（%）
+}
+```
+
+#### **架构约束**
+
+1. **强制 ModelInfo 存在**
+   ```rust
+   // ✅ 正确
+   let model_info = provider.get_model_info(model_id)
+       .expect("模型必须存在");
+   
+   // ❌ 禁止降级逻辑
+   if let Some(model_info) = ... { } else { /* 硬编码 */ }
+   ```
+
+2. **统一货币单位**
+   - 所有价格: **USD per 1M tokens**
+   - 所有成本: **USD**（非 CNY/¥）
+   - UI 显示: `$X.XXXX` 或 `$X.XX‰`
+
+3. **成本计算路径**
+   ```
+   ModelInfo → CostCalculator → CostBreakdown → TokenStats.cost
+   ```
 
 ### 类型驱动开发优势
 

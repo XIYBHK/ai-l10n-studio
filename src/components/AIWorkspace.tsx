@@ -87,7 +87,12 @@ export const AIWorkspace: React.FC<AIWorkspaceProps> = ({ isTranslating, onReset
     const deduplicated = sessionStats.deduplicated ?? 0;
     const aiTranslated = sessionStats.ai_translated ?? 0;
     const total = sessionStats.total ?? 0;
-    const estimatedCost = `¥${cost.toFixed(4)}`;
+    
+    // 💰 精确成本显示（USD per 1M tokens）
+    // 后端使用 ModelInfo 和 CostCalculator 精确计算
+    const costDisplay = cost < 0.01 
+      ? `$${(cost * 1000).toFixed(2)}‰`  // 小于 1 美分，显示为千分之
+      : `$${cost.toFixed(4)}`;
     
     return (
       <div>
@@ -144,7 +149,7 @@ export const AIWorkspace: React.FC<AIWorkspaceProps> = ({ isTranslating, onReset
           </div>
         </div>
         
-        {/* 费用 */}
+        {/* 精确成本（使用 ModelInfo 定价） */}
         <div style={{ 
           padding: '8px',
           background: colors.bgTertiary,
@@ -155,10 +160,15 @@ export const AIWorkspace: React.FC<AIWorkspaceProps> = ({ isTranslating, onReset
           fontSize: '12px'
         }}>
           <span style={{ color: colors.textSecondary }}>
-            💰 预估费用
+            💰 实际成本
           </span>
-          <span style={{ fontWeight: 600, color: colors.statusTranslated, fontSize: '16px' }}>
-            {estimatedCost}
+          <span style={{ 
+            fontWeight: 600, 
+            color: colors.statusTranslated, 
+            fontSize: '16px',
+            fontFamily: 'monospace'
+          }}>
+            {costDisplay}
           </span>
         </div>
         
@@ -198,7 +208,11 @@ export const AIWorkspace: React.FC<AIWorkspaceProps> = ({ isTranslating, onReset
     // 安全访问 token_stats
     const cost = cumulativeStats.token_stats?.cost ?? 0;
     const totalTokens = cumulativeStats.token_stats?.total_tokens ?? 0;
-    const estimatedCost = `¥${cost.toFixed(4)}`;
+    
+    // 💰 累计成本显示（USD）
+    const costDisplay = cost < 0.01 
+      ? `$${(cost * 1000).toFixed(2)}‰`  // 小于 1 美分，显示为千分之
+      : `$${cost.toFixed(4)}`;
     
     return (
       <div>
@@ -268,8 +282,8 @@ export const AIWorkspace: React.FC<AIWorkspaceProps> = ({ isTranslating, onReset
           <span style={{ color: colors.textSecondary }}>
             Token: {totalTokens.toLocaleString()}
           </span>
-          <span style={{ fontWeight: 600, color: colors.statusTranslated }}>
-            {estimatedCost}
+          <span style={{ fontWeight: 600, color: colors.statusTranslated, fontFamily: 'monospace' }}>
+            {costDisplay}
           </span>
         </div>
       </div>

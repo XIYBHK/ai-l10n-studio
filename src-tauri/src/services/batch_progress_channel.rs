@@ -96,7 +96,7 @@ pub struct TokenStatsEvent {
     pub prompt_tokens: usize,
     pub completion_tokens: usize,
     pub total_tokens: usize,
-    /// 费用（人民币元）
+    /// 费用（USD）
     pub cost: f64,
 }
 

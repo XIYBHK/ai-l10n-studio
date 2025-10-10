@@ -13,7 +13,11 @@
     "test": "vitest",
     "test:ui": "vitest --ui",
     "test:run": "vitest run",
-    "test:coverage": "vitest run --coverage"
+    "test:coverage": "vitest run --coverage",
+    "test:backend": "cd src-tauri && cargo nextest run --lib",
+    "test:backend:all": "cd src-tauri && cargo nextest run",
+    "test:backend:watch": "cd src-tauri && cargo watch -x 'nextest run --lib'",
+    "test:all": "npm run test:run && npm run test:backend"
   },
   "dependencies": {
     "@ant-design/icons": "^5.6.1",

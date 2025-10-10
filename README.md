@@ -229,12 +229,21 @@ ai-l10n-studio/
 ## 🧪 测试
 
 ```bash
-# 前端单测（Vitest）
-npm run test
-npm run test:ui
-npm run test:run
-npm run test:coverage
+# 前端测试（Vitest）
+npm run test              # Watch 模式
+npm run test:ui           # UI 模式
+npm run test:coverage     # 覆盖率报告
+
+# 后端测试（Nextest ⚡）
+npm run test:backend      # 推荐：使用 nextest（快 40%）
+npm run test:backend:all  # 包含集成测试
+npm run test:all          # 前端 + 后端
+
+# 传统方式
+cd src-tauri && cargo test
 ```
+
+**⚡ 已集成 [cargo-nextest](https://nexte.st/)** - 详见 [`NEXTEST_SETUP.md`](NEXTEST_SETUP.md)
 
 更多说明参见 docs/README.md 与 docs/API.md。
 
