@@ -515,7 +515,7 @@ impl AITranslator {
 
         // 📊 TM处理完成后推送第一次统计更新
         if let Some(ref stats_cb_opt) = stats_callback {
-            if let Some(ref stats_cb) = stats_cb_opt {
+            if let Some(stats_cb) = stats_cb_opt {
                 let current_stats = self.batch_stats.clone();
                 let current_token_stats = self.token_stats.clone();
                 stats_cb(current_stats, current_token_stats);
@@ -591,7 +591,7 @@ impl AITranslator {
                 ai_translations.extend(batch_translations);
                 
                 if let Some(ref stats_cb_opt) = stats_callback {
-                    if let Some(ref stats_cb) = stats_cb_opt {
+                    if let Some(stats_cb) = stats_cb_opt {
                         let current_stats = self.batch_stats.clone();
                         let current_token_stats = self.token_stats.clone();
                         stats_cb(current_stats, current_token_stats);
@@ -659,7 +659,7 @@ impl AITranslator {
 
         // 📊 最终统计更新（包含TM学习数量）
         if let Some(ref stats_cb_opt) = stats_callback {
-            if let Some(ref stats_cb) = stats_cb_opt {
+            if let Some(stats_cb) = stats_cb_opt {
                 let final_stats = self.batch_stats.clone();
                 let final_token_stats = self.token_stats.clone();
                 stats_cb(final_stats, final_token_stats);

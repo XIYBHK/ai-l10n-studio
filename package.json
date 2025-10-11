@@ -10,6 +10,7 @@
     "tauri": "tauri",
     "tauri:dev": "tauri dev",
     "tauri:build": "tauri build",
+    "tauri:portable": "node scripts/portable.js",
     "test": "vitest",
     "test:ui": "vitest --ui",
     "test:run": "vitest run",
@@ -17,7 +18,8 @@
     "test:backend": "cd src-tauri && cargo nextest run --lib",
     "test:backend:all": "cd src-tauri && cargo nextest run",
     "test:backend:watch": "cd src-tauri && cargo watch -x 'nextest run --lib'",
-    "test:all": "npm run test:run && npm run test:backend"
+    "test:all": "npm run test:run && npm run test:backend",
+    "i18n:check": "node scripts/check-unused-i18n.js"
   },
   "dependencies": {
     "@ant-design/icons": "^5.6.1",
@@ -55,6 +57,7 @@
     "@types/react-window": "^1.8.8",
     "@vitest/coverage-v8": "^3.2.4",
     "@vitest/ui": "^3.2.4",
+    "adm-zip": "^0.5.16",
     "happy-dom": "^19.0.2",
     "jsdom": "^27.0.0",
     "typescript": "^5.3.0",

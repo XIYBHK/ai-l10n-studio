@@ -4,11 +4,12 @@
     "save": "保存",
     "batchTranslate": "批量翻译",
     "translating": "翻译中...",
-    "settings": "设置",
-    "theme": {
-      "dark": "切换到暗色模式",
-      "light": "切换到亮色模式"
-    }
+    "settings": "设置"
+  },
+  "theme": {
+    "light": "浅色",
+    "dark": "深色",
+    "system": "跟随系统"
   },
   "entryList": {
     "total": "共 {{count}} 条",

@@ -12,7 +12,6 @@ import { ErrorBoundary } from './components/ErrorBoundary';
 import { useSessionStore } from './store';
 // import { useSettingsStore, useStatsStore } from './store'; // 预留给未来使用
 import { useTheme } from './hooks/useTheme';
-import { useTauriEventBridge } from './hooks/useTauriEventBridge';
 import { useChannelTranslation } from './hooks/useChannelTranslation'; // Tauri 2.x: Channel API
 import { useAsync } from './hooks/useAsync';
 import { TranslationStats, POEntry } from './types/tauri';
@@ -81,8 +80,8 @@ function App() {
   const configSyncInitialized = useRef(false); // 防止 StrictMode 重复初始化
   const [configSyncIssues, setConfigSyncIssues] = useState<string[]>([]);
   
-  // 🌉 建立 Tauri 事件桥接
-  useTauriEventBridge();
+  // 🌉 Tauri 事件桥接已在 AppDataProvider 中集成（useTauriEventBridge.enhanced.ts）
+  // 旧版本 useTauriEventBridge 已移除，避免重复监听
 
   // 💾 Store 已在 main.tsx 中初始化，这里不需要重复初始化
 

@@ -3,9 +3,8 @@
   line-height: 1.5;
   font-weight: 400;
 
+  /* Phase 9: 移除默认背景色，由 Ant Design ConfigProvider 控制 */
   color-scheme: light dark;
-  color: rgba(255, 255, 255, 0.87);
-  background-color: #242424;
 
   font-synthesis: none;
   text-rendering: optimizeLegibility;

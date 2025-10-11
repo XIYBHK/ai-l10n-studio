@@ -29,9 +29,9 @@ import {
   FileTextOutlined,
   ApiOutlined,
   UndoOutlined,
-  GlobalOutlined,
   BellOutlined,
-  InfoCircleOutlined
+  InfoCircleOutlined,
+  BgColorsOutlined
 } from '@ant-design/icons';
 import { aiConfigApi, systemPromptApi, aiModelApi } from '../services/api';
 import { AIConfig, ProviderType, PROVIDER_INFO_MAP } from '../types/aiProvider';
@@ -41,6 +41,7 @@ import { useAIConfigs, useSystemPrompt } from '../hooks/useConfig';
 import i18n from '../i18n/config'; // Phase 6
 import { notificationManager } from '../utils/notificationManager'; // Tauri 2.x: Notification
 import type { ModelInfo } from '../types/generated/ModelInfo';
+import { ThemeModeSwitch } from './ThemeModeSwitch'; // Phase 9
 
 const log = createModuleLogger('SettingsModal');
 
@@ -74,8 +75,20 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
   const [systemPrompt, setSystemPrompt] = useState<string>('');
   const [isPromptModified, setIsPromptModified] = useState(false);
   
-  // Phase 6: 语言设置状态
+  // Phase 9: 语言设置状态（监听 i18n 变化）
   const [currentLanguage, setCurrentLanguage] = useState<string>(i18n.language);
+  
+  // 监听 i18n 语言变化，自动更新 Select 组件
+  useEffect(() => {
+    const handleLanguageChanged = () => {
+      setCurrentLanguage(i18n.language);
+    };
+    
+    i18n.on('languageChanged', handleLanguageChanged);
+    return () => {
+      i18n.off('languageChanged', handleLanguageChanged);
+    };
+  }, []);
   
   // Notification设置状态
   const [notificationEnabled, setNotificationEnabled] = useState(notificationManager.isEnabled());
@@ -368,19 +381,19 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
     }
   };
 
-  // Phase 6: 语言切换处理
+  // Phase 9: 语言切换处理（无刷新，响应式更新）
   const handleLanguageChange = async (language: string) => {
     try {
+      // 1. 切换 i18n 语言（响应式，无需刷新）
       await i18n.changeLanguage(language);
       setCurrentLanguage(language);
-      localStorage.setItem('app-language', language);
-      message.success(`语言已切换为 ${language === 'zh-CN' ? '简体中文' : 'English'}，正在刷新...`, 1);
-      log.info('应用语言已切换', { language });
       
-      // 延迟刷新以显示成功消息
-      setTimeout(() => {
-        window.location.reload();
-      }, 1000);
+      // 2. 保存到 TauriStore（通过 useAppStore）
+      const { useAppStore } = await import('../store/useAppStore');
+      useAppStore.getState().setLanguage(language as any);
+      
+      message.success(`语言已切换为 ${language === 'zh-CN' ? '简体中文' : 'English'}`);
+      log.info('应用语言已切换', { language });
     } catch (error) {
       log.logError(error, '语言切换失败');
       message.error('语言切换失败');
@@ -749,15 +762,30 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
       ),
     },
     {
-      key: 'language',
+      key: 'appearance',
       label: (
         <span>
-          <GlobalOutlined /> 语言设置
+          <BgColorsOutlined /> 外观与语言
         </span>
       ),
       children: (
-        <div>
-          <Card size="small" title="当前语言">
+        <Space direction="vertical" style={{ width: '100%' }} size="middle">
+          {/* Phase 9: 主题切换 */}
+          <Card size="small" title="主题模式">
+            <Space direction="vertical" style={{ width: '100%' }}>
+              <ThemeModeSwitch />
+              <Alert
+                message="提示"
+                description="选择'跟随系统'时，主题将自动适应您的系统设置"
+                type="info"
+                showIcon
+                style={{ marginTop: 8 }}
+              />
+            </Space>
+          </Card>
+          
+          {/* 语言设置 */}
+          <Card size="small" title="界面语言">
             <Select
               value={currentLanguage}
               onChange={handleLanguageChange}
@@ -767,7 +795,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
               <Select.Option value="en-US">English</Select.Option>
             </Select>
           </Card>
-        </div>
+        </Space>
       ),
     },
     {

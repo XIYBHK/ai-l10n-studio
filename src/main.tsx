@@ -10,6 +10,7 @@ import { SWRConfig } from 'swr'
 import { defaultSWRConfig } from './services/swr'
 import { initializeSWRRevalidators } from './services/swrEvents'
 import { initializeStatsManagerV2 } from './services/statsManagerV2'
+import { AppDataProvider } from './providers' // Phase 9: 统一数据提供者
 
 // Phase 6: 异步初始化 i18n 后再渲染应用
 async function bootstrap() {
@@ -42,7 +43,9 @@ async function bootstrap() {
   ReactDOM.createRoot(document.getElementById('root')!).render(
     <React.StrictMode>
       <SWRConfig value={defaultSWRConfig}>
-        <App />
+        <AppDataProvider>
+          <App />
+        </AppDataProvider>
       </SWRConfig>
     </React.StrictMode>,
   );
@@ -54,7 +57,9 @@ bootstrap().catch(error => {
   ReactDOM.createRoot(document.getElementById('root')!).render(
     <React.StrictMode>
       <SWRConfig value={defaultSWRConfig}>
-        <App />
+        <AppDataProvider>
+          <App />
+        </AppDataProvider>
       </SWRConfig>
     </React.StrictMode>,
   );

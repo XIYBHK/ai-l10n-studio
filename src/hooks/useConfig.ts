@@ -1,6 +1,6 @@
 import useSWR from 'swr';
 import type { AIConfig } from '../types/aiProvider';
-import { aiConfigApi, configApi, systemPromptApi } from '../services/api';
+import { configCommands, aiConfigCommands, systemPromptCommands } from '../services/commands';
 
 // 应用配置（整体）
 const APP_CONFIG_KEY = 'app_config';
@@ -13,7 +13,7 @@ const SYSTEM_PROMPT_KEY = 'system_prompt';
 export function useAppConfig() {
   const { data, error, isLoading, mutate } = useSWR(
     APP_CONFIG_KEY, 
-    () => configApi.get(),
+    () => configCommands.get(),  // ✅ 迁移到统一命令层
     { 
       keepPreviousData: true,
       revalidateOnFocus: false, // 配置不需要聚焦刷新
@@ -26,7 +26,7 @@ export function useAppConfig() {
 export function useAIConfigs() {
   const all = useSWR(
     AI_CONFIGS_KEY, 
-    () => aiConfigApi.getAllConfigs(),
+    () => aiConfigCommands.getAll(),  // ✅ 迁移到统一命令层
     { 
       keepPreviousData: true,
       revalidateOnFocus: false, // AI配置不需要聚焦刷新
@@ -35,7 +35,7 @@ export function useAIConfigs() {
   );
   const active = useSWR(
     ACTIVE_AI_CONFIG_KEY, 
-    () => aiConfigApi.getActiveConfig(),
+    () => aiConfigCommands.getActive(),  // ✅ 迁移到统一命令层
     { 
       keepPreviousData: true,
       revalidateOnFocus: false,
@@ -55,7 +55,7 @@ export function useAIConfigs() {
 export function useSystemPrompt() {
   const { data, error, isLoading, mutate } = useSWR(
     SYSTEM_PROMPT_KEY,
-    () => systemPromptApi.getPrompt(),
+    () => systemPromptCommands.get(),  // ✅ 迁移到统一命令层
     {
       revalidateOnFocus: false, // 系统提示词不需要聚焦刷新
       revalidateOnReconnect: false,

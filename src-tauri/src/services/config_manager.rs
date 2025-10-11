@@ -5,6 +5,7 @@ use std::path::{Path, PathBuf};
 use chrono;
 
 use crate::services::ai_translator::AIConfig;
+use crate::utils::paths;
 
 #[cfg(feature = "ts-rs")]
 use ts_rs::TS;
@@ -49,6 +50,16 @@ pub struct AppConfig {
     #[serde(default)]
     pub system_prompt: Option<String>,      // 自定义系统提示词（None使用默认）
     
+    // Phase 9 新增字段：UI 配置
+    #[serde(default)]
+    pub theme_mode: Option<String>,         // 主题模式：light/dark/system（None使用系统默认）
+    #[serde(default)]
+    pub language: Option<String>,           // 界面语言：zh-CN/en等（None使用系统语言）
+    
+    // Phase 9 新增字段：日志配置
+    #[serde(default)]
+    pub log_retention_days: Option<u32>,    // 日志保留天数（None表示永久保留）
+    
     // 配置版本控制（前后端同步）
     #[serde(default)]
     pub config_version: u64,                // 配置版本号，每次修改递增
@@ -78,6 +89,10 @@ impl Default for AppConfig {
             active_config_index: None,
             // Phase 3 新增字段默认值
             system_prompt: None,  // None表示使用内置默认提示词
+            // Phase 9 新增字段默认值
+            theme_mode: None,      // None表示使用系统主题
+            language: None,        // None表示使用系统语言
+            log_retention_days: Some(7),  // 默认保留7天日志
             // 配置版本控制
             config_version: 0,
             last_modified: None,
@@ -194,10 +209,17 @@ pub struct ConfigManager {
 impl ConfigManager {
     pub fn new(config_path: Option<PathBuf>) -> Result<Self> {
         let config_path = config_path.unwrap_or_else(|| {
-            let mut path = dirs::home_dir().unwrap_or_else(|| PathBuf::from("."));
-            path.push(".po-translator");
-            path.push("config.json");
-            path
+            // Phase 9: 使用新的 paths.rs 统一路径管理
+            // 支持便携模式：程序目录/.config/ 或 系统目录
+            paths::app_home_dir()
+                .map(|dir| dir.join("config.json"))
+                .unwrap_or_else(|_| {
+                    // 降级：使用旧的用户目录路径
+                    let mut path = dirs::home_dir().unwrap_or_else(|| PathBuf::from("."));
+                    path.push(".po-translator");
+                    path.push("config.json");
+                    path
+                })
         });
 
         let config = if config_path.exists() {

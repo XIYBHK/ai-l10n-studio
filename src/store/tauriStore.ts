@@ -17,7 +17,7 @@ import { Store } from '@tauri-apps/plugin-store';
  */
 export interface AppStoreData {
   // 应用设置
-  theme: 'light' | 'dark';
+  theme: 'light' | 'dark' | 'system'; // Phase 9: 支持三种主题模式
   language: string;
   
   // 累计统计（完整的 TranslationStats 字段）
@@ -253,15 +253,15 @@ class TauriStore {
   /**
    * 获取主题
    */
-  async getTheme(): Promise<'light' | 'dark'> {
+  async getTheme(): Promise<'light' | 'dark' | 'system'> {
     const theme = await this.get('theme');
-    return theme ?? 'light';
+    return theme ?? 'system'; // Phase 9: 默认跟随系统
   }
 
   /**
    * 设置主题
    */
-  async setTheme(theme: 'light' | 'dark'): Promise<void> {
+  async setTheme(theme: 'light' | 'dark' | 'system'): Promise<void> {
     await this.set('theme', theme);
     await this.save();
   }

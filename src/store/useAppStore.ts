@@ -2,7 +2,8 @@ import { create } from 'zustand';
 import { POEntry, TranslationReport, AppConfig, TranslationStats } from '../types/tauri';
 import { tauriStore } from './tauriStore';
 
-type ThemeMode = 'light' | 'dark';
+// Phase 9: 支持三种主题模式
+type ThemeMode = 'light' | 'dark' | 'system';
 type Language = 'zh-CN' | 'en-US';
 
 interface AppState {
@@ -42,7 +43,7 @@ interface AppState {
   
   // 主题和语言
   setTheme: (theme: ThemeMode) => void;
-  toggleTheme: () => void;
+  toggleTheme: () => void; // Deprecated: 使用 useTheme.toggleTheme()
   setLanguage: (language: Language) => void;
   
   // 累计统计
@@ -64,7 +65,7 @@ export const useAppStore = create<AppState>()((set, get) => ({
   progress: 0,
   report: null,
   config: null,
-  theme: 'light',
+  theme: 'system', // Phase 9: 默认跟随系统
   language: 'zh-CN',
   cumulativeStats: {
     total: 0,
@@ -135,7 +136,11 @@ export const useAppStore = create<AppState>()((set, get) => ({
         );
       },
       toggleTheme: () => {
-        const newTheme = get().theme === 'light' ? 'dark' : 'light';
+        // Phase 9: 支持三种模式循环切换 (Deprecated, 推荐使用 useTheme.toggleTheme())
+        const current = get().theme;
+        const newTheme: ThemeMode = 
+          current === 'light' ? 'dark' :
+          current === 'dark' ? 'system' : 'light';
         set({ theme: newTheme });
         // 异步保存到 TauriStore
         tauriStore.setTheme(newTheme).catch(err => 

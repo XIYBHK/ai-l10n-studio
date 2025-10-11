@@ -8,16 +8,16 @@ mod utils;
 use commands::*;
 
 fn main() {
-    // 初始化日志系统
-    tracing_subscriber::fmt()
-        .with_max_level(tracing::Level::DEBUG)
-        .with_target(true)
-        .with_thread_ids(true)
-        .with_file(true)
-        .with_line_number(true)
-        .init();
+    // Phase 9: 使用新的初始化流程
+    // 1. 初始化便携模式标志
+    // 2. 创建目录结构
+    // 3. 初始化 flexi_logger 日志系统
+    if let Err(e) = utils::init::init_app() {
+        eprintln!("❌ Failed to initialize application: {}", e);
+        std::process::exit(1);
+    }
 
-    tracing::info!("🚀 PO Translator GUI starting...");
+    log::info!("🚀 PO Translator GUI starting...");
     
     // 初始化提示词日志
     services::init_prompt_logger();
@@ -72,6 +72,9 @@ fn main() {
         get_supported_langs,
         // 系统语言检测 (Phase 6)
         get_system_language,
+        // Phase 9: 后端国际化增强
+        utils::i18n::get_system_locale,
+        utils::i18n::get_available_languages,
         // Contextual Refine (Phase 7)
         contextual_refine,
         // 提示词日志

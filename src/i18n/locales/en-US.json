@@ -4,11 +4,12 @@
     "save": "Save",
     "batchTranslate": "Batch Translate",
     "translating": "Translating...",
-    "settings": "Settings",
-    "theme": {
-      "dark": "Switch to Dark Mode",
-      "light": "Switch to Light Mode"
-    }
+    "settings": "Settings"
+  },
+  "theme": {
+    "light": "Light",
+    "dark": "Dark",
+    "system": "System"
   },
   "entryList": {
     "total": "Total: {{count}}",

@@ -3,6 +3,7 @@ pub mod ai_translator;
 pub mod batch_translator;
 pub mod batch_progress_channel;  // Tauri 2.x: IPC Channel 优化
 pub mod config_manager;
+pub mod config_draft;  // Phase 9: Draft 模式配置管理
 pub mod po_parser;
 pub mod translation_memory;
 pub mod term_library;
