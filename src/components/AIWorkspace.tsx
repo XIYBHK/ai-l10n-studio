@@ -14,6 +14,7 @@ import { useStatsStore, useSessionStore } from '../store';
 import { createModuleLogger } from '../utils/logger';
 import { eventDispatcher } from '../services/eventDispatcher';
 import { useTermLibrary } from '../hooks/useTermLibrary';
+import { formatCost, formatTokens, formatPercentage } from '../utils/formatters';
 
 const log = createModuleLogger('AIWorkspace');
 
@@ -35,7 +36,7 @@ export const AIWorkspace: React.FC<AIWorkspaceProps> = ({ isTranslating, onReset
   // 1. stats (prop): 本次翻译详情（实时更新）
   // 2. sessionStats: 本次会话聚合（当前文件打开后的所有翻译）
   // 3. cumulativeStats: 累计统计（跨文件跨会话）
-  const { cumulativeStats, updateCumulativeStats, resetCumulativeStats } = useStatsStore();
+  const { cumulativeStats, resetCumulativeStats } = useStatsStore();
   const { sessionStats } = useSessionStore();
 
   // 监听术语更新事件（说明有术语了，开始加载）
@@ -86,13 +87,10 @@ export const AIWorkspace: React.FC<AIWorkspaceProps> = ({ isTranslating, onReset
     const tmHits = sessionStats.tm_hits ?? 0;
     const deduplicated = sessionStats.deduplicated ?? 0;
     const aiTranslated = sessionStats.ai_translated ?? 0;
-    const total = sessionStats.total ?? 0;
     
-    // 💰 精确成本显示（USD per 1M tokens）
-    // 后端使用 ModelInfo 和 CostCalculator 精确计算
-    const costDisplay = cost < 0.01 
-      ? `$${(cost * 1000).toFixed(2)}‰`  // 小于 1 美分，显示为千分之
-      : `$${cost.toFixed(4)}`;
+    // 🔧 修复：实际处理的总条目数 = tm_hits + deduplicated + ai_translated
+    // 而不是使用 sessionStats.total（文件总条目数）
+    const actualTotal = tmHits + deduplicated + aiTranslated;
     
     return (
       <div>
@@ -115,15 +113,15 @@ export const AIWorkspace: React.FC<AIWorkspaceProps> = ({ isTranslating, onReset
         }}>
           <div style={{ textAlign: 'center', padding: '8px', background: colors.bgTertiary, borderRadius: '4px' }}>
             <div style={{ color: colors.textTertiary, marginBottom: '4px' }}>记忆库命中</div>
-            <div style={{ fontSize: '16px', fontWeight: 600, color: colors.statusTranslated }}>{tmHits}</div>
+            <div style={{ fontSize: '16px', fontWeight: 600, color: colors.statusTranslated }}>{actualTotal > 0 ? formatPercentage(tmHits, actualTotal) : '0.0%'}</div>
           </div>
           <div style={{ textAlign: 'center', padding: '8px', background: colors.bgTertiary, borderRadius: '4px' }}>
             <div style={{ color: colors.textTertiary, marginBottom: '4px' }}>去重节省</div>
-            <div style={{ fontSize: '16px', fontWeight: 600, color: colors.statusUntranslated }}>{deduplicated}</div>
+            <div style={{ fontSize: '16px', fontWeight: 600, color: colors.statusUntranslated }}>{actualTotal > 0 ? formatPercentage(deduplicated, actualTotal) : '0.0%'}</div>
           </div>
           <div style={{ textAlign: 'center', padding: '8px', background: colors.bgTertiary, borderRadius: '4px' }}>
             <div style={{ color: colors.textTertiary, marginBottom: '4px' }}>AI调用</div>
-            <div style={{ fontSize: '16px', fontWeight: 600, color: colors.textPrimary }}>{aiTranslated}</div>
+            <div style={{ fontSize: '16px', fontWeight: 600, color: colors.textPrimary }}>{actualTotal > 0 ? formatPercentage(aiTranslated, actualTotal) : '0.0%'}</div>
           </div>
         </div>
         
@@ -137,15 +135,15 @@ export const AIWorkspace: React.FC<AIWorkspaceProps> = ({ isTranslating, onReset
         }}>
           <div style={{ textAlign: 'center', padding: '6px', background: colors.bgTertiary, borderRadius: '4px' }}>
             <div style={{ color: colors.textTertiary }}>输入</div>
-            <div style={{ fontSize: '14px', fontWeight: 600 }}>{inputTokens.toLocaleString()}</div>
+            <div style={{ fontSize: '14px', fontWeight: 600 }}>{formatTokens(inputTokens)}</div>
           </div>
           <div style={{ textAlign: 'center', padding: '6px', background: colors.bgTertiary, borderRadius: '4px' }}>
             <div style={{ color: colors.textTertiary }}>输出</div>
-            <div style={{ fontSize: '14px', fontWeight: 600 }}>{outputTokens.toLocaleString()}</div>
+            <div style={{ fontSize: '14px', fontWeight: 600 }}>{formatTokens(outputTokens)}</div>
           </div>
           <div style={{ textAlign: 'center', padding: '6px', background: colors.bgTertiary, borderRadius: '4px' }}>
             <div style={{ color: colors.textTertiary }}>总计</div>
-            <div style={{ fontSize: '14px', fontWeight: 600 }}>{totalTokens.toLocaleString()}</div>
+            <div style={{ fontSize: '14px', fontWeight: 600 }}>{formatTokens(totalTokens)}</div>
           </div>
         </div>
         
@@ -168,7 +166,7 @@ export const AIWorkspace: React.FC<AIWorkspaceProps> = ({ isTranslating, onReset
             fontSize: '16px',
             fontFamily: 'monospace'
           }}>
-            {costDisplay}
+            {formatCost(cost)}
           </span>
         </div>
         
@@ -209,11 +207,6 @@ export const AIWorkspace: React.FC<AIWorkspaceProps> = ({ isTranslating, onReset
     const cost = cumulativeStats.token_stats?.cost ?? 0;
     const totalTokens = cumulativeStats.token_stats?.total_tokens ?? 0;
     
-    // 💰 累计成本显示（USD）
-    const costDisplay = cost < 0.01 
-      ? `$${(cost * 1000).toFixed(2)}‰`  // 小于 1 美分，显示为千分之
-      : `$${cost.toFixed(4)}`;
-    
     return (
       <div>
         <div style={{ 
@@ -235,7 +228,7 @@ export const AIWorkspace: React.FC<AIWorkspaceProps> = ({ isTranslating, onReset
           </Popconfirm>
         </div>
         
-        {/* 精简数据展示 - 添加去重 */}
+        {/* 精简数据展示 - 调整排版：总计翻译-AI调用 / 记忆命中-去重命中 */}
         <div style={{ 
           display: 'grid',
           gridTemplateColumns: 'repeat(2, 1fr)',
@@ -244,12 +237,12 @@ export const AIWorkspace: React.FC<AIWorkspaceProps> = ({ isTranslating, onReset
           marginBottom: 8
         }}>
           <div style={{ textAlign: 'center', padding: '6px', background: colors.bgTertiary, borderRadius: '4px' }}>
-            <div style={{ color: colors.textTertiary }}>总计</div>
+            <div style={{ color: colors.textTertiary }}>总计翻译</div>
             <div style={{ fontSize: '16px', fontWeight: 600, color: colors.textPrimary }}>{cumulativeStats.total}</div>
           </div>
           <div style={{ textAlign: 'center', padding: '6px', background: colors.bgTertiary, borderRadius: '4px' }}>
-            <div style={{ color: colors.textTertiary }}>命中</div>
-            <div style={{ fontSize: '16px', fontWeight: 600, color: colors.statusTranslated }}>{cumulativeStats.tm_hits}</div>
+            <div style={{ color: colors.textTertiary }}>AI调用</div>
+            <div style={{ fontSize: '16px', fontWeight: 600, color: colors.textPrimary }}>{cumulativeStats.ai_translated}</div>
           </div>
         </div>
         <div style={{ 
@@ -259,12 +252,12 @@ export const AIWorkspace: React.FC<AIWorkspaceProps> = ({ isTranslating, onReset
           fontSize: '11px'
         }}>
           <div style={{ textAlign: 'center', padding: '6px', background: colors.bgTertiary, borderRadius: '4px' }}>
-            <div style={{ color: colors.textTertiary }}>去重</div>
-            <div style={{ fontSize: '16px', fontWeight: 600, color: colors.statusUntranslated }}>{cumulativeStats.deduplicated ?? 0}</div>
+            <div style={{ color: colors.textTertiary }}>记忆命中</div>
+            <div style={{ fontSize: '16px', fontWeight: 600, color: colors.statusTranslated }}>{cumulativeStats.tm_hits}</div>
           </div>
           <div style={{ textAlign: 'center', padding: '6px', background: colors.bgTertiary, borderRadius: '4px' }}>
-            <div style={{ color: colors.textTertiary }}>AI调用</div>
-            <div style={{ fontSize: '16px', fontWeight: 600, color: colors.textPrimary }}>{cumulativeStats.ai_translated}</div>
+            <div style={{ color: colors.textTertiary }}>去重命中</div>
+            <div style={{ fontSize: '16px', fontWeight: 600, color: colors.statusUntranslated }}>{cumulativeStats.deduplicated ?? 0}</div>
           </div>
         </div>
         
@@ -280,10 +273,10 @@ export const AIWorkspace: React.FC<AIWorkspaceProps> = ({ isTranslating, onReset
           fontSize: '11px'
         }}>
           <span style={{ color: colors.textSecondary }}>
-            Token: {totalTokens.toLocaleString()}
+            Token: {formatTokens(totalTokens)}
           </span>
           <span style={{ fontWeight: 600, color: colors.statusTranslated, fontFamily: 'monospace' }}>
-            {costDisplay}
+            {formatCost(cost)}
           </span>
         </div>
       </div>

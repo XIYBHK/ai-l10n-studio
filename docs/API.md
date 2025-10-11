@@ -45,9 +45,11 @@ const { data, error, isLoading } = useSWR('config', configApi.loadConfig);
 ### 🆕 多AI供应商架构 (`aiModelApi`)
 
 **核心能力**：
-- **精确成本计算** - 基于 ModelInfo，支持缓存定价（节省高达90%）
-- **统一定价** - USD per 1M tokens，强制 ModelInfo 存在
-- **10个预定义模型** - OpenAI (4), Moonshot (4), DeepSeek (2)
+- ✅ **精确成本计算** - 基于 ModelInfo，支持缓存定价（节省高达90%）
+- ✅ **统一定价** - USD per 1M tokens，强制 ModelInfo 存在
+- ✅ **10个预定义模型** - OpenAI (4), Moonshot (4), DeepSeek (2)
+- ✅ **设置页预设模型** - 下拉选择器显示所有可用模型及定价
+- ✅ **统计面板集成** - 实时显示精确成本（USD）
 
 **API 方法**：
 ```typescript
@@ -75,6 +77,45 @@ aiModelApi.estimateTranslationCost(
 - `ModelInfo` - 模型参数、定价、能力
 - `CostBreakdown` - 精确成本分解（含缓存节省）
 
+**成本计算流程**（已完全集成）：
+```
+翻译请求 → AITranslator
+  ├─ OpenAI API 返回 usage: { prompt_tokens, completion_tokens }
+  ├─ ProviderType.get_model_info(model_id) → ModelInfo (包含定价)
+  ├─ CostCalculator.calculate_openai(ModelInfo, tokens) → CostBreakdown
+  └─ token_stats.cost = breakdown.total_cost (USD)
+       ↓
+BatchStatsEvent { token_stats: { cost } } → Channel 发送
+       ↓
+前端 EventDispatcher → StatsEngine → useSessionStore/useStatsStore
+       ↓
+AIWorkspace 统计面板 → 显示 `$0.0023`（小额4位）或 `$12.35`（大额2位）
+```
+
+**供应商配置整合**（`src/types/aiProvider.ts`）：
+- ✅ **统一配置源** - `PROVIDER_INFO_MAP` 包含所有8个供应商的默认配置
+- ✅ **自动生成** - SettingsModal 从 `PROVIDER_INFO_MAP` 动态生成供应商列表
+- ✅ **类型安全** - `ProviderType` 枚举确保类型一致性
+- ✅ **模型预设** - 每个供应商都有 `defaultModel`，可被预设模型列表覆盖
+
+**统一格式化工具**（`src/utils/formatters.ts`）：
+- ✅ **单一数据源** - 所有格式化逻辑集中在一个模块
+- ✅ **全局一致** - `formatCost()` 确保所有地方显示成本的格式完全相同
+- ✅ **易于维护** - 修改一处，全局生效（如 `0.42¢` vs `$0.0042`）
+- ✅ **可复用** - `formatTokens()`, `formatPercentage()`, `formatDuration()` 等
+
+```typescript
+// 统一的格式化函数
+import { formatCost, formatTokens, formatPercentage } from '@/utils/formatters';
+
+// ✅ 正确：使用统一函数
+const costDisplay = formatCost(0.0042);  // "0.42¢"
+
+// ❌ 错误：手动格式化（分散逻辑）
+const costDisplay = cost < 0.01 ? `${(cost * 100).toFixed(2)}¢` : `$${cost.toFixed(4)}`;
+```
+
+**代码质量改进**: 详见 `docs/CODE_QUALITY_IMPROVEMENTS.md`  
 **完整参考**: `CLAUDE.md` §Architecture Overview
 
 ---

@@ -6,7 +6,8 @@
 import { message } from 'antd';
 import { createModuleLogger } from '../utils/logger';
 import { apiClient } from './apiClient';
-import type { ModelInfo, CostBreakdown } from '../types/generated/ModelInfo';
+import type { ModelInfo } from '../types/generated/ModelInfo';
+import type { CostBreakdown } from '../types/generated/CostBreakdown';
 
 const log = createModuleLogger('API');
 
@@ -534,7 +535,7 @@ export const aiModelApi = {
    * 获取指定供应商的所有模型
    */
   async getProviderModels(provider: string): Promise<ModelInfo[]> {
-    return invoke<ModelInfo[]>('get_provider_models', { providerType: provider }, {
+    return invoke<ModelInfo[]>('get_provider_models', { provider }, {
       errorMessage: '获取模型列表失败',
     });
   },
@@ -544,7 +545,7 @@ export const aiModelApi = {
    */
   async getModelInfo(provider: string, modelId: string): Promise<ModelInfo | null> {
     return invoke<ModelInfo | null>('get_model_info', { 
-      providerType: provider, 
+      provider, 
       modelId 
     }, {
       errorMessage: '获取模型信息失败',
@@ -561,7 +562,7 @@ export const aiModelApi = {
     cacheHitRate?: number
   ): Promise<number> {
     return invoke<number>('estimate_translation_cost', {
-      providerType: provider,
+      provider,
       modelId,
       totalChars,
       cacheHitRate: cacheHitRate ?? null
@@ -582,7 +583,7 @@ export const aiModelApi = {
     cacheReadTokens?: number
   ): Promise<CostBreakdown> {
     return invoke<CostBreakdown>('calculate_precise_cost', {
-      providerType: provider,
+      provider,
       modelId,
       inputTokens,
       outputTokens,

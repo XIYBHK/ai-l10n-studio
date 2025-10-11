@@ -34,7 +34,7 @@ import {
   InfoCircleOutlined
 } from '@ant-design/icons';
 import { aiConfigApi, systemPromptApi, aiModelApi } from '../services/api';
-import { AIConfig, ProviderType } from '../types/aiProvider';
+import { AIConfig, ProviderType, PROVIDER_INFO_MAP } from '../types/aiProvider';
 import { createModuleLogger } from '../utils/logger';
 import { useAsync } from '../hooks/useAsync';
 import { useAIConfigs, useSystemPrompt } from '../hooks/useConfig';
@@ -49,57 +49,13 @@ interface SettingsModalProps {
   onClose: () => void;
 }
 
-// 供应商配置
-const PROVIDER_CONFIGS = [
-  { 
-    value: ProviderType.Moonshot, 
-    label: 'Moonshot AI', 
-    defaultUrl: 'https://api.moonshot.cn/v1', 
-    defaultModel: 'moonshot-v1-auto' 
-  },
-  { 
-    value: ProviderType.OpenAI, 
-    label: 'OpenAI', 
-    defaultUrl: 'https://api.openai.com/v1', 
-    defaultModel: 'gpt-3.5-turbo' 
-  },
-  { 
-    value: ProviderType.SparkDesk, 
-    label: '讯飞星火', 
-    defaultUrl: 'https://spark-api.xf-yun.com/v1', 
-    defaultModel: 'spark-v3.5' 
-  },
-  { 
-    value: ProviderType.Wenxin, 
-    label: '百度文心', 
-    defaultUrl: 'https://aip.baidubce.com/rpc/2.0/ai_custom/v1', 
-    defaultModel: 'ERNIE-Bot-4' 
-  },
-  { 
-    value: ProviderType.Qianwen, 
-    label: '阿里通义千问', 
-    defaultUrl: 'https://dashscope.aliyuncs.com/api/v1', 
-    defaultModel: 'qwen-max' 
-  },
-  { 
-    value: ProviderType.GLM, 
-    label: '智谱 GLM', 
-    defaultUrl: 'https://open.bigmodel.cn/api/paas/v4', 
-    defaultModel: 'glm-4' 
-  },
-  { 
-    value: ProviderType.Claude, 
-    label: 'Claude (Anthropic)', 
-    defaultUrl: 'https://api.anthropic.com/v1', 
-    defaultModel: 'claude-3-opus-20240229' 
-  },
-  { 
-    value: ProviderType.Gemini, 
-    label: 'Google Gemini', 
-    defaultUrl: 'https://generativelanguage.googleapis.com/v1', 
-    defaultModel: 'gemini-pro' 
-  },
-];
+// 供应商配置（从 aiProvider.ts 统一获取）
+const PROVIDER_CONFIGS = Object.values(ProviderType).map(type => ({
+  value: type,
+  label: PROVIDER_INFO_MAP[type].displayName,
+  defaultUrl: PROVIDER_INFO_MAP[type].defaultUrl,
+  defaultModel: PROVIDER_INFO_MAP[type].defaultModel,
+}));
 
 export const SettingsModal: React.FC<SettingsModalProps> = ({
   visible,
@@ -112,6 +68,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
   const [isAddingNew, setIsAddingNew] = useState(false);
   const [testing, setTesting] = useState(false);
   const [currentModelInfo, setCurrentModelInfo] = useState<ModelInfo | null>(null);
+  const [availableModels, setAvailableModels] = useState<ModelInfo[]>([]);
   
   // Phase 3: 系统提示词状态
   const [systemPrompt, setSystemPrompt] = useState<string>('');
@@ -145,7 +102,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
   
   // 加载由 SWR 负责
 
-  const handleProviderChange = (provider: ProviderType) => {
+  const handleProviderChange = async (provider: ProviderType) => {
     const providerConfig = PROVIDER_CONFIGS.find(p => p.value === provider);
     if (providerConfig) {
       form.setFieldsValue({
@@ -153,9 +110,26 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
         model: providerConfig.defaultModel,
       });
     }
+    
+    // 加载该供应商的可用模型列表
+    try {
+      const models = await aiModelApi.getProviderModels(provider);
+      setAvailableModels(models);
+      log.info('已加载模型列表', { provider, count: models.length });
+      
+      // 如果有推荐模型，自动选择
+      const recommendedModel = models.find(m => m.recommended);
+      if (recommendedModel && !form.getFieldValue('model')) {
+        form.setFieldsValue({ model: recommendedModel.id });
+        setCurrentModelInfo(recommendedModel);
+      }
+    } catch (error) {
+      log.logError(error, '加载模型列表失败');
+      setAvailableModels([]);
+    }
   };
 
-  const handleAddNew = () => {
+  const handleAddNew = async () => {
     setIsAddingNew(true);
     setEditingIndex(null);
     form.resetFields();
@@ -169,9 +143,24 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
         port: 7890,
       },
     });
+    
+    // 自动加载 Moonshot 的模型列表
+    try {
+      const models = await aiModelApi.getProviderModels(ProviderType.Moonshot);
+      setAvailableModels(models);
+      
+      // 查找推荐模型
+      const recommendedModel = models.find(m => m.recommended);
+      if (recommendedModel) {
+        setCurrentModelInfo(recommendedModel);
+      }
+    } catch (error) {
+      log.logError(error, '加载默认模型列表失败');
+      setAvailableModels([]);
+    }
   };
 
-  const handleEdit = (index: number) => {
+  const handleEdit = async (index: number) => {
     const config = configs[index];
     setEditingIndex(index);
     setIsAddingNew(false);
@@ -185,6 +174,21 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
       baseUrl: config.baseUrl,
       model: config.model,
     });
+    
+    // 加载该供应商的模型列表
+    try {
+      const models = await aiModelApi.getProviderModels(config.provider);
+      setAvailableModels(models);
+      
+      // 如果有当前模型，加载其信息
+      if (config.model) {
+        const modelInfo = models.find(m => m.id === config.model);
+        setCurrentModelInfo(modelInfo || null);
+      }
+    } catch (error) {
+      log.logError(error, '加载模型列表失败');
+      setAvailableModels([]);
+    }
     
     // 直接使用用户保存的值，不填充默认值
     // 留空的字段在后端会自动使用默认值
@@ -536,25 +540,47 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                 <Form.Item
                   label="模型"
                   name="model"
-                  tooltip="留空使用默认模型"
+                  tooltip="选择预设模型或手动输入自定义模型"
+                  rules={[{ required: true, message: '请选择或输入模型' }]}
                 >
-                  <Input 
-                    placeholder="模型名称" 
-                    onBlur={async (e) => {
-                      const provider = form.getFieldValue('provider');
-                      const modelId = e.target.value;
-                      if (provider && modelId) {
-                        try {
-                          const modelInfo = await aiModelApi.getModelInfo(provider, modelId);
-                          setCurrentModelInfo(modelInfo);
-                        } catch {
-                          setCurrentModelInfo(null);
-                        }
+                  <Select
+                    placeholder="选择预设模型或输入自定义"
+                    showSearch
+                    allowClear
+                    optionFilterProp="children"
+                    onChange={(value) => {
+                      if (value) {
+                        const modelInfo = availableModels.find(m => m.id === value);
+                        setCurrentModelInfo(modelInfo || null);
                       } else {
                         setCurrentModelInfo(null);
                       }
                     }}
-                  />
+                    dropdownRender={(menu) => (
+                      <>
+                        {menu}
+                        {availableModels.length === 0 && (
+                          <div style={{ padding: '8px', color: '#999', textAlign: 'center' }}>
+                            暂无预设模型，请手动输入
+                          </div>
+                        )}
+                      </>
+                    )}
+                  >
+                    {availableModels.map((model) => (
+                      <Select.Option key={model.id} value={model.id}>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                          <span>
+                            {model.name}
+                            {model.recommended && <Tag color="blue" style={{ marginLeft: 8, fontSize: '10px' }}>推荐</Tag>}
+                          </span>
+                          <span style={{ fontSize: '11px', color: '#999' }}>
+                            ${model.input_price.toFixed(2)}/${model.output_price.toFixed(2)}/1M
+                          </span>
+                        </div>
+                      </Select.Option>
+                    ))}
+                  </Select>
                 </Form.Item>
 
                 {/* 模型信息显示 */}

@@ -6,10 +6,12 @@
  * 2. 事件溯源：记录所有统计事件，可追溯、可审计
  * 3. 幂等性：同一事件多次处理结果一致，防止重复计数
  * 4. 类型安全：完整的 TypeScript 类型定义
+ * 5. 格式化集成：与 StatsFormatter 整合，提供 ready-to-display 数据
  */
 
 import { TranslationStats } from '../types/tauri';
 import { createModuleLogger } from '../utils/logger';
+import { StatsFormatter, FormattedStatsSummary } from './statsFormatter';
 
 const log = createModuleLogger('StatsEngine');
 
@@ -159,9 +161,15 @@ export class StatsEngine {
     }
   }
   
-  /** 获取会话统计 */
+  /** 获取会话统计（原始数据） */
   getSessionStats(): TranslationStats {
     return this.aggregator.aggregate(this.sessionStore.getAll());
+  }
+  
+  /** 获取会话统计（格式化后，ready-to-display） */
+  getFormattedSessionStats(locale?: string): FormattedStatsSummary {
+    const rawStats = this.getSessionStats();
+    return StatsFormatter.formatSummary(rawStats, locale);
   }
   
   /** 重置会话统计 */
@@ -172,9 +180,18 @@ export class StatsEngine {
   
   /** 获取调试信息 */
   getDebugInfo() {
+    const sessionStats = this.getSessionStats();
     return {
       sessionEvents: this.sessionStore.size(),
-      sessionStats: this.getSessionStats(),
+      sessionStats,
+      formatted: StatsFormatter.formatDebugInfo(sessionStats),
+      eventHistory: this.sessionStore.getAll().map(e => ({
+        eventId: e.meta.eventId,
+        type: e.meta.type,
+        timestamp: new Date(e.meta.timestamp).toISOString(),
+        taskId: e.meta.taskId,
+        data: e.data,
+      })),
     };
   }
 }
