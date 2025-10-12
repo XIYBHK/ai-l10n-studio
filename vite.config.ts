@@ -14,8 +14,8 @@ export default defineConfig(async () => ({
     port: 1420,
     strictPort: true,
     watch: {
-      // 3. tell vite to ignore watching `src-tauri`
-      ignored: ['**/src-tauri/**'],
+      // 3. tell vite to ignore watching `src-tauri` and reference projects
+      ignored: ['**/src-tauri/**', '**/ref/**'],
     },
     hmr: {
       overlay: false,
@@ -25,9 +25,10 @@ export default defineConfig(async () => ({
   esbuild: {
     target: 'es2020',
   },
-  // 5. optimize dependencies to exclude src-tauri
+  // 5. optimize dependencies to exclude src-tauri and reference projects
   optimizeDeps: {
-    exclude: ['src-tauri'],
+    exclude: ['src-tauri', 'ref'],
+    entries: ['index.html', 'src/**/*.{ts,tsx}'],
   },
   // 6. resolve configuration
   resolve: {
