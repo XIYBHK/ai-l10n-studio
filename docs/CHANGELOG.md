@@ -1,5 +1,32 @@
 # 更新日志
 
+## 2025-01-12 - 质量提升：代码规范 + 日志管理 + Bug修复
+
+### ✅ 新增功能
+- **日志管理UI**: 添加日志配置界面到设置模态框
+  - 日志级别选择器（error/warn/info/debug/trace）
+  - 日志保留天数配置（0-365天，0表示永久保留）
+  - 实时配置同步到 AppConfig
+  
+### 🛠️ 工程改进
+- **代码规范工具**: 配置 Prettier + EditorConfig
+  - 统一前端代码格式化（printWidth=100, singleQuote=true）
+  - Rust 代码格式化脚本（cargo fmt）
+  - 跨编辑器一致性配置
+  
+### 🐛 Bug修复
+- **并发安全**: 修复 parking_lot RwLock guard 跨 await 点问题
+  - 解决 `future cannot be sent between threads safely` 编译错误
+  - 优化 translate_entry, contextual_refine, translate_batch_with_channel 命令
+  - 使用作用域限制 guard 生命周期
+
+### 📊 代码统计
+- **4 个原子提交**，可安全回滚
+- **+127 行**（新功能：日志UI）
+- **-355 行**（临时文件清理）
+
+---
+
 ## 2025-01-12 - 架构重构：统一命令层 + Draft 配置管理
 
 ### ✅ 完成度
