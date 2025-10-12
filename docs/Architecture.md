@@ -8,30 +8,57 @@
 
 ### 提升开发效率的核心架构
 
-#### 1️⃣ **三层 API 设计**
+#### 1️⃣ **🆕 四层架构设计（2025-01 重构）**
 
 ```
-组件层 (React Hooks)
-   ↓ useAsync / useConfig
-API 层 (api.ts - 13 模块)
+组件层 (React Components)
+   ↓ useAppData / useAsync
+AppDataProvider (统一数据提供者)
+   ↓ SWR缓存 + 事件监听
+命令层 (commands.ts - 13 模块)
    ↓ 统一错误处理 + 日志
 Tauri Commands (52 个)
    ↓ 序列化/反序列化
 Rust 服务层 (services/)
+   ↓ ConfigDraft (原子更新)
+Rust 持久化层 (JSON文件)
 ```
 
-#### 2️⃣ **类型安全事件总线**
+**核心改进**：
+- ✅ **统一数据访问**：`AppDataProvider` 集中管理所有全局数据
+- ✅ **命令层重构**：`commands.ts` 替代旧的 `api.ts`，模块化组织
+- ✅ **Draft 模式**：`ConfigDraft` 实现配置的原子更新和并发安全
+- ✅ **增强事件桥接**：防抖+节流+鲁棒清理，性能更优
+
+#### 2️⃣ **🆕 增强事件系统（2025-01 升级）**
 
 - **UE 风格设计**: `EventMap` 全局类型定义 → 编译时检查
-- **双向桥接**: `useTauriEventBridge` 自动连接后端事件到前端 dispatcher
+- **增强桥接**: `useTauriEventBridgeEnhanced` 支持防抖/节流/鲁棒清理
+- **自动转发**: 后端事件 → `eventDispatcher` → 前端状态
 - **调试友好**: 事件历史记录 + 时间戳 + payload 快照
+- **集成方式**: 已集成到 `AppDataProvider`，自动启用
 
-#### 3️⃣ **SWR 数据缓存层**
+#### 3️⃣ **🆕 统一数据层（AppDataProvider）**
 
-- 自动缓存配置/TM/术语库（避免重复 IPC 调用）
-- 后台重验证（保持数据新鲜）
-- 乐观更新（即时 UI 响应）
-- 与事件系统集成（数据变更自动失效缓存）
+```typescript
+// main.tsx - 全局包裹
+<AppDataProvider>
+  <App />
+</AppDataProvider>
+
+// 组件中使用
+const { config, aiConfigs, termLibrary, refreshAll } = useAppData();
+```
+
+**核心特性**：
+- ✅ **SWR 集成**：自动缓存配置/TM/术语库（避免重复 IPC 调用）
+- ✅ **统一刷新**：`refreshAll()` 一键刷新所有数据
+- ✅ **事件同步**：集成增强事件桥接，自动失效缓存
+- ✅ **类型安全**：完整 TypeScript 类型推断
+
+**替代的旧模式**：
+- ❌ 旧：每个组件单独调用 `useSWR`
+- ✅ 新：统一通过 `useAppData` 访问全局数据
 
 #### 4️⃣ **Channel API 翻译（统一路径）**
 
@@ -133,8 +160,9 @@ const { progress, stats } = useChannelTranslation(onProgress);
 
 - **智能分批**: <10MB 直接加载，10-50MB 500条/批，>50MB 200条/批
 - **去重翻译**: 批量去重（减少 70% API 调用）
-- **节流更新**: 100ms 进度节流（避免 UI 卡顿）
+- **🆕 事件节流**: 配置更新 500ms，统计更新 500ms（性能更优）
 - **LRU 缓存**: 翻译记忆库模式匹配缓存
+- **🆕 日志轮转**: 单个文件最大 128KB，自动切换新文件，保留最新 8 个
 
 #### 7️⃣ **多AI供应商架构（统一API）**
 
@@ -187,12 +215,46 @@ AI 翻译（ModelInfo + CostCalculator 精确计费）
 TM 更新 + 事件发布 → SWR 失效 → UI 更新
 ```
 
+#### 9️⃣ **🆕 后端配置管理（Draft 模式）** - 2025-01
+
+```rust
+// 读取配置（只读访问）
+let draft = ConfigDraft::global().await;
+let config = draft.data(); // MappedRwLockReadGuard
+println!("Active AI: {}", config.active_config_index);
+// config 自动释放读锁
+
+// 修改配置（原子更新）
+let draft = ConfigDraft::global().await;
+{
+    let mut config = draft.draft(); // MappedRwLockWriteGuard
+    config.ai_configs.push(new_config);
+}
+draft.apply()?; // 保存到磁盘 + 发送事件
+```
+
+**核心特性**：
+- ✅ **并发安全**：`parking_lot::RwLock` 保证线程安全
+- ✅ **原子更新**：配置修改要么全部成功，要么全部失败
+- ✅ **自动持久化**：`apply()` 自动保存到磁盘并发送更新事件
+- ✅ **全局单例**：`ConfigDraft::global()` 提供全局访问
+
+**参考源**：`clash-verge-rev/src-tauri/src/config/draft.rs`
+
+---
+
 ### 开发工作流
 
 ```bash
 npm run tauri:dev  # 自动热重载（Vite HMR + Rust 监控）
 npm run test       # Vitest 监听模式
 npm run test:ui    # 可视化测试调试
+
+# 新增：代码规范工具
+npm run format       # Prettier 格式化前端代码
+npm run format:check # 检查代码格式
+npm run fmt          # Rust 代码格式化
+npm run lint:all     # 检查所有代码格式
 ```
 
 **完整文档**: `CLAUDE.md` §Architecture Overview & Development Guidelines

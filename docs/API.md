@@ -1,8 +1,57 @@
 ## API 索引（简版）
 
-### 统一 API 层 (`src/services/api.ts`)
+### 🆕 统一命令层 (`src/services/commands.ts`) - 2025-01
 
-封装 **52 个 Tauri Commands**，13 个功能模块，自动处理错误、日志和用户反馈：
+**最新架构**：所有 Tauri 后端调用已迁移到统一命令层，提供：
+
+- ✅ **类型安全**：52 个命令的完整 TypeScript 类型定义
+- ✅ **统一错误处理**：集中式 `invoke()` 包装器，自动日志和用户提示
+- ✅ **模块化组织**：13 个命令模块（`configCommands`, `aiConfigCommands`, `translatorCommands` 等）
+- ✅ **易于维护**：命令名称统一管理在 `COMMANDS` 常量中
+
+**推荐用法**：
+```typescript
+import { configCommands, aiConfigCommands, translatorCommands } from '@/services/commands';
+
+// ✅ 使用命令层（推荐）
+const config = await configCommands.get();
+await aiConfigCommands.add(newConfig);
+const result = await translatorCommands.translateBatch(entries, targetLang);
+```
+
+**命令模块索引**：
+- `configCommands` - 应用配置管理
+- `aiConfigCommands` - AI 配置 CRUD + 连接测试
+- `aiModelCommands` - 模型信息查询 + 成本计算
+- `systemPromptCommands` - 系统提示词管理
+- `termLibraryCommands` - 术语库操作
+- `translationMemoryCommands` - 翻译记忆库
+- `translatorCommands` - 翻译执行（单条/批量/精翻）
+- `poFileCommands` - PO 文件解析和保存
+- `fileFormatCommands` - 文件格式检测
+- `dialogCommands` - 系统对话框
+- `i18nCommands` - 国际化（语言检测/系统语言）
+- `logCommands` - 日志管理
+- `systemCommands` - 系统信息
+
+---
+
+### ⚠️ 已废弃：旧 API 层 (`src/services/api.ts`)
+
+**迁移状态**（2025-01-13 完成）：
+
+- ❌ **已删除**：`termLibraryApi`, `translationMemoryApi`, `logApi`, `promptLogApi`
+- ❌ **已删除**：`aiConfigApi`, `systemPromptApi`, `aiModelApi`
+- ❌ **已删除**：`poFileApi`, `dialogApi`, `translatorApi`, `languageApi`
+- ✅ **保留**：`configApi`, `fileFormatApi`, `systemApi`（尚未迁移）
+
+**迁移完成清单**：所有前端组件已迁移到命令层，旧 API 实现已完全移除。
+
+---
+
+### 封装的 Tauri Commands（52 个）
+
+13 个功能模块，自动处理错误、日志和用户反馈：
 
 **核心 API 模块**：
 
@@ -16,17 +65,87 @@
 - 🌐 `languageApi.*` - 语言检测（10 语言，自动识别）
 - 📝 `logApi.*` - 结构化日志（开发/生产模式）
 
+### 🆕 统一数据提供者 (`AppDataProvider`) - 2025-01
+
+**架构升级**：使用 React Context 集中管理全局数据，配合 SWR 实现自动缓存和重验证：
+
+```typescript
+// main.tsx - 全局包裹
+<AppDataProvider>
+  <App />
+</AppDataProvider>
+
+// 组件中使用
+const { config, aiConfigs, termLibrary, refreshAll } = useAppData();
+```
+
+**核心特性**：
+- ✅ **统一刷新接口**：`refreshAll()` 一键刷新所有数据
+- ✅ **SWR 集成**：自动缓存、后台重验证、错误重试
+- ✅ **增强事件桥接**：集成 `useDefaultTauriEventBridge()`，自动同步后端事件
+- ✅ **类型安全**：完整 TypeScript 类型推断
+
+**提供的数据**：
+- `config` - 应用配置（来自 `configCommands.get()`）
+- `aiConfigs` - AI 配置列表
+- `activeAiConfig` - 当前启用的 AI 配置
+- `termLibrary` - 术语库
+- `translationMemory` - 翻译记忆库
+- `systemPrompt` - 系统提示词
+- `supportedLanguages` - 支持的语言列表
+
+---
+
+### 🆕 增强事件桥接 (`useTauriEventBridge.enhanced.ts`) - 2025-01
+
+**改进点**：
+
+1. **防抖和节流**：避免高频事件导致的性能问题
+   ```typescript
+   CommonEventConfigs.configUpdated(500); // 配置更新，节流 500ms
+   CommonEventConfigs.translationStatsUpdate(500); // 统计更新，节流 500ms
+   ```
+
+2. **鲁棒清理**：组件卸载时自动清理所有监听器
+3. **事件转发**：自动转发到 `eventDispatcher` 保持兼容性
+4. **预设配置**：`useDefaultTauriEventBridge()` 一键启用所有常用事件
+
+**推荐用法**：
+```typescript
+// 使用默认配置（已集成到 AppDataProvider）
+useDefaultTauriEventBridge();
+
+// 或自定义配置
+useTauriEventBridgeEnhanced([
+  CommonEventConfigs.configUpdated(1000),
+  CommonEventConfigs.translationAfter(500),
+]);
+```
+
+---
+
+### ⚠️ 已废弃：旧事件桥接 (`useTauriEventBridge.ts`)
+
+**迁移状态**（2025-01-13 完成）：
+- ❌ **已删除**：旧的 `useTauriEventBridge.ts` 文件
+- ✅ **已迁移**：所有事件监听器已迁移到增强版本
+- ✅ **兼容性**：增强版本自动转发事件到 `eventDispatcher`
+
+---
+
 ### 现代化 React Hooks
 
-- `useAsync` - 统一异步操作（替代旧的 useTranslator）
-- `useConfig` - SWR 驱动的配置管理（自动缓存、重验证）
+- `useAsync` - 统一异步操作（✅ 推荐，替代旧的 useTranslator）
+- `useAppData` - 🆕 统一数据访问（从 AppDataProvider）
+- `useConfig` - ⚠️ 已被 `useAppData` 部分替代，仍可用于特殊场景
 - `useLanguage` - 语言状态与检测
-- `useTermLibrary` / `useTranslationMemory` - 专用数据管理
+- `useTermLibrary` / `useTranslationMemory` - ⚠️ 已被 `useAppData` 替代
 - `useChannelTranslation` - Channel API 批量翻译（实时进度，高性能）
+- `useDefaultTauriEventBridge` - 🆕 增强事件监听（集成在 AppDataProvider）
 
 ### 类型安全事件系统 (`eventDispatcher`)
 
-受 Unreal Engine 启发，全类型推断：
+受 Unreal Engine 启发，全类型推断，配合增强事件桥接使用：
 
 ```typescript
 // 订阅事件（自动推断 payload 类型）
@@ -41,13 +160,27 @@ eventDispatcher.once('translation:complete', handleComplete);
 eventDispatcher.getEventHistory();
 ```
 
-### SWR 数据缓存
+**与增强事件桥接集成**：
+- `useTauriEventBridgeEnhanced` 自动将 Tauri 事件转发到 `eventDispatcher`
+- 支持防抖和节流，避免高频事件导致的性能问题
+- 组件卸载时自动清理，防止内存泄漏
 
-自动缓存、后台重验证、乐观更新：
+### SWR 数据缓存（已集成到 AppDataProvider）
+
+自动缓存、后台重验证、乐观更新，现已通过 `AppDataProvider` 统一管理：
 
 ```typescript
-const { data, error, isLoading } = useSWR('config', configApi.loadConfig);
+// ✅ 推荐：使用 AppDataProvider
+const { config, refreshAll } = useAppData();
+
+// ⚠️ 旧方式（仍可用于特殊场景）
+const { data, error, isLoading } = useSWR('config', configCommands.get);
 ```
+
+**AppDataProvider 优势**：
+- 统一的数据访问接口
+- 自动集成事件监听和缓存失效
+- 一键刷新所有数据（`refreshAll()`）
 
 ### 🆕 多AI供应商架构 (`aiModelApi`)
 
@@ -128,8 +261,56 @@ const costDisplay = formatCost(0.0042); // "0.42¢"
 const costDisplay = cost < 0.01 ? `${(cost * 100).toFixed(2)}¢` : `$${cost.toFixed(4)}`;
 ```
 
-**代码质量改进**: 详见 `docs/CODE_QUALITY_IMPROVEMENTS.md`  
+**代码质量改进**: 详见 `docs/CHANGELOG.md` (2025-01-13 质量提升)  
 **完整参考**: `CLAUDE.md` §Architecture Overview
+
+---
+
+## 🆕 后端配置管理（Draft 模式） - 2025-01
+
+### ConfigDraft - 原子配置更新
+
+参考 `clash-verge-rev`，使用 `parking_lot::RwLock` + Draft 模式实现配置的原子更新：
+
+**核心特性**：
+- ✅ **并发安全**：使用 `parking_lot::RwLock` 保证线程安全
+- ✅ **原子更新**：配置修改要么全部成功，要么全部失败
+- ✅ **自动持久化**：`apply()` 方法自动保存到磁盘并发送更新事件
+- ✅ **全局单例**：`ConfigDraft::global()` 提供全局访问
+
+**使用示例**：
+
+```rust
+// 读取配置（只读访问）
+let draft = ConfigDraft::global().await;
+let config = draft.data(); // MappedRwLockReadGuard
+println!("API Key: {}", config.ai_configs[0].api_key);
+// config 在作用域结束时自动释放读锁
+
+// 修改配置（原子更新）
+let draft = ConfigDraft::global().await;
+{
+    let mut config = draft.draft(); // MappedRwLockWriteGuard
+    config.ai_configs.push(new_config);
+    // draft 在作用域结束时自动释放写锁
+}
+draft.apply()?; // 保存到磁盘 + 发送事件
+
+// ❌ 错误示例：guard 跨 await 点
+let config = draft.data();
+some_async_fn().await; // 编译错误：Send bound not satisfied
+```
+
+**API 方法**：
+- `ConfigDraft::global()` - 获取全局配置实例（async，首次调用时初始化）
+- `data()` - 获取当前提交的配置（只读）
+- `draft()` - 获取草稿配置（可写，修改后需调用 `apply()`）
+- `apply()` - 提交草稿，保存到磁盘并发送更新事件
+
+**迁移状态**：
+- ✅ **已迁移**：所有 `ConfigManager` 调用已迁移到 `ConfigDraft`
+- ❌ **已废弃**：旧的 `ConfigManager::new()` + `save_config()` 模式
+- ✅ **清理完成**：所有命令文件已完成迁移（`ai_config.rs`, `translator.rs` 等）
 
 ---
 
