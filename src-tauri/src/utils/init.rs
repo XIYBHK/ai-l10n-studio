@@ -1,11 +1,12 @@
 use crate::services::ConfigDraft;
-use crate::utils::{logging as logging_types, paths};
+use crate::utils::paths;
+use crate::utils::logging::Type as LogType;
 use crate::{logging, logging_error};
 use anyhow::Result;
 use flexi_logger::{Cleanup, Criterion, Duplicate, FileSpec, LogSpecBuilder, Logger};
 
 #[cfg(not(debug_assertions))]
-use crate::utils::logging_types::NoModuleFilter;
+use crate::utils::logging::NoModuleFilter;
 
 /// 初始化应用程序
 /// 步骤：
@@ -24,18 +25,18 @@ pub async fn init_app() -> Result<()> {
 
     logging!(
         info,
-        logging_types::Type::Init,
+        LogType::Init,
         "🚀 Application initialized successfully"
     );
     logging!(
         info,
-        logging_types::Type::Init,
+        LogType::Init,
         "Portable mode: {}",
         *paths::PORTABLE_FLAG.get().unwrap_or(&false)
     );
     logging!(
         info,
-        logging_types::Type::Init,
+        LogType::Init,
         "Home directory: {:?}",
         paths::app_home_dir()?
     );
@@ -128,7 +129,7 @@ pub async fn delete_old_logs(retention_days: Option<u32>) -> Result<()> {
     let Some(days) = retention_days else {
         logging!(
             info,
-            logging_types::Type::Init,
+            LogType::Init,
             "Log retention disabled, skipping cleanup"
         );
         return Ok(());
@@ -141,7 +142,7 @@ pub async fn delete_old_logs(retention_days: Option<u32>) -> Result<()> {
 
     logging!(
         info,
-        logging_types::Type::Init,
+        LogType::Init,
         "Cleaning logs older than {} days",
         days
     );
@@ -160,7 +161,7 @@ pub async fn delete_old_logs(retention_days: Option<u32>) -> Result<()> {
                     if modified_time < cutoff {
                         if let Err(e) = tokio::fs::remove_file(entry.path()).await {
                             logging_error!(
-                                logging_types::Type::Init,
+                                LogType::Init,
                                 "Failed to delete log file {:?}: {}",
                                 entry.path(),
                                 e
@@ -177,7 +178,7 @@ pub async fn delete_old_logs(retention_days: Option<u32>) -> Result<()> {
     if deleted_count > 0 {
         logging!(
             info,
-            logging_types::Type::Init,
+            LogType::Init,
             "Deleted {} old log files",
             deleted_count
         );
