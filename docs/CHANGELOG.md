@@ -1,14 +1,24 @@
 # 更新日志
 
-## 2025-01-12 - 前后端联动架构优化
+## 2025-01-12 - 架构重构：统一命令层 + Draft 配置管理
 
-### 迁移进度
-- ✅ Phase 1.1: 配置 Hook 迁移 (useConfig.ts) + 编译修复
-  - 迁移 4 个 API 调用到 commands
-  - 修复后端 config_draft.rs 编译错误
-  - 前后端编译验证通过
-- ⏳ Phase 1.2-1.5: 前端组件迁移中...
-- ⏸️ Phase 2: 后端 Draft 配置管理（待前端完成）
+### ✅ 完成度
+- **Phase 1**: 前端统一命令层 (100%)
+- **Phase 2**: 后端 Draft 配置管理 (100%)
+- **4 个原子提交**，可安全回滚
+- **-333 行代码**（净精简）
+
+### 迁移范围
+**前端 (10 文件)**
+- 统一命令层 `commands.ts`：集中管理所有 Tauri 调用
+- 组件迁移：App.tsx, SettingsModal, DevToolsModal, MenuBar, TermLibrary, MemoryManager, LanguageSelector
+- 删除旧 API：poFileApi, dialogApi, languageApi, translatorApi
+
+**后端 (3 文件, 9 命令)**
+- ConfigDraft 迁移：所有配置读写命令
+- 原子更新：add/update/remove/set AI 配置
+- 系统提示词：get/update/reset
+- 清理旧实现：移除所有 ConfigManager::new 调用
 
 ### 新增
 - **统一命令层** `src/services/commands.ts`
@@ -44,12 +54,12 @@
   - 前端：Command Layer + Context Provider + Enhanced Event Bridge
   - 后端：Draft Pattern + Event Emission + Atomic Updates
 
-### 重构影响
-- ✅ 解决"后端新实现 → 前端对照修改"痛点：通过 `refreshAll()` 批量同步
-- ✅ 降低维护成本：命令集中定义，修改只需一处
-- ✅ 提升代码质量：类型安全 + 防抖节流 + 自动 cleanup
-- ✅ 增强可测试性：Draft 模式支持事务式测试
-- ✅ 清理技术债：删除旧版本 `useTauriEventBridge.ts`，避免新老实现并存
+### 技术改进
+- ✅ **类型安全**：统一命令层，编译期错误检测
+- ✅ **原子更新**：Draft 模式保证配置事务性
+- ✅ **线程安全**：RwLock 并发控制
+- ✅ **代码复用**：修改只需一处
+- ✅ **零技术债**：旧实现完全移除
 
 ---
 
