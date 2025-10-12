@@ -42,6 +42,7 @@ import i18n from '../i18n/config'; // Phase 6
 import { notificationManager } from '../utils/notificationManager'; // Tauri 2.x: Notification
 import type { ModelInfo } from '../types/generated/ModelInfo';
 import { ThemeModeSwitch } from './ThemeModeSwitch'; // Phase 9
+import { configCommands } from '../services/commands';
 
 const log = createModuleLogger('SettingsModal');
 
@@ -92,6 +93,26 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
   
   // Notification设置状态
   const [notificationEnabled, setNotificationEnabled] = useState(notificationManager.isEnabled());
+  
+  // 日志设置状态
+  const [logLevel, setLogLevel] = useState<string>('info');
+  const [logRetentionDays, setLogRetentionDays] = useState<number>(7);
+  
+  // 加载日志配置
+  useEffect(() => {
+    if (visible) {
+      configCommands.get().then((config) => {
+        if (config.log_level) {
+          setLogLevel(config.log_level);
+        }
+        if (config.log_retention_days !== undefined) {
+          setLogRetentionDays(config.log_retention_days);
+        }
+      }).catch((err) => {
+        log.error('加载日志配置失败:', err);
+      });
+    }
+  }, [visible]);
   
   // 异步操作hooks
   const { prompt, mutate: mutatePrompt } = useSystemPrompt();
@@ -397,6 +418,21 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
     } catch (error) {
       log.logError(error, '语言切换失败');
       message.error('语言切换失败');
+    }
+  };
+  
+  // 保存日志配置
+  const handleSaveLogConfig = async () => {
+    try {
+      const config = await configCommands.get();
+      config.log_level = logLevel;
+      config.log_retention_days = logRetentionDays;
+      await configCommands.update(config);
+      message.success('日志配置已保存');
+      log.info('日志配置已更新', { logLevel, logRetentionDays });
+    } catch (error) {
+      log.logError(error, '保存日志配置失败');
+      message.error('保存日志配置失败');
     }
   };
 
@@ -855,6 +891,91 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                 发送测试通知
               </Button>
             </Space>
+          </Card>
+        </div>
+      ),
+    },
+    {
+      key: 'logs',
+      label: (
+        <span>
+          <FileTextOutlined /> 日志设置
+        </span>
+      ),
+      children: (
+        <div>
+          <Card size="small" title="日志配置">
+            <Form layout="vertical">
+              <Space direction="vertical" style={{ width: '100%' }} size="large">
+                <Row gutter={16}>
+                  <Col span={24}>
+                    <Form.Item label="日志级别" help="控制应用日志输出的详细程度">
+                    <Select
+                      value={logLevel}
+                      onChange={setLogLevel}
+                      style={{ width: '100%' }}
+                      options={[
+                        { label: 'Error - 仅错误', value: 'error' },
+                        { label: 'Warn - 警告及错误', value: 'warn' },
+                        { label: 'Info - 信息、警告、错误', value: 'info' },
+                        { label: 'Debug - 调试级别（包含所有）', value: 'debug' },
+                        { label: 'Trace - 追踪级别（最详细）', value: 'trace' },
+                      ]}
+                    />
+                  </Form.Item>
+                </Col>
+              </Row>
+              
+              <Row gutter={16}>
+                <Col span={24}>
+                  <Form.Item 
+                    label="日志保留天数" 
+                    help="超过指定天数的日志文件将被自动清理，设置为 0 表示永久保留"
+                  >
+                    <InputNumber
+                      min={0}
+                      max={365}
+                      value={logRetentionDays}
+                      onChange={(value) => setLogRetentionDays(value || 7)}
+                      style={{ width: '100%' }}
+                      addonAfter="天"
+                    />
+                  </Form.Item>
+                </Col>
+              </Row>
+              
+              <Divider />
+              
+              <Alert
+                message="日志说明"
+                description={
+                  <div>
+                    <div style={{ marginBottom: 8 }}>应用日志会记录：</div>
+                    <ul style={{ paddingLeft: 20, margin: 0 }}>
+                      <li>🔄 翻译操作和结果</li>
+                      <li>⚙️ 配置更改</li>
+                      <li>❌ 错误和异常信息</li>
+                      <li>📊 性能统计数据</li>
+                    </ul>
+                    <div style={{ marginTop: 12, fontSize: '12px', color: '#999' }}>
+                      日志文件位置：应用数据目录/logs/
+                    </div>
+                  </div>
+                }
+                type="info"
+                showIcon
+                icon={<InfoCircleOutlined />}
+              />
+              
+                <Button
+                  type="primary"
+                  onClick={handleSaveLogConfig}
+                  block
+                >
+                  保存日志配置
+                </Button>
+              </Space>
+            </Form>
           </Card>
         </div>
       ),
