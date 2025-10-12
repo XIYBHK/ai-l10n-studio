@@ -59,6 +59,10 @@ pub struct AppConfig {
     // Phase 9 新增字段：日志配置
     #[serde(default)]
     pub log_retention_days: Option<u32>, // 日志保留天数（None表示永久保留）
+    #[serde(default)]
+    pub log_max_size: Option<u32>, // 单个日志文件最大大小（KB，None使用默认128KB）
+    #[serde(default)]
+    pub log_max_count: Option<u32>, // 最多保留日志文件数量（None使用默认8个）
 
     // 配置版本控制（前后端同步）
     #[serde(default)]
@@ -93,6 +97,8 @@ impl Default for AppConfig {
             theme_mode: None,            // None表示使用系统主题
             language: None,              // None表示使用系统语言
             log_retention_days: Some(7), // 默认保留7天日志
+            log_max_size: Some(128),     // 默认单个文件最大128KB
+            log_max_count: Some(8),      // 默认保留8个文件
             // 配置版本控制
             config_version: 0,
             last_modified: None,

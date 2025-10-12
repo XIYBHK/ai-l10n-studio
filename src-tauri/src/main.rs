@@ -11,8 +11,9 @@ fn main() {
     // Phase 9: 使用新的初始化流程
     // 1. 初始化便携模式标志
     // 2. 创建目录结构
-    // 3. 初始化 flexi_logger 日志系统
-    if let Err(e) = utils::init::init_app() {
+    // 3. 初始化 flexi_logger 日志系统（从配置读取轮转参数）
+    let runtime = tokio::runtime::Runtime::new().expect("Failed to create tokio runtime");
+    if let Err(e) = runtime.block_on(utils::init::init_app()) {
         eprintln!("❌ Failed to initialize application: {}", e);
         std::process::exit(1);
     }

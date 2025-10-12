@@ -94,6 +94,8 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({ visible, onClose }
   // 日志设置状态
   const [logLevel, setLogLevel] = useState<string>('info');
   const [logRetentionDays, setLogRetentionDays] = useState<number>(7);
+  const [logMaxSize, setLogMaxSize] = useState<number>(128); // 单个文件最大大小（KB）
+  const [logMaxCount, setLogMaxCount] = useState<number>(8); // 最多保留文件数
 
   // 加载日志配置
   useEffect(() => {
@@ -106,6 +108,12 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({ visible, onClose }
           }
           if (config.log_retention_days !== undefined) {
             setLogRetentionDays(config.log_retention_days);
+          }
+          if (config.log_max_size !== undefined) {
+            setLogMaxSize(config.log_max_size);
+          }
+          if (config.log_max_count !== undefined) {
+            setLogMaxCount(config.log_max_count);
           }
         })
         .catch((err) => {
@@ -428,9 +436,11 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({ visible, onClose }
       const config = await configCommands.get();
       config.log_level = logLevel;
       config.log_retention_days = logRetentionDays;
+      config.log_max_size = logMaxSize;
+      config.log_max_count = logMaxCount;
       await configCommands.update(config);
       message.success('日志配置已保存');
-      log.info('日志配置已更新', { logLevel, logRetentionDays });
+      log.info('日志配置已更新', { logLevel, logRetentionDays, logMaxSize, logMaxCount });
     } catch (error) {
       log.logError(error, '保存日志配置失败');
       message.error('保存日志配置失败');
@@ -945,6 +955,41 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({ visible, onClose }
 
                 <Divider />
 
+                <Row gutter={16}>
+                  <Col span={12}>
+                    <Form.Item
+                      label="单个文件最大大小"
+                      help="当日志文件达到此大小时自动轮转到新文件"
+                    >
+                      <InputNumber
+                        min={64}
+                        max={1024}
+                        value={logMaxSize}
+                        onChange={(value) => setLogMaxSize(value || 128)}
+                        style={{ width: '100%' }}
+                        addonAfter="KB"
+                      />
+                    </Form.Item>
+                  </Col>
+                  <Col span={12}>
+                    <Form.Item
+                      label="保留文件数量"
+                      help="最多保留的日志文件数量，超过将删除最旧的文件"
+                    >
+                      <InputNumber
+                        min={1}
+                        max={50}
+                        value={logMaxCount}
+                        onChange={(value) => setLogMaxCount(value || 8)}
+                        style={{ width: '100%' }}
+                        addonAfter="个"
+                      />
+                    </Form.Item>
+                  </Col>
+                </Row>
+
+                <Divider />
+
                 <Alert
                   message="日志说明"
                   description={
@@ -956,7 +1001,13 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({ visible, onClose }
                         <li>❌ 错误和异常信息</li>
                         <li>📊 性能统计数据</li>
                       </ul>
-                      <div style={{ marginTop: 12, fontSize: '12px', color: '#999' }}>
+                      <div style={{ marginTop: 12, fontSize: '12px', color: '#666' }}>
+                        <strong>日志轮转策略：</strong>
+                        <br />• 单个文件超过 {logMaxSize} KB 时自动切换到新文件
+                        <br />• 最多保留 {logMaxCount} 个日志文件（按时间戳命名）
+                        <br />• 超过 {logRetentionDays} 天的日志自动清理
+                      </div>
+                      <div style={{ marginTop: 8, fontSize: '12px', color: '#999' }}>
                         日志文件位置：应用数据目录/logs/
                       </div>
                     </div>
