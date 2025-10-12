@@ -281,3 +281,5 @@ docs/examples/data/*.json
 **/build/
 **/dist/
 ref/
+.cursor/rules/
+docs/PLAN_STATUS_AUDIT.md
