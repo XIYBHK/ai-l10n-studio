@@ -70,7 +70,7 @@ export async function loadSettings() {
     const theme = await tauriStore.getTheme();
     const language = await tauriStore.getLanguage();
 
-    useSettingsStore.setState({ theme, language });
+    useSettingsStore.setState({ theme: theme as any, language: language as any });
 
     console.log('[useSettingsStore] 设置加载成功', { theme, language });
   } catch (error) {

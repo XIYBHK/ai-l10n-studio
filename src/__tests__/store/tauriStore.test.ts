@@ -168,6 +168,8 @@ describe('TauriStore', () => {
         notifications: {
           enabled: false,
           onComplete: false,
+          onError: false,
+          onProgress: false,
         },
       });
 

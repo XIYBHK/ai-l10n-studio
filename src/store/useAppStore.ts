@@ -241,7 +241,7 @@ export async function loadPersistedState() {
 
     // 加载语言
     const language = await tauriStore.getLanguage();
-    useAppStore.getState().setLanguage(language);
+    useAppStore.getState().setLanguage(language as any);
 
     // 加载累计统计
     const stats = await tauriStore.getCumulativeStats();

@@ -73,11 +73,11 @@ vi.mock('@tauri-apps/plugin-store', () => {
     async values() {
       return Promise.resolve(Array.from(memoryStore.values()));
     }
-    async onKeyChange(key: string, cb: (value: any) => void) {
+    async onKeyChange(_key: string, _cb: (value: any) => void) {
       // Mock implementation if needed
       return Promise.resolve(() => {});
     }
-    async onChange(cb: (key: string, value: any) => void) {
+    async onChange(_cb: (key: string, value: any) => void) {
       // Mock implementation if needed
       return Promise.resolve(() => {});
     }

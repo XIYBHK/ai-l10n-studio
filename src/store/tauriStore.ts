@@ -133,7 +133,7 @@ class TauriStore {
       await this.ensureInitialized();
       const value = await this.store!.get<AppStoreData[K]>(key);
       console.log(`[TauriStore] 获取 ${key}:`, value);
-      return value;
+      return value ?? null;
     } catch (error) {
       console.error(`[TauriStore] 获取 ${key} 失败:`, error);
       return null;

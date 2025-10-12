@@ -1,6 +1,5 @@
 import { render, fireEvent, screen, waitFor } from '@testing-library/react';
 import { vi, describe, it, expect, beforeEach } from 'vitest';
-import React from 'react';
 import { EditorPane } from '../../components/EditorPane';
 import { eventDispatcher } from '../../services/eventDispatcher';
 import { useSessionStore } from '../../store';

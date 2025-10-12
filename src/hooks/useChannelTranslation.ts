@@ -135,11 +135,8 @@ export const useChannelTranslation = () => {
           setProgress(normalized);
           // 向全局事件总线广播，便于 DevTools/StatsManager 监听
           eventDispatcher.emit('translation:progress', {
-            current: monotonicCurrent,
-            total,
-            percentage,
             index: index ?? -1,
-            text,
+            translation: text || '',
           });
 
           if (callbacksRef.current.onProgress) {
@@ -192,7 +189,20 @@ export const useChannelTranslation = () => {
 
         // 🔧 发送任务完成统计事件（Channel API 后端无法发送事件）
         eventDispatcher.emit('translation:after', {
-          stats: result.stats,
+          success: true,
+          stats: {
+            total: result.stats.total || 0,
+            tm_hits: result.stats.tm_hits || 0,
+            deduplicated: result.stats.deduplicated || 0,
+            ai_translated: result.stats.ai_translated || 0,
+            tm_learned: result.stats.tm_learned || 0,
+            token_stats: {
+              input_tokens: result.stats.token_stats.prompt_tokens || 0,
+              output_tokens: result.stats.token_stats.completion_tokens || 0,
+              total_tokens: result.stats.token_stats.total_tokens || 0,
+              cost: result.stats.token_stats.cost || 0,
+            },
+          },
         });
 
         return result;

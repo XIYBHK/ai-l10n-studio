@@ -367,7 +367,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({ visible, onClose }
       );
 
       if (result.success) {
-        message.success(`${result.message} (响应时间: ${result.response_time_ms}ms)`, 3);
+        message.success(result.message, 3);
       } else {
         message.error(result.message, 5);
       }

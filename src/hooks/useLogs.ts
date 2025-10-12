@@ -1,5 +1,6 @@
 import useSWR from 'swr';
 import type { TauriKey } from '../services/swr';
+import { logCommands } from '../services/commands';
 
 // 后端日志（字符串）
 const BACKEND_LOGS_KEY: TauriKey = ['get_app_logs'];
@@ -14,8 +15,9 @@ interface UseLogsOptions {
 export function useBackendLogs(options?: UseLogsOptions) {
   const { enabled = true, refreshInterval = 2000 } = options || {};
 
-  const { data, error, isLoading, mutate } = useSWR<string>(
+  const { data, error, isLoading, mutate } = useSWR(
     enabled ? BACKEND_LOGS_KEY : null, // enabled=false 时不请求
+    () => logCommands.get() as Promise<string>,
     {
       refreshInterval: enabled ? refreshInterval : 0,
       revalidateOnFocus: false,
@@ -33,8 +35,9 @@ export function useBackendLogs(options?: UseLogsOptions) {
 export function usePromptLogs(options?: UseLogsOptions) {
   const { enabled = true, refreshInterval = 2000 } = options || {};
 
-  const { data, error, isLoading, mutate } = useSWR<string>(
+  const { data, error, isLoading, mutate } = useSWR(
     enabled ? PROMPT_LOGS_KEY : null, // enabled=false 时不请求
+    () => logCommands.getPromptLogs() as Promise<string>,
     {
       refreshInterval: enabled ? refreshInterval : 0,
       revalidateOnFocus: false,

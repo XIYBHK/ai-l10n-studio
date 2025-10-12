@@ -209,7 +209,10 @@ export const useNotification = (): NotificationAPI => {
     info,
     warning,
     send,
-    checkPermission: checkPermissionStatus,
+    checkPermission: async () => {
+      await checkPermissionStatus();
+      return hasPermission;
+    },
     requestPermission: requestNotificationPermission,
     isEnabled,
     toggle,

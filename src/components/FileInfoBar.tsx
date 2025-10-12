@@ -1,5 +1,5 @@
 import React from 'react';
-import { Tag, Space, Tooltip } from 'antd';
+import { Tag, Space } from 'antd';
 import { useFileFormat, useFileMetadata } from '../hooks/useFileFormat';
 
 interface FileInfoBarProps {

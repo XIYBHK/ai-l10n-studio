@@ -165,7 +165,7 @@ export async function migrateToTauriStore(): Promise<{
           totalTranslated: stats.total || 0,
           totalTokens: stats.token_stats?.total_tokens || 0,
           totalCost: stats.token_stats?.cost || 0,
-          sessionCount: stats.total > 0 ? 1 : 0,
+          sessionCount: (stats.total ?? 0) > 0 ? 1 : 0,
           lastUpdated: Date.now(),
         });
         migratedKeys.push('cumulativeStats');

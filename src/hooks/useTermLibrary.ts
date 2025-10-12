@@ -1,6 +1,7 @@
 import useSWR from 'swr';
 import type { TermLibrary } from '../types/termLibrary';
 import type { TauriKey } from '../services/swr';
+import { termLibraryCommands } from '../services/commands';
 
 const KEY: TauriKey = ['get_term_library'];
 
@@ -11,8 +12,9 @@ interface UseTermLibraryOptions {
 export function useTermLibrary(options?: UseTermLibraryOptions) {
   const { enabled = true } = options || {};
 
-  const { data, error, isLoading, mutate } = useSWR<TermLibrary>(
+  const { data, error, isLoading, mutate } = useSWR(
     enabled ? KEY : null, // enabled=false 时不请求
+    () => termLibraryCommands.get() as Promise<TermLibrary>,
     {
       revalidateOnFocus: false, // 术语库不需要聚焦刷新
       revalidateOnReconnect: false,
