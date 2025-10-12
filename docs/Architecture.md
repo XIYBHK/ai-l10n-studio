@@ -8,7 +8,7 @@
 
 ### 提升开发效率的核心架构
 
-#### 1️⃣ **🆕 四层架构设计（2025-10 重构）**
+#### 四层架构设计 (2025-10重构)
 
 ```
 组件层 (React Components)
@@ -24,21 +24,21 @@ Rust 服务层 (services/)
 Rust 持久化层 (JSON文件)
 ```
 
-**核心改进**：
-- ✅ **统一数据访问**：`AppDataProvider` 集中管理所有全局数据
-- ✅ **命令层重构**：`commands.ts` 替代旧的 `api.ts`，模块化组织
-- ✅ **Draft 模式**：`ConfigDraft` 实现配置的原子更新和并发安全
-- ✅ **增强事件桥接**：防抖+节流+鲁棒清理，性能更优
+**核心改进**:
+- 统一数据访问: `AppDataProvider` 集中管理所有全局数据
+- 命令层重构: `commands.ts` 替代旧的 `api.ts`，模块化组织
+- Draft 模式: `ConfigDraft` 实现配置的原子更新和并发安全
+- 增强事件桥接: 防抖+节流+鲁棒清理，性能更优
 
-#### 2️⃣ **🆕 增强事件系统（2025-10 升级）**
+#### 增强事件系统 (2025-10升级)
 
-- **UE 风格设计**: `EventMap` 全局类型定义 → 编译时检查
-- **增强桥接**: `useTauriEventBridgeEnhanced` 支持防抖/节流/鲁棒清理
-- **自动转发**: 后端事件 → `eventDispatcher` → 前端状态
-- **调试友好**: 事件历史记录 + 时间戳 + payload 快照
-- **集成方式**: 已集成到 `AppDataProvider`，自动启用
+- UE 风格设计: `EventMap` 全局类型定义 → 编译时检查
+- 增强桥接: `useTauriEventBridgeEnhanced` 支持防抖/节流/鲁棒清理
+- 自动转发: 后端事件 → `eventDispatcher` → 前端状态
+- 调试友好: 事件历史记录 + 时间戳 + payload 快照
+- 集成方式: 已集成到 `AppDataProvider`，自动启用
 
-#### 3️⃣ **🆕 统一数据层（AppDataProvider）**
+#### 统一数据层 (AppDataProvider)
 
 ```typescript
 // main.tsx - 全局包裹
@@ -50,17 +50,17 @@ Rust 持久化层 (JSON文件)
 const { config, aiConfigs, termLibrary, refreshAll } = useAppData();
 ```
 
-**核心特性**：
-- ✅ **SWR 集成**：自动缓存配置/TM/术语库（避免重复 IPC 调用）
-- ✅ **统一刷新**：`refreshAll()` 一键刷新所有数据
-- ✅ **事件同步**：集成增强事件桥接，自动失效缓存
-- ✅ **类型安全**：完整 TypeScript 类型推断
+**核心特性**:
+- SWR 集成: 自动缓存配置/TM/术语库（避免重复 IPC 调用）
+- 统一刷新: `refreshAll()` 一键刷新所有数据
+- 事件同步: 集成增强事件桥接，自动失效缓存
+- 类型安全: 完整 TypeScript 类型推断
 
-**替代的旧模式**：
-- ❌ 旧：每个组件单独调用 `useSWR`
-- ✅ 新：统一通过 `useAppData` 访问全局数据
+**替代的旧模式**:
+- 旧: 每个组件单独调用 `useSWR`
+- 新: 统一通过 `useAppData` 访问全局数据
 
-#### 4️⃣ **Channel API 翻译（统一路径）**
+#### Channel API 翻译（统一路径）
 
 ```rust
 // Rust 端通过 IPC Channel 发送进度和统计
@@ -71,11 +71,11 @@ stats_tx.send(StatsEvent { tm_hits, deduplicated, ... }).await;
 const { progress, stats } = useChannelTranslation(onProgress);
 ```
 
-- ✅ 高性能：替代轮询，实时推送
-- ✅ 低内存：流式处理，无需缓存全部结果
-- ✅ 唯一翻译路径：已移除 Event API
+- 高性能: 替代轮询，实时推送
+- 低内存: 流式处理，无需缓存全部结果
+- 唯一翻译路径: 已移除 Event API
 
-#### 5️⃣ **统计系统 V2（Event Sourcing）**
+#### 统计系统（Event Sourcing）
 
 ```
 ┌─────────────────────────────────────────────────────────────┐
