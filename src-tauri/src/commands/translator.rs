@@ -102,20 +102,22 @@ pub async fn translate_entry(
     target_language: Option<String>
 ) -> Result<String, String> {
     // 从配置管理器获取启用的AI配置
-    let draft = ConfigDraft::global().await;
-    let config = draft.data();
-    let ai_config = config.get_active_ai_config()
-        .ok_or_else(|| "未找到启用的AI配置，请在设置中配置并启用AI服务".to_string())?
-        .clone();
-    
-    let custom_prompt = config.system_prompt.clone();
-    let mut translator = AITranslator::new_with_config(
-        ai_config,
-        true,
-        custom_prompt.as_deref(),
-        target_language
-    )
-        .map_err(|e| format!("AI翻译器初始化失败: {}", e))?;
+    let mut translator = {
+        let draft = ConfigDraft::global().await;
+        let config = draft.data();
+        let ai_config = config.get_active_ai_config()
+            .ok_or_else(|| "未找到启用的AI配置，请在设置中配置并启用AI服务".to_string())?
+            .clone();
+        
+        let custom_prompt = config.system_prompt.clone();
+        AITranslator::new_with_config(
+            ai_config,
+            true,
+            custom_prompt.as_deref(),
+            target_language
+        )
+            .map_err(|e| format!("AI翻译器初始化失败: {}", e))?
+    };
     
     let result = translator
         .translate_batch(vec![text], None)
@@ -289,7 +291,7 @@ pub async fn update_app_config(config: serde_json::Value) -> Result<(), String> 
     // 在草稿上替换整个配置
     {
         let mut draft_config = draft.draft();
-        *draft_config = app_config;
+        *draft_config = Box::new(app_config);
     }
     
     // 原子提交并保存
@@ -514,28 +516,27 @@ pub async fn contextual_refine(
         return Ok(Vec::new());
     }
     
-    // 1. 获取配置管理器
-    let draft = ConfigDraft::global().await;
-    let config = draft.data();
-    
-    // 2. 获取活动的 AI 配置
-    let ai_config = config.get_active_ai_config()
-        .ok_or_else(|| "未找到启用的AI配置，请在设置中配置并启用AI服务".to_string())?
-        .clone();
-    
-    // 3. 获取系统提示词
-    let custom_prompt = config.system_prompt.clone();
-    
-    // 4. 创建翻译器（关键：use_tm = false，绕过翻译记忆库）
-    let mut translator = AITranslator::new_with_config(
-        ai_config,
-        false, // 🔑 绕过翻译记忆库
-        custom_prompt.as_deref(),
-        Some(target_language.clone())
-    ).map_err(|e| {
-        crate::app_log!("[精翻] 创建翻译器失败: {}", e);
-        format!("AI翻译器初始化失败: {}", e)
-    })?;
+    // 1-4. 获取配置并创建翻译器（在单独的作用域中以释放guard）
+    let mut translator = {
+        let draft = ConfigDraft::global().await;
+        let config = draft.data();
+        
+        let ai_config = config.get_active_ai_config()
+            .ok_or_else(|| "未找到启用的AI配置，请在设置中配置并启用AI服务".to_string())?
+            .clone();
+        
+        let custom_prompt = config.system_prompt.clone();
+        
+        AITranslator::new_with_config(
+            ai_config,
+            false, // 🔑 绕过翻译记忆库
+            custom_prompt.as_deref(),
+            Some(target_language.clone())
+        ).map_err(|e| {
+            crate::app_log!("[精翻] 创建翻译器失败: {}", e);
+            format!("AI翻译器初始化失败: {}", e)
+        })?
+    };
     
     crate::app_log!("[精翻] 翻译器已创建（已绕过TM）");
     
@@ -647,16 +648,18 @@ pub async fn translate_batch_with_channel(
 ) -> Result<BatchResult, String> {
     use crate::services::{BatchProgressManager, BatchStatsEvent, TokenStatsEvent};
     
-    // 初始化配置和翻译器
-    let draft = ConfigDraft::global().await;
-    let config = draft.data();
-    let ai_config = config.get_active_ai_config()
-        .ok_or_else(|| "未找到启用的AI配置，请在设置中配置并启用AI服务".to_string())?
-        .clone();
-    
-    let custom_prompt = config.system_prompt.clone();
-    let mut translator = AITranslator::new_with_config(ai_config, true, custom_prompt.as_deref(), target_language)
-        .map_err(|e| format!("AI翻译器初始化失败: {}", e))?;
+    // 初始化配置和翻译器（在单独的作用域中以释放guard）
+    let mut translator = {
+        let draft = ConfigDraft::global().await;
+        let config = draft.data();
+        let ai_config = config.get_active_ai_config()
+            .ok_or_else(|| "未找到启用的AI配置，请在设置中配置并启用AI服务".to_string())?
+            .clone();
+        
+        let custom_prompt = config.system_prompt.clone();
+        AITranslator::new_with_config(ai_config, true, custom_prompt.as_deref(), target_language)
+            .map_err(|e| format!("AI翻译器初始化失败: {}", e))?
+    };
     
     // 创建进度管理器（暂未使用，保留以备后续优化）
     let _progress_mgr = BatchProgressManager::new(texts.len());

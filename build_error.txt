@@ -1,0 +1,151 @@
+warning: unused variable: `text`
+   --> src\services\ai_translator.rs:644:21
+    |
+644 |             for (i, text) in texts.iter().enumerate() {
+    |                     ^^^^ help: if this is intentional, prefix it with an underscore: `_text`
+    |
+    = note: `#[warn(unused_variables)]` on by default
+
+warning: unused variable: `e`
+   --> src\services\ai_translator.rs:724:29
+    |
+724 |                         Err(e) => {
+    |                             ^ help: if this is intentional, prefix it with an underscore: `_e`
+
+warning: function `get_custom_system_prompt` is never used
+  --> src\commands\translator.rs:19:10
+   |
+19 | async fn get_custom_system_prompt() -> Option<String> {
+   |          ^^^^^^^^^^^^^^^^^^^^^^^^
+   |
+   = note: `#[warn(dead_code)]` on by default
+
+warning: fields `max_history_tokens` and `use_tm` are never read
+   --> src\services\ai_translator.rs:179:5
+    |
+171 | pub struct AITranslator {
+    |            ------------ fields in this struct
+...
+179 |     max_history_tokens: usize,
+    |     ^^^^^^^^^^^^^^^^^^
+180 |     token_stats: TokenStats,
+181 |     use_tm: bool,
+    |     ^^^^^^
+    |
+    = note: `AITranslator` has derived impls for the traits `Clone` and `Debug`, but these are intentionally ignored during dead code analysis
+
+warning: `po-translator-gui` (lib) generated 4 warnings
+   Compiling po-translator-gui v0.0.0 (F:\Github\ai-l10n-studio\src-tauri)
+error: future cannot be sent between threads safely
+   --> src\commands\translator.rs:98:1
+    |
+ 98 |   #[tauri::command]
+    |   ^^^^^^^^^^^^^^^^^ future returned by `translate_entry` is not `Send`
+    |
+   ::: src\main.rs:32:25
+    |
+ 32 |           .invoke_handler(tauri::generate_handler![
+    |  _________________________-
+ 33 | |             parse_po_file,
+ 34 | |             translate_entry,
+ 35 | |             translate_batch_with_channel,  // Tauri 2.x: Channel API (缁熶竴缈昏瘧鍏ュ彛)
+...   |
+ 89 | |         get_all_providers
+ 90 | |     ])
+    | |_____- in this macro invocation
+    |
+    = help: within `GuardNoSend`, the trait `Send` is not implemented for `*mut ()`
+note: future is not `Send` as this value is used across an await
+   --> src\commands\translator.rs:122:10
+    |
+106 |     let config = draft.data();
+    |         ------ has type `parking_lot::lock_api::MappedRwLockReadGuard<'_, parking_lot::RawRwLock, Box<config_manager::AppConfig>>` which is not `Send`
+...
+122 |         .await
+    |          ^^^^^ await occurs here, with `config` maybe used later
+note: required by a bound in `ResultFutureTag::future`
+   --> C:\Users\xiybh\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\tauri-2.8.5\src\ipc\command.rs:314:42
+    |
+310 |     pub async fn future<T, E, F>(self, value: F) -> Result<InvokeResponseBody, InvokeError>
+    |                  ------ required by a bound in this associated function
+...
+314 |       F: Future<Output = Result<T, E>> + Send,
+    |                                          ^^^^ required by this bound in `ResultFutureTag::future`
+    = note: this error originates in the macro `__cmd__translate_entry` which comes from the expansion of the macro `tauri::generate_handler` (in Nightly builds, run with -Z macro-backtrace for more info)
+
+error: future cannot be sent between threads safely
+   --> src\commands\translator.rs:641:1
+    |
+641 |   #[tauri::command]
+    |   ^^^^^^^^^^^^^^^^^ future returned by `translate_batch_with_channel` is not `Send`
+    |
+   ::: src\main.rs:32:25
+    |
+ 32 |           .invoke_handler(tauri::generate_handler![
+    |  _________________________-
+ 33 | |             parse_po_file,
+ 34 | |             translate_entry,
+ 35 | |             translate_batch_with_channel,  // Tauri 2.x: Channel API (缁熶竴缈昏瘧鍏ュ彛)
+...   |
+ 89 | |         get_all_providers
+ 90 | |     ])
+    | |_____- in this macro invocation
+    |
+    = help: within `GuardNoSend`, the trait `Send` is not implemented for `*mut ()`
+note: future is not `Send` as this value is used across an await
+   --> src\commands\translator.rs:703:14
+    |
+652 |     let config = draft.data();
+    |         ------ has type `parking_lot::lock_api::MappedRwLockReadGuard<'_, parking_lot::RawRwLock, Box<config_manager::AppConfig>>` which is not `Send`
+...
+703 |             .await
+    |              ^^^^^ await occurs here, with `config` maybe used later
+note: required by a bound in `ResultFutureTag::future`
+   --> C:\Users\xiybh\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\tauri-2.8.5\src\ipc\command.rs:314:42
+    |
+310 |     pub async fn future<T, E, F>(self, value: F) -> Result<InvokeResponseBody, InvokeError>
+    |                  ------ required by a bound in this associated function
+...
+314 |       F: Future<Output = Result<T, E>> + Send,
+    |                                          ^^^^ required by this bound in `ResultFutureTag::future`
+    = note: this error originates in the macro `__cmd__translate_batch_with_channel` which comes from the expansion of the macro `tauri::generate_handler` (in Nightly builds, run with -Z macro-backtrace for more info)
+
+error: future cannot be sent between threads safely
+   --> src\commands\translator.rs:505:1
+    |
+505 |   #[tauri::command]
+    |   ^^^^^^^^^^^^^^^^^ future returned by `contextual_refine` is not `Send`
+    |
+   ::: src\main.rs:32:25
+    |
+ 32 |           .invoke_handler(tauri::generate_handler![
+    |  _________________________-
+ 33 | |             parse_po_file,
+ 34 | |             translate_entry,
+ 35 | |             translate_batch_with_channel,  // Tauri 2.x: Channel API (缁熶竴缈昏瘧鍏ュ彛)
+...   |
+ 89 | |         get_all_providers
+ 90 | |     ])
+    | |_____- in this macro invocation
+    |
+    = help: within `GuardNoSend`, the trait `Send` is not implemented for `*mut ()`
+note: future is not `Send` as this value is used across an await
+   --> src\commands\translator.rs:575:76
+    |
+519 |     let config = draft.data();
+    |         ------ has type `parking_lot::lock_api::MappedRwLockReadGuard<'_, parking_lot::RawRwLock, Box<config_manager::AppConfig>>` which is not `Send`
+...
+575 |         match translator.translate_with_custom_user_prompt(prompt.clone()).await {
+    |                                                                            ^^^^^ await occurs here, with `config` maybe used later
+note: required by a bound in `ResultFutureTag::future`
+   --> C:\Users\xiybh\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\tauri-2.8.5\src\ipc\command.rs:314:42
+    |
+310 |     pub async fn future<T, E, F>(self, value: F) -> Result<InvokeResponseBody, InvokeError>
+    |                  ------ required by a bound in this associated function
+...
+314 |       F: Future<Output = Result<T, E>> + Send,
+    |                                          ^^^^ required by this bound in `ResultFutureTag::future`
+    = note: this error originates in the macro `__cmd__contextual_refine` which comes from the expansion of the macro `tauri::generate_handler` (in Nightly builds, run with -Z macro-backtrace for more info)
+
+warning: `po-translator-gui` (bin "po-translator-gui") generated 2 warnings (2 duplicates)
+error: could not compile `po-translator-gui` (bin "po-translator-gui") due to 6 previous errors; 2 warnings emitted
