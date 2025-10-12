@@ -5,14 +5,16 @@ use crate::services::file_format::{FileFormat, FileMetadata};
 /// 检测文件格式
 #[tauri::command]
 pub async fn detect_file_format(file_path: String) -> Result<FileFormat, String> {
-    crate::services::file_format::detect_file_format(&file_path).map(|format| {
-        crate::app_log!("[文件格式] {} → {:?}", file_path, format);
-        format
-    }).map_err(|e| {
-        let error_msg = format!("检测文件格式失败: {}", e);
-        crate::app_log!("❌ {}", error_msg);
-        error_msg
-    })
+    crate::services::file_format::detect_file_format(&file_path)
+        .map(|format| {
+            crate::app_log!("[文件格式] {} → {:?}", file_path, format);
+            format
+        })
+        .map_err(|e| {
+            let error_msg = format!("检测文件格式失败: {}", e);
+            crate::app_log!("❌ {}", error_msg);
+            error_msg
+        })
 }
 
 /// 获取文件元数据
@@ -24,4 +26,3 @@ pub async fn get_file_metadata(file_path: String) -> Result<FileMetadata, String
         error_msg
     })
 }
-

@@ -1,17 +1,17 @@
 // ========== Phase 5: 语言检测命令 ==========
 
-use crate::services::language_detector::{detect_language, get_default_target_language, get_supported_languages, Language, LanguageInfo};
+use crate::services::language_detector::{
+    Language, LanguageInfo, detect_language, get_default_target_language, get_supported_languages,
+};
 
 /// 检测文本语言
 #[tauri::command]
 pub async fn detect_text_language(text: String) -> Result<LanguageInfo, String> {
-    detect_language(&text)
-        .map(|lang| lang.into())
-        .map_err(|e| {
-            let error_msg = format!("检测语言失败: {}", e);
-            crate::app_log!("❌ {}", error_msg);
-            error_msg
-        })
+    detect_language(&text).map(|lang| lang.into()).map_err(|e| {
+        let error_msg = format!("检测语言失败: {}", e);
+        crate::app_log!("❌ {}", error_msg);
+        error_msg
+    })
 }
 
 /// 获取默认目标语言
@@ -28,4 +28,3 @@ pub async fn get_default_target_lang(source_lang_code: String) -> Result<Languag
 pub async fn get_supported_langs() -> Result<Vec<LanguageInfo>, String> {
     Ok(get_supported_languages())
 }
-

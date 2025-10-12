@@ -13,31 +13,31 @@ const log = createModuleLogger('API');
  * API 调用配置
  */
 interface ApiOptions {
-  showErrorMessage?: boolean;  // 是否自动显示错误消息
-  errorMessage?: string;        // 自定义错误消息
-  silent?: boolean;             // 静默模式（不记录日志）
-  timeout?: number;             // 超时时间（毫秒）
-  retry?: number;               // 重试次数
-  retryDelay?: number;          // 重试延迟（毫秒）
-  dedup?: boolean;             // 请求去重
+  showErrorMessage?: boolean; // 是否自动显示错误消息
+  errorMessage?: string; // 自定义错误消息
+  silent?: boolean; // 静默模式（不记录日志）
+  timeout?: number; // 超时时间（毫秒）
+  retry?: number; // 重试次数
+  retryDelay?: number; // 重试延迟（毫秒）
+  dedup?: boolean; // 请求去重
 }
 
 /**
  * 统一的 API 调用封装（增强版）
  */
 export async function invoke<T>(
-  command: string, 
-  args?: Record<string, unknown>, 
+  command: string,
+  args?: Record<string, unknown>,
   options: ApiOptions = {}
 ): Promise<T> {
-  const { 
-    showErrorMessage = true, 
-    errorMessage, 
+  const {
+    showErrorMessage = true,
+    errorMessage,
     silent = false,
     timeout,
     retry,
     retryDelay,
-    dedup
+    dedup,
   } = options;
 
   try {
@@ -52,7 +52,7 @@ export async function invoke<T>(
       retryDelay,
       silent,
       errorMessage,
-      dedup
+      dedup,
     });
 
     if (!silent) {
@@ -62,7 +62,7 @@ export async function invoke<T>(
           type: 'Array',
           length: result.length,
           first: result[0],
-          last: result[result.length - 1]
+          last: result[result.length - 1],
         });
       } else {
         log.debug(`📥 API响应: ${command}`, result);
@@ -102,23 +102,30 @@ export { apiClient };
 export const configApi = {
   async get() {
     return invoke('get_app_config', undefined, {
-      errorMessage: '加载配置失败'
+      errorMessage: '加载配置失败',
     });
   },
 
   async update(config: unknown) {
-    return invoke('update_app_config', { config }, {
-      errorMessage: '更新配置失败'
-    });
+    return invoke(
+      'update_app_config',
+      { config },
+      {
+        errorMessage: '更新配置失败',
+      }
+    );
   },
 
   async validate(config: unknown) {
-    return invoke('validate_config', { config }, {
-      errorMessage: '配置验证失败'
-    });
-  }
+    return invoke(
+      'validate_config',
+      { config },
+      {
+        errorMessage: '配置验证失败',
+      }
+    );
+  },
 };
-
 
 // ========== Phase 1: 文件格式 API（预留）==========
 
@@ -132,20 +139,28 @@ export const fileFormatApi = {
    * 检测文件格式
    */
   async detectFormat(filePath: string) {
-    return invoke<FileFormat>('detect_file_format', { filePath }, {
-      errorMessage: '检测文件格式失败',
-      silent: true,
-    });
+    return invoke<FileFormat>(
+      'detect_file_format',
+      { filePath },
+      {
+        errorMessage: '检测文件格式失败',
+        silent: true,
+      }
+    );
   },
 
   /**
    * 获取文件元数据
    */
   async getFileMetadata(filePath: string) {
-    return invoke<FileMetadata>('get_file_metadata', { filePath }, {
-      errorMessage: '获取文件元数据失败',
-      silent: true,
-    });
+    return invoke<FileMetadata>(
+      'get_file_metadata',
+      { filePath },
+      {
+        errorMessage: '获取文件元数据失败',
+        silent: true,
+      }
+    );
   },
 };
 
@@ -157,7 +172,6 @@ export interface LanguageInfo {
   english_name: string; // Rust后端使用蛇形命名
 }
 
-
 // ========== Phase 6: 系统语言检测 API ==========
 
 export const systemApi = {
@@ -166,11 +180,13 @@ export const systemApi = {
    * 返回 BCP 47 语言标签（如 "zh-CN", "en-US"）
    */
   async getSystemLanguage() {
-    return invoke<string>('get_system_language', {}, {
-      errorMessage: '获取系统语言失败',
-      silent: true,
-    });
+    return invoke<string>(
+      'get_system_language',
+      {},
+      {
+        errorMessage: '获取系统语言失败',
+        silent: true,
+      }
+    );
   },
 };
-
-

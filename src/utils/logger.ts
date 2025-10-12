@@ -25,10 +25,10 @@ class Logger {
 
   private getTimestamp(): string {
     const now = new Date();
-    const time = now.toLocaleTimeString('zh-CN', { 
-      hour12: false, 
-      hour: '2-digit', 
-      minute: '2-digit', 
+    const time = now.toLocaleTimeString('zh-CN', {
+      hour12: false,
+      hour: '2-digit',
+      minute: '2-digit',
       second: '2-digit',
     });
     const ms = now.getMilliseconds().toString().padStart(3, '0');
@@ -37,19 +37,19 @@ class Logger {
 
   private formatMessage(level: string, module: string, message: string): string {
     const parts: string[] = [];
-    
+
     if (this.config.enableTimestamp) {
       parts.push(`[${this.getTimestamp()}]`);
     }
-    
+
     parts.push(`[${level}]`);
-    
+
     if (this.config.enableModule && module) {
       parts.push(`[${module}]`);
     }
-    
+
     parts.push(message);
-    
+
     return parts.join(' ');
   }
 
@@ -89,12 +89,8 @@ class Logger {
   logError(module: string, error: unknown, context?: string) {
     const errorMessage = error instanceof Error ? error.message : String(error);
     const stack = error instanceof Error ? error.stack : undefined;
-    
-    this.error(
-      module,
-      context ? `${context}: ${errorMessage}` : errorMessage,
-      { error, stack }
-    );
+
+    this.error(module, context ? `${context}: ${errorMessage}` : errorMessage, { error, stack });
   }
 }
 
@@ -109,4 +105,3 @@ export const createModuleLogger = (moduleName: string) => ({
   error: (message: string, ...args: any[]) => logger.error(moduleName, message, ...args),
   logError: (error: unknown, context?: string) => logger.logError(moduleName, error, context),
 });
-

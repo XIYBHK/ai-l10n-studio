@@ -1,8 +1,8 @@
-use anyhow::{anyhow, Result};
+use anyhow::{Result, anyhow};
+use chrono;
 use serde::{Deserialize, Serialize};
 use std::fs;
 use std::path::{Path, PathBuf};
-use chrono;
 
 use crate::services::ai_translator::AIConfig;
 use crate::utils::paths;
@@ -39,39 +39,39 @@ pub struct AppConfig {
     pub batch_size: usize,
     pub max_concurrent: usize,
     pub timeout_seconds: u64,
-    
+
     // Phase 1 新增字段
     #[serde(default)]
-    pub ai_configs: Vec<AIConfig>,          // 多个AI配置
+    pub ai_configs: Vec<AIConfig>, // 多个AI配置
     #[serde(default)]
     pub active_config_index: Option<usize>, // 当前启用的配置索引
-    
+
     // Phase 3 新增字段
     #[serde(default)]
-    pub system_prompt: Option<String>,      // 自定义系统提示词（None使用默认）
-    
+    pub system_prompt: Option<String>, // 自定义系统提示词（None使用默认）
+
     // Phase 9 新增字段：UI 配置
     #[serde(default)]
-    pub theme_mode: Option<String>,         // 主题模式：light/dark/system（None使用系统默认）
+    pub theme_mode: Option<String>, // 主题模式：light/dark/system（None使用系统默认）
     #[serde(default)]
-    pub language: Option<String>,           // 界面语言：zh-CN/en等（None使用系统语言）
-    
+    pub language: Option<String>, // 界面语言：zh-CN/en等（None使用系统语言）
+
     // Phase 9 新增字段：日志配置
     #[serde(default)]
-    pub log_retention_days: Option<u32>,    // 日志保留天数（None表示永久保留）
-    
+    pub log_retention_days: Option<u32>, // 日志保留天数（None表示永久保留）
+
     // 配置版本控制（前后端同步）
     #[serde(default)]
-    pub config_version: u64,                // 配置版本号，每次修改递增
+    pub config_version: u64, // 配置版本号，每次修改递增
     #[serde(default)]
-    pub last_modified: Option<String>,      // 最后修改时间
+    pub last_modified: Option<String>, // 最后修改时间
 }
 
 impl Default for AppConfig {
     fn default() -> Self {
         // 获取默认的翻译记忆库路径
         let default_tm_path = Self::get_default_tm_path();
-        
+
         Self {
             api_key: String::new(),
             provider: "moonshot".to_string(),
@@ -88,11 +88,11 @@ impl Default for AppConfig {
             ai_configs: Vec::new(),
             active_config_index: None,
             // Phase 3 新增字段默认值
-            system_prompt: None,  // None表示使用内置默认提示词
+            system_prompt: None, // None表示使用内置默认提示词
             // Phase 9 新增字段默认值
-            theme_mode: None,      // None表示使用系统主题
-            language: None,        // None表示使用系统语言
-            log_retention_days: Some(7),  // 默认保留7天日志
+            theme_mode: None,            // None表示使用系统主题
+            language: None,              // None表示使用系统语言
+            log_retention_days: Some(7), // 默认保留7天日志
             // 配置版本控制
             config_version: 0,
             last_modified: None,
@@ -114,7 +114,7 @@ impl AppConfig {
                 }
             }
         }
-        
+
         // 2. 使用用户目录（标准模式）
         let mut path = dirs::home_dir().unwrap_or_else(|| PathBuf::from("."));
         path.push(".po-translator");
@@ -123,13 +123,13 @@ impl AppConfig {
     }
 
     // ========== Phase 1: AI 配置管理方法 ==========
-    
+
     /// 获取当前启用的AI配置
     pub fn get_active_ai_config(&self) -> Option<&AIConfig> {
         self.active_config_index
             .and_then(|index| self.ai_configs.get(index))
     }
-    
+
     /// 获取当前启用的AI配置（可变）
     pub fn get_active_ai_config_mut(&mut self) -> Option<&mut AIConfig> {
         if let Some(index) = self.active_config_index {
@@ -138,7 +138,7 @@ impl AppConfig {
             None
         }
     }
-    
+
     /// 添加AI配置
     pub fn add_ai_config(&mut self, config: AIConfig) {
         self.ai_configs.push(config);
@@ -147,7 +147,7 @@ impl AppConfig {
             self.active_config_index = Some(0);
         }
     }
-    
+
     /// 更新AI配置
     pub fn update_ai_config(&mut self, index: usize, config: AIConfig) -> Result<()> {
         if index < self.ai_configs.len() {
@@ -157,15 +157,15 @@ impl AppConfig {
             Err(anyhow!("配置索引超出范围: {}", index))
         }
     }
-    
+
     /// 删除AI配置
     pub fn remove_ai_config(&mut self, index: usize) -> Result<()> {
         if index >= self.ai_configs.len() {
             return Err(anyhow!("配置索引超出范围: {}", index));
         }
-        
+
         self.ai_configs.remove(index);
-        
+
         // 调整启用索引
         if let Some(active_index) = self.active_config_index {
             if active_index == index {
@@ -180,10 +180,10 @@ impl AppConfig {
                 self.active_config_index = Some(active_index - 1);
             }
         }
-        
+
         Ok(())
     }
-    
+
     /// 设置启用的AI配置
     pub fn set_active_ai_config(&mut self, index: usize) -> Result<()> {
         if index < self.ai_configs.len() {
@@ -193,7 +193,7 @@ impl AppConfig {
             Err(anyhow!("配置索引超出范围: {}", index))
         }
     }
-    
+
     /// 获取所有AI配置
     pub fn get_all_ai_configs(&self) -> &Vec<AIConfig> {
         &self.ai_configs
@@ -262,23 +262,23 @@ impl ConfigManager {
 
         Ok(())
     }
-    
+
     /// 保存配置并递增版本号（用于配置修改）
     fn save_with_version_increment(&mut self) -> Result<()> {
         // 递增版本号
         self.config.config_version = self.config.config_version.wrapping_add(1);
-        
+
         // 更新时间戳
         let now = chrono::Local::now().to_rfc3339();
         self.config.last_modified = Some(now);
-        
+
         self.save()
     }
 
     pub fn get_config(&self) -> &AppConfig {
         &self.config
     }
-    
+
     pub fn get_config_mut(&mut self) -> &mut AppConfig {
         &mut self.config
     }
@@ -291,12 +291,16 @@ impl ConfigManager {
         self.save_with_version_increment()?;
         Ok(())
     }
-    
+
     /// 获取配置版本信息（用于前后端同步）
     pub fn get_config_version_info(&self) -> ConfigVersionInfo {
         ConfigVersionInfo {
             version: self.config.config_version,
-            timestamp: self.config.last_modified.clone().unwrap_or_else(|| "unknown".to_string()),
+            timestamp: self
+                .config
+                .last_modified
+                .clone()
+                .unwrap_or_else(|| "unknown".to_string()),
             active_config_index: self.config.active_config_index,
             config_count: self.config.ai_configs.len(),
         }

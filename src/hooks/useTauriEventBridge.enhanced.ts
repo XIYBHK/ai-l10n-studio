@@ -1,6 +1,6 @@
 /**
  * 增强版 Tauri 事件桥接器
- * 
+ *
  * 参考 clash-verge-rev 设计，提供：
  * 1. 防抖和节流策略（避免重复事件）
  * 2. 高级 cleanup 管理（避免内存泄漏）
@@ -29,7 +29,7 @@ interface EventConfig {
 
 /**
  * 增强版 Tauri 事件桥接器
- * 
+ *
  * @example
  * ```typescript
  * useTauriEventBridgeEnhanced([
@@ -50,16 +50,16 @@ export function useTauriEventBridgeEnhanced(events: EventConfig[]) {
   useEffect(() => {
     // 组件是否已卸载
     let isUnmounted = false;
-    
+
     // 清理函数列表
     const cleanupFns: Array<() => void> = [];
-    
+
     // 定时器集合
     const scheduledTimeouts = new Set<ReturnType<typeof setTimeout>>();
-    
+
     // 节流状态：记录每个事件的最后触发时间
     const lastTriggerTime: Record<string, number> = {};
-    
+
     // 注册清理函数（立即执行或延迟执行）
     const registerCleanup = (fn: () => void) => {
       if (isUnmounted) {
@@ -68,39 +68,39 @@ export function useTauriEventBridgeEnhanced(events: EventConfig[]) {
         cleanupFns.push(fn); // 否则添加到清理列表
       }
     };
-    
+
     // 带管理的延迟执行
     const scheduleTimeout = (callback: () => void | Promise<void>, delay: number) => {
       const timeoutId = setTimeout(() => {
         scheduledTimeouts.delete(timeoutId);
         void callback();
       }, delay);
-      
+
       scheduledTimeouts.add(timeoutId);
       return timeoutId;
     };
-    
+
     // 清除所有定时器
     const clearAllTimeouts = () => {
       scheduledTimeouts.forEach(clearTimeout);
       scheduledTimeouts.clear();
     };
-    
+
     // 检查是否应该节流
     const shouldThrottle = (eventName: string, throttleMs?: number): boolean => {
       if (!throttleMs) return false;
-      
+
       const now = Date.now();
       const lastTime = lastTriggerTime[eventName] || 0;
-      
+
       if (now - lastTime < throttleMs) {
         return true; // 在节流期内，跳过
       }
-      
+
       lastTriggerTime[eventName] = now;
       return false;
     };
-    
+
     // 创建带防抖/节流的事件处理器
     const createThrottledHandler = (config: EventConfig) => {
       return (event?: any) => {
@@ -109,7 +109,7 @@ export function useTauriEventBridgeEnhanced(events: EventConfig[]) {
           log.debug(`事件 ${config.name} 被节流，跳过执行`);
           return;
         }
-        
+
         // 执行处理函数（可选延迟）
         if (config.delayMs && config.delayMs > 0) {
           scheduleTimeout(() => {
@@ -121,14 +121,14 @@ export function useTauriEventBridgeEnhanced(events: EventConfig[]) {
         }
       };
     };
-    
+
     // 初始化所有事件监听器
     const initializeListeners = async () => {
       log.info('🚀 初始化 Tauri 事件监听器...');
-      
+
       for (const eventConfig of events) {
         const throttledHandler = createThrottledHandler(eventConfig);
-        
+
         try {
           // 尝试使用 Tauri 原生事件系统
           const unlisten = await listen(eventConfig.name, throttledHandler);
@@ -137,40 +137,40 @@ export function useTauriEventBridgeEnhanced(events: EventConfig[]) {
         } catch (error) {
           // Tauri 事件失败，使用 window 事件作为回退
           log.warn(`⚠️ Tauri 监听 ${eventConfig.name} 失败，使用 window 事件回退`, error);
-          
+
           window.addEventListener(eventConfig.name, throttledHandler as EventListener);
           registerCleanup(() => {
             window.removeEventListener(eventConfig.name, throttledHandler as EventListener);
           });
         }
       }
-      
+
       log.info(`✅ 初始化完成，共监听 ${events.length} 个事件`);
     };
-    
+
     // 启动初始化（异步执行）
     void initializeListeners();
-    
+
     // 清理函数
     return () => {
       isUnmounted = true;
-      
+
       log.debug('🧹 清理 Tauri 事件监听器...');
-      
+
       // 清理所有定时器
       clearAllTimeouts();
-      
+
       // 执行所有清理函数
-      cleanupFns.forEach(fn => {
+      cleanupFns.forEach((fn) => {
         try {
           fn();
         } catch (error) {
           log.warn('清理函数执行失败', error);
         }
       });
-      
+
       cleanupFns.length = 0;
-      
+
       log.debug('✅ 清理完成');
     };
   }, [events]);
@@ -192,7 +192,7 @@ export const CommonEventConfigs = {
     throttleMs,
     delayMs: 100,
   }),
-  
+
   /** 术语库更新事件 */
   termUpdated: (throttleMs = 500): EventConfig => ({
     name: 'term:updated',
@@ -202,7 +202,7 @@ export const CommonEventConfigs = {
     },
     throttleMs,
   }),
-  
+
   /** 文件保存事件 */
   fileSaved: (throttleMs = 500): EventConfig => ({
     name: 'file:saved',
@@ -216,7 +216,7 @@ export const CommonEventConfigs = {
     },
     throttleMs,
   }),
-  
+
   /** 翻译完成事件 */
   translationAfter: (throttleMs = 1000): EventConfig => ({
     name: 'translation:after',
@@ -232,7 +232,7 @@ export const CommonEventConfigs = {
     throttleMs,
     delayMs: 200,
   }),
-  
+
   /** 翻译统计更新事件（批量翻译增量更新）*/
   translationStatsUpdate: (throttleMs = 500): EventConfig => ({
     name: 'translation-stats-update',
@@ -243,7 +243,7 @@ export const CommonEventConfigs = {
     },
     throttleMs,
   }),
-  
+
   /** Contextual Refine 开始 */
   refineStart: (throttleMs = 500): EventConfig => ({
     name: 'refine:start',
@@ -254,7 +254,7 @@ export const CommonEventConfigs = {
     },
     throttleMs,
   }),
-  
+
   /** Contextual Refine 完成 */
   refineComplete: (throttleMs = 500): EventConfig => ({
     name: 'refine:complete',
@@ -265,7 +265,7 @@ export const CommonEventConfigs = {
     },
     throttleMs,
   }),
-  
+
   /** Contextual Refine 错误 */
   refineError: (throttleMs = 500): EventConfig => ({
     name: 'refine:error',
@@ -280,7 +280,7 @@ export const CommonEventConfigs = {
 
 /**
  * 默认事件桥接器（使用预定义配置）
- * 
+ *
  * 这是最常用的事件监听器，适合大多数场景
  * 替代旧版本的 useTauriEventBridge
  */
@@ -292,11 +292,10 @@ export function useDefaultTauriEventBridge() {
     CommonEventConfigs.fileSaved(),
     CommonEventConfigs.translationAfter(),
     CommonEventConfigs.translationStatsUpdate(),
-    
+
     // Contextual Refine 事件
     CommonEventConfigs.refineStart(),
     CommonEventConfigs.refineComplete(),
     CommonEventConfigs.refineError(),
   ]);
 }
-

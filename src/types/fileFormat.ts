@@ -26,12 +26,12 @@ export interface FileMetadata {
  * 翻译条目（通用格式）
  */
 export interface TranslationEntry {
-  id: string;           // 唯一标识
-  source: string;       // 源文本
-  target: string;       // 译文
-  context?: string;     // 上下文/注释
-  location?: string;    // 文件位置
-  flags?: string[];     // 标记
+  id: string; // 唯一标识
+  source: string; // 源文本
+  target: string; // 译文
+  context?: string; // 上下文/注释
+  location?: string; // 文件位置
+  flags?: string[]; // 标记
 }
 
 /**
@@ -93,13 +93,12 @@ export function getFileFormatInfo(format: FileFormat): FileFormatInfo {
  */
 export function guessFormatFromExtension(filename: string): FileFormat {
   const ext = filename.toLowerCase().substring(filename.lastIndexOf('.'));
-  
+
   for (const [format, info] of Object.entries(FILE_FORMAT_INFO)) {
     if (info.extensions.includes(ext)) {
       return format as FileFormat;
     }
   }
-  
+
   return FileFormat.PO; // 默认
 }
-

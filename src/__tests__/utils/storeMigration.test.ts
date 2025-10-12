@@ -3,7 +3,11 @@
  */
 
 import { describe, it, expect, beforeEach, vi } from 'vitest';
-import { needsMigration, migrateToTauriStore, cleanupLocalStorage } from '../../utils/storeMigration';
+import {
+  needsMigration,
+  migrateToTauriStore,
+  cleanupLocalStorage,
+} from '../../utils/storeMigration';
 
 // Mock localStorage
 const localStorageMock = (() => {
@@ -38,7 +42,7 @@ Object.defineProperty(global, 'localStorage', {
 // Mock TauriStore
 vi.mock('../../store/tauriStore', () => {
   const mockData = new Map<string, any>();
-  
+
   return {
     tauriStore: {
       init: vi.fn().mockResolvedValue(undefined),
@@ -73,7 +77,7 @@ describe('Store 迁移工具', () => {
   beforeEach(() => {
     // 清空 localStorage
     localStorage.clear();
-    
+
     // 重置 mock
     vi.clearAllMocks();
   });
@@ -85,9 +89,12 @@ describe('Store 迁移工具', () => {
     });
 
     it('当有 localStorage 数据但 TauriStore 已有数据时应该返回 false', async () => {
-      localStorage.setItem('app-settings', JSON.stringify({
-        state: { theme: 'dark' }
-      }));
+      localStorage.setItem(
+        'app-settings',
+        JSON.stringify({
+          state: { theme: 'dark' },
+        })
+      );
 
       const { tauriStore } = await import('../../store/tauriStore');
       vi.mocked(tauriStore.has).mockResolvedValue(true);
@@ -97,9 +104,12 @@ describe('Store 迁移工具', () => {
     });
 
     it('当有 localStorage 数据且 TauriStore 无数据时应该返回 true', async () => {
-      localStorage.setItem('app-settings', JSON.stringify({
-        state: { theme: 'dark' }
-      }));
+      localStorage.setItem(
+        'app-settings',
+        JSON.stringify({
+          state: { theme: 'dark' },
+        })
+      );
 
       const { tauriStore } = await import('../../store/tauriStore');
       vi.mocked(tauriStore.has).mockResolvedValue(false);
@@ -111,9 +121,12 @@ describe('Store 迁移工具', () => {
 
   describe('migrateToTauriStore', () => {
     it('应该能够迁移主题设置', async () => {
-      localStorage.setItem('app-settings', JSON.stringify({
-        state: { theme: 'dark', language: 'en' }
-      }));
+      localStorage.setItem(
+        'app-settings',
+        JSON.stringify({
+          state: { theme: 'dark', language: 'en' },
+        })
+      );
 
       const result = await migrateToTauriStore();
 
@@ -123,17 +136,20 @@ describe('Store 迁移工具', () => {
     });
 
     it('应该能够迁移累计统计', async () => {
-      localStorage.setItem('app-stats', JSON.stringify({
-        state: {
-          cumulativeStats: {
-            total: 100,
-            token_stats: {
-              total_tokens: 1000,
-              cost: 0.5
-            }
-          }
-        }
-      }));
+      localStorage.setItem(
+        'app-stats',
+        JSON.stringify({
+          state: {
+            cumulativeStats: {
+              total: 100,
+              token_stats: {
+                total_tokens: 1000,
+                cost: 0.5,
+              },
+            },
+          },
+        })
+      );
 
       const result = await migrateToTauriStore();
 
@@ -142,19 +158,22 @@ describe('Store 迁移工具', () => {
     });
 
     it('应该能够从旧的 app-storage 迁移', async () => {
-      localStorage.setItem('app-storage', JSON.stringify({
-        state: {
-          theme: 'dark',
-          language: 'zh-CN',
-          cumulativeStats: {
-            total: 50,
-            token_stats: {
-              total_tokens: 500,
-              cost: 0.25
-            }
-          }
-        }
-      }));
+      localStorage.setItem(
+        'app-storage',
+        JSON.stringify({
+          state: {
+            theme: 'dark',
+            language: 'zh-CN',
+            cumulativeStats: {
+              total: 50,
+              token_stats: {
+                total_tokens: 500,
+                cost: 0.25,
+              },
+            },
+          },
+        })
+      );
 
       const result = await migrateToTauriStore();
 
@@ -163,9 +182,12 @@ describe('Store 迁移工具', () => {
     });
 
     it('应该处理部分迁移失败', async () => {
-      localStorage.setItem('app-settings', JSON.stringify({
-        state: { theme: 'dark' }
-      }));
+      localStorage.setItem(
+        'app-settings',
+        JSON.stringify({
+          state: { theme: 'dark' },
+        })
+      );
 
       const { tauriStore } = await import('../../store/tauriStore');
       vi.mocked(tauriStore.setTheme).mockRejectedValueOnce(new Error('保存失败'));
@@ -193,4 +215,3 @@ describe('Store 迁移工具', () => {
     });
   });
 });
-

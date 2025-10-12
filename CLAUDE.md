@@ -12,6 +12,7 @@ This is a professional PO file translation tool built with Tauri (Rust + React).
 **Development Status**: Production Ready
 
 ### Key Features (Phase 1-8)
+
 - ✅ **Multi-AI Provider Support** (Phase 1): 8 AI services (Moonshot, OpenAI, iFlytek, Baidu, Alibaba, Zhipu, Claude, Gemini)
 - ✅ **Custom System Prompts** (Phase 2): User-customizable translation prompts
 - ✅ **Automated Testing** (Phase 3): 73 tests, 100% pass rate
@@ -24,6 +25,7 @@ This is a professional PO file translation tool built with Tauri (Rust + React).
 ## Development Commands
 
 ### Core Development
+
 ```bash
 # Start development server (first run is slow due to Rust compilation)
 npm run tauri:dev
@@ -42,6 +44,7 @@ npm run tauri clean
 ```
 
 ### Testing Commands
+
 ```bash
 # Run all tests (frontend + backend)
 npm run test           # Frontend tests with Vitest
@@ -57,6 +60,7 @@ npm run test -- path/to/test.spec.ts
 ```
 
 ### Troubleshooting
+
 ```bash
 # Clear all caches and reinstall
 rm -rf node_modules
@@ -74,6 +78,7 @@ npm run build  # Build frontend only first
 ## Architecture Overview
 
 ### Frontend Structure (`src/`)
+
 - **Components**: React components using Ant Design
   - `MenuBar.tsx` - Application toolbar with file operations
   - `EntryList.tsx` - PO file entries list with status indicators
@@ -115,6 +120,7 @@ npm run build  # Build frontend only first
   - `termLibrary.ts` - Terminology library specific types
 
 ### Backend Structure (`src-tauri/src/`)
+
 - **Commands** (`commands/`): Tauri command handlers for frontend-backend communication
   - `translator.rs` - Translation operations (single/batch)
   - `mod.rs` - Command module organization
@@ -135,6 +141,7 @@ npm run build  # Build frontend only first
   - `mod.rs` - Utility module organization
 
 ### Key Integration Points
+
 - **Tauri Commands**: All backend operations exposed through Tauri's invoke system with unified error handling
 - **Event System**: Type-safe event dispatcher bridges backend events to frontend components
 - **API Layer**: Centralized API wrapper with consistent error handling, logging, and organization
@@ -146,6 +153,7 @@ npm run build  # Build frontend only first
 ## Technology Stack
 
 ### Frontend
+
 - React 18 + TypeScript
 - Ant Design 5 (UI components)
 - Zustand (state management)
@@ -153,6 +161,7 @@ npm run build  # Build frontend only first
 - i18next (internationalization)
 
 ### Backend
+
 - Tauri 2.x (desktop app framework)
 - Rust with Tokio (async runtime)
 - reqwest (HTTP client for AI APIs)
@@ -165,6 +174,7 @@ npm run build  # Build frontend only first
 - ts-rs (Rust-to-TypeScript type generation, optional)
 
 ### External Dependencies
+
 - **AI Translation Providers** (8 supported):
   - Moonshot AI (primary, Chinese-optimized)
   - OpenAI (GPT series)
@@ -179,24 +189,28 @@ npm run build  # Build frontend only first
 ## Development Guidelines
 
 ### API Usage
+
 - Use the centralized API services from `services/api.ts` instead of direct Tauri invoke calls
 - All API calls have built-in error handling, logging, and user feedback
 - Prefer `useAsync` hook + API functions over specialized hooks (like `useTranslator`)
 - API modules are organized by feature: `termLibraryApi`, `translationMemoryApi`, `poFileApi`, etc.
 
 ### Event System Integration
+
 - Subscribe to events via `eventDispatcher` for type-safe event handling
 - Use `useTauriEventBridge` to bridge backend events to frontend
 - Events cover translation lifecycle, file operations, terminology changes, and UI updates
 - Event history is available for debugging with `eventDispatcher.getEventHistory()`
 
 ### File Operations
+
 - All PO file operations go through Rust backend (`po_parser.rs`)
 - File dialogs handled by Tauri's filesystem API via `dialogApi`
 - Translation memory automatically saves/loads from user data directory
 - File state is managed through Zustand store with persistence
 
 ### AI Translation Integration
+
 - Translation requests are batched and deduplicated for efficiency
 - Translation memory serves 83+ built-in phrases with automatic pattern matching
 - Both single-entry and batch translation modes supported
@@ -204,18 +218,21 @@ npm run build  # Build frontend only first
 - Batch translation emits progress events and final statistics
 
 ### State Management
+
 - Use Zustand stores for frontend state with selective persistence
 - Keep state in sync with backend operations via events and API calls
 - Handle async operations with `useAsync` hook for consistent loading/error states
 - Theme, language, and cumulative statistics are persisted across sessions
 
 ### Logging and Debugging
+
 - Rust backend uses structured logging with `tracing`
 - Frontend logging available via `utils/logger` with module-based organization
 - Development mode shows detailed logs in console
 - Event system provides debugging capabilities through event history
 
 ### Configuration Management
+
 - API keys and settings stored in Tauri's app data directory
 - Use `configApi` for all configuration operations with validation
 - Configuration changes are persisted immediately
@@ -224,6 +241,7 @@ npm run build  # Build frontend only first
 ## Common Tasks
 
 ### Adding New AI Providers
+
 1. Update `ai_translator.rs` with new provider implementation
 2. Add provider configuration to `config_manager.rs` and types
 3. Update `configApi` in `services/api.ts` with new provider methods
@@ -231,6 +249,7 @@ npm run build  # Build frontend only first
 5. Register new commands in `main.rs` if needed
 
 ### Extending Translation Memory
+
 1. Modify `translation_memory.rs` for new phrase patterns
 2. Update built-in phrases collection
 3. Adjust matching algorithms if needed
@@ -238,6 +257,7 @@ npm run build  # Build frontend only first
 5. Update `translationMemoryApi` if new operations are needed
 
 ### Adding New File Format Support
+
 1. Create parser service similar to `po_parser.rs`
 2. Add Tauri commands for file operations in `commands/`
 3. Update `poFileApi` in `services/api.ts` with new format methods
@@ -246,6 +266,7 @@ npm run build  # Build frontend only first
 6. Update types in `types/tauri.ts` for new format structures
 
 ### Adding New Events
+
 1. Define event type in `EventMap` in `eventDispatcher.ts`
 2. Emit events from backend services or commands
 3. Bridge Tauri events in `useTauriEventBridge.ts` if needed
@@ -253,6 +274,7 @@ npm run build  # Build frontend only first
 5. Add event types to `types/` if needed
 
 ### Adding New API Operations
+
 1. Add Tauri command in `src-tauri/src/commands/`
 2. Register command in `main.rs`
 3. Add API method to appropriate module in `services/api.ts`
@@ -263,6 +285,7 @@ npm run build  # Build frontend only first
 ## Performance Considerations
 
 ### File Handling (Phase 8)
+
 - **Small files** (<10MB): Direct memory loading
 - **Large files** (10-50MB): Automatic chunking with 500 entries/batch
 - **Huge files** (>50MB): Optimized processing with 200 entries/batch
@@ -270,24 +293,29 @@ npm run build  # Build frontend only first
 - Streaming support for future enhancements
 
 ### Translation Efficiency
+
 - Batch translation with intelligent deduplication
 - Translation memory lookup optimized for phrase patterns
 - AI API requests deduplicated to avoid redundant calls
 - Progress updates throttled to 100ms intervals for smooth UI
 
 ### Memory Management
+
 - PO files parsed into memory (suitable for files ~5000 entries)
 - LRU caching strategy for translation memory
 - Automatic memory optimization for large operations
 
 ### Testing & Quality
+
 - 73 automated tests (46 backend + 27 frontend)
 - 100% test pass rate
 - 82.8% code coverage
 - Fast test execution (~14 seconds)
 
 ### Supported Languages (Phase 5)
+
 The application supports translation to/from 10 major languages with automatic detection:
+
 - English
 - Chinese (Simplified & Traditional)
 - Japanese
@@ -302,6 +330,7 @@ The application supports translation to/from 10 major languages with automatic d
 ## Important Project Files
 
 ### Documentation
+
 - `README.md` - Project introduction and quick start
 - `ARCHITECTURE_OVERVIEW.md` - Detailed architecture documentation
 - `API_REFERENCE_V2.md` - Complete API reference
@@ -315,6 +344,7 @@ The application supports translation to/from 10 major languages with automatic d
   - `docs/PHASE*_COMPLETION_SUMMARY.md` - Phase completion reports
 
 ### Configuration
+
 - `package.json` - Frontend dependencies and scripts
 - `src-tauri/Cargo.toml` - Backend dependencies and build config
 - `vite.config.ts` - Vite build configuration
@@ -322,6 +352,7 @@ The application supports translation to/from 10 major languages with automatic d
 - `tsconfig.json` - TypeScript configuration
 
 ### Key Source Files
+
 - `src/services/api.ts` - Centralized API layer (13 modules)
 - `src/services/eventDispatcher.ts` - Type-safe event system
 - `src/store/useAppStore.ts` - Main application state

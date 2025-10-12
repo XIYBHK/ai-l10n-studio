@@ -1,15 +1,14 @@
+use anyhow::{Context, Result};
+use std::fs::metadata;
 ///! 文件分块处理工具
 ///! 用于优化大文件的读取和处理性能
-
 use std::path::Path;
-use std::fs::metadata;
-use anyhow::{Result, Context};
 
 /// 文件大小常量（单位：字节）
 pub const MB: u64 = 1024 * 1024;
-pub const LARGE_FILE_THRESHOLD: u64 = 10 * MB;  // 10MB
-pub const HUGE_FILE_THRESHOLD: u64 = 50 * MB;   // 50MB
-pub const CHUNK_SIZE: usize = 1000;              // 每次处理的条目数
+pub const LARGE_FILE_THRESHOLD: u64 = 10 * MB; // 10MB
+pub const HUGE_FILE_THRESHOLD: u64 = 50 * MB; // 50MB
+pub const CHUNK_SIZE: usize = 1000; // 每次处理的条目数
 
 /// 文件大小分类
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -26,9 +25,9 @@ impl FileSizeCategory {
     /// 建议的分块大小
     pub fn suggested_chunk_size(&self) -> usize {
         match self {
-            FileSizeCategory::Small => 1000,   // 一次处理1000个条目
-            FileSizeCategory::Large => 500,    // 一次处理500个条目
-            FileSizeCategory::Huge => 200,     // 一次处理200个条目
+            FileSizeCategory::Small => 1000, // 一次处理1000个条目
+            FileSizeCategory::Large => 500,  // 一次处理500个条目
+            FileSizeCategory::Huge => 200,   // 一次处理200个条目
         }
     }
 
@@ -63,12 +62,12 @@ impl FileAnalyzer {
     /// 分析文件大小并返回分类
     pub fn analyze<P: AsRef<Path>>(file_path: P) -> Result<(u64, FileSizeCategory)> {
         let path = file_path.as_ref();
-        let metadata = metadata(path)
-            .with_context(|| format!("无法读取文件元数据: {}", path.display()))?;
-        
+        let metadata =
+            metadata(path).with_context(|| format!("无法读取文件元数据: {}", path.display()))?;
+
         let size = metadata.len();
         let category = Self::categorize(size);
-        
+
         Ok((size, category))
     }
 
@@ -164,4 +163,3 @@ mod tests {
         assert_eq!(chunks.len(), 0);
     }
 }
-

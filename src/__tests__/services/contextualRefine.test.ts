@@ -33,19 +33,13 @@ describe('Contextual Refine API', () => {
 
       mockInvoke.mockResolvedValue(expectedResults);
 
-      const results = await translatorCommands.contextualRefine(
-        requests,
-        targetLanguage
-      );
+      const results = await translatorCommands.contextualRefine(requests, targetLanguage);
 
-      expect(mockInvoke).toHaveBeenCalledWith(
-        'contextual_refine',
-        {
-          requests,
-          apiKey,
-          targetLanguage,
-        }
-      );
+      expect(mockInvoke).toHaveBeenCalledWith('contextual_refine', {
+        requests,
+        apiKey,
+        targetLanguage,
+      });
       expect(results).toEqual(expectedResults);
     });
 
@@ -59,10 +53,7 @@ describe('Contextual Refine API', () => {
       const expectedResults = ['保存', '取消', '确定'];
       mockInvoke.mockResolvedValue(expectedResults);
 
-      const results = await translatorCommands.contextualRefine(
-        requests,
-        'zh-CN'
-      );
+      const results = await translatorCommands.contextualRefine(requests, 'zh-CN');
 
       expect(results).toHaveLength(3);
       expect(results).toEqual(expectedResults);
@@ -71,10 +62,7 @@ describe('Contextual Refine API', () => {
     it('应该处理空请求数组', async () => {
       mockInvoke.mockResolvedValue([]);
 
-      const results = await translatorCommands.contextualRefine(
-        [],
-        'zh-CN'
-      );
+      const results = await translatorCommands.contextualRefine([], 'zh-CN');
 
       expect(results).toEqual([]);
     });
@@ -84,10 +72,7 @@ describe('Contextual Refine API', () => {
       mockInvoke.mockRejectedValue(new Error(errorMessage));
 
       await expect(
-        translatorCommands.contextualRefine(
-          [{ msgid: 'Test' }],
-          'zh-CN'
-        )
+        translatorCommands.contextualRefine([{ msgid: 'Test' }], 'zh-CN')
       ).rejects.toThrow();
     });
 
@@ -126,10 +111,7 @@ describe('Contextual Refine API', () => {
 
       mockInvoke.mockResolvedValue(['保存文件']);
 
-      await translatorCommands.contextualRefine(
-        [fullContextRequest],
-        'zh-CN'
-      );
+      await translatorCommands.contextualRefine([fullContextRequest], 'zh-CN');
 
       expect(mockInvoke).toHaveBeenCalledWith(
         'contextual_refine',
@@ -141,7 +123,7 @@ describe('Contextual Refine API', () => {
 
     it('应该支持不同的目标语言', async () => {
       const request = { msgid: 'Hello' };
-      
+
       const testCases = [
         { lang: 'zh-CN', expected: '你好' },
         { lang: 'en-US', expected: 'Hello' },
@@ -151,10 +133,7 @@ describe('Contextual Refine API', () => {
       for (const { lang, expected } of testCases) {
         mockInvoke.mockResolvedValue([expected]);
 
-        await translatorCommands.contextualRefine(
-          [request],
-          lang
-        );
+        await translatorCommands.contextualRefine([request], lang);
 
         expect(mockInvoke).toHaveBeenCalledWith(
           'contextual_refine',
@@ -251,4 +230,3 @@ describe('Contextual Refine API', () => {
     });
   });
 });
-

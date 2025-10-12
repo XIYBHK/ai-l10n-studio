@@ -1,29 +1,29 @@
 import React, { useState, useEffect } from 'react';
-import { 
-  Modal, 
-  Form, 
-  Input, 
-  Switch, 
-  Select, 
-  InputNumber, 
-  Button, 
-  List, 
-  Card, 
-  Space, 
-  Divider, 
-  Tag, 
+import {
+  Modal,
+  Form,
+  Input,
+  Switch,
+  Select,
+  InputNumber,
+  Button,
+  List,
+  Card,
+  Space,
+  Divider,
+  Tag,
   Popconfirm,
   message,
   Row,
   Col,
   Tabs,
   Alert,
-  Descriptions
+  Descriptions,
 } from 'antd';
-import { 
-  PlusOutlined, 
-  DeleteOutlined, 
-  EditOutlined, 
+import {
+  PlusOutlined,
+  DeleteOutlined,
+  EditOutlined,
   CheckOutlined,
   ThunderboltOutlined,
   FileTextOutlined,
@@ -31,7 +31,7 @@ import {
   UndoOutlined,
   BellOutlined,
   InfoCircleOutlined,
-  BgColorsOutlined
+  BgColorsOutlined,
 } from '@ant-design/icons';
 import { aiConfigCommands, systemPromptCommands, aiModelCommands } from '../services/commands'; // ✅ 迁移到统一命令层
 import { AIConfig, ProviderType, PROVIDER_INFO_MAP } from '../types/aiProvider';
@@ -52,17 +52,14 @@ interface SettingsModalProps {
 }
 
 // 供应商配置（从 aiProvider.ts 统一获取）
-const PROVIDER_CONFIGS = Object.values(ProviderType).map(type => ({
+const PROVIDER_CONFIGS = Object.values(ProviderType).map((type) => ({
   value: type,
   label: PROVIDER_INFO_MAP[type].displayName,
   defaultUrl: PROVIDER_INFO_MAP[type].defaultUrl,
   defaultModel: PROVIDER_INFO_MAP[type].defaultModel,
 }));
 
-export const SettingsModal: React.FC<SettingsModalProps> = ({
-  visible,
-  onClose,
-}) => {
+export const SettingsModal: React.FC<SettingsModalProps> = ({ visible, onClose }) => {
   const [form] = Form.useForm();
   const { configs, active, mutateAll, mutateActive } = useAIConfigs();
   const [activeIndex, setActiveIndex] = useState<number | null>(null);
@@ -71,49 +68,52 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
   const [testing, setTesting] = useState(false);
   const [currentModelInfo, setCurrentModelInfo] = useState<ModelInfo | null>(null);
   const [availableModels, setAvailableModels] = useState<ModelInfo[]>([]);
-  
+
   // Phase 3: 系统提示词状态
   const [systemPrompt, setSystemPrompt] = useState<string>('');
   const [isPromptModified, setIsPromptModified] = useState(false);
-  
+
   // Phase 9: 语言设置状态（监听 i18n 变化）
   const [currentLanguage, setCurrentLanguage] = useState<string>(i18n.language);
-  
+
   // 监听 i18n 语言变化，自动更新 Select 组件
   useEffect(() => {
     const handleLanguageChanged = () => {
       setCurrentLanguage(i18n.language);
     };
-    
+
     i18n.on('languageChanged', handleLanguageChanged);
     return () => {
       i18n.off('languageChanged', handleLanguageChanged);
     };
   }, []);
-  
+
   // Notification设置状态
   const [notificationEnabled, setNotificationEnabled] = useState(notificationManager.isEnabled());
-  
+
   // 日志设置状态
   const [logLevel, setLogLevel] = useState<string>('info');
   const [logRetentionDays, setLogRetentionDays] = useState<number>(7);
-  
+
   // 加载日志配置
   useEffect(() => {
     if (visible) {
-      configCommands.get().then((config) => {
-        if (config.log_level) {
-          setLogLevel(config.log_level);
-        }
-        if (config.log_retention_days !== undefined) {
-          setLogRetentionDays(config.log_retention_days);
-        }
-      }).catch((err) => {
-        log.error('加载日志配置失败:', err);
-      });
+      configCommands
+        .get()
+        .then((config) => {
+          if (config.log_level) {
+            setLogLevel(config.log_level);
+          }
+          if (config.log_retention_days !== undefined) {
+            setLogRetentionDays(config.log_retention_days);
+          }
+        })
+        .catch((err) => {
+          log.error('加载日志配置失败:', err);
+        });
     }
   }, [visible]);
-  
+
   // 异步操作hooks
   const { prompt, mutate: mutatePrompt } = useSystemPrompt();
   const { execute: savePrompt, loading: savingPrompt } = useAsync(systemPromptCommands.set);
@@ -126,33 +126,35 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
       setIsPromptModified(false);
       // 计算当前 activeIndex
       if (active) {
-        const idx = configs.findIndex(c => c.provider === active.provider && c.apiKey === active.apiKey);
+        const idx = configs.findIndex(
+          (c) => c.provider === active.provider && c.apiKey === active.apiKey
+        );
         setActiveIndex(idx >= 0 ? idx : null);
       } else {
         setActiveIndex(null);
       }
     }
   }, [visible, prompt, active, configs]);
-  
+
   // 加载由 SWR 负责
 
   const handleProviderChange = async (provider: ProviderType) => {
-    const providerConfig = PROVIDER_CONFIGS.find(p => p.value === provider);
+    const providerConfig = PROVIDER_CONFIGS.find((p) => p.value === provider);
     if (providerConfig) {
       form.setFieldsValue({
         baseUrl: providerConfig.defaultUrl,
         model: providerConfig.defaultModel,
       });
     }
-    
+
     // 加载该供应商的可用模型列表
     try {
       const models = await aiModelCommands.getProviderModels(provider);
       setAvailableModels(models);
       log.info('已加载模型列表', { provider, count: models.length });
-      
+
       // 如果有推荐模型，自动选择
-      const recommendedModel = models.find(m => m.recommended);
+      const recommendedModel = models.find((m) => m.recommended);
       if (recommendedModel && !form.getFieldValue('model')) {
         form.setFieldsValue({ model: recommendedModel.id });
         setCurrentModelInfo(recommendedModel);
@@ -177,14 +179,14 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
         port: 7890,
       },
     });
-    
+
     // 自动加载 Moonshot 的模型列表
     try {
       const models = await aiModelCommands.getProviderModels(ProviderType.Moonshot);
       setAvailableModels(models);
-      
+
       // 查找推荐模型
-      const recommendedModel = models.find(m => m.recommended);
+      const recommendedModel = models.find((m) => m.recommended);
       if (recommendedModel) {
         setCurrentModelInfo(recommendedModel);
       }
@@ -198,46 +200,46 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
     const config = configs[index];
     setEditingIndex(index);
     setIsAddingNew(false);
-    
+
     // 安全日志：不输出敏感信息
-    log.info('编辑配置', { 
-      index, 
+    log.info('编辑配置', {
+      index,
       provider: config.provider,
       hasApiKey: !!config.apiKey,
       apiKeyLength: config.apiKey?.length || 0,
       baseUrl: config.baseUrl,
       model: config.model,
     });
-    
+
     // 加载该供应商的模型列表
     try {
       const models = await aiModelCommands.getProviderModels(config.provider);
       setAvailableModels(models);
-      
+
       // 如果有当前模型，加载其信息
       if (config.model) {
-        const modelInfo = models.find(m => m.id === config.model);
+        const modelInfo = models.find((m) => m.id === config.model);
         setCurrentModelInfo(modelInfo || null);
       }
     } catch (error) {
       log.logError(error, '加载模型列表失败');
       setAvailableModels([]);
     }
-    
+
     // 直接使用用户保存的值，不填充默认值
     // 留空的字段在后端会自动使用默认值
     form.setFieldsValue({
       provider: config.provider,
-      apiKey: config.apiKey || '',    // 确保显示实际值
-      baseUrl: config.baseUrl || '',  // 用户保存的值，空就是空
-      model: config.model || '',       // 用户保存的值，空就是空
+      apiKey: config.apiKey || '', // 确保显示实际值
+      baseUrl: config.baseUrl || '', // 用户保存的值，空就是空
+      model: config.model || '', // 用户保存的值，空就是空
       proxy: config.proxy || {
         enabled: false,
         host: '127.0.0.1',
         port: 7890,
       },
     });
-    
+
     // 强制刷新表单显示
     setTimeout(() => {
       form.validateFields().catch(() => {});
@@ -253,20 +255,22 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
         apiKey: values.apiKey || undefined,
         baseUrl: values.baseUrl || undefined,
         model: values.model || undefined,
-        proxy: values.proxy?.enabled ? {
-          enabled: values.proxy.enabled,
-          host: values.proxy.host,
-          port: values.proxy.port,
-        } : undefined,
+        proxy: values.proxy?.enabled
+          ? {
+              enabled: values.proxy.enabled,
+              host: values.proxy.host,
+              port: values.proxy.port,
+            }
+          : undefined,
       };
 
       if (isAddingNew) {
         await aiConfigCommands.add(config);
         message.success('添加配置成功');
-        
+
         // 刷新配置列表
         await mutateAll();
-        
+
         // 如果是第一个配置，自动设为启用
         const updatedConfigs = await aiConfigCommands.getAll();
         if (updatedConfigs.length === 1) {
@@ -278,11 +282,11 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
       } else if (editingIndex !== null) {
         await aiConfigCommands.update(editingIndex.toString(), config);
         message.success('更新配置成功');
-        
+
         await mutateAll();
         await mutateActive();
       }
-      
+
       setIsAddingNew(false);
       setEditingIndex(null);
       form.resetFields();
@@ -294,12 +298,11 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
     }
   };
 
-
   const handleDelete = async (index: number) => {
     try {
       await aiConfigCommands.delete(index.toString());
       message.success('删除配置成功');
-      
+
       // 重置编辑状态，防止索引超出范围
       if (editingIndex === index) {
         setEditingIndex(null);
@@ -309,7 +312,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
         // 如果正在编辑的配置在被删除配置之后，索引需要减1
         setEditingIndex(editingIndex - 1);
       }
-      
+
       await mutateAll();
       await mutateActive();
       log.info('配置删除成功', { index });
@@ -336,33 +339,31 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
     try {
       setTesting(true);
       const values = await form.validateFields();
-      
+
       // 只有在启用代理且配置完整时才传递 proxy
-      const proxyConfig = values.proxy?.enabled && values.proxy?.host && values.proxy?.port
-        ? {
-            enabled: values.proxy.enabled,
-            host: values.proxy.host,
-            port: values.proxy.port,
-          }
-        : undefined;
-      
+      const proxyConfig =
+        values.proxy?.enabled && values.proxy?.host && values.proxy?.port
+          ? {
+              enabled: values.proxy.enabled,
+              host: values.proxy.host,
+              port: values.proxy.port,
+            }
+          : undefined;
+
       const result = await aiConfigCommands.testConnection(
         values.provider,
         values.apiKey,
         values.baseUrl || undefined,
-        values.model || undefined,      // ✅ 传递 model
-        proxyConfig                      // ✅ 传递完整的 proxy 或 undefined
+        values.model || undefined, // ✅ 传递 model
+        proxyConfig // ✅ 传递完整的 proxy 或 undefined
       );
 
       if (result.success) {
-        message.success(
-          `${result.message} (响应时间: ${result.response_time_ms}ms)`,
-          3
-        );
+        message.success(`${result.message} (响应时间: ${result.response_time_ms}ms)`, 3);
       } else {
         message.error(result.message, 5);
       }
-      
+
       log.info('连接测试完成', result);
     } catch (error) {
       log.logError(error, '测试连接失败');
@@ -371,13 +372,13 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
       setTesting(false);
     }
   };
-  
+
   // Phase 3: 系统提示词处理函数
   const handlePromptChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
     setSystemPrompt(e.target.value);
     setIsPromptModified(true);
   };
-  
+
   const handleSavePrompt = async () => {
     try {
       await savePrompt(systemPrompt);
@@ -389,7 +390,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
       log.logError(error, '保存系统提示词失败');
     }
   };
-  
+
   const handleResetPrompt = async () => {
     try {
       await resetPrompt();
@@ -408,11 +409,11 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
       // 1. 切换 i18n 语言（响应式，无需刷新）
       await i18n.changeLanguage(language);
       setCurrentLanguage(language);
-      
+
       // 2. 保存到 TauriStore（通过 useAppStore）
       const { useAppStore } = await import('../store/useAppStore');
       useAppStore.getState().setLanguage(language as any);
-      
+
       message.success(`语言已切换为 ${language === 'zh-CN' ? '简体中文' : 'English'}`);
       log.info('应用语言已切换', { language });
     } catch (error) {
@@ -420,7 +421,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
       message.error('语言切换失败');
     }
   };
-  
+
   // 保存日志配置
   const handleSaveLogConfig = async () => {
     try {
@@ -443,7 +444,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
   };
 
   const getProviderLabel = (provider: ProviderType) => {
-    return PROVIDER_CONFIGS.find(p => p.value === provider)?.label || provider;
+    return PROVIDER_CONFIGS.find((p) => p.value === provider)?.label || provider;
   };
 
   // 定义Tab项
@@ -457,292 +458,303 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
       ),
       children: (
         <Row gutter={16}>
-        {/* 左侧：配置列表 */}
-        <Col span={10}>
-          <Card 
-            title="已保存的配置" 
-            size="small"
-            extra={
-              <Button
-                type="primary"
-                icon={<PlusOutlined />}
-                onClick={handleAddNew}
-                size="small"
-              >
-                新增
-              </Button>
-            }
-          >
-            <List
-              dataSource={configs}
-              locale={{ emptyText: '暂无配置，请点击"新增"添加配置' }}
-              renderItem={(config, index) => (
-                <List.Item
-                  actions={[
-                    activeIndex !== index ? (
+          {/* 左侧：配置列表 */}
+          <Col span={10}>
+            <Card
+              title="已保存的配置"
+              size="small"
+              extra={
+                <Button type="primary" icon={<PlusOutlined />} onClick={handleAddNew} size="small">
+                  新增
+                </Button>
+              }
+            >
+              <List
+                dataSource={configs}
+                locale={{ emptyText: '暂无配置，请点击"新增"添加配置' }}
+                renderItem={(config, index) => (
+                  <List.Item
+                    actions={[
+                      activeIndex !== index ? (
+                        <Button
+                          key="active"
+                          type="primary"
+                          size="small"
+                          onClick={() => handleSetActive(index)}
+                        >
+                          设为启用
+                        </Button>
+                      ) : (
+                        <Tag key="active-tag" color="green" icon={<CheckOutlined />}>
+                          启用中
+                        </Tag>
+                      ),
                       <Button
-                        key="active"
-                        type="primary"
-                        size="small"
-                        onClick={() => handleSetActive(index)}
-                      >
-                        设为启用
-                      </Button>
-                    ) : (
-                      <Tag key="active-tag" color="green" icon={<CheckOutlined />}>
-                        启用中
-                      </Tag>
-                    ),
-                    <Button
-                      key="edit"
-                      type="link"
-                      icon={<EditOutlined />}
-                      onClick={() => handleEdit(index)}
-                      size="small"
-                    />,
-                    <Popconfirm
-                      key="delete"
-                      title="确认删除此配置？"
-                      onConfirm={() => handleDelete(index)}
-                      okText="确认"
-                      cancelText="取消"
-                    >
-                      <Button
+                        key="edit"
                         type="link"
-                        danger
-                        icon={<DeleteOutlined />}
+                        icon={<EditOutlined />}
+                        onClick={() => handleEdit(index)}
                         size="small"
-                      />
-                    </Popconfirm>,
-                  ]}
-                >
-                  <List.Item.Meta
-                    title={
-                      <span>{getProviderLabel(config.provider)}</span>
-                    }
-                    description={
-                      <div style={{ fontSize: '12px', color: '#666' }}>
-                        <div>模型: {config.model || '(未设置)'}</div>
-                        {config.proxy?.enabled && (
-                          <div>代理: {config.proxy.host}:{config.proxy.port}</div>
-                        )}
-                      </div>
-                    }
-                  />
-                </List.Item>
-              )}
-            />
-          </Card>
-        </Col>
-
-        {/* 右侧：配置编辑器 */}
-        <Col span={14}>
-          {(isAddingNew || editingIndex !== null) ? (
-            <Card 
-              title={isAddingNew ? '新增配置' : '编辑配置'} 
-              size="small"
-            >
-              <Form
-                form={form}
-                layout="vertical"
-                size="small"
-              >
-                <Form.Item
-                  label="服务提供商"
-                  name="provider"
-                  rules={[{ required: true, message: '请选择服务提供商' }]}
-                >
-                  <Select onChange={handleProviderChange}>
-                    {PROVIDER_CONFIGS.map(p => (
-                      <Select.Option key={p.value} value={p.value}>
-                        {p.label}
-                      </Select.Option>
-                    ))}
-                  </Select>
-                </Form.Item>
-
-                <Form.Item
-                  label="API 密钥"
-                  name="apiKey"
-                  rules={[{ required: true, message: '请输入 API 密钥' }]}
-                  extra={editingIndex !== null ? "已保存的密钥会以掩码形式显示，留空则保持原值不变" : null}
-                >
-                  <Input.Password 
-                    placeholder="请输入 API 密钥"
-                    autoComplete="off"
-                    visibilityToggle
-                  />
-                </Form.Item>
-
-                <Form.Item
-                  label="API 基础 URL"
-                  name="baseUrl"
-                  tooltip="留空使用默认 URL"
-                  extra={editingIndex !== null && !form.getFieldValue('baseUrl') ? "当前使用默认 URL" : null}
-                >
-                  <Input 
-                    placeholder="https://api.example.com/v1"
-                    autoComplete="off"
-                  />
-                </Form.Item>
-
-                <Form.Item
-                  label="模型"
-                  name="model"
-                  tooltip="选择预设模型或手动输入自定义模型"
-                  rules={[{ required: true, message: '请选择或输入模型' }]}
-                >
-                  <Select
-                    placeholder="选择预设模型或输入自定义"
-                    showSearch
-                    allowClear
-                    optionFilterProp="children"
-                    onChange={(value) => {
-                      if (value) {
-                        const modelInfo = availableModels.find(m => m.id === value);
-                        setCurrentModelInfo(modelInfo || null);
-                      } else {
-                        setCurrentModelInfo(null);
-                      }
-                    }}
-                    dropdownRender={(menu) => (
-                      <>
-                        {menu}
-                        {availableModels.length === 0 && (
-                          <div style={{ padding: '8px', color: '#999', textAlign: 'center' }}>
-                            暂无预设模型，请手动输入
-                          </div>
-                        )}
-                      </>
-                    )}
+                      />,
+                      <Popconfirm
+                        key="delete"
+                        title="确认删除此配置？"
+                        onConfirm={() => handleDelete(index)}
+                        okText="确认"
+                        cancelText="取消"
+                      >
+                        <Button type="link" danger icon={<DeleteOutlined />} size="small" />
+                      </Popconfirm>,
+                    ]}
                   >
-                    {availableModels.map((model) => (
-                      <Select.Option key={model.id} value={model.id}>
-                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                          <span>
-                            {model.name}
-                            {model.recommended && <Tag color="blue" style={{ marginLeft: 8, fontSize: '10px' }}>推荐</Tag>}
-                          </span>
-                          <span style={{ fontSize: '11px', color: '#999' }}>
-                            ${model.input_price.toFixed(2)}/${model.output_price.toFixed(2)}/1M
-                          </span>
+                    <List.Item.Meta
+                      title={<span>{getProviderLabel(config.provider)}</span>}
+                      description={
+                        <div style={{ fontSize: '12px', color: '#666' }}>
+                          <div>模型: {config.model || '(未设置)'}</div>
+                          {config.proxy?.enabled && (
+                            <div>
+                              代理: {config.proxy.host}:{config.proxy.port}
+                            </div>
+                          )}
                         </div>
-                      </Select.Option>
-                    ))}
-                  </Select>
-                </Form.Item>
-
-                {/* 模型信息显示 */}
-                {currentModelInfo && (
-                  <Alert
-                    message={
-                      <Space direction="vertical" size={4} style={{ width: '100%' }}>
-                        <div style={{ fontWeight: 600 }}>{currentModelInfo.name}</div>
-                        <Descriptions size="small" column={2} style={{ fontSize: '12px' }}>
-                          <Descriptions.Item label="上下文">{(currentModelInfo.context_window / 1000).toFixed(0)}K</Descriptions.Item>
-                          <Descriptions.Item label="输出">{(currentModelInfo.max_output_tokens / 1000).toFixed(0)}K</Descriptions.Item>
-                          <Descriptions.Item label="输入价格">${currentModelInfo.input_price.toFixed(2)}/1M</Descriptions.Item>
-                          <Descriptions.Item label="输出价格">${currentModelInfo.output_price.toFixed(2)}/1M</Descriptions.Item>
-                        </Descriptions>
-                        {currentModelInfo.supports_cache && currentModelInfo.cache_reads_price && (
-                          <div style={{ fontSize: '12px', color: '#722ed1' }}>
-                            💾 缓存价格: ${currentModelInfo.cache_reads_price.toFixed(2)}/1M 
-                            (省 {Math.round(((currentModelInfo.input_price - currentModelInfo.cache_reads_price) / currentModelInfo.input_price) * 100)}%)
-                          </div>
-                        )}
-                      </Space>
-                    }
-                    type="info"
-                    icon={<InfoCircleOutlined />}
-                    style={{ marginBottom: 16 }}
-                  />
+                      }
+                    />
+                  </List.Item>
                 )}
+              />
+            </Card>
+          </Col>
 
-                <Divider orientation="left" plain style={{ margin: '12px 0' }}>
-                  代理设置
-                </Divider>
-
-                <Form.Item
-                  label="启用代理"
-                  name={['proxy', 'enabled']}
-                  valuePropName="checked"
-                  tooltip="如果使用 VPN，需要配置代理"
-                >
-                  <Switch />
-                </Form.Item>
-
-                <Form.Item
-                  noStyle
-                  shouldUpdate={(prevValues, currentValues) =>
-                    prevValues.proxy?.enabled !== currentValues.proxy?.enabled
-                  }
-                >
-                  {({ getFieldValue }) =>
-                    getFieldValue(['proxy', 'enabled']) ? (
-                      <>
-                        <Form.Item
-                          label="代理地址"
-                          name={['proxy', 'host']}
-                          rules={[{ required: true, message: '请输入代理地址' }]}
-                        >
-                          <Input placeholder="127.0.0.1" />
-                        </Form.Item>
-
-                        <Form.Item
-                          label="代理端口"
-                          name={['proxy', 'port']}
-                          rules={[{ required: true, message: '请输入代理端口' }]}
-                        >
-                          <InputNumber 
-                            placeholder="7890" 
-                            min={1} 
-                            max={65535} 
-                            style={{ width: '100%' }}
-                          />
-                        </Form.Item>
-                      </>
-                    ) : null
-                  }
-                </Form.Item>
-
-                <Divider style={{ margin: '12px 0' }} />
-
-                <Space style={{ width: '100%', justifyContent: 'flex-end' }}>
-                  <Button onClick={handleCancel}>
-                    取消
-                  </Button>
-                  <Button
-                    icon={<ThunderboltOutlined />}
-                    onClick={handleTestConnection}
-                    loading={testing}
+          {/* 右侧：配置编辑器 */}
+          <Col span={14}>
+            {isAddingNew || editingIndex !== null ? (
+              <Card title={isAddingNew ? '新增配置' : '编辑配置'} size="small">
+                <Form form={form} layout="vertical" size="small">
+                  <Form.Item
+                    label="服务提供商"
+                    name="provider"
+                    rules={[{ required: true, message: '请选择服务提供商' }]}
                   >
-                    测试连接
-                  </Button>
-                  <Button type="primary" onClick={handleSaveConfig}>
-                    保存
-                  </Button>
-                </Space>
-              </Form>
-            </Card>
-          ) : (
-            <Card 
-              size="small"
-              style={{ 
-                height: '100%', 
-                display: 'flex', 
-                alignItems: 'center', 
-                justifyContent: 'center',
-                color: '#999'
-              }}
-            >
-              <div style={{ textAlign: 'center' }}>
-                <p>选择一个配置进行编辑</p>
-                <p>或点击"新增"添加新配置</p>
-              </div>
-            </Card>
-          )}
-        </Col>
-      </Row>
+                    <Select onChange={handleProviderChange}>
+                      {PROVIDER_CONFIGS.map((p) => (
+                        <Select.Option key={p.value} value={p.value}>
+                          {p.label}
+                        </Select.Option>
+                      ))}
+                    </Select>
+                  </Form.Item>
+
+                  <Form.Item
+                    label="API 密钥"
+                    name="apiKey"
+                    rules={[{ required: true, message: '请输入 API 密钥' }]}
+                    extra={
+                      editingIndex !== null
+                        ? '已保存的密钥会以掩码形式显示，留空则保持原值不变'
+                        : null
+                    }
+                  >
+                    <Input.Password
+                      placeholder="请输入 API 密钥"
+                      autoComplete="off"
+                      visibilityToggle
+                    />
+                  </Form.Item>
+
+                  <Form.Item
+                    label="API 基础 URL"
+                    name="baseUrl"
+                    tooltip="留空使用默认 URL"
+                    extra={
+                      editingIndex !== null && !form.getFieldValue('baseUrl')
+                        ? '当前使用默认 URL'
+                        : null
+                    }
+                  >
+                    <Input placeholder="https://api.example.com/v1" autoComplete="off" />
+                  </Form.Item>
+
+                  <Form.Item
+                    label="模型"
+                    name="model"
+                    tooltip="选择预设模型或手动输入自定义模型"
+                    rules={[{ required: true, message: '请选择或输入模型' }]}
+                  >
+                    <Select
+                      placeholder="选择预设模型或输入自定义"
+                      showSearch
+                      allowClear
+                      optionFilterProp="children"
+                      onChange={(value) => {
+                        if (value) {
+                          const modelInfo = availableModels.find((m) => m.id === value);
+                          setCurrentModelInfo(modelInfo || null);
+                        } else {
+                          setCurrentModelInfo(null);
+                        }
+                      }}
+                      dropdownRender={(menu) => (
+                        <>
+                          {menu}
+                          {availableModels.length === 0 && (
+                            <div style={{ padding: '8px', color: '#999', textAlign: 'center' }}>
+                              暂无预设模型，请手动输入
+                            </div>
+                          )}
+                        </>
+                      )}
+                    >
+                      {availableModels.map((model) => (
+                        <Select.Option key={model.id} value={model.id}>
+                          <div
+                            style={{
+                              display: 'flex',
+                              justifyContent: 'space-between',
+                              alignItems: 'center',
+                            }}
+                          >
+                            <span>
+                              {model.name}
+                              {model.recommended && (
+                                <Tag color="blue" style={{ marginLeft: 8, fontSize: '10px' }}>
+                                  推荐
+                                </Tag>
+                              )}
+                            </span>
+                            <span style={{ fontSize: '11px', color: '#999' }}>
+                              ${model.input_price.toFixed(2)}/${model.output_price.toFixed(2)}/1M
+                            </span>
+                          </div>
+                        </Select.Option>
+                      ))}
+                    </Select>
+                  </Form.Item>
+
+                  {/* 模型信息显示 */}
+                  {currentModelInfo && (
+                    <Alert
+                      message={
+                        <Space direction="vertical" size={4} style={{ width: '100%' }}>
+                          <div style={{ fontWeight: 600 }}>{currentModelInfo.name}</div>
+                          <Descriptions size="small" column={2} style={{ fontSize: '12px' }}>
+                            <Descriptions.Item label="上下文">
+                              {(currentModelInfo.context_window / 1000).toFixed(0)}K
+                            </Descriptions.Item>
+                            <Descriptions.Item label="输出">
+                              {(currentModelInfo.max_output_tokens / 1000).toFixed(0)}K
+                            </Descriptions.Item>
+                            <Descriptions.Item label="输入价格">
+                              ${currentModelInfo.input_price.toFixed(2)}/1M
+                            </Descriptions.Item>
+                            <Descriptions.Item label="输出价格">
+                              ${currentModelInfo.output_price.toFixed(2)}/1M
+                            </Descriptions.Item>
+                          </Descriptions>
+                          {currentModelInfo.supports_cache &&
+                            currentModelInfo.cache_reads_price && (
+                              <div style={{ fontSize: '12px', color: '#722ed1' }}>
+                                💾 缓存价格: ${currentModelInfo.cache_reads_price.toFixed(2)}/1M (省{' '}
+                                {Math.round(
+                                  ((currentModelInfo.input_price -
+                                    currentModelInfo.cache_reads_price) /
+                                    currentModelInfo.input_price) *
+                                    100
+                                )}
+                                %)
+                              </div>
+                            )}
+                        </Space>
+                      }
+                      type="info"
+                      icon={<InfoCircleOutlined />}
+                      style={{ marginBottom: 16 }}
+                    />
+                  )}
+
+                  <Divider orientation="left" plain style={{ margin: '12px 0' }}>
+                    代理设置
+                  </Divider>
+
+                  <Form.Item
+                    label="启用代理"
+                    name={['proxy', 'enabled']}
+                    valuePropName="checked"
+                    tooltip="如果使用 VPN，需要配置代理"
+                  >
+                    <Switch />
+                  </Form.Item>
+
+                  <Form.Item
+                    noStyle
+                    shouldUpdate={(prevValues, currentValues) =>
+                      prevValues.proxy?.enabled !== currentValues.proxy?.enabled
+                    }
+                  >
+                    {({ getFieldValue }) =>
+                      getFieldValue(['proxy', 'enabled']) ? (
+                        <>
+                          <Form.Item
+                            label="代理地址"
+                            name={['proxy', 'host']}
+                            rules={[{ required: true, message: '请输入代理地址' }]}
+                          >
+                            <Input placeholder="127.0.0.1" />
+                          </Form.Item>
+
+                          <Form.Item
+                            label="代理端口"
+                            name={['proxy', 'port']}
+                            rules={[{ required: true, message: '请输入代理端口' }]}
+                          >
+                            <InputNumber
+                              placeholder="7890"
+                              min={1}
+                              max={65535}
+                              style={{ width: '100%' }}
+                            />
+                          </Form.Item>
+                        </>
+                      ) : null
+                    }
+                  </Form.Item>
+
+                  <Divider style={{ margin: '12px 0' }} />
+
+                  <Space style={{ width: '100%', justifyContent: 'flex-end' }}>
+                    <Button onClick={handleCancel}>取消</Button>
+                    <Button
+                      icon={<ThunderboltOutlined />}
+                      onClick={handleTestConnection}
+                      loading={testing}
+                    >
+                      测试连接
+                    </Button>
+                    <Button type="primary" onClick={handleSaveConfig}>
+                      保存
+                    </Button>
+                  </Space>
+                </Form>
+              </Card>
+            ) : (
+              <Card
+                size="small"
+                style={{
+                  height: '100%',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  color: '#999',
+                }}
+              >
+                <div style={{ textAlign: 'center' }}>
+                  <p>选择一个配置进行编辑</p>
+                  <p>或点击"新增"添加新配置</p>
+                </div>
+              </Card>
+            )}
+          </Col>
+        </Row>
       ),
     },
     {
@@ -754,11 +766,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
       ),
       children: (
         <div>
-          <Card 
-            size="small" 
-            title="系统提示词编辑器" 
-            style={{ marginBottom: 16 }}
-          >
+          <Card size="small" title="系统提示词编辑器" style={{ marginBottom: 16 }}>
             <Input.TextArea
               value={systemPrompt}
               onChange={handlePromptChange}
@@ -767,7 +775,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
               style={{ fontFamily: 'monospace' }}
             />
           </Card>
-          
+
           <Space>
             <Button
               type="primary"
@@ -783,16 +791,11 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
               okText="确认"
               cancelText="取消"
             >
-              <Button
-                icon={<UndoOutlined />}
-                loading={resettingPrompt}
-              >
+              <Button icon={<UndoOutlined />} loading={resettingPrompt}>
                 重置为默认
               </Button>
             </Popconfirm>
-            {isPromptModified && (
-              <Tag color="warning">未保存</Tag>
-            )}
+            {isPromptModified && <Tag color="warning">未保存</Tag>}
           </Space>
         </div>
       ),
@@ -819,14 +822,10 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
               />
             </Space>
           </Card>
-          
+
           {/* 语言设置 */}
           <Card size="small" title="界面语言">
-            <Select
-              value={currentLanguage}
-              onChange={handleLanguageChange}
-              style={{ width: 200 }}
-            >
+            <Select value={currentLanguage} onChange={handleLanguageChange} style={{ width: 200 }}>
               <Select.Option value="zh-CN">简体中文</Select.Option>
               <Select.Option value="en-US">English</Select.Option>
             </Select>
@@ -865,9 +864,9 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                   />
                 </Col>
               </Row>
-              
+
               <Divider style={{ margin: '16px 0' }} />
-              
+
               <div style={{ fontSize: '12px', color: '#999' }}>
                 <div style={{ marginBottom: 8 }}>通知类型：</div>
                 <ul style={{ paddingLeft: 20, margin: 0 }}>
@@ -877,7 +876,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                   <li>📤 文件导出成功通知</li>
                 </ul>
               </div>
-              
+
               <Button
                 type="primary"
                 size="small"
@@ -910,68 +909,64 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                 <Row gutter={16}>
                   <Col span={24}>
                     <Form.Item label="日志级别" help="控制应用日志输出的详细程度">
-                    <Select
-                      value={logLevel}
-                      onChange={setLogLevel}
-                      style={{ width: '100%' }}
-                      options={[
-                        { label: 'Error - 仅错误', value: 'error' },
-                        { label: 'Warn - 警告及错误', value: 'warn' },
-                        { label: 'Info - 信息、警告、错误', value: 'info' },
-                        { label: 'Debug - 调试级别（包含所有）', value: 'debug' },
-                        { label: 'Trace - 追踪级别（最详细）', value: 'trace' },
-                      ]}
-                    />
-                  </Form.Item>
-                </Col>
-              </Row>
-              
-              <Row gutter={16}>
-                <Col span={24}>
-                  <Form.Item 
-                    label="日志保留天数" 
-                    help="超过指定天数的日志文件将被自动清理，设置为 0 表示永久保留"
-                  >
-                    <InputNumber
-                      min={0}
-                      max={365}
-                      value={logRetentionDays}
-                      onChange={(value) => setLogRetentionDays(value || 7)}
-                      style={{ width: '100%' }}
-                      addonAfter="天"
-                    />
-                  </Form.Item>
-                </Col>
-              </Row>
-              
-              <Divider />
-              
-              <Alert
-                message="日志说明"
-                description={
-                  <div>
-                    <div style={{ marginBottom: 8 }}>应用日志会记录：</div>
-                    <ul style={{ paddingLeft: 20, margin: 0 }}>
-                      <li>🔄 翻译操作和结果</li>
-                      <li>⚙️ 配置更改</li>
-                      <li>❌ 错误和异常信息</li>
-                      <li>📊 性能统计数据</li>
-                    </ul>
-                    <div style={{ marginTop: 12, fontSize: '12px', color: '#999' }}>
-                      日志文件位置：应用数据目录/logs/
+                      <Select
+                        value={logLevel}
+                        onChange={setLogLevel}
+                        style={{ width: '100%' }}
+                        options={[
+                          { label: 'Error - 仅错误', value: 'error' },
+                          { label: 'Warn - 警告及错误', value: 'warn' },
+                          { label: 'Info - 信息、警告、错误', value: 'info' },
+                          { label: 'Debug - 调试级别（包含所有）', value: 'debug' },
+                          { label: 'Trace - 追踪级别（最详细）', value: 'trace' },
+                        ]}
+                      />
+                    </Form.Item>
+                  </Col>
+                </Row>
+
+                <Row gutter={16}>
+                  <Col span={24}>
+                    <Form.Item
+                      label="日志保留天数"
+                      help="超过指定天数的日志文件将被自动清理，设置为 0 表示永久保留"
+                    >
+                      <InputNumber
+                        min={0}
+                        max={365}
+                        value={logRetentionDays}
+                        onChange={(value) => setLogRetentionDays(value || 7)}
+                        style={{ width: '100%' }}
+                        addonAfter="天"
+                      />
+                    </Form.Item>
+                  </Col>
+                </Row>
+
+                <Divider />
+
+                <Alert
+                  message="日志说明"
+                  description={
+                    <div>
+                      <div style={{ marginBottom: 8 }}>应用日志会记录：</div>
+                      <ul style={{ paddingLeft: 20, margin: 0 }}>
+                        <li>🔄 翻译操作和结果</li>
+                        <li>⚙️ 配置更改</li>
+                        <li>❌ 错误和异常信息</li>
+                        <li>📊 性能统计数据</li>
+                      </ul>
+                      <div style={{ marginTop: 12, fontSize: '12px', color: '#999' }}>
+                        日志文件位置：应用数据目录/logs/
+                      </div>
                     </div>
-                  </div>
-                }
-                type="info"
-                showIcon
-                icon={<InfoCircleOutlined />}
-              />
-              
-                <Button
-                  type="primary"
-                  onClick={handleSaveLogConfig}
-                  block
-                >
+                  }
+                  type="info"
+                  showIcon
+                  icon={<InfoCircleOutlined />}
+                />
+
+                <Button type="primary" onClick={handleSaveLogConfig} block>
                   保存日志配置
                 </Button>
               </Space>
@@ -981,7 +976,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
       ),
     },
   ];
-  
+
   return (
     <Modal
       title="设置"
@@ -990,11 +985,11 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
       footer={null}
       width={900}
       style={{ top: 20 }}
-      styles={{ 
+      styles={{
         body: {
           maxHeight: 'calc(100vh - 200px)',
-          overflowY: 'auto' 
-        }
+          overflowY: 'auto',
+        },
       }}
       destroyOnHidden
       maskClosable={false}

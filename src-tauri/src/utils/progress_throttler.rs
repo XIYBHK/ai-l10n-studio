@@ -1,12 +1,11 @@
 ///! 进度更新节流器
 ///! 用于优化频繁的进度更新，避免UI卡顿
-
 use std::sync::Arc;
 use std::sync::atomic::{AtomicU64, Ordering};
 use std::time::{SystemTime, UNIX_EPOCH};
 
 /// 进度节流器
-/// 
+///
 /// 限制进度更新的频率，避免过于频繁的UI更新导致性能问题
 pub struct ProgressThrottler {
     /// 最小更新间隔（毫秒）
@@ -17,7 +16,7 @@ pub struct ProgressThrottler {
 
 impl ProgressThrottler {
     /// 创建新的进度节流器
-    /// 
+    ///
     /// # 参数
     /// * `min_interval_ms` - 最小更新间隔（毫秒），默认100ms
     pub fn new(min_interval_ms: u64) -> Self {
@@ -33,14 +32,14 @@ impl ProgressThrottler {
     }
 
     /// 检查是否应该更新进度
-    /// 
+    ///
     /// # 返回
     /// * `true` - 应该更新，距离上次更新已超过最小间隔
     /// * `false` - 不应该更新，距离上次更新时间过短
     pub fn should_update(&self) -> bool {
         let now = Self::current_timestamp_ms();
         let last = self.last_update.load(Ordering::Relaxed);
-        
+
         if now >= last + self.min_interval_ms {
             self.last_update.store(now, Ordering::Relaxed);
             true
@@ -78,7 +77,7 @@ impl ProgressThrottler {
 }
 
 /// 批量进度跟踪器
-/// 
+///
 /// 用于跟踪批量操作的进度，并智能决定何时发送进度更新
 pub struct BatchProgressTracker {
     /// 总数
@@ -113,7 +112,7 @@ impl BatchProgressTracker {
     }
 
     /// 增加进度
-    /// 
+    ///
     /// # 返回
     /// `true` 表示应该发送进度更新
     pub fn increment(&mut self) -> bool {
@@ -122,7 +121,7 @@ impl BatchProgressTracker {
     }
 
     /// 设置当前进度
-    /// 
+    ///
     /// # 返回
     /// `true` 表示应该发送进度更新
     pub fn set_progress(&mut self, current: usize) -> bool {
@@ -186,13 +185,13 @@ mod tests {
     #[test]
     fn test_throttler_basic() {
         let throttler = ProgressThrottler::new(50); // 50ms间隔
-        
+
         // 第一次应该允许
         assert!(throttler.should_update());
-        
+
         // 立即再次调用应该被拒绝
         assert!(!throttler.should_update());
-        
+
         // 等待足够时间后应该允许
         sleep(Duration::from_millis(60));
         assert!(throttler.should_update());
@@ -201,12 +200,12 @@ mod tests {
     #[test]
     fn test_throttler_force_update() {
         let throttler = ProgressThrottler::new(100);
-        
+
         throttler.should_update(); // 消耗第一次
-        
+
         // 强制更新不受节流限制
         throttler.force_update();
-        
+
         // 但是下次正常更新仍然受节流限制
         assert!(!throttler.should_update());
     }
@@ -214,18 +213,18 @@ mod tests {
     #[test]
     fn test_batch_tracker_checkpoints() {
         let mut tracker = BatchProgressTracker::new(100);
-        
+
         // 起始点应该emit
         assert!(tracker.should_emit());
-        
+
         // 25%应该emit
         tracker.set_progress(25);
         assert!(tracker.should_emit());
-        
+
         // 50%应该emit
         tracker.set_progress(50);
         assert!(tracker.should_emit());
-        
+
         // 100%应该emit
         tracker.set_progress(100);
         assert!(tracker.should_emit());
@@ -234,15 +233,15 @@ mod tests {
     #[test]
     fn test_batch_tracker_percentage() {
         let mut tracker = BatchProgressTracker::new(200);
-        
+
         assert_eq!(tracker.percentage(), 0.0);
-        
+
         tracker.set_progress(50);
         assert_eq!(tracker.percentage(), 25.0);
-        
+
         tracker.set_progress(100);
         assert_eq!(tracker.percentage(), 50.0);
-        
+
         tracker.set_progress(200);
         assert_eq!(tracker.percentage(), 100.0);
     }
@@ -250,13 +249,12 @@ mod tests {
     #[test]
     fn test_batch_tracker_increment() {
         let mut tracker = BatchProgressTracker::new(10);
-        
+
         for _ in 0..5 {
             tracker.increment();
         }
-        
+
         assert_eq!(tracker.current(), 5);
         assert_eq!(tracker.percentage(), 50.0);
     }
 }
-

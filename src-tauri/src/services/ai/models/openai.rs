@@ -1,16 +1,15 @@
 use crate::services::ai::model_info::ModelInfo;
 
 /// OpenAI 模型列表（2025年最新价格）
-/// 
+///
 /// 数据来源：
 /// - https://openai.com/api/pricing/
 /// - https://platform.openai.com/docs/models
-/// 
+///
 /// 更新时间：2025-01-10
 pub fn get_openai_models() -> Vec<ModelInfo> {
     vec![
         // ========== GPT-4o 系列（多模态）==========
-        
         ModelInfo {
             id: "gpt-4o".to_string(),
             name: "GPT-4o".to_string(),
@@ -27,7 +26,6 @@ pub fn get_openai_models() -> Vec<ModelInfo> {
             description: Some("最强大的多模态模型，支持视觉和文本".to_string()),
             recommended: true,
         },
-        
         ModelInfo {
             id: "gpt-4o-mini".to_string(),
             name: "GPT-4o Mini".to_string(),
@@ -44,9 +42,7 @@ pub fn get_openai_models() -> Vec<ModelInfo> {
             description: Some("性价比最高的小模型，适合批量翻译".to_string()),
             recommended: true,
         },
-        
         // ========== GPT-4 Turbo 系列 ==========
-        
         ModelInfo {
             id: "gpt-4-turbo".to_string(),
             name: "GPT-4 Turbo".to_string(),
@@ -63,9 +59,7 @@ pub fn get_openai_models() -> Vec<ModelInfo> {
             description: Some("GPT-4 Turbo 模型，稳定高质量".to_string()),
             recommended: false,
         },
-        
         // ========== GPT-3.5 Turbo（经济实惠）==========
-        
         ModelInfo {
             id: "gpt-3.5-turbo".to_string(),
             name: "GPT-3.5 Turbo".to_string(),
@@ -88,12 +82,12 @@ pub fn get_openai_models() -> Vec<ModelInfo> {
 #[cfg(test)]
 mod tests {
     use super::*;
-    
+
     #[test]
     fn test_get_openai_models() {
         let models = get_openai_models();
         assert!(models.len() >= 4);
-        
+
         // 检查 GPT-4o Mini 模型
         let gpt4o_mini = models.iter().find(|m| m.id == "gpt-4o-mini").unwrap();
         assert_eq!(gpt4o_mini.provider, "OpenAI");
@@ -102,15 +96,14 @@ mod tests {
         assert!(gpt4o_mini.supports_cache);
         assert!(gpt4o_mini.recommended);
     }
-    
+
     #[test]
     fn test_cache_prices() {
         let models = get_openai_models();
         let gpt4o = models.iter().find(|m| m.id == "gpt-4o").unwrap();
-        
+
         // 验证缓存价格
-        assert_eq!(gpt4o.cache_reads_price, Some(1.25));  // 50% off
+        assert_eq!(gpt4o.cache_reads_price, Some(1.25)); // 50% off
         assert_eq!(gpt4o.cache_writes_price, Some(3.125)); // 25% more
     }
 }
-

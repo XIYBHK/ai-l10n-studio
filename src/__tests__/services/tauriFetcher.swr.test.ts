@@ -33,5 +33,3 @@ describe('tauriFetcher', () => {
     await expect(tauriFetcher(123 as unknown as any)).rejects.toThrow();
   });
 });
-
-

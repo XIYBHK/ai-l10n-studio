@@ -56,11 +56,10 @@ describe('Logger Utils', () => {
       const logger2 = createModuleLogger('Module2');
 
       expect(logger1).not.toBe(logger2);
-      
+
       // 两个 logger 都应该正常工作
       expect(() => logger1.info('Module1 log')).not.toThrow();
       expect(() => logger2.info('Module2 log')).not.toThrow();
     });
   });
 });
-

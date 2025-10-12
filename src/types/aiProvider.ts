@@ -6,12 +6,12 @@
 export enum ProviderType {
   Moonshot = 'Moonshot',
   OpenAI = 'OpenAI',
-  SparkDesk = 'SparkDesk',   // 讯飞星火
-  Wenxin = 'Wenxin',         // 百度文心一言
-  Qianwen = 'Qianwen',       // 阿里通义千问
-  GLM = 'GLM',               // 智谱AI
-  Claude = 'Claude',         // Anthropic
-  Gemini = 'Gemini',         // Google
+  SparkDesk = 'SparkDesk', // 讯飞星火
+  Wenxin = 'Wenxin', // 百度文心一言
+  Qianwen = 'Qianwen', // 阿里通义千问
+  GLM = 'GLM', // 智谱AI
+  Claude = 'Claude', // Anthropic
+  Gemini = 'Gemini', // Google
 }
 
 /**
@@ -40,8 +40,8 @@ export interface ProxyConfig {
 export interface AIConfig {
   provider: ProviderType;
   apiKey: string;
-  baseUrl?: string;    // 可选的自定义URL
-  model?: string;      // 可选的自定义模型
+  baseUrl?: string; // 可选的自定义URL
+  model?: string; // 可选的自定义模型
   proxy?: ProxyConfig;
 }
 
@@ -77,7 +77,7 @@ export const PROVIDER_INFO_MAP: Record<ProviderType, Omit<ProviderInfo, 'type'>>
   [ProviderType.GLM]: {
     displayName: '智谱AI (GLM)',
     defaultUrl: 'https://open.bigmodel.cn/api/paas/v4',
-    defaultModel: 'glm-4.6',  // 根据官方文档: https://docs.bigmodel.cn/cn/api/introduction
+    defaultModel: 'glm-4.6', // 根据官方文档: https://docs.bigmodel.cn/cn/api/introduction
   },
   [ProviderType.Claude]: {
     displayName: 'Claude (Anthropic)',
@@ -105,7 +105,7 @@ export function getProviderInfo(type: ProviderType): ProviderInfo {
  * 获取所有供应商
  */
 export function getAllProviders(): ProviderInfo[] {
-  return Object.values(ProviderType).map(type => getProviderInfo(type));
+  return Object.values(ProviderType).map((type) => getProviderInfo(type));
 }
 
 /**
@@ -116,4 +116,3 @@ export interface TestConnectionResult {
   message: string;
   response_time_ms?: number;
 }
-

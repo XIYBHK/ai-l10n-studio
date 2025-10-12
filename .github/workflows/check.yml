@@ -2,15 +2,15 @@ name: Check
 
 on:
   push:
-    branches: [ main, feature/* ]
+    branches: [main, feature/*]
   pull_request:
-    branches: [ main ]
+    branches: [main]
   workflow_dispatch:
 
 jobs:
   check:
     runs-on: ubuntu-22.04
-    
+
     steps:
       - name: Checkout repository
         uses: actions/checkout@v5

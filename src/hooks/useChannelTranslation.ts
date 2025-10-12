@@ -1,15 +1,15 @@
 /**
  * Channel Translation Hook - 使用 Tauri 2.x Channel API 的高性能批量翻译
- * 
+ *
  * 相比传统 Event API:
  * - 性能提升 ~40%
  * - 内存占用降低 ~30%
  * - 更适合大文件处理 (>1000 条目)
- * 
+ *
  * @example
  * ```tsx
  * const { translateBatch, progress, stats, isTranslating } = useChannelTranslation();
- * 
+ *
  * await translateBatch(texts, 'zh-CN', {
  *   onProgress: (current, total, percentage) => console.log(`${percentage}%`),
  *   onStats: (stats) => console.log('统计:', stats),
@@ -87,122 +87,124 @@ export const useChannelTranslation = () => {
     percentage: 0,
   });
   const [stats, setStats] = useState<BatchStatsEvent | null>(null);
-  
+
   // 使用 ref 存储回调，避免闭包问题
   const callbacksRef = useRef<TranslationCallbacks>({});
 
   /**
    * 批量翻译
    */
-  const translateBatch = useCallback(async (
-    texts: string[],
-    targetLanguage: string,
-    callbacks?: TranslationCallbacks
-  ): Promise<BatchResult> => {
-    if (texts.length === 0) {
-      throw new Error('没有需要翻译的文本');
-    }
+  const translateBatch = useCallback(
+    async (
+      texts: string[],
+      targetLanguage: string,
+      callbacks?: TranslationCallbacks
+    ): Promise<BatchResult> => {
+      if (texts.length === 0) {
+        throw new Error('没有需要翻译的文本');
+      }
 
-    setIsTranslating(true);
-    setProgress({ current: 0, total: texts.length, percentage: 0 });
-    setStats(null);
-    callbacksRef.current = callbacks || {};
+      setIsTranslating(true);
+      setProgress({ current: 0, total: texts.length, percentage: 0 });
+      setStats(null);
+      callbacksRef.current = callbacks || {};
 
-    log.info('🚀 开始 Channel 批量翻译', {
-      total: texts.length,
-      targetLanguage,
-    });
-
-    try {
-      // 创建 Channel 通道
-      const progressChannel = new Channel<BatchProgressEvent>();
-      const statsChannel = new Channel<BatchStatsEvent>();
-
-      // 监听进度更新
-      progressChannel.onmessage = (progressEvent: any) => {
-        // 兼容后端字段：processed/current、current_item/text
-        const currentRaw = (progressEvent.current ?? progressEvent.processed ?? 0) as number;
-        const total = (progressEvent.total ?? 0) as number;
-        const percentage = (progressEvent.percentage ?? 0) as number;
-        const text = (progressEvent.text ?? progressEvent.current_item) as string | undefined;
-        const index = (progressEvent.index ?? null) as number | null;
-
-        // 进度单调递增，避免回退
-        const monotonicCurrent = Math.max(progress.current ?? 0, currentRaw);
-        const normalized = { current: monotonicCurrent, total, percentage, text } as any;
-        log.debug('📊 进度更新:', normalized);
-        setProgress(normalized);
-        // 向全局事件总线广播，便于 DevTools/StatsManager 监听
-        eventDispatcher.emit('translation:progress', {
-          current: monotonicCurrent,
-          total,
-          percentage,
-          index: index ?? -1,
-          text,
-        });
-        
-        if (callbacksRef.current.onProgress) {
-          callbacksRef.current.onProgress(monotonicCurrent, total, percentage);
-        }
-
-        if (callbacksRef.current.onItem && index !== null && typeof text === 'string') {
-          callbacksRef.current.onItem(index, text);
-        }
-      };
-
-      // 监听统计更新
-      statsChannel.onmessage = (statsEvent) => {
-        log.debug('📈 统计更新:', statsEvent);
-        setStats(statsEvent);
-        // 🔧 广播批次统计事件到 statsManager（使用 translation-stats-update）
-        eventDispatcher.emit('translation-stats-update', {
-          total: 0,  // 批次统计不设置 total，避免重复累加
-          tm_hits: statsEvent.tm_hits,
-          deduplicated: statsEvent.deduplicated,
-          ai_translated: statsEvent.ai_translated,
-          tm_learned: 0,
-          token_stats: {
-            input_tokens: statsEvent.token_stats.prompt_tokens,
-            output_tokens: statsEvent.token_stats.completion_tokens,
-            total_tokens: statsEvent.token_stats.total_tokens,
-            cost: statsEvent.token_stats.cost,
-          },
-        } as any);
-        
-        if (callbacksRef.current.onStats) {
-          callbacksRef.current.onStats(statsEvent);
-        }
-      };
-
-      // 调用后端 Channel API
-      const result = await invoke<BatchResult>('translate_batch_with_channel', {
-        texts,
+      log.info('🚀 开始 Channel 批量翻译', {
+        total: texts.length,
         targetLanguage,
-        progressChannel,
-        statsChannel,
       });
 
-      log.info('✅ 批量翻译完成', {
-        translated: Object.keys(result.translations).length,
-        tm_hits: result.stats.tm_hits,
-        ai_translated: result.stats.ai_translated,
-        cost: result.stats.token_stats.cost,
-      });
+      try {
+        // 创建 Channel 通道
+        const progressChannel = new Channel<BatchProgressEvent>();
+        const statsChannel = new Channel<BatchStatsEvent>();
 
-      // 🔧 发送任务完成统计事件（Channel API 后端无法发送事件）
-      eventDispatcher.emit('translation:after', {
-        stats: result.stats
-      });
+        // 监听进度更新
+        progressChannel.onmessage = (progressEvent: any) => {
+          // 兼容后端字段：processed/current、current_item/text
+          const currentRaw = (progressEvent.current ?? progressEvent.processed ?? 0) as number;
+          const total = (progressEvent.total ?? 0) as number;
+          const percentage = (progressEvent.percentage ?? 0) as number;
+          const text = (progressEvent.text ?? progressEvent.current_item) as string | undefined;
+          const index = (progressEvent.index ?? null) as number | null;
 
-      return result;
+          // 进度单调递增，避免回退
+          const monotonicCurrent = Math.max(progress.current ?? 0, currentRaw);
+          const normalized = { current: monotonicCurrent, total, percentage, text } as any;
+          log.debug('📊 进度更新:', normalized);
+          setProgress(normalized);
+          // 向全局事件总线广播，便于 DevTools/StatsManager 监听
+          eventDispatcher.emit('translation:progress', {
+            current: monotonicCurrent,
+            total,
+            percentage,
+            index: index ?? -1,
+            text,
+          });
 
-    } catch (error) {
-      log.error('❌ 批量翻译失败:', error);
-      throw error;
-    } finally {
-      setIsTranslating(false);
-    }
-  }, []);
+          if (callbacksRef.current.onProgress) {
+            callbacksRef.current.onProgress(monotonicCurrent, total, percentage);
+          }
+
+          if (callbacksRef.current.onItem && index !== null && typeof text === 'string') {
+            callbacksRef.current.onItem(index, text);
+          }
+        };
+
+        // 监听统计更新
+        statsChannel.onmessage = (statsEvent) => {
+          log.debug('📈 统计更新:', statsEvent);
+          setStats(statsEvent);
+          // 🔧 广播批次统计事件到 statsManager（使用 translation-stats-update）
+          eventDispatcher.emit('translation-stats-update', {
+            total: 0, // 批次统计不设置 total，避免重复累加
+            tm_hits: statsEvent.tm_hits,
+            deduplicated: statsEvent.deduplicated,
+            ai_translated: statsEvent.ai_translated,
+            tm_learned: 0,
+            token_stats: {
+              input_tokens: statsEvent.token_stats.prompt_tokens,
+              output_tokens: statsEvent.token_stats.completion_tokens,
+              total_tokens: statsEvent.token_stats.total_tokens,
+              cost: statsEvent.token_stats.cost,
+            },
+          } as any);
+
+          if (callbacksRef.current.onStats) {
+            callbacksRef.current.onStats(statsEvent);
+          }
+        };
+
+        // 调用后端 Channel API
+        const result = await invoke<BatchResult>('translate_batch_with_channel', {
+          texts,
+          targetLanguage,
+          progressChannel,
+          statsChannel,
+        });
+
+        log.info('✅ 批量翻译完成', {
+          translated: Object.keys(result.translations).length,
+          tm_hits: result.stats.tm_hits,
+          ai_translated: result.stats.ai_translated,
+          cost: result.stats.token_stats.cost,
+        });
+
+        // 🔧 发送任务完成统计事件（Channel API 后端无法发送事件）
+        eventDispatcher.emit('translation:after', {
+          stats: result.stats,
+        });
+
+        return result;
+      } catch (error) {
+        log.error('❌ 批量翻译失败:', error);
+        throw error;
+      } finally {
+        setIsTranslating(false);
+      }
+    },
+    []
+  );
 
   /**
    * 重置状态
@@ -219,10 +221,9 @@ export const useChannelTranslation = () => {
     isTranslating,
     progress,
     stats,
-    
+
     // 方法
     translateBatch,
     reset,
   };
 };
-

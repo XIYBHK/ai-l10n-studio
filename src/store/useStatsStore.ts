@@ -1,6 +1,6 @@
 /**
  * 统计状态管理（持久化）
- * 
+ *
  * 管理累计统计数据，应用关闭后保留
  * 使用 TauriStore 替代 localStorage
  */
@@ -15,7 +15,7 @@ const log = createModuleLogger('useStatsStore');
 interface StatsState {
   // 累计统计
   cumulativeStats: TranslationStats;
-  
+
   // Actions
   updateCumulativeStats: (stats: TranslationStats) => void;
   setCumulativeStats: (stats: TranslationStats) => void; // 直接设置（用于 StatsEngine）
@@ -31,15 +31,15 @@ const initialStats: TranslationStats = {
     input_tokens: 0,
     output_tokens: 0,
     total_tokens: 0,
-    cost: 0
+    cost: 0,
   },
-  tm_learned: 0
+  tm_learned: 0,
 };
 
 export const useStatsStore = create<StatsState>()((set, get) => ({
   // 初始状态
   cumulativeStats: initialStats,
-  
+
   // Actions (持久化到 TauriStore)
   updateCumulativeStats: (stats) => {
     const { cumulativeStats } = get();
@@ -87,61 +87,61 @@ export const useStatsStore = create<StatsState>()((set, get) => ({
       tokens: newStats.token_stats.total_tokens,
       cost: newStats.token_stats.cost,
     });
-    
+
     // 异步保存到 TauriStore（完整字段）
-    tauriStore.updateCumulativeStats({
-      totalTranslated: newStats.total,
-      totalTokens: newStats.token_stats.total_tokens,
-      totalCost: newStats.token_stats.cost,
-      sessionCount: cumulativeStats.total > 0 ? 1 : 0,
-      lastUpdated: Date.now(),
-      // 🔧 保存所有统计字段
-      tmHits: newStats.tm_hits,
-      deduplicated: newStats.deduplicated,
-      aiTranslated: newStats.ai_translated,
-      tmLearned: newStats.tm_learned,
-      inputTokens: newStats.token_stats.input_tokens,
-      outputTokens: newStats.token_stats.output_tokens,
-    }).catch(err => 
-      console.error('[useStatsStore] 保存累计统计失败:', err)
-    );
+    tauriStore
+      .updateCumulativeStats({
+        totalTranslated: newStats.total,
+        totalTokens: newStats.token_stats.total_tokens,
+        totalCost: newStats.token_stats.cost,
+        sessionCount: cumulativeStats.total > 0 ? 1 : 0,
+        lastUpdated: Date.now(),
+        // 🔧 保存所有统计字段
+        tmHits: newStats.tm_hits,
+        deduplicated: newStats.deduplicated,
+        aiTranslated: newStats.ai_translated,
+        tmLearned: newStats.tm_learned,
+        inputTokens: newStats.token_stats.input_tokens,
+        outputTokens: newStats.token_stats.output_tokens,
+      })
+      .catch((err) => console.error('[useStatsStore] 保存累计统计失败:', err));
   },
-  
+
   setCumulativeStats: (stats) => {
     set({ cumulativeStats: stats });
     log.info('累计统计 => new', stats);
     // 异步保存到 TauriStore
-    tauriStore.updateCumulativeStats({
-      totalTranslated: stats.total,
-      totalTokens: stats.token_stats.total_tokens,
-      totalCost: stats.token_stats.cost,
-      sessionCount: stats.total > 0 ? 1 : 0,
-      lastUpdated: Date.now(),
-    }).catch(err => 
-      console.error('[useStatsStore] 保存累计统计失败:', err)
-    );
+    tauriStore
+      .updateCumulativeStats({
+        totalTranslated: stats.total,
+        totalTokens: stats.token_stats.total_tokens,
+        totalCost: stats.token_stats.cost,
+        sessionCount: stats.total > 0 ? 1 : 0,
+        lastUpdated: Date.now(),
+      })
+      .catch((err) => console.error('[useStatsStore] 保存累计统计失败:', err));
   },
-  
+
   resetCumulativeStats: () => {
     set({ cumulativeStats: initialStats });
     log.warn('累计统计已重置为 0');
     // 异步保存到 TauriStore（完整字段）
-    tauriStore.updateCumulativeStats({
-      totalTranslated: 0,
-      totalTokens: 0,
-      totalCost: 0,
-      sessionCount: 0,
-      lastUpdated: Date.now(),
-      // 🔧 重置所有统计字段
-      tmHits: 0,
-      deduplicated: 0,
-      aiTranslated: 0,
-      tmLearned: 0,
-      inputTokens: 0,
-      outputTokens: 0,
-    }).catch(err => 
-      console.error('[useStatsStore] 重置累计统计失败:', err)
-    );
+    tauriStore
+      .updateCumulativeStats({
+        totalTranslated: 0,
+        totalTokens: 0,
+        totalCost: 0,
+        sessionCount: 0,
+        lastUpdated: Date.now(),
+        // 🔧 重置所有统计字段
+        tmHits: 0,
+        deduplicated: 0,
+        aiTranslated: 0,
+        tmLearned: 0,
+        inputTokens: 0,
+        outputTokens: 0,
+      })
+      .catch((err) => console.error('[useStatsStore] 重置累计统计失败:', err));
   },
 }));
 
@@ -151,28 +151,27 @@ export const useStatsStore = create<StatsState>()((set, get) => ({
 export async function loadStats() {
   try {
     await tauriStore.init();
-    
+
     const stats = await tauriStore.getCumulativeStats();
-    
+
     useStatsStore.setState({
       cumulativeStats: {
         total: stats.totalTranslated,
-        tm_hits: stats.tmHits,              // 🔧 从持久化读取
-        deduplicated: stats.deduplicated,    // 🔧 从持久化读取
-        ai_translated: stats.aiTranslated,   // 🔧 从持久化读取
+        tm_hits: stats.tmHits, // 🔧 从持久化读取
+        deduplicated: stats.deduplicated, // 🔧 从持久化读取
+        ai_translated: stats.aiTranslated, // 🔧 从持久化读取
         token_stats: {
-          input_tokens: stats.inputTokens,   // 🔧 从持久化读取
+          input_tokens: stats.inputTokens, // 🔧 从持久化读取
           output_tokens: stats.outputTokens, // 🔧 从持久化读取
           total_tokens: stats.totalTokens,
-          cost: stats.totalCost
+          cost: stats.totalCost,
         },
-        tm_learned: stats.tmLearned          // 🔧 从持久化读取
-      }
+        tm_learned: stats.tmLearned, // 🔧 从持久化读取
+      },
     });
-    
+
     console.log('[useStatsStore] 统计加载成功', stats);
   } catch (error) {
     console.error('[useStatsStore] 加载统计失败:', error);
   }
 }
-

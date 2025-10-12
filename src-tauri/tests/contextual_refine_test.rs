@@ -51,10 +51,9 @@ fn test_contextual_refine_request_serde() {
 
     // 序列化
     let json = serde_json::to_string(&request).expect("序列化失败");
-    
+
     // 反序列化
-    let deserialized: ContextualRefineRequest = 
-        serde_json::from_str(&json).expect("反序列化失败");
+    let deserialized: ContextualRefineRequest = serde_json::from_str(&json).expect("反序列化失败");
 
     assert_eq!(deserialized.msgid, request.msgid);
     assert_eq!(deserialized.msgctxt, request.msgctxt);
@@ -104,7 +103,7 @@ fn test_empty_msgid() {
 #[test]
 fn test_long_text_fields() {
     let long_text = "A".repeat(1000);
-    
+
     let request = ContextualRefineRequest {
         msgid: long_text.clone(),
         msgctxt: Some(long_text.clone()),
@@ -174,4 +173,3 @@ mod integration_tests {
         assert!(!request.msgid.is_empty());
     }
 }
-

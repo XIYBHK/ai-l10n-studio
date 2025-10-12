@@ -7,10 +7,12 @@
 ### 1. Check - 代码检查 (check.yml)
 
 **触发条件：**
+
 - Push 到 `main` 或 `feature/*` 分支
 - Pull Request 到 `main` 分支
 
 **执行内容：**
+
 - ✅ 前端 ESLint 检查
 - ✅ Rust 代码格式检查 (rustfmt)
 - ✅ Rust 静态分析 (clippy)
@@ -19,11 +21,13 @@
 ### 2. Build - 多平台构建 (build.yml)
 
 **触发条件：**
+
 - Push 到 `main` 或 `feature/*` 分支
 - Pull Request 到 `main` 分支
 - 手动触发
 
 **支持平台：**
+
 - 🪟 Windows (MSI, NSIS)
 - 🍎 macOS (DMG, .app)
 - 🐧 Linux (DEB, AppImage)
@@ -33,10 +37,12 @@
 ### 3. Release - 自动发布 (release.yml)
 
 **触发条件：**
+
 - Push tag `v*` (例如：v1.0.0)
 - 手动触发
 
 **执行内容：**
+
 - 多平台编译
 - 自动创建 GitHub Release (草稿)
 - 上传所有平台的安装包
@@ -46,11 +52,13 @@
 ### 开发流程
 
 1. **提交代码**
+
    ```bash
    git add .
    git commit -m "feat: add new feature"
    git push
    ```
+
    → 自动触发 **Check** 和 **Build** 工作流
 
 2. **创建 Pull Request**
@@ -59,6 +67,7 @@
 ### 发布流程
 
 1. **更新版本号**
+
    ```bash
    # 更新 po-translator-gui/package.json 的 version
    # 更新 po-translator-gui/src-tauri/Cargo.toml 的 version
@@ -66,10 +75,12 @@
    ```
 
 2. **创建并推送标签**
+
    ```bash
    git tag v1.0.0
    git push origin v1.0.0
    ```
+
    → 自动触发 **Release** 工作流
 
 3. **完成发布**
@@ -85,6 +96,7 @@
 如需启用 Tauri 的自动更新功能，需配置以下 Secrets：
 
 1. 生成密钥对：
+
    ```bash
    cd po-translator-gui
    npm run tauri signer generate -- -w ~/.tauri/myapp.key
@@ -97,14 +109,17 @@
 ## 📦 构建产物
 
 ### Windows
+
 - `*.msi` - Windows 安装包
 - `*.exe` - NSIS 安装程序
 
 ### macOS
+
 - `*.dmg` - macOS 磁盘映像
 - `*.app.tar.gz` - 应用程序包
 
 ### Linux
+
 - `*.deb` - Debian/Ubuntu 安装包
 - `*.AppImage` - 通用 Linux 可执行文件
 
@@ -129,6 +144,7 @@
 ### Ubuntu 构建失败
 
 确保所有系统依赖已安装：
+
 ```bash
 sudo apt-get update
 sudo apt-get install -y libgtk-3-dev libwebkit2gtk-4.0-dev \

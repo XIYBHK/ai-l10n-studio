@@ -39,5 +39,3 @@ export const defaultSWRConfig: SWRConfiguration = {
   errorRetryCount: 2,
   shouldRetryOnError: true,
 };
-
-

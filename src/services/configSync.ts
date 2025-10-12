@@ -1,6 +1,6 @@
 /**
  * 配置同步管理器
- * 
+ *
  * 架构原则：
  * 1. 后端是配置的唯一权威来源（Single Source of Truth）
  * 2. 前端只读访问配置，不持有敏感数据（如 API Key）
@@ -39,17 +39,17 @@ class ConfigSyncManager {
    */
   async initialize(): Promise<void> {
     log.info('🔄 初始化配置同步管理器');
-    
+
     try {
       // 1. 从后端获取初始配置版本
       await this.syncFromBackend();
-      
+
       // 2. 启动定期验证
       this.startValidation();
-      
+
       // 3. 监听配置变更事件
       this.subscribeToConfigChanges();
-      
+
       log.info('✅ 配置同步管理器初始化成功');
     } catch (error) {
       log.error('❌ 配置同步管理器初始化失败', { error });
@@ -65,7 +65,7 @@ class ConfigSyncManager {
       const version = await invoke<ConfigVersion>('get_config_version');
       this.currentVersion = version;
       log.debug('📥 配置版本已同步', version);
-      
+
       // 触发配置同步事件
       eventDispatcher.emit('config:synced', version);
     } catch (error) {
@@ -79,16 +79,16 @@ class ConfigSyncManager {
    */
   async validate(): Promise<ConfigValidationResult> {
     const issues: string[] = [];
-    
+
     try {
       const backendVersion = await invoke<ConfigVersion>('get_config_version');
-      
+
       if (!this.currentVersion) {
         issues.push('前端配置未初始化');
         return {
           isValid: false,
           backendVersion,
-          issues
+          issues,
         };
       }
 
@@ -114,7 +114,7 @@ class ConfigSyncManager {
       }
 
       const isValid = issues.length === 0;
-      
+
       if (!isValid) {
         log.warn('⚠️ 配置验证失败', { issues });
         // 自动同步
@@ -126,13 +126,13 @@ class ConfigSyncManager {
         isValid,
         frontendVersion: this.currentVersion,
         backendVersion,
-        issues
+        issues,
       };
     } catch (error) {
       issues.push(`验证失败: ${error}`);
       return {
         isValid: false,
-        issues
+        issues,
       };
     }
   }
@@ -149,8 +149,8 @@ class ConfigSyncManager {
       await this.validate();
     }, this.VALIDATION_INTERVAL_MS);
 
-    log.debug('⏰ 配置验证定时器已启动', { 
-      intervalMs: this.VALIDATION_INTERVAL_MS 
+    log.debug('⏰ 配置验证定时器已启动', {
+      intervalMs: this.VALIDATION_INTERVAL_MS,
     });
   }
 
@@ -199,4 +199,3 @@ class ConfigSyncManager {
 // 单例实例
 export { ConfigSyncManager };
 export const configSyncManager = new ConfigSyncManager();
-

@@ -60,7 +60,10 @@ mod provider_type_tests {
         assert_eq!(ProviderType::Wenxin.default_model(), "ernie-bot-turbo");
         assert_eq!(ProviderType::Qianwen.default_model(), "qwen-turbo");
         assert_eq!(ProviderType::GLM.default_model(), "glm-4");
-        assert_eq!(ProviderType::Claude.default_model(), "claude-3-haiku-20240307");
+        assert_eq!(
+            ProviderType::Claude.default_model(),
+            "claude-3-haiku-20240307"
+        );
         assert_eq!(ProviderType::Gemini.default_model(), "gemini-pro");
     }
 
@@ -98,4 +101,3 @@ mod provider_type_tests {
         }
     }
 }
-

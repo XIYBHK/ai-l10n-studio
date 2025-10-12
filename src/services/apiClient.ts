@@ -1,6 +1,6 @@
 /**
  * 增强的 API 客户端
- * 
+ *
  * 功能:
  * - 请求取消（AbortController）
  * - 超时控制
@@ -14,12 +14,12 @@ import { createModuleLogger } from '../utils/logger';
 const log = createModuleLogger('APIClient');
 
 interface InvokeOptions {
-  timeout?: number;           // 超时时间（毫秒）
-  retry?: number;            // 重试次数
-  retryDelay?: number;       // 重试延迟（毫秒）
-  silent?: boolean;          // 静默模式（不显示错误提示）
-  errorMessage?: string;     // 自定义错误消息
-  dedup?: boolean;          // 是否去重（相同参数的并发请求）
+  timeout?: number; // 超时时间（毫秒）
+  retry?: number; // 重试次数
+  retryDelay?: number; // 重试延迟（毫秒）
+  silent?: boolean; // 静默模式（不显示错误提示）
+  errorMessage?: string; // 自定义错误消息
+  dedup?: boolean; // 是否去重（相同参数的并发请求）
 }
 
 interface PendingRequest {
@@ -53,7 +53,7 @@ class APIClient {
     if (dedup) {
       const key = this.getRequestKey(command, params);
       const pending = this.pendingRequests.get(key);
-      
+
       if (pending) {
         log.debug(`请求去重: ${command}`, { params });
         return pending.promise;
@@ -114,17 +114,12 @@ class APIClient {
 
     for (let attempt = 0; attempt <= maxRetries; attempt++) {
       try {
-        const result = await this.executeWithTimeout<T>(
-          command,
-          params,
-          controller,
-          timeout
-        );
-        
+        const result = await this.executeWithTimeout<T>(command, params, controller, timeout);
+
         if (attempt > 0) {
           log.info(`请求成功（重试 ${attempt} 次）: ${command}`);
         }
-        
+
         return result;
       } catch (error) {
         lastError = error as Error;
@@ -136,7 +131,10 @@ class APIClient {
 
         // 如果还有重试次数
         if (attempt < maxRetries) {
-          log.warn(`请求失败，将在 ${retryDelay}ms 后重试 (${attempt + 1}/${maxRetries}): ${command}`, { error });
+          log.warn(
+            `请求失败，将在 ${retryDelay}ms 后重试 (${attempt + 1}/${maxRetries}): ${command}`,
+            { error }
+          );
           await this.delay(retryDelay);
           continue;
         }
@@ -148,10 +146,8 @@ class APIClient {
     }
 
     // 抛出错误
-    const finalError = new Error(
-      errorMessage || lastError?.message || `API调用失败: ${command}`
-    );
-    
+    const finalError = new Error(errorMessage || lastError?.message || `API调用失败: ${command}`);
+
     if (!silent) {
       throw finalError;
     }
@@ -192,7 +188,7 @@ class APIClient {
    */
   cancelCommand(command: string) {
     let cancelled = 0;
-    
+
     this.pendingRequests.forEach((request, key) => {
       if (key.startsWith(command + ':')) {
         request.controller.abort();
@@ -211,13 +207,13 @@ class APIClient {
    */
   cancelAll() {
     const count = this.pendingRequests.size;
-    
-    this.pendingRequests.forEach(request => {
+
+    this.pendingRequests.forEach((request) => {
       request.controller.abort();
     });
-    
+
     this.pendingRequests.clear();
-    
+
     if (count > 0) {
       log.info(`已取消所有请求 (${count} 个)`);
     }
@@ -260,7 +256,7 @@ class APIClient {
   }
 
   private delay(ms: number): Promise<void> {
-    return new Promise(resolve => setTimeout(resolve, ms));
+    return new Promise((resolve) => setTimeout(resolve, ms));
   }
 }
 
@@ -271,4 +267,3 @@ export const apiClient = new APIClient();
 setInterval(() => {
   apiClient.cleanup();
 }, 60000); // 每分钟清理一次
-

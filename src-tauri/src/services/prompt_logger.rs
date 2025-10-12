@@ -1,6 +1,6 @@
-use std::sync::Mutex;
-use serde::{Deserialize, Serialize};
 use chrono::Local;
+use serde::{Deserialize, Serialize};
+use std::sync::Mutex;
 
 /// 提示词日志条目
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -29,10 +29,10 @@ pub fn log_prompt(log_type: &str, prompt: String, metadata: Option<serde_json::V
     if logs.is_none() {
         *logs = Some(Vec::new());
     }
-    
+
     let timestamp = Local::now().format("%Y-%m-%d %H:%M:%S").to_string();
     let entry_id = format!("{}-{}", timestamp, logs.as_ref().unwrap().len());
-    
+
     let entry = PromptLogEntry {
         timestamp: timestamp.clone(),
         log_type: log_type.to_string(),
@@ -40,7 +40,7 @@ pub fn log_prompt(log_type: &str, prompt: String, metadata: Option<serde_json::V
         response: None,
         metadata,
     };
-    
+
     if let Some(ref mut log_vec) = *logs {
         log_vec.push(entry);
         // 限制日志条数为最近100条
@@ -48,7 +48,7 @@ pub fn log_prompt(log_type: &str, prompt: String, metadata: Option<serde_json::V
             log_vec.drain(0..log_vec.len() - 100);
         }
     }
-    
+
     entry_id
 }
 
@@ -82,14 +82,20 @@ pub fn format_prompt_logs() -> String {
     if logs.is_empty() {
         return "暂无提示词日志".to_string();
     }
-    
+
     let mut output = String::new();
-    output.push_str(&format!("========== 提示词日志 ({} 条) ==========\n\n", logs.len()));
-    
+    output.push_str(&format!(
+        "========== 提示词日志 ({} 条) ==========\n\n",
+        logs.len()
+    ));
+
     for (idx, entry) in logs.iter().enumerate() {
         output.push_str(&format!("┌─ 日志 #{} ─────────────────\n", idx + 1));
-        output.push_str(&format!("│ 时间: {}  类型: {}\n", entry.timestamp, entry.log_type));
-        
+        output.push_str(&format!(
+            "│ 时间: {}  类型: {}\n",
+            entry.timestamp, entry.log_type
+        ));
+
         // 紧凑的元数据显示（单行）
         if let Some(ref metadata) = entry.metadata {
             if let Ok(meta_str) = serde_json::to_string(metadata) {
@@ -97,13 +103,13 @@ pub fn format_prompt_logs() -> String {
                 output.push_str(&format!("│ 元数据: {}\n", meta_str));
             }
         }
-        
+
         output.push_str(&format!("├─ 提示词 ─────────────────\n"));
         // 缩进提示词内容
         for line in entry.prompt.lines() {
             output.push_str(&format!("│ {}\n", line));
         }
-        
+
         output.push_str(&format!("├─ AI 响应 ────────────────\n"));
         if let Some(ref response) = entry.response {
             for line in response.lines() {
@@ -112,10 +118,9 @@ pub fn format_prompt_logs() -> String {
         } else {
             output.push_str("│ (暂无)\n");
         }
-        
+
         output.push_str(&format!("└───────────────────────────\n\n"));
     }
-    
+
     output
 }
-

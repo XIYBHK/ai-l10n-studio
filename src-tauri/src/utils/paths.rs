@@ -38,7 +38,7 @@ pub fn init_portable_flag() -> Result<()> {
 ///   - Linux: ~/.local/share/com.potranslator.gui
 pub fn app_home_dir() -> Result<PathBuf> {
     let flag = PORTABLE_FLAG.get().unwrap_or(&false);
-    
+
     if *flag {
         // 便携模式：使用程序目录
         use tauri::utils::platform::current_exe;
@@ -51,8 +51,8 @@ pub fn app_home_dir() -> Result<PathBuf> {
     }
 
     // 标准模式：使用系统数据目录
-    let data_dir = dirs::data_dir()
-        .ok_or_else(|| anyhow::anyhow!("Failed to get system data directory"))?;
+    let data_dir =
+        dirs::data_dir().ok_or_else(|| anyhow::anyhow!("Failed to get system data directory"))?;
     Ok(data_dir.join(APP_ID))
 }
 

@@ -6,12 +6,12 @@ import { useTranslation } from 'react-i18next';
 
 /**
  * Phase 9: 主题模式切换组件
- * 
+ *
  * 特性：
  * - 三种模式：light/dark/system
  * - 图标 + 文字显示
  * - 响应式设计
- * 
+ *
  * 参考：clash-verge-rev/components/setting/mods/theme-mode-switch.tsx
  */
 
@@ -64,4 +64,3 @@ export const ThemeModeSwitch: React.FC<ThemeModeSwitchProps> = ({ style, classNa
     />
   );
 };
-

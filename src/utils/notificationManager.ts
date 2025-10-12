@@ -1,18 +1,22 @@
 /**
  * Notification Manager - 全局通知管理器
- * 
+ *
  * 提供单例的通知服务，可以在任何地方调用
- * 
+ *
  * @example
  * ```typescript
  * import { notificationManager } from '@/utils/notificationManager';
- * 
+ *
  * notificationManager.success('操作成功', '文件已保存');
  * notificationManager.error('操作失败', '网络连接错误');
  * ```
  */
 
-import { isPermissionGranted, requestPermission, sendNotification } from '@tauri-apps/plugin-notification';
+import {
+  isPermissionGranted,
+  requestPermission,
+  sendNotification,
+} from '@tauri-apps/plugin-notification';
 import { createModuleLogger } from './logger';
 
 const log = createModuleLogger('NotificationManager');
@@ -37,13 +41,13 @@ class NotificationManager {
 
     try {
       this.hasPermission = await isPermissionGranted();
-      
+
       if (!this.hasPermission) {
         log.warn('通知权限未授予，将在首次使用时请求');
       } else {
         log.info('✅ 通知权限已授予');
       }
-      
+
       this.initialized = true;
     } catch (error) {
       log.error('初始化通知管理器失败:', error);
@@ -57,13 +61,13 @@ class NotificationManager {
     try {
       const permission = await requestPermission();
       this.hasPermission = permission === 'granted';
-      
+
       if (this.hasPermission) {
         log.info('✅ 通知权限已授予');
       } else {
         log.warn('⚠️ 通知权限被拒绝');
       }
-      
+
       return this.hasPermission;
     } catch (error) {
       log.error('请求通知权限失败:', error);
@@ -153,12 +157,9 @@ class NotificationManager {
    */
   async batchTranslationComplete(total: number, success: number, failed: number): Promise<void> {
     const successRate = Math.round((success / total) * 100);
-    
+
     if (failed === 0) {
-      await this.success(
-        '批量翻译完成',
-        `成功翻译 ${success}/${total} 条内容 (${successRate}%)`
-      );
+      await this.success('批量翻译完成', `成功翻译 ${success}/${total} 条内容 (${successRate}%)`);
     } else {
       await this.warning(
         '批量翻译完成（部分失败）',
@@ -171,20 +172,14 @@ class NotificationManager {
    * 文件保存成功通知
    */
   async fileSaved(filename: string, count: number): Promise<void> {
-    await this.success(
-      '文件已保存',
-      `${filename} - ${count} 条翻译`
-    );
+    await this.success('文件已保存', `${filename} - ${count} 条翻译`);
   }
 
   /**
    * 导出成功通知
    */
   async exportComplete(filename: string): Promise<void> {
-    await this.success(
-      '导出成功',
-      `文件已导出: ${filename}`
-    );
+    await this.success('导出成功', `文件已导出: ${filename}`);
   }
 
   /**
@@ -214,7 +209,6 @@ class NotificationManager {
 export const notificationManager = new NotificationManager();
 
 // 自动初始化
-notificationManager.init().catch(error => {
+notificationManager.init().catch((error) => {
   log.error('自动初始化通知管理器失败:', error);
 });
-

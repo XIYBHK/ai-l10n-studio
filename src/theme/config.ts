@@ -66,22 +66,22 @@ export const semanticColors = {
     bgPrimary: '#ffffff',
     bgSecondary: '#f0f2f5',
     bgTertiary: '#fafafa',
-    
+
     // 文本色
     textPrimary: 'rgba(0, 0, 0, 0.88)',
     textSecondary: 'rgba(0, 0, 0, 0.65)',
     textTertiary: 'rgba(0, 0, 0, 0.45)',
     textDisabled: 'rgba(0, 0, 0, 0.25)',
-    
+
     // 边框色
     borderPrimary: '#d9d9d9',
     borderSecondary: '#f0f0f0',
-    
+
     // 状态色
     statusUntranslated: '#1890ff',
     statusNeedsReview: '#faad14',
     statusTranslated: '#52c41a',
-    
+
     // 交互色
     hoverBg: '#f5f5f5',
     activeBg: '#e6f7ff',
@@ -93,22 +93,22 @@ export const semanticColors = {
     bgPrimary: '#141414',
     bgSecondary: '#1f1f1f',
     bgTertiary: '#262626',
-    
+
     // 文本色
     textPrimary: 'rgba(255, 255, 255, 0.88)',
     textSecondary: 'rgba(255, 255, 255, 0.65)',
     textTertiary: 'rgba(255, 255, 255, 0.45)',
     textDisabled: 'rgba(255, 255, 255, 0.25)',
-    
+
     // 边框色
     borderPrimary: '#434343',
     borderSecondary: '#303030',
-    
+
     // 状态色
     statusUntranslated: '#1890ff',
     statusNeedsReview: '#faad14',
     statusTranslated: '#52c41a',
-    
+
     // 交互色
     hoverBg: '#262626',
     activeBg: '#111b26',
@@ -116,4 +116,3 @@ export const semanticColors = {
     selectedBorder: '#1890ff',
   },
 };
-

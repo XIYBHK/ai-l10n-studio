@@ -1,19 +1,19 @@
 /**
  * 全局数据提供者（AppDataProvider）
- * 
+ *
  * 参考 clash-verge-rev 设计，提供：
  * 1. 统一的数据访问接口
  * 2. 集中的刷新控制
  * 3. 全局加载状态管理
  * 4. 自动事件监听和数据同步
- * 
+ *
  * 使用方式：
  * ```typescript
  * // 在 App.tsx 中包裹
  * <AppDataProvider>
  *   <YourApp />
  * </AppDataProvider>
- * 
+ *
  * // 在组件中使用
  * const { config, aiConfigs, refreshAll } = useAppData();
  * ```
@@ -46,7 +46,7 @@ interface AppDataContextType {
   termLibrary: any | null;
   /** 翻译记忆库 */
   translationMemory: any | null;
-  
+
   // ===== 刷新方法 =====
   /** 刷新应用配置 */
   refreshConfig: () => Promise<void>;
@@ -60,7 +60,7 @@ interface AppDataContextType {
   refreshTranslationMemory: () => Promise<void>;
   /** 一键刷新所有数据 */
   refreshAll: () => Promise<void>;
-  
+
   // ===== 状态 =====
   /** 是否正在加载（任一数据源正在加载） */
   isLoading: boolean;
@@ -84,7 +84,7 @@ interface AppDataProviderProps {
 
 export function AppDataProvider({ children }: AppDataProviderProps) {
   log.debug('渲染 AppDataProvider');
-  
+
   // ===== 数据源集成 =====
   const {
     config,
@@ -92,7 +92,7 @@ export function AppDataProvider({ children }: AppDataProviderProps) {
     isLoading: configLoading,
     error: configError,
   } = useAppConfig();
-  
+
   const {
     configs: aiConfigs,
     active: activeAIConfig,
@@ -101,62 +101,62 @@ export function AppDataProvider({ children }: AppDataProviderProps) {
     loading: aiLoading,
     error: aiError,
   } = useAIConfigs();
-  
+
   const {
     prompt: systemPrompt,
     mutate: mutateSystemPrompt,
     isLoading: promptLoading,
     error: promptError,
   } = useSystemPrompt();
-  
+
   const {
     termLibrary,
     mutate: mutateTermLibrary,
     isLoading: termLoading,
     error: termError,
   } = useTermLibrary({ enabled: true });
-  
+
   const {
     tm: translationMemory,
     mutate: mutateTranslationMemory,
     isLoading: memoryLoading,
     error: memoryError,
   } = useTranslationMemory();
-  
+
   // ===== 自动事件监听 =====
   useDefaultTauriEventBridge();
-  
+
   // ===== 刷新方法 =====
   const refreshConfig = useCallback(async () => {
     log.debug('刷新配置');
     await mutateConfig();
   }, [mutateConfig]);
-  
+
   const refreshAIConfigs = useCallback(async () => {
     log.debug('刷新AI配置');
     await Promise.all([mutateAIConfigs(), mutateActiveAIConfig()]);
   }, [mutateAIConfigs, mutateActiveAIConfig]);
-  
+
   const refreshSystemPrompt = useCallback(async () => {
     log.debug('刷新系统提示词');
     await mutateSystemPrompt();
   }, [mutateSystemPrompt]);
-  
+
   const refreshTermLibrary = useCallback(async () => {
     log.debug('刷新术语库');
     await mutateTermLibrary();
   }, [mutateTermLibrary]);
-  
+
   const refreshTranslationMemory = useCallback(async () => {
     log.debug('刷新翻译记忆库');
     await mutateTranslationMemory();
   }, [mutateTranslationMemory]);
-  
+
   // ⭐ 统一刷新接口 - 这是核心功能
   const refreshAll = useCallback(async () => {
     log.info('🔄 开始刷新所有数据...');
     const startTime = performance.now();
-    
+
     try {
       await Promise.all([
         refreshConfig(),
@@ -165,7 +165,7 @@ export function AppDataProvider({ children }: AppDataProviderProps) {
         refreshTermLibrary(),
         refreshTranslationMemory(),
       ]);
-      
+
       const duration = (performance.now() - startTime).toFixed(2);
       log.info(`✅ 刷新完成，耗时 ${duration}ms`);
     } catch (error) {
@@ -179,28 +179,16 @@ export function AppDataProvider({ children }: AppDataProviderProps) {
     refreshTermLibrary,
     refreshTranslationMemory,
   ]);
-  
+
   // ===== 状态聚合 =====
   const isLoading = useMemo(() => {
-    return (
-      configLoading ||
-      aiLoading ||
-      promptLoading ||
-      termLoading ||
-      memoryLoading
-    );
+    return configLoading || aiLoading || promptLoading || termLoading || memoryLoading;
   }, [configLoading, aiLoading, promptLoading, termLoading, memoryLoading]);
-  
+
   const hasError = useMemo(() => {
-    return !!(
-      configError ||
-      aiError ||
-      promptError ||
-      termError ||
-      memoryError
-    );
+    return !!(configError || aiError || promptError || termError || memoryError);
   }, [configError, aiError, promptError, termError, memoryError]);
-  
+
   // ===== Context Value =====
   const value = useMemo<AppDataContextType>(
     () => ({
@@ -211,7 +199,7 @@ export function AppDataProvider({ children }: AppDataProviderProps) {
       systemPrompt,
       termLibrary,
       translationMemory,
-      
+
       // 刷新方法
       refreshConfig,
       refreshAIConfigs,
@@ -219,7 +207,7 @@ export function AppDataProvider({ children }: AppDataProviderProps) {
       refreshTermLibrary,
       refreshTranslationMemory,
       refreshAll,
-      
+
       // 状态
       isLoading,
       hasError,
@@ -232,7 +220,7 @@ export function AppDataProvider({ children }: AppDataProviderProps) {
       systemPrompt,
       termLibrary,
       translationMemory,
-      
+
       // 方法依赖
       refreshConfig,
       refreshAIConfigs,
@@ -240,18 +228,14 @@ export function AppDataProvider({ children }: AppDataProviderProps) {
       refreshTermLibrary,
       refreshTranslationMemory,
       refreshAll,
-      
+
       // 状态依赖
       isLoading,
       hasError,
     ]
   );
-  
-  return (
-    <AppDataContext.Provider value={value}>
-      {children}
-    </AppDataContext.Provider>
-  );
+
+  return <AppDataContext.Provider value={value}>{children}</AppDataContext.Provider>;
 }
 
 // ========================================
@@ -260,14 +244,14 @@ export function AppDataProvider({ children }: AppDataProviderProps) {
 
 /**
  * 使用全局应用数据
- * 
+ *
  * ⚠️ 必须在 AppDataProvider 内部使用
- * 
+ *
  * @example
  * ```typescript
  * function SettingsModal() {
  *   const { config, refreshAll, isLoading } = useAppData();
- *   
+ *
  *   const handleSave = async () => {
  *     await configApi.save(config);
  *     await refreshAll(); // 一键刷新所有数据
@@ -277,20 +261,19 @@ export function AppDataProvider({ children }: AppDataProviderProps) {
  */
 export function useAppData(): AppDataContextType {
   const context = useContext(AppDataContext);
-  
+
   if (!context) {
     throw new Error('useAppData must be used within AppDataProvider');
   }
-  
+
   return context;
 }
 
 /**
  * 有条件地使用全局应用数据
- * 
+ *
  * 如果在 AppDataProvider 外部使用，返回 null 而不是抛出错误
  */
 export function useAppDataOptional(): AppDataContextType | null {
   return useContext(AppDataContext);
 }
-

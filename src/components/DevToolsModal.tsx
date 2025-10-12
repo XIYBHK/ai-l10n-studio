@@ -1,6 +1,15 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { Modal, Input, Button, Space, message, Tabs } from 'antd';
-import { CopyOutlined, ReloadOutlined, ClearOutlined, FileOutlined, BugOutlined, DownloadOutlined, SaveOutlined, FileTextOutlined } from '@ant-design/icons';
+import {
+  CopyOutlined,
+  ReloadOutlined,
+  ClearOutlined,
+  FileOutlined,
+  BugOutlined,
+  DownloadOutlined,
+  SaveOutlined,
+  FileTextOutlined,
+} from '@ant-design/icons';
 import { logCommands } from '../services/commands'; // ✅ 迁移到统一命令层 (promptLogApi 已通过 hooks 使用)
 import Draggable from 'react-draggable';
 import { FileDropTest } from './FileDropTest';
@@ -16,22 +25,33 @@ interface DevToolsModalProps {
   onClose: () => void;
 }
 
-export const DevToolsModal: React.FC<DevToolsModalProps> = ({
-  visible,
-  onClose,
-}) => {
+export const DevToolsModal: React.FC<DevToolsModalProps> = ({ visible, onClose }) => {
   const [frontendLogs, setFrontendLogs] = useState<string>('');
   // 只有在窗口打开时才启用 SWR 和轮询
-  const { logs, isLoading: loading, refresh: refreshBackendLogs } = useBackendLogs({ 
+  const {
+    logs,
+    isLoading: loading,
+    refresh: refreshBackendLogs,
+  } = useBackendLogs({
     enabled: visible,
-    refreshInterval: 2000 
+    refreshInterval: 2000,
   });
-  const { promptLogs, isLoading: promptLoading, refresh: refreshPromptLogs } = usePromptLogs({ 
+  const {
+    promptLogs,
+    isLoading: promptLoading,
+    refresh: refreshPromptLogs,
+  } = usePromptLogs({
     enabled: visible,
-    refreshInterval: 2000 
+    refreshInterval: 2000,
   });
-  const backendLogText = typeof logs === 'string' ? logs : logs ? JSON.stringify(logs, null, 2) : '';
-  const promptLogText = typeof promptLogs === 'string' ? promptLogs : promptLogs ? JSON.stringify(promptLogs, null, 2) : '';
+  const backendLogText =
+    typeof logs === 'string' ? logs : logs ? JSON.stringify(logs, null, 2) : '';
+  const promptLogText =
+    typeof promptLogs === 'string'
+      ? promptLogs
+      : promptLogs
+        ? JSON.stringify(promptLogs, null, 2)
+        : '';
   const [bounds, setBounds] = useState({ left: 0, top: 0, bottom: 0, right: 0 });
   const [disabled, setDisabled] = useState(true);
   const draggleRef = useRef<HTMLDivElement>(null);
@@ -52,22 +72,25 @@ export const DevToolsModal: React.FC<DevToolsModalProps> = ({
   // SWR 已处理日志加载与轮询
 
   const handleCopy = () => {
-    navigator.clipboard.writeText(backendLogText).then(() => {
-      message.success('日志已复制到剪贴板');
-    }).catch(() => {
-      message.error('复制失败');
-    });
+    navigator.clipboard
+      .writeText(backendLogText)
+      .then(() => {
+        message.success('日志已复制到剪贴板');
+      })
+      .catch(() => {
+        message.error('复制失败');
+      });
   };
 
   const handleExportLogs = () => {
     try {
       const timestamp = new Date().toISOString().replace(/[:.]/g, '-').slice(0, -5);
       const filename = `backend-logs-${timestamp}.txt`;
-      
+
       // 创建 Blob 对象
       const blob = new Blob([backendLogText], { type: 'text/plain;charset=utf-8' });
       const url = URL.createObjectURL(blob);
-      
+
       // 创建下载链接
       const link = document.createElement('a');
       link.href = url;
@@ -75,10 +98,10 @@ export const DevToolsModal: React.FC<DevToolsModalProps> = ({
       document.body.appendChild(link);
       link.click();
       document.body.removeChild(link);
-      
+
       // 清理
       URL.revokeObjectURL(url);
-      
+
       message.success(`后端日志已导出: ${filename}`);
       log.info('后端日志已导出', { filename });
     } catch (error) {
@@ -154,7 +177,7 @@ export const DevToolsModal: React.FC<DevToolsModalProps> = ({
       footer={[
         <Button key="close" onClick={onClose}>
           关闭
-        </Button>
+        </Button>,
       ]}
       modalRender={(modal) => (
         <Draggable
@@ -188,29 +211,16 @@ export const DevToolsModal: React.FC<DevToolsModalProps> = ({
                     >
                       刷新
                     </Button>
-                    <span style={{ fontSize: '12px', color: '#999' }}>
-                      (自动刷新: 每2秒)
-                    </span>
+                    <span style={{ fontSize: '12px', color: '#999' }}>(自动刷新: 每2秒)</span>
                   </Space>
                   <Space>
-                    <Button
-                      icon={<DownloadOutlined />}
-                      onClick={handleExportLogs}
-                    >
+                    <Button icon={<DownloadOutlined />} onClick={handleExportLogs}>
                       导出日志
                     </Button>
-                    <Button
-                      icon={<ClearOutlined />}
-                      onClick={handleClear}
-                      danger
-                    >
+                    <Button icon={<ClearOutlined />} onClick={handleClear} danger>
                       清空
                     </Button>
-                    <Button
-                      icon={<CopyOutlined />}
-                      onClick={handleCopy}
-                      type="primary"
-                    >
+                    <Button icon={<CopyOutlined />} onClick={handleCopy} type="primary">
                       复制日志
                     </Button>
                   </Space>
@@ -233,14 +243,16 @@ export const DevToolsModal: React.FC<DevToolsModalProps> = ({
                   }}
                 />
 
-                <div style={{ 
-                  marginTop: 12, 
-                  fontSize: '12px', 
-                  color: '#999',
-                  display: 'flex',
-                  justifyContent: 'space-between'
-                }}>
-                  <span>日志行数: {backendLogText.split('\n').filter(l => l.trim()).length}</span>
+                <div
+                  style={{
+                    marginTop: 12,
+                    fontSize: '12px',
+                    color: '#999',
+                    display: 'flex',
+                    justifyContent: 'space-between',
+                  }}
+                >
+                  <span>日志行数: {backendLogText.split('\n').filter((l) => l.trim()).length}</span>
                   <span>字符数: {backendLogText.length}</span>
                   <span>最后更新: {new Date().toLocaleTimeString()}</span>
                 </div>
@@ -257,17 +269,10 @@ export const DevToolsModal: React.FC<DevToolsModalProps> = ({
             children: (
               <div>
                 <Space style={{ marginBottom: 12 }}>
-                  <Button
-                    icon={<ReloadOutlined />}
-                    onClick={refreshFrontendLogs}
-                  >
+                  <Button icon={<ReloadOutlined />} onClick={refreshFrontendLogs}>
                     刷新
                   </Button>
-                  <Button
-                    icon={<SaveOutlined />}
-                    onClick={handleSaveFrontendLogs}
-                    type="primary"
-                  >
+                  <Button icon={<SaveOutlined />} onClick={handleSaveFrontendLogs} type="primary">
                     保存到数据目录
                   </Button>
                   <Button
@@ -283,19 +288,21 @@ export const DevToolsModal: React.FC<DevToolsModalProps> = ({
                   </Button>
                 </Space>
 
-            <div style={{
-              fontSize: '12px',
-              color: '#666',
-              marginBottom: 12,
-              padding: '8px 12px',
-              background: '#e6f7ff',
-              borderRadius: 4,
-              border: '1px solid #91d5ff'
-            }}>
-              💡 自动捕获：模块日志（[App]、[EditorPane] 等）+ 错误/警告，已过滤框架噪音
-              <br />
-              📁 文件管理：内存最多 500 条，保存到文件时自动保留最近 5 个文件
-            </div>
+                <div
+                  style={{
+                    fontSize: '12px',
+                    color: '#666',
+                    marginBottom: 12,
+                    padding: '8px 12px',
+                    background: '#e6f7ff',
+                    borderRadius: 4,
+                    border: '1px solid #91d5ff',
+                  }}
+                >
+                  💡 自动捕获：模块日志（[App]、[EditorPane] 等）+ 错误/警告，已过滤框架噪音
+                  <br />
+                  📁 文件管理：内存最多 500 条，保存到文件时自动保留最近 5 个文件
+                </div>
 
                 <TextArea
                   value={frontendLogs}
@@ -310,14 +317,16 @@ export const DevToolsModal: React.FC<DevToolsModalProps> = ({
                   }}
                 />
 
-                <div style={{ 
-                  marginTop: 12, 
-                  fontSize: '12px', 
-                  color: '#999',
-                  display: 'flex',
-                  justifyContent: 'space-between'
-                }}>
-                  <span>日志行数: {frontendLogs.split('\n').filter(l => l.trim()).length}</span>
+                <div
+                  style={{
+                    marginTop: 12,
+                    fontSize: '12px',
+                    color: '#999',
+                    display: 'flex',
+                    justifyContent: 'space-between',
+                  }}
+                >
+                  <span>日志行数: {frontendLogs.split('\n').filter((l) => l.trim()).length}</span>
                   <span>字符数: {frontendLogs.length}</span>
                   <span>最后更新: {new Date().toLocaleTimeString()}</span>
                 </div>
@@ -351,9 +360,7 @@ export const DevToolsModal: React.FC<DevToolsModalProps> = ({
                     >
                       刷新
                     </Button>
-                    <span style={{ fontSize: '12px', color: '#999' }}>
-                      (自动刷新: 每2秒)
-                    </span>
+                    <span style={{ fontSize: '12px', color: '#999' }}>(自动刷新: 每2秒)</span>
                   </Space>
                   <Space>
                     <Button
@@ -375,11 +382,14 @@ export const DevToolsModal: React.FC<DevToolsModalProps> = ({
                     <Button
                       icon={<CopyOutlined />}
                       onClick={() => {
-                        navigator.clipboard.writeText(promptLogs).then(() => {
-                          message.success('提示词日志已复制到剪贴板');
-                        }).catch(() => {
-                          message.error('复制失败');
-                        });
+                        navigator.clipboard
+                          .writeText(promptLogs)
+                          .then(() => {
+                            message.success('提示词日志已复制到剪贴板');
+                          })
+                          .catch(() => {
+                            message.error('复制失败');
+                          });
                       }}
                       type="primary"
                     >
@@ -388,15 +398,17 @@ export const DevToolsModal: React.FC<DevToolsModalProps> = ({
                   </Space>
                 </Space>
 
-                <div style={{
-                  fontSize: '12px',
-                  color: '#666',
-                  marginBottom: 12,
-                  padding: '8px 12px',
-                  background: '#e6fffb',
-                  borderRadius: 4,
-                  border: '1px solid #87e8de'
-                }}>
+                <div
+                  style={{
+                    fontSize: '12px',
+                    color: '#666',
+                    marginBottom: 12,
+                    padding: '8px 12px',
+                    background: '#e6fffb',
+                    borderRadius: 4,
+                    border: '1px solid #87e8de',
+                  }}
+                >
                   💡 捕获精翻（Contextual Refine）和批量翻译时发送给 AI 的提示词及响应
                   <br />
                   📊 每个日志包含：时间、类型、完整提示词、AI响应、元数据
@@ -422,14 +434,16 @@ export const DevToolsModal: React.FC<DevToolsModalProps> = ({
                   }}
                 />
 
-                <div style={{ 
-                  marginTop: 12, 
-                  fontSize: '12px', 
-                  color: '#999',
-                  display: 'flex',
-                  justifyContent: 'space-between'
-                }}>
-                  <span>日志行数: {promptLogText.split('\n').filter(l => l.trim()).length}</span>
+                <div
+                  style={{
+                    marginTop: 12,
+                    fontSize: '12px',
+                    color: '#999',
+                    display: 'flex',
+                    justifyContent: 'space-between',
+                  }}
+                >
+                  <span>日志行数: {promptLogText.split('\n').filter((l) => l.trim()).length}</span>
                   <span>字符数: {promptLogText.length}</span>
                   <span>最后更新: {new Date().toLocaleTimeString()}</span>
                 </div>
@@ -441,4 +455,3 @@ export const DevToolsModal: React.FC<DevToolsModalProps> = ({
     </Modal>
   );
 };
-

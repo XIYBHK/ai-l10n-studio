@@ -12,7 +12,7 @@ Object.defineProperty(global, 'crypto', {
   value: {
     getRandomValues: (arr: Uint32Array) => {
       for (let i = 0; i < arr.length; i++) {
-        arr[i] = Math.floor(Math.random() * 0xFFFFFFFF);
+        arr[i] = Math.floor(Math.random() * 0xffffffff);
       }
       return arr;
     },
@@ -85,7 +85,5 @@ vi.mock('@tauri-apps/plugin-store', () => {
   return { Store: MockStore };
 });
 
-
 // 导出 mock 函数供测试使用
 export { mockTauriInvoke };
-

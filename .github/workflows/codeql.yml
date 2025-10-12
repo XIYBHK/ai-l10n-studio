@@ -2,11 +2,11 @@ name: CodeQL Security Scan
 
 on:
   push:
-    branches: [ main ]
+    branches: [main]
   pull_request:
-    branches: [ main ]
+    branches: [main]
   schedule:
-    - cron: '0 0 * * 1'  # 每周一自动扫描
+    - cron: '0 0 * * 1' # 每周一自动扫描
   workflow_dispatch:
 
 jobs:
@@ -21,7 +21,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        language: [ 'javascript', 'rust' ]  # 支持项目的语言
+        language: ['javascript', 'rust'] # 支持项目的语言
 
     steps:
       - name: Checkout repository
@@ -31,7 +31,7 @@ jobs:
         uses: github/codeql-action/init@v4
         with:
           languages: ${{ matrix.language }}
-          queries: security-and-quality  # 安全+质量检查
+          queries: security-and-quality # 安全+质量检查
 
       - name: Autobuild
         uses: github/codeql-action/autobuild@v4
@@ -39,5 +39,4 @@ jobs:
       - name: Perform CodeQL Analysis
         uses: github/codeql-action/analyze@v4
         with:
-          category: "/language:${{matrix.language}}"
-
+          category: '/language:${{matrix.language}}'

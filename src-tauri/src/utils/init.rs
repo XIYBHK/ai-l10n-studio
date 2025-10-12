@@ -1,5 +1,5 @@
-use crate::{logging, logging_error};
 use crate::utils::{logging as logging_types, paths};
+use crate::{logging, logging_error};
 use anyhow::Result;
 use flexi_logger::{Cleanup, Criterion, Duplicate, FileSpec, LogSpecBuilder, Logger};
 
@@ -21,9 +21,23 @@ pub fn init_app() -> Result<()> {
     // Step 3: 初始化日志系统
     init_logger()?;
 
-    logging!(info, logging_types::Type::Init, "🚀 Application initialized successfully");
-    logging!(info, logging_types::Type::Init, "Portable mode: {}", *paths::PORTABLE_FLAG.get().unwrap_or(&false));
-    logging!(info, logging_types::Type::Init, "Home directory: {:?}", paths::app_home_dir()?);
+    logging!(
+        info,
+        logging_types::Type::Init,
+        "🚀 Application initialized successfully"
+    );
+    logging!(
+        info,
+        logging_types::Type::Init,
+        "Portable mode: {}",
+        *paths::PORTABLE_FLAG.get().unwrap_or(&false)
+    );
+    logging!(
+        info,
+        logging_types::Type::Init,
+        "Home directory: {:?}",
+        paths::app_home_dir()?
+    );
 
     Ok(())
 }
@@ -37,7 +51,9 @@ pub fn init_app() -> Result<()> {
 #[cfg(not(debug_assertions))]
 fn init_logger() -> Result<()> {
     let log_dir = paths::app_logs_dir()?;
-    let spec = LogSpecBuilder::new().default(log::LevelFilter::Info).build();
+    let spec = LogSpecBuilder::new()
+        .default(log::LevelFilter::Info)
+        .build();
 
     // 生产环境：过滤噪音模块
     let logger = Logger::with(spec)
@@ -51,7 +67,9 @@ fn init_logger() -> Result<()> {
             },
             Cleanup::KeepLogFiles(7),
         )
-        .filter(Box::new(NoModuleFilter(&["wry", "tauri", "tokio", "hyper"])));
+        .filter(Box::new(NoModuleFilter(&[
+            "wry", "tauri", "tokio", "hyper",
+        ])));
 
     logger.start()?;
     Ok(())
@@ -61,7 +79,9 @@ fn init_logger() -> Result<()> {
 #[cfg(debug_assertions)]
 fn init_logger() -> Result<()> {
     let log_dir = paths::app_logs_dir()?;
-    let spec = LogSpecBuilder::new().default(log::LevelFilter::Debug).build();
+    let spec = LogSpecBuilder::new()
+        .default(log::LevelFilter::Debug)
+        .build();
 
     let logger = Logger::with(spec)
         .log_to_file(FileSpec::default().directory(&log_dir).basename("app"))
@@ -85,7 +105,11 @@ fn init_logger() -> Result<()> {
 /// 参数：retention_days - 保留天数（None 表示不清理）
 pub async fn delete_old_logs(retention_days: Option<u32>) -> Result<()> {
     let Some(days) = retention_days else {
-        logging!(info, logging_types::Type::Init, "Log retention disabled, skipping cleanup");
+        logging!(
+            info,
+            logging_types::Type::Init,
+            "Log retention disabled, skipping cleanup"
+        );
         return Ok(());
     };
 
@@ -94,7 +118,12 @@ pub async fn delete_old_logs(retention_days: Option<u32>) -> Result<()> {
         return Ok(());
     }
 
-    logging!(info, logging_types::Type::Init, "Cleaning logs older than {} days", days);
+    logging!(
+        info,
+        logging_types::Type::Init,
+        "Cleaning logs older than {} days",
+        days
+    );
 
     let now = chrono::Local::now();
     let cutoff = now - chrono::Duration::days(days as i64);
@@ -109,7 +138,12 @@ pub async fn delete_old_logs(retention_days: Option<u32>) -> Result<()> {
                     let modified_time: chrono::DateTime<chrono::Local> = modified.into();
                     if modified_time < cutoff {
                         if let Err(e) = tokio::fs::remove_file(entry.path()).await {
-                            logging_error!(logging_types::Type::Init, "Failed to delete log file {:?}: {}", entry.path(), e);
+                            logging_error!(
+                                logging_types::Type::Init,
+                                "Failed to delete log file {:?}: {}",
+                                entry.path(),
+                                e
+                            );
                         } else {
                             deleted_count += 1;
                         }
@@ -120,7 +154,12 @@ pub async fn delete_old_logs(retention_days: Option<u32>) -> Result<()> {
     }
 
     if deleted_count > 0 {
-        logging!(info, logging_types::Type::Init, "Deleted {} old log files", deleted_count);
+        logging!(
+            info,
+            logging_types::Type::Init,
+            "Deleted {} old log files",
+            deleted_count
+        );
     }
 
     Ok(())
@@ -144,4 +183,3 @@ mod tests {
         assert!(result.is_ok());
     }
 }
-

@@ -4,7 +4,7 @@ import type { FileFormat, FileMetadata } from '../types/fileFormat';
 
 export function useFileFormat(filePath: string | null | undefined) {
   const key: TauriKey | null = filePath ? ['detect_file_format', { filePath }] : null;
-  const { data, error, isLoading, mutate } = useSWR(key, { 
+  const { data, error, isLoading, mutate } = useSWR(key, {
     keepPreviousData: true,
     revalidateOnFocus: false, // 文件格式不会变，无需聚焦刷新
     revalidateOnReconnect: false,
@@ -21,7 +21,7 @@ export function useFileFormat(filePath: string | null | undefined) {
 
 export function useFileMetadata(filePath: string | null | undefined) {
   const key: TauriKey | null = filePath ? ['get_file_metadata', { filePath }] : null;
-  const { data, error, isLoading, mutate } = useSWR(key, { 
+  const { data, error, isLoading, mutate } = useSWR(key, {
     keepPreviousData: true,
     revalidateOnFocus: false, // 文件元数据不会变（除非保存），无需聚焦刷新
     revalidateOnReconnect: false,
@@ -35,5 +35,3 @@ export function useFileMetadata(filePath: string | null | undefined) {
     mutate,
   } as const;
 }
-
-

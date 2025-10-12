@@ -1,11 +1,11 @@
 import React, { useState, useEffect } from 'react';
 import { Modal, Table, Button, Space, message, Popconfirm, Tag, Input, Tooltip } from 'antd';
-import { 
-  DeleteOutlined, 
-  EditOutlined, 
-  ReloadOutlined, 
+import {
+  DeleteOutlined,
+  EditOutlined,
+  ReloadOutlined,
   BookOutlined,
-  ThunderboltOutlined 
+  ThunderboltOutlined,
 } from '@ant-design/icons';
 import { TermEntry } from '../types/termLibrary';
 import { useTermLibrary } from '../hooks/useTermLibrary';
@@ -169,9 +169,7 @@ export const TermLibraryManager: React.FC<TermLibraryManagerProps> = ({
       key: 'frequency',
       width: '8%',
       align: 'center' as const,
-      render: (freq: number) => (
-        <Tag color={freq > 3 ? 'green' : 'default'}>{freq}</Tag>
-      ),
+      render: (freq: number) => <Tag color={freq > 3 ? 'green' : 'default'}>{freq}</Tag>,
     },
     {
       title: '操作',
@@ -190,11 +188,7 @@ export const TermLibraryManager: React.FC<TermLibraryManagerProps> = ({
           </Space>
         ) : (
           <Space size="small">
-            <Button
-              size="small"
-              icon={<EditOutlined />}
-              onClick={() => handleEdit(record)}
-            />
+            <Button size="small" icon={<EditOutlined />} onClick={() => handleEdit(record)} />
             <Popconfirm
               title="确定删除此术语？"
               onConfirm={() => handleDelete(record.source)}
@@ -246,33 +240,42 @@ export const TermLibraryManager: React.FC<TermLibraryManagerProps> = ({
     >
       {/* 风格总结展示 */}
       {library?.style_summary && (
-        <div style={{
-          marginBottom: 16,
-          padding: 12,
-          background: colors.bgTertiary,
-          borderRadius: 4,
-        }}>
-          <div style={{ 
-            fontSize: '12px', 
-            fontWeight: 600, 
-            marginBottom: 8,
-            color: colors.textPrimary 
-          }}>
+        <div
+          style={{
+            marginBottom: 16,
+            padding: 12,
+            background: colors.bgTertiary,
+            borderRadius: 4,
+          }}
+        >
+          <div
+            style={{
+              fontSize: '12px',
+              fontWeight: 600,
+              marginBottom: 8,
+              color: colors.textPrimary,
+            }}
+          >
             📝 当前风格总结 (v{library.style_summary.version})
           </div>
-          <div style={{ 
-            fontSize: '13px', 
-            lineHeight: '1.6',
-            color: colors.textSecondary 
-          }}>
+          <div
+            style={{
+              fontSize: '13px',
+              lineHeight: '1.6',
+              color: colors.textSecondary,
+            }}
+          >
             {library.style_summary.prompt}
           </div>
-          <div style={{ 
-            fontSize: '11px', 
-            marginTop: 8,
-            color: colors.textTertiary 
-          }}>
-            基于 {library.style_summary.based_on_terms} 条术语 · 最后更新: {new Date(library.style_summary.generated_at).toLocaleString('zh-CN')}
+          <div
+            style={{
+              fontSize: '11px',
+              marginTop: 8,
+              color: colors.textTertiary,
+            }}
+          >
+            基于 {library.style_summary.based_on_terms} 条术语 · 最后更新:{' '}
+            {new Date(library.style_summary.generated_at).toLocaleString('zh-CN')}
           </div>
         </div>
       )}
@@ -296,11 +299,13 @@ export const TermLibraryManager: React.FC<TermLibraryManagerProps> = ({
 
       {/* 提示信息 */}
       {library && library.terms.length === 0 && (
-        <div style={{
-          textAlign: 'center',
-          padding: '40px 20px',
-          color: colors.textTertiary,
-        }}>
+        <div
+          style={{
+            textAlign: 'center',
+            padding: '40px 20px',
+            color: colors.textTertiary,
+          }}
+        >
           <BookOutlined style={{ fontSize: 48, marginBottom: 16 }} />
           <div>术语库为空</div>
           <div style={{ fontSize: '12px', marginTop: 8 }}>
@@ -311,4 +316,3 @@ export const TermLibraryManager: React.FC<TermLibraryManagerProps> = ({
     </Modal>
   );
 };
-

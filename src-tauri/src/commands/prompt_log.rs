@@ -12,4 +12,3 @@ pub fn clear_prompt_logs() -> Result<(), String> {
     crate::services::clear_prompt_logs();
     Ok(())
 }
-

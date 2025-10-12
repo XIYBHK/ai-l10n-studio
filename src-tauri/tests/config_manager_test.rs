@@ -2,7 +2,7 @@
 
 #[cfg(test)]
 mod config_manager_tests {
-    use po_translator_gui::services::{AppConfig, AIConfig, ProviderType, ProxyConfig};
+    use po_translator_gui::services::{AIConfig, AppConfig, ProviderType, ProxyConfig};
 
     #[test]
     fn test_add_first_ai_config_auto_sets_active() {
@@ -67,11 +67,14 @@ mod config_manager_tests {
 
         let active = config.get_active_ai_config();
         assert!(active.is_some());
-        
+
         let active_config = active.unwrap();
         assert_eq!(active_config.provider, ProviderType::Moonshot);
         assert_eq!(active_config.api_key, "test-key");
-        assert_eq!(active_config.base_url, Some("https://api.test.com".to_string()));
+        assert_eq!(
+            active_config.base_url,
+            Some("https://api.test.com".to_string())
+        );
     }
 
     #[test]
@@ -107,7 +110,7 @@ mod config_manager_tests {
     #[test]
     fn test_update_ai_config_out_of_bounds() {
         let mut config = AppConfig::default();
-        
+
         let ai_config = AIConfig {
             provider: ProviderType::Moonshot,
             api_key: "test-key".to_string(),
@@ -256,7 +259,7 @@ mod config_manager_tests {
 
         let active = config.get_active_ai_config().unwrap();
         assert!(active.proxy.is_some());
-        
+
         let proxy = active.proxy.as_ref().unwrap();
         assert_eq!(proxy.host, "127.0.0.1");
         assert_eq!(proxy.port, 7890);
@@ -289,4 +292,3 @@ mod config_manager_tests {
         assert_eq!(all_configs[1].provider, ProviderType::OpenAI);
     }
 }
-

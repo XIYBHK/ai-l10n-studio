@@ -94,9 +94,12 @@ export const TermConfirmModal: React.FC<TermConfirmModalProps> = ({
       destroyOnHidden={true}
       mask={false}
       footer={[
-        <Button key="cancel" onClick={() => {
-          onConfirm(false);
-        }}>
+        <Button
+          key="cancel"
+          onClick={() => {
+            onConfirm(false);
+          }}
+        >
           仅此一次
         </Button>,
         <Button
@@ -113,43 +116,55 @@ export const TermConfirmModal: React.FC<TermConfirmModalProps> = ({
       width={500}
     >
       <Space direction="vertical" style={{ width: '100%' }} size="middle">
-        <Alert
-          message={diffInfo.description}
-          type={diffInfo.color}
-          showIcon
-        />
+        <Alert message={diffInfo.description} type={diffInfo.color} showIcon />
 
         <div>
-          <Text type="secondary" style={{ fontSize: 12 }}>原文：</Text>
-          <Paragraph style={{ marginTop: 4, marginBottom: 8, padding: '8px 12px', background: '#e6f4ff', border: '1px solid #91caff', borderRadius: 4, color: '#000' }}>
+          <Text type="secondary" style={{ fontSize: 12 }}>
+            原文：
+          </Text>
+          <Paragraph
+            style={{
+              marginTop: 4,
+              marginBottom: 8,
+              padding: '8px 12px',
+              background: '#e6f4ff',
+              border: '1px solid #91caff',
+              borderRadius: 4,
+              color: '#000',
+            }}
+          >
             {original}
           </Paragraph>
 
-          <Text type="secondary" style={{ fontSize: 12 }}>AI译文：</Text>
-          <Paragraph 
-            delete 
-            style={{ 
-              marginTop: 4, 
-              marginBottom: 8, 
-              padding: '8px 12px', 
-              background: '#fff1f0', 
+          <Text type="secondary" style={{ fontSize: 12 }}>
+            AI译文：
+          </Text>
+          <Paragraph
+            delete
+            style={{
+              marginTop: 4,
+              marginBottom: 8,
+              padding: '8px 12px',
+              background: '#fff1f0',
               borderRadius: 4,
-              color: '#cf1322'
+              color: '#cf1322',
             }}
           >
             {aiTranslation}
           </Paragraph>
 
-          <Text type="secondary" style={{ fontSize: 12 }}>您的译文：</Text>
-          <Paragraph 
-            style={{ 
-              marginTop: 4, 
-              marginBottom: 8, 
-              padding: '8px 12px', 
-              background: '#f6ffed', 
+          <Text type="secondary" style={{ fontSize: 12 }}>
+            您的译文：
+          </Text>
+          <Paragraph
+            style={{
+              marginTop: 4,
+              marginBottom: 8,
+              padding: '8px 12px',
+              background: '#f6ffed',
               borderRadius: 4,
               color: '#52c41a',
-              fontWeight: 500
+              fontWeight: 500,
             }}
           >
             {userTranslation}
@@ -161,8 +176,15 @@ export const TermConfirmModal: React.FC<TermConfirmModalProps> = ({
             message="术语对比"
             description={
               <div style={{ fontSize: 13 }}>
-                <div>AI译法：<Text code>{difference.ai_term}</Text></div>
-                <div>您的译法：<Text code type="success">{difference.user_term}</Text></div>
+                <div>
+                  AI译法：<Text code>{difference.ai_term}</Text>
+                </div>
+                <div>
+                  您的译法：
+                  <Text code type="success">
+                    {difference.user_term}
+                  </Text>
+                </div>
               </div>
             }
             type="info"
@@ -187,4 +209,3 @@ export const TermConfirmModal: React.FC<TermConfirmModalProps> = ({
     </Modal>
   );
 };
-

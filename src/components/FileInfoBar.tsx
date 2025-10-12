@@ -19,11 +19,7 @@ export const FileInfoBar: React.FC<FileInfoBarProps> = ({ filePath }) => {
       <Space size="small" wrap>
         <Tag color="blue">文件</Tag>
         <span>{filePath.split(/[/\\]/).pop()}</span>
-        {loadingFormat ? (
-          <Tag>格式加载中...</Tag>
-        ) : (
-          format && <Tag color="geekblue">{format}</Tag>
-        )}
+        {loadingFormat ? <Tag>格式加载中...</Tag> : format && <Tag color="geekblue">{format}</Tag>}
         {loadingMeta ? (
           <Tag>元数据加载中...</Tag>
         ) : metadata ? (

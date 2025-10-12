@@ -1,10 +1,10 @@
-use anyhow::{anyhow, Result};
+use anyhow::{Result, anyhow};
 use reqwest::Client as HttpClient;
 use serde::{Deserialize, Serialize};
 // use std::collections::HashMap;
 
-use crate::services::translation_memory::TranslationMemory;
 use crate::services::term_library::TermLibrary;
+use crate::services::translation_memory::TranslationMemory;
 use crate::utils::common::is_simple_phrase;
 use crate::utils::paths::get_translation_memory_path;
 
@@ -30,12 +30,12 @@ pub const DEFAULT_SYSTEM_PROMPT: &str = r#"专业游戏本地化翻译。
 pub enum ProviderType {
     Moonshot,
     OpenAI,
-    SparkDesk,   // 讯飞星火
-    Wenxin,      // 百度文心一言
-    Qianwen,     // 阿里通义千问
-    GLM,         // 智谱AI
-    Claude,      // Anthropic
-    Gemini,      // Google
+    SparkDesk, // 讯飞星火
+    Wenxin,    // 百度文心一言
+    Qianwen,   // 阿里通义千问
+    GLM,       // 智谱AI
+    Claude,    // Anthropic
+    Gemini,    // Google
 }
 
 impl ProviderType {
@@ -52,7 +52,7 @@ impl ProviderType {
             Self::Gemini => "https://generativelanguage.googleapis.com/v1",
         }
     }
-    
+
     /// 获取显示名称
     pub fn display_name(&self) -> &str {
         match self {
@@ -66,7 +66,7 @@ impl ProviderType {
             Self::Gemini => "Google Gemini",
         }
     }
-    
+
     /// 获取默认模型
     pub fn default_model(&self) -> &str {
         match self {
@@ -80,7 +80,7 @@ impl ProviderType {
             Self::Gemini => "gemini-pro",
         }
     }
-    
+
     /// 获取该供应商的所有可用模型
     pub fn get_models(&self) -> Vec<crate::services::ai::ModelInfo> {
         use crate::services::ai::models;
@@ -88,19 +88,17 @@ impl ProviderType {
             Self::OpenAI => models::get_openai_models(),
             Self::Moonshot => models::get_moonshot_models(),
             Self::SparkDesk => models::get_deepseek_models(), // TODO: 创建独立的 SparkDesk 模型定义
-            Self::Wenxin => models::get_deepseek_models(),     // TODO: 创建独立的 Wenxin 模型定义
-            Self::Qianwen => models::get_deepseek_models(),    // TODO: 创建独立的 Qianwen 模型定义
-            Self::GLM => models::get_deepseek_models(),        // TODO: 创建独立的 GLM 模型定义
-            Self::Claude => models::get_deepseek_models(),     // TODO: 创建独立的 Claude 模型定义
-            Self::Gemini => models::get_deepseek_models(),     // TODO: 创建独立的 Gemini 模型定义
+            Self::Wenxin => models::get_deepseek_models(),    // TODO: 创建独立的 Wenxin 模型定义
+            Self::Qianwen => models::get_deepseek_models(),   // TODO: 创建独立的 Qianwen 模型定义
+            Self::GLM => models::get_deepseek_models(),       // TODO: 创建独立的 GLM 模型定义
+            Self::Claude => models::get_deepseek_models(),    // TODO: 创建独立的 Claude 模型定义
+            Self::Gemini => models::get_deepseek_models(),    // TODO: 创建独立的 Gemini 模型定义
         }
     }
-    
+
     /// 根据模型ID获取模型信息
     pub fn get_model_info(&self, model_id: &str) -> Option<crate::services::ai::ModelInfo> {
-        self.get_models()
-            .into_iter()
-            .find(|m| m.id == model_id)
+        self.get_models().into_iter().find(|m| m.id == model_id)
     }
 }
 
@@ -121,8 +119,8 @@ pub struct ProxyConfig {
 pub struct AIConfig {
     pub provider: ProviderType,
     pub api_key: String,
-    pub base_url: Option<String>,      // 可选的自定义URL
-    pub model: Option<String>,          // 可选的自定义模型
+    pub base_url: Option<String>, // 可选的自定义URL
+    pub model: Option<String>,    // 可选的自定义模型
     pub proxy: Option<ProxyConfig>,
 }
 
@@ -173,7 +171,7 @@ pub struct AITranslator {
     api_key: String,
     base_url: String,
     model: String,
-    provider: ProviderType,  // 🔧 添加：保存 provider 类型用于费用计算
+    provider: ProviderType, // 🔧 添加：保存 provider 类型用于费用计算
     system_prompt: String,
     conversation_history: Vec<ChatMessage>,
     max_history_tokens: usize,
@@ -198,15 +196,15 @@ pub struct BatchStats {
 impl AITranslator {
     /// 原有构造函数（Phase 3: 支持自定义提示词，Phase 5: 支持目标语言）
     pub fn new(
-        api_key: String, 
-        base_url: Option<String>, 
-        use_tm: bool, 
+        api_key: String,
+        base_url: Option<String>,
+        use_tm: bool,
         custom_system_prompt: Option<&str>,
-        target_language: Option<String>
+        target_language: Option<String>,
     ) -> Result<Self> {
         let client = HttpClient::new();
         let base_url = base_url.unwrap_or_else(|| "https://api.moonshot.cn/v1".to_string());
-        
+
         // 加载术语库并构建系统提示词
         let term_library_path = std::env::current_exe()
             .ok()
@@ -214,20 +212,24 @@ impl AITranslator {
             .unwrap_or_else(|| std::path::PathBuf::from("."))
             .join("data")
             .join("term_library.json");
-        
+
         let term_library = TermLibrary::load_from_file(&term_library_path).ok();
-        
+
         // 🔍 调试日志：检查术语库状态
         if let Some(ref lib) = term_library {
             crate::app_log!(
                 "[AITranslator] 加载术语库: {} 条术语, 风格总结: {}",
                 lib.terms.len(),
-                if lib.style_summary.is_some() { "有" } else { "无" }
+                if lib.style_summary.is_some() {
+                    "有"
+                } else {
+                    "无"
+                }
             );
         } else {
             crate::app_log!("[AITranslator] 术语库文件不存在或加载失败");
         }
-        
+
         let system_prompt = Self::get_system_prompt(custom_system_prompt, term_library.as_ref());
 
         // 从文件加载TM（合并内置短语和已保存的翻译）
@@ -244,7 +246,7 @@ impl AITranslator {
             api_key,
             base_url,
             model: "moonshot-v1-auto".to_string(),
-            provider: ProviderType::Moonshot,  // 🔧 默认使用 Moonshot
+            provider: ProviderType::Moonshot, // 🔧 默认使用 Moonshot
             system_prompt,
             conversation_history: Vec::new(),
             max_history_tokens: 2000,
@@ -269,22 +271,24 @@ impl AITranslator {
 
     /// 使用 AIConfig 创建（Phase 3: 支持自定义提示词，Phase 5: 支持目标语言）
     pub fn new_with_config(
-        config: AIConfig, 
-        use_tm: bool, 
+        config: AIConfig,
+        use_tm: bool,
         custom_system_prompt: Option<&str>,
-        target_language: Option<String>
+        target_language: Option<String>,
     ) -> Result<Self> {
         // 构建HTTP客户端（支持代理）
         let client = Self::build_client_with_proxy(config.proxy.clone())?;
-        
+
         // 使用自定义URL或默认URL
-        let base_url = config.base_url
+        let base_url = config
+            .base_url
             .unwrap_or_else(|| config.provider.default_url().to_string());
-        
+
         // 使用自定义模型或默认模型
-        let model = config.model
+        let model = config
+            .model
             .unwrap_or_else(|| config.provider.default_model().to_string());
-        
+
         // 加载术语库并构建系统提示词
         let term_library_path = std::env::current_exe()
             .ok()
@@ -292,20 +296,24 @@ impl AITranslator {
             .unwrap_or_else(|| std::path::PathBuf::from("."))
             .join("data")
             .join("term_library.json");
-        
+
         let term_library = TermLibrary::load_from_file(&term_library_path).ok();
-        
+
         // 🔍 调试日志：检查术语库状态
         if let Some(ref lib) = term_library {
             crate::app_log!(
                 "[AITranslator] 加载术语库: {} 条术语, 风格总结: {}",
                 lib.terms.len(),
-                if lib.style_summary.is_some() { "有" } else { "无" }
+                if lib.style_summary.is_some() {
+                    "有"
+                } else {
+                    "无"
+                }
             );
         } else {
             crate::app_log!("[AITranslator] 术语库文件不存在或加载失败");
         }
-        
+
         let system_prompt = Self::get_system_prompt(custom_system_prompt, term_library.as_ref());
 
         // 从文件加载TM
@@ -321,7 +329,11 @@ impl AITranslator {
             "[AI翻译器] 使用配置创建: 供应商={}, 模型={}, 代理={}",
             config.provider.display_name(),
             model,
-            if config.proxy.as_ref().map(|p| p.enabled).unwrap_or(false) { "已启用" } else { "未启用" }
+            if config.proxy.as_ref().map(|p| p.enabled).unwrap_or(false) {
+                "已启用"
+            } else {
+                "未启用"
+            }
         );
 
         Ok(Self {
@@ -329,7 +341,7 @@ impl AITranslator {
             api_key: config.api_key,
             base_url,
             model,
-            provider: config.provider,  // 🔧 保存 provider
+            provider: config.provider, // 🔧 保存 provider
             system_prompt,
             conversation_history: Vec::new(),
             max_history_tokens: 2000,
@@ -355,17 +367,17 @@ impl AITranslator {
     /// 构建支持代理的HTTP客户端
     fn build_client_with_proxy(proxy: Option<ProxyConfig>) -> Result<HttpClient> {
         let mut builder = HttpClient::builder();
-        
+
         // 检查是否需要启用代理
         let should_use_proxy = proxy.as_ref().map(|p| p.enabled).unwrap_or(false);
-        
+
         if should_use_proxy {
             if let Some(proxy_cfg) = proxy {
                 let proxy_url = format!("http://{}:{}", proxy_cfg.host, proxy_cfg.port);
                 crate::app_log!("[AI翻译器] 使用代理: {}", proxy_url);
-                
-                let proxy = reqwest::Proxy::all(&proxy_url)
-                    .map_err(|e| anyhow!("代理配置错误: {}", e))?;
+
+                let proxy =
+                    reqwest::Proxy::all(&proxy_url).map_err(|e| anyhow!("代理配置错误: {}", e))?;
                 builder = builder.proxy(proxy);
             }
         } else {
@@ -373,16 +385,20 @@ impl AITranslator {
             crate::app_log!("[AI翻译器] 代理已禁用（忽略系统代理设置）");
             builder = builder.no_proxy();
         }
-        
-        builder.build()
+
+        builder
+            .build()
             .map_err(|e| anyhow!("HTTP客户端构建失败: {}", e))
     }
 
     /// Phase 3: 构建系统提示词（支持自定义 + 术语库拼接）
-    /// 
+    ///
     /// custom_prompt: 用户自定义的基础提示词（None则使用DEFAULT_SYSTEM_PROMPT）
     /// term_library: 术语库（用于拼接风格总结）
-    fn get_system_prompt(custom_prompt: Option<&str>, term_library: Option<&TermLibrary>) -> String {
+    fn get_system_prompt(
+        custom_prompt: Option<&str>,
+        term_library: Option<&TermLibrary>,
+    ) -> String {
         // 使用自定义提示词或默认提示词
         let base_prompt = custom_prompt.unwrap_or(DEFAULT_SYSTEM_PROMPT);
 
@@ -391,9 +407,7 @@ impl AITranslator {
             if let Some(style_summary) = &library.style_summary {
                 return format!(
                     "{}\n\n【用户翻译风格偏好】（基于{}条术语学习）\n{}",
-                    base_prompt,
-                    style_summary.based_on_terms,
-                    style_summary.prompt
+                    base_prompt, style_summary.based_on_terms, style_summary.prompt
                 );
             }
         }
@@ -407,7 +421,8 @@ impl AITranslator {
         progress_callback: Option<Box<dyn Fn(usize, String) + Send + Sync>>,
         stats_callback: Option<Box<dyn Fn(BatchStats, TokenStats) + Send + Sync>>,
     ) -> Result<Vec<String>> {
-        self.translate_batch_internal(texts, progress_callback, Some(stats_callback), None).await
+        self.translate_batch_internal(texts, progress_callback, Some(stats_callback), None)
+            .await
     }
 
     pub async fn translate_batch(
@@ -415,10 +430,12 @@ impl AITranslator {
         texts: Vec<String>,
         progress_callback: Option<Box<dyn Fn(usize, String) + Send + Sync>>,
     ) -> Result<Vec<String>> {
-        let (translations, _sources) = self.translate_batch_with_sources(texts, progress_callback, None).await?;
+        let (translations, _sources) = self
+            .translate_batch_with_sources(texts, progress_callback, None)
+            .await?;
         Ok(translations)
     }
-    
+
     /// 翻译并返回每个条目的来源
     pub async fn translate_batch_with_sources(
         &mut self,
@@ -432,8 +449,10 @@ impl AITranslator {
 
         // 初始化来源跟踪
         let mut sources = vec![String::from("unknown"); texts.len()];
-        
-        let translations = self.translate_batch_internal(texts, progress_callback, stats_callback, Some(&mut sources)).await?;
+
+        let translations = self
+            .translate_batch_internal(texts, progress_callback, stats_callback, Some(&mut sources))
+            .await?;
         Ok((translations, sources))
     }
 
@@ -465,7 +484,7 @@ impl AITranslator {
         // Step 1: 使用翻译记忆库进行预翻译 + 去重（保持顺序）
         let mut result = vec![String::new(); texts.len()];
         let mut untranslated_indices = Vec::new();
-        
+
         let mut unique_texts_ordered: Vec<String> = Vec::new();
         let mut unique_text_to_indices: std::collections::HashMap<String, Vec<usize>> =
             std::collections::HashMap::new();
@@ -484,7 +503,7 @@ impl AITranslator {
                 } else {
                     // TM未命中，记录到去重map
                     untranslated_indices.push(i);
-                    
+
                     if !unique_text_to_indices.contains_key(text) {
                         unique_texts_ordered.push(text.clone());
                     }
@@ -498,7 +517,7 @@ impl AITranslator {
             // 没有TM，直接去重
             for (i, text) in texts.iter().enumerate() {
                 untranslated_indices.push(i);
-                
+
                 if !unique_text_to_indices.contains_key(text) {
                     unique_texts_ordered.push(text.clone());
                 }
@@ -544,19 +563,20 @@ impl AITranslator {
                     total_batches,
                     chunk.len()
                 );
-                
+
                 if batch_idx == 0 {
                     let sample_size = std::cmp::min(3, chunk.len());
-                    let sample_texts: Vec<String> = chunk.iter().take(sample_size).cloned().collect();
+                    let sample_texts: Vec<String> =
+                        chunk.iter().take(sample_size).cloned().collect();
                     let user_prompt = self.build_user_prompt(&sample_texts);
-                    
+
                     // 构建提示词日志（只显示实际发送给AI的内容，不包括API参数）
                     let full_prompt = format!(
                         "【System Prompt】:\n{}\n【User Prompt】:\n{}",
                         self.current_system_prompt(),
                         user_prompt
                     );
-                    
+
                     let metadata = serde_json::json!({
                         "batch_index": batch_idx + 1,
                         "total_batches": total_batches,
@@ -570,16 +590,24 @@ impl AITranslator {
                     });
                     crate::services::log_prompt("批量翻译", full_prompt, Some(metadata));
                 }
-                
+
                 let batch_translations = self.translate_with_ai(chunk.to_vec()).await?;
-                
+
                 if batch_idx == 0 {
                     let logs = crate::services::get_prompt_logs();
                     if let Some(last_idx) = logs.len().checked_sub(1) {
                         if !batch_translations.is_empty() {
                             let sample_size = std::cmp::min(3, batch_translations.len());
-                            let sample_results: Vec<String> = batch_translations.iter().take(sample_size).cloned().collect();
-                            let mut response = format!("批次翻译结果（总 {} 条，显示前 {} 条）:\n", batch_translations.len(), sample_size);
+                            let sample_results: Vec<String> = batch_translations
+                                .iter()
+                                .take(sample_size)
+                                .cloned()
+                                .collect();
+                            let mut response = format!(
+                                "批次翻译结果（总 {} 条，显示前 {} 条）:\n",
+                                batch_translations.len(),
+                                sample_size
+                            );
                             for (i, result) in sample_results.iter().enumerate() {
                                 response.push_str(&format!("{}. {}\n", i + 1, result));
                             }
@@ -587,9 +615,9 @@ impl AITranslator {
                         }
                     }
                 }
-                
+
                 ai_translations.extend(batch_translations);
-                
+
                 if let Some(ref stats_cb_opt) = stats_callback {
                     if let Some(stats_cb) = stats_cb_opt {
                         let current_stats = self.batch_stats.clone();
@@ -598,7 +626,7 @@ impl AITranslator {
                     }
                 }
             }
-            
+
             self.batch_stats.ai_translated = unique_list.len();
 
             // Step 3: 将翻译结果分发到所有对应的索引
@@ -671,7 +699,10 @@ impl AITranslator {
 
     /// 使用自定义的用户提示词进行翻译（不使用标准提示词模板）
     /// 用于精翻等场景，提示词已经完整构建好
-    pub async fn translate_with_custom_user_prompt(&mut self, user_prompt: String) -> Result<String> {
+    pub async fn translate_with_custom_user_prompt(
+        &mut self,
+        user_prompt: String,
+    ) -> Result<String> {
         // 构建消息数组
         let messages = if self.conversation_history.is_empty() {
             vec![
@@ -715,38 +746,46 @@ impl AITranslator {
                 .send()
                 .await
             {
-                Ok(response) => {
-                    match response.json().await {
-                        Ok(parsed) => {
-                            chat_response = Some(parsed);
-                            break;
-                        }
-                        Err(e) => {
-                            last_error = Some(anyhow::anyhow!("error decoding response body"));
-                            if retry < max_retries - 1 {
-                                let delay = 2u64.pow(retry as u32);
-                                crate::app_log!("[重试] 解析响应失败，{}秒后重试 ({}/{})", delay, retry + 1, max_retries);
-                                tokio::time::sleep(std::time::Duration::from_secs(delay)).await;
-                            }
+                Ok(response) => match response.json().await {
+                    Ok(parsed) => {
+                        chat_response = Some(parsed);
+                        break;
+                    }
+                    Err(e) => {
+                        last_error = Some(anyhow::anyhow!("error decoding response body"));
+                        if retry < max_retries - 1 {
+                            let delay = 2u64.pow(retry as u32);
+                            crate::app_log!(
+                                "[重试] 解析响应失败，{}秒后重试 ({}/{})",
+                                delay,
+                                retry + 1,
+                                max_retries
+                            );
+                            tokio::time::sleep(std::time::Duration::from_secs(delay)).await;
                         }
                     }
-                }
+                },
                 Err(e) => {
                     last_error = Some(anyhow::anyhow!("request failed: {}", e));
                     if retry < max_retries - 1 {
                         let delay = 2u64.pow(retry as u32);
-                        crate::app_log!("[重试] 请求失败，{}秒后重试 ({}/{})", delay, retry + 1, max_retries);
+                        crate::app_log!(
+                            "[重试] 请求失败，{}秒后重试 ({}/{})",
+                            delay,
+                            retry + 1,
+                            max_retries
+                        );
                         tokio::time::sleep(std::time::Duration::from_secs(delay)).await;
                     }
                 }
             }
         }
 
-        let chat_response = chat_response.ok_or_else(|| {
-            last_error.unwrap_or_else(|| anyhow::anyhow!("未知错误"))
-        })?;
+        let chat_response = chat_response
+            .ok_or_else(|| last_error.unwrap_or_else(|| anyhow::anyhow!("未知错误")))?;
 
-        let assistant_response = chat_response.choices
+        let assistant_response = chat_response
+            .choices
             .first()
             .and_then(|choice| Some(choice.message.content.clone()))
             .ok_or_else(|| anyhow::anyhow!("AI响应为空"))?;
@@ -818,63 +857,85 @@ impl AITranslator {
                             // 简化日志：只记录关键信息
                             if !status.is_success() {
                                 // 错误时记录完整响应
-                                crate::app_log!("[API错误] 状态码: {}, 响应: {}", status, &body_text);
+                                crate::app_log!(
+                                    "[API错误] 状态码: {}, 响应: {}",
+                                    status,
+                                    &body_text
+                                );
                             } else {
                                 // 成功时提取关键内容
-                                let summary = if let Ok(json) = serde_json::from_str::<serde_json::Value>(&body_text) {
+                                let summary = if let Ok(json) =
+                                    serde_json::from_str::<serde_json::Value>(&body_text)
+                                {
                                     // 提取 AI 返回的实际内容
-                                    if let Some(content) = json["choices"][0]["message"]["content"].as_str() {
+                                    if let Some(content) =
+                                        json["choices"][0]["message"]["content"].as_str()
+                                    {
                                         format!("内容: \"{}\"", content)
                                     } else {
-                                        format!("tokens: {}, cost: 参考usage字段", 
-                                            json["usage"]["total_tokens"].as_u64().unwrap_or(0))
+                                        format!(
+                                            "tokens: {}, cost: 参考usage字段",
+                                            json["usage"]["total_tokens"].as_u64().unwrap_or(0)
+                                        )
                                     }
                                 } else {
                                     // JSON 解析失败，显示前100字符
                                     if body_text.len() > 100 {
-                                        format!("{}... ({} 字符)", &body_text[..100], body_text.len())
+                                        format!(
+                                            "{}... ({} 字符)",
+                                            &body_text[..100],
+                                            body_text.len()
+                                        )
                                     } else {
                                         body_text.clone()
                                     }
                                 };
                                 crate::app_log!("[API响应] {} OK, {}", status.as_u16(), summary);
                             }
-                            
+
                             // 检查是否是错误响应
                             if !status.is_success() {
                                 // 尝试解析通用错误格式
-                                let error_msg = if let Ok(error_json) = serde_json::from_str::<serde_json::Value>(&body_text) {
+                                let error_msg = if let Ok(error_json) =
+                                    serde_json::from_str::<serde_json::Value>(&body_text)
+                                {
                                     // 提取错误信息
                                     let extracted_msg = error_json["error"]["message"]
                                         .as_str()
                                         .or_else(|| error_json["message"].as_str())
                                         .or_else(|| error_json["error"].as_str())
                                         .unwrap_or("API请求失败");
-                                    
+
                                     // 根据状态码和错误信息生成友好提示
                                     match status.as_u16() {
                                         401 => format!("API Key无效或已过期: {}", extracted_msg),
                                         403 => format!("API访问被拒绝: {}", extracted_msg),
                                         429 => {
                                             // 429 可能是频率超限，也可能是余额不足
-                                            if extracted_msg.contains("余额") || extracted_msg.contains("资源包") {
+                                            if extracted_msg.contains("余额")
+                                                || extracted_msg.contains("资源包")
+                                            {
                                                 format!("账户余额不足: {}", extracted_msg)
                                             } else {
                                                 format!("API请求频率超限: {}", extracted_msg)
                                             }
-                                        },
+                                        }
                                         500..=599 => format!("AI服务器错误: {}", extracted_msg),
-                                        _ => format!("API请求失败({}): {}", status.as_u16(), extracted_msg),
+                                        _ => format!(
+                                            "API请求失败({}): {}",
+                                            status.as_u16(),
+                                            extracted_msg
+                                        ),
                                     }
                                 } else {
                                     format!("API请求失败({}): {}", status.as_u16(), body_text)
                                 };
-                                
+
                                 crate::app_log!("[错误] {}", error_msg);
                                 last_error = Some(anyhow!(error_msg));
                                 break; // 错误响应不重试
                             }
-                            
+
                             // 尝试解析为ChatResponse
                             match serde_json::from_str::<ChatResponse>(&body_text) {
                                 Ok(parsed) => {
@@ -886,7 +947,7 @@ impl AITranslator {
                                         "无法解析AI响应格式 (模型: {}): {}\n响应内容: {}",
                                         self.model,
                                         e,
-                                        if body_text.len() > 500 { 
+                                        if body_text.len() > 500 {
                                             format!("{}...(已截断)", &body_text[..500])
                                         } else {
                                             body_text.clone()
@@ -902,10 +963,11 @@ impl AITranslator {
                             let error_msg = format!("读取响应体失败: {}", e);
                             crate::app_log!("[错误] {}", error_msg);
                             last_error = Some(anyhow!(error_msg));
-                            
+
                             if retry < max_retries - 1 {
                                 let delay_secs = 2_u64.pow(retry as u32);
-                                tokio::time::sleep(tokio::time::Duration::from_secs(delay_secs)).await;
+                                tokio::time::sleep(tokio::time::Duration::from_secs(delay_secs))
+                                    .await;
                             }
                         }
                     }
@@ -935,11 +997,13 @@ impl AITranslator {
             self.token_stats.input_tokens += usage.prompt_tokens;
             self.token_stats.output_tokens += usage.completion_tokens;
             self.token_stats.total_tokens += usage.total_tokens;
-            
+
             // 使用 ModelInfo 计算精确成本
-            let model_info = self.provider.get_model_info(&self.model)
+            let model_info = self
+                .provider
+                .get_model_info(&self.model)
                 .expect("模型信息必须存在，请检查 models/ 目录中的模型定义");
-            
+
             use crate::services::ai::CostCalculator;
             let breakdown = CostCalculator::calculate_openai(
                 &model_info,
@@ -987,7 +1051,7 @@ impl AITranslator {
             Some(lang) => lang,
             None => "目标语言", // 默认（未指定语言）
         };
-        
+
         // 精简提示词：移除冗余说明和空行
         let mut prompt = format!("翻译为{}（每行一条，带序号）:\n", target_lang_instruction);
         for (i, text) in texts.iter().enumerate() {
@@ -1040,7 +1104,7 @@ impl AITranslator {
         // 优先提取以数字序号开头的行（支持多种格式）
         let number_prefix_regex = regex::Regex::new(r"^\d+[\.\)、:\s]+(.+)$").unwrap();
         let mut translations = Vec::new();
-        
+
         for line in lines.iter() {
             if let Some(captures) = number_prefix_regex.captures(line) {
                 if let Some(content) = captures.get(1) {
@@ -1060,12 +1124,12 @@ impl AITranslator {
         // ⚠️ 验证翻译数量（只在出错时输出详细日志）
         if translations.len() != original_texts.len() {
             crate::app_log!(
-                "[解析错误] 期望{}条，实际{}条\n[AI响应]\n{}", 
-                original_texts.len(), 
+                "[解析错误] 期望{}条，实际{}条\n[AI响应]\n{}",
+                original_texts.len(),
                 translations.len(),
                 response
             );
-            
+
             return Err(anyhow!(
                 "翻译数量不匹配！请求 {} 条，实际返回 {} 条",
                 original_texts.len(),

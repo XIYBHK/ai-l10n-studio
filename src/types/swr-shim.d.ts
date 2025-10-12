@@ -4,7 +4,10 @@ declare module 'swr' {
   export const SWRConfig: any;
   export type SWRConfiguration = any;
   export function mutate(...args: any[]): any;
-  export function useSWR<T = any>(key: any, ...rest: any[]): {
+  export function useSWR<T = any>(
+    key: any,
+    ...rest: any[]
+  ): {
     data: T | undefined;
     error: any;
     isLoading: boolean;
@@ -14,5 +17,3 @@ declare module 'swr' {
   export function useSWRMutation(...args: any[]): any;
   export function useSWRInfinite(...args: any[]): any;
 }
-
-

@@ -5,6 +5,7 @@
 ## ✨ 特性
 
 ### 核心功能
+
 - 🚀 **现代化界面** - 基于 Ant Design 的专业 UI，支持暗色主题
 - 🤖 **多 AI 提供商** - 支持 Moonshot AI、OpenAI、讯飞星火、百度文心等 8 家 AI 服务
 - 💾 **智能翻译记忆** - 内置 83+ 短语库，自动学习新翻译
@@ -13,6 +14,7 @@
 - 📁 **多格式文件** - 支持 PO、JSON、XLIFF、YAML 格式（基础）
 
 ### 高级功能
+
 - 🎯 **Contextual Refine** - 上下文感知的精细翻译（Ctrl+Shift+R）
 - 🔧 **自定义提示词** - 可定制 AI 系统提示词，适应不同翻译场景
 - 📚 **术语库管理** - 术语库+风格提示词自动拼接
@@ -50,9 +52,10 @@ npm install
 
 > 首次开发前，请完成本节。Tauri 需要 Rust 和平台原生依赖。
 
-1) 安装 Rust（使用 rustup）
+1. 安装 Rust（使用 rustup）
 
 - Windows（PowerShell）
+
 ```powershell
 winget install --id Rustlang.Rustup -e
 rustup default stable
@@ -60,32 +63,39 @@ rustup update
 ```
 
 - macOS / Linux（终端）
+
 ```bash
 curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh
 rustup default stable
 rustup update
 ```
 
-2) 安装平台依赖（Tauri 2）
+2. 安装平台依赖（Tauri 2）
 
 - Windows：安装 Visual Studio Build Tools，并勾选「使用 C++ 的桌面开发」工作负载。
 - macOS：安装 Xcode 与命令行工具：
+
 ```bash
 xcode-select --install
 ```
+
 - Linux（以 Debian/Ubuntu 为例）：
+
 ```bash
 sudo apt update
 sudo apt install -y libwebkit2gtk-4.1-dev libgtk-3-dev libayatana-appindicator3-dev librsvg2-dev build-essential
 ```
+
 （其他发行版请参考 Tauri 官方文档，确保安装 WebKitGTK 与 GTK3 等开发包）
 
-3) 验证安装
+3. 验证安装
+
 ```bash
 node --version
 rustc --version
 cargo --version
 ```
+
 若 `rustc` / `cargo` 未找到，Windows 请确认 PATH 包含 `%USERPROFILE%\.cargo\bin`，并重启终端/IDE。
 
 ### 开发模式
@@ -101,12 +111,13 @@ npm run tauri:dev
 # 构建可执行文件
 npm run tauri:build
 ```
+
 ### 常见环境问题
 
-1) Windows 缺少 C++ 构建工具：请安装 Visual Studio Build Tools，选择 “使用 C++ 的桌面开发”。
-2) macOS 缺少 CLT：运行 `xcode-select --install`。
-3) Linux 缺少 GTK/WebKit：参考 Tauri 文档安装 `webkit2gtk`、`libgtk-3-dev` 等。
-4) Rust 版本过旧：`rustup update stable`。
+1. Windows 缺少 C++ 构建工具：请安装 Visual Studio Build Tools，选择 “使用 C++ 的桌面开发”。
+2. macOS 缺少 CLT：运行 `xcode-select --install`。
+3. Linux 缺少 GTK/WebKit：参考 Tauri 文档安装 `webkit2gtk`、`libgtk-3-dev` 等。
+4. Rust 版本过旧：`rustup update stable`。
 
 ```
 
@@ -163,7 +174,9 @@ npm run tauri:build
 
 ### 工具栏
 ```
+
 [🌐 PO 翻译工具] [打开] [保存] | [批量翻译] ... [设置]
+
 ```
 
 ### 条目列表（左侧）
@@ -200,31 +213,33 @@ npm run tauri:build
 ## 🏗️ 项目结构
 
 ```
+
 ai-l10n-studio/
-├── src/                    # 前端代码 (React + TypeScript)
-│   ├── components/        # UI 组件
-│   │   ├── MenuBar.tsx   # 工具栏
-│   │   ├── EntryList.tsx # 条目列表
-│   │   ├── EditorPane.tsx # 编辑器
-│   │   └── SettingsModal.tsx # 设置对话框
-│   ├── hooks/            # React Hooks
-│   ├── store/            # Zustand 状态管理
-│   ├── types/            # TypeScript 类型
-│   └── App.tsx           # 主应用
-├── src-tauri/             # 后端代码 (Rust)
-│   ├── src/
-│   │   ├── commands/     # Tauri 命令
-│   │   ├── services/     # 核心服务
-│   │   │   ├── po_parser.rs        # PO 文件解析
-│   │   │   ├── ai_translator.rs    # AI 翻译
-│   │   │   ├── translation_memory.rs # 翻译记忆库
-│   │   │   ├── batch_translator.rs  # 批量翻译
-│   │   │   └── config_manager.rs    # 配置管理
-│   │   └── main.rs       # 入口文件
-│   └── Cargo.toml        # Rust 依赖
-├── package.json           # Node.js 依赖
-└── vite.config.ts        # Vite 配置
-```
+├── src/ # 前端代码 (React + TypeScript)
+│ ├── components/ # UI 组件
+│ │ ├── MenuBar.tsx # 工具栏
+│ │ ├── EntryList.tsx # 条目列表
+│ │ ├── EditorPane.tsx # 编辑器
+│ │ └── SettingsModal.tsx # 设置对话框
+│ ├── hooks/ # React Hooks
+│ ├── store/ # Zustand 状态管理
+│ ├── types/ # TypeScript 类型
+│ └── App.tsx # 主应用
+├── src-tauri/ # 后端代码 (Rust)
+│ ├── src/
+│ │ ├── commands/ # Tauri 命令
+│ │ ├── services/ # 核心服务
+│ │ │ ├── po_parser.rs # PO 文件解析
+│ │ │ ├── ai_translator.rs # AI 翻译
+│ │ │ ├── translation_memory.rs # 翻译记忆库
+│ │ │ ├── batch_translator.rs # 批量翻译
+│ │ │ └── config_manager.rs # 配置管理
+│ │ └── main.rs # 入口文件
+│ └── Cargo.toml # Rust 依赖
+├── package.json # Node.js 依赖
+└── vite.config.ts # Vite 配置
+
+````
 
 ## 🧪 测试
 
@@ -241,7 +256,7 @@ npm run test:all          # 前端 + 后端
 
 # 传统方式
 cd src-tauri && cargo test
-```
+````
 
 **⚡ 已集成 [cargo-nextest](https://nexte.st/)** - 详见 [`NEXTEST_SETUP.md`](NEXTEST_SETUP.md)
 
@@ -250,6 +265,7 @@ cd src-tauri && cargo test
 ## 📚 技术栈
 
 ### 前端
+
 - **React 18** - UI 框架
 - **TypeScript** - 类型安全
 - **Ant Design 5** - UI 组件库
@@ -257,6 +273,7 @@ cd src-tauri && cargo test
 - **Vite** - 构建工具
 
 ### 后端
+
 - **Tauri 2.x** - 桌面应用框架（权限系统）
 - **Rust** - 系统编程语言
 - **Tokio** - 异步运行时
@@ -264,23 +281,27 @@ cd src-tauri && cargo test
 - **Serde** - 序列化/反序列化
 
 ### AI 集成
+
 - **Moonshot AI** - 中文优化的大语言模型
 - **OpenAI** - GPT 系列模型
 
 ## 📈 性能
 
 ### 文件处理
+
 - **小文件** (< 10MB): 即时加载，< 1s
 - **大文件** (10-50MB): 自动分块，< 3s
 - **超大文件** (> 50MB): 优化处理，智能节流
 
 ### 翻译效率
+
 - **批量翻译**: 1-3 条目/秒（取决于 AI 响应）
 - **TM 命中率**: 30-50%（简单短语）
 - **去重优化**: 自动去重，减少 AI 调用
 - **进度节流**: 100ms 更新间隔，流畅 UI
 
 ### 资源占用
+
 - **内存占用**: < 200MB（常规文件）
 - **CPU 使用**: 低（异步处理）
 - **测试覆盖**: 73 个测试，100% 通过
@@ -288,18 +309,21 @@ cd src-tauri && cargo test
 ## 🎯 核心功能
 
 ### 翻译记忆库 (TM)
+
 - 83+ 内置常用短语
 - 自动识别简单短语 (9 条件判断)
 - 自动保存新翻译
 - 命中/未命中统计
 
 ### 智能翻译
+
 - 批量去重优化
 - 上下文感知
 - 对话历史管理
 - Token 使用统计
 
 ### PO 文件支持
+
 - 完整的 PO 格式解析
 - 保留注释和元数据
 - 支持 msgctxt 上下文
@@ -308,29 +332,35 @@ cd src-tauri && cargo test
 ## 📄 文档
 
 ### 📚 完整文档库
+
 **所有文档已整理到 [`docs/`](./docs/) 文件夹** - [查看文档索引](./docs/README.md)
 
 ### 快速链接
 
 #### 🚀 新手入门
+
 - [快速开始指南](./docs/QUICK_START.md) - 5分钟上手
 - [开发指南](./docs/DEVELOPMENT_GUIDE.md) - 完整开发教程
 
 #### 🏗️ 架构与设计
+
 - [系统架构](./docs/ARCHITECTURE.md) - 技术架构说明
 - [数据契约](./docs/DATA_CONTRACT.md) - 数据结构定义
 
 #### 📋 项目规划
+
 - [特性扩展计划](./docs/FEATURE_EXPANSION_PLAN.md) - 8 个 Phase 详细规划
 - [测试覆盖状态](./docs/TEST_COVERAGE_STATUS.md) - 73 个测试，100% 通过
 
 #### 📊 阶段总结
+
 - [Phase 1-7 完成总结](./docs/) - 各阶段详细报告
 - [最新进展 (Phase 7)](./docs/PHASE7_COMPLETION_SUMMARY.md) - Contextual Refine 功能
 
 ## 🐛 问题排查
 
 ### 应用无法启动
+
 ```bash
 # 清理缓存
 npm run tauri clean
@@ -339,6 +369,7 @@ npm install
 ```
 
 ### Rust 编译错误
+
 ```bash
 # 更新 Rust
 rustup update stable
@@ -349,6 +380,7 @@ cargo clean
 ```
 
 ### 翻译失败
+
 1. 检查 API 密钥是否正确
 2. 检查网络连接
 3. 查看控制台错误信息
@@ -371,4 +403,3 @@ cargo clean
 ---
 
 **开始翻译你的 PO 文件吧！** 🚀
-

@@ -57,11 +57,11 @@ export function analyzeTranslationDifference(
 function calculateSimilarity(str1: string, str2: string): number {
   const longer = str1.length > str2.length ? str1 : str2;
   const shorter = str1.length > str2.length ? str2 : str1;
-  
+
   if (longer.length === 0) {
     return 1.0;
   }
-  
+
   const editDistance = getEditDistance(longer, shorter);
   return (longer.length - editDistance) / longer.length;
 }
@@ -129,16 +129,13 @@ function tokenize(text: string): string[] {
   return text
     .replace(/[，。！？；：""''（）【】《》]/g, ' ')
     .split(/\s+/)
-    .filter(word => word.length > 0);
+    .filter((word) => word.length > 0);
 }
 
 /**
  * 判断是否值得加入术语库
  */
-export function isWorthAdding(
-  difference: TermDifference,
-  originalLength: number
-): boolean {
+export function isWorthAdding(difference: TermDifference, originalLength: number): boolean {
   // 1. 原文太长（>100字符），不适合精确匹配
   if (originalLength > 100) {
     return false;
@@ -151,4 +148,3 @@ export function isWorthAdding(
 
   return false;
 }
-

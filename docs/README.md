@@ -26,6 +26,7 @@
 ### ✅ 完成内容
 
 **后端 (Phase 1-3)**:
+
 - ✅ **统一 API** - 移除旧版 API，单一入口
 - ✅ **ModelInfo 管理** - 统一模型信息（参数、定价、能力）
 - ✅ **精确成本计算** - 支持缓存成本（节省高达90%）
@@ -34,6 +35,7 @@
 - ✅ **Nextest 集成** - 测试加速 13 倍（8.5s → 0.6s）
 
 **前端 (Phase 4)**:
+
 - ✅ **TypeScript 类型** - 自动生成（ModelInfo, CostBreakdown）
 - ✅ **API 服务层** - aiModelApi（5个接口）
 - ✅ **UI 组件** - ModelInfoCard + CostEstimator
@@ -49,7 +51,6 @@
 ---
 
 维护约定：
+
 - 简版文档保持 1 页内即可读完；必要时链接到长文档。
 - 长文档集中存放在 `docs/gui/`（或后续归档到 `docs/archive/gui/`）。
-
-

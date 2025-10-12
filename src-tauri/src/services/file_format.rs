@@ -2,8 +2,8 @@
 
 use anyhow::{Result, anyhow};
 use serde::{Deserialize, Serialize};
-use std::path::Path;
 use std::fs;
+use std::path::Path;
 
 /// 文件格式枚举
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
@@ -18,11 +18,8 @@ impl FileFormat {
     /// 根据扩展名推测格式
     pub fn from_extension(filename: &str) -> Self {
         let lowercase = filename.to_lowercase();
-        let ext = lowercase
-            .rsplit('.')
-            .next()
-            .unwrap_or("");
-        
+        let ext = lowercase.rsplit('.').next().unwrap_or("");
+
         match ext {
             "po" => FileFormat::PO,
             "json" => FileFormat::JSON,
@@ -31,7 +28,7 @@ impl FileFormat {
             _ => FileFormat::PO, // 默认
         }
     }
-    
+
     /// 格式显示名称
     pub fn display_name(&self) -> &str {
         match self {
@@ -41,7 +38,7 @@ impl FileFormat {
             FileFormat::YAML => "YAML",
         }
     }
-    
+
     /// 支持的扩展名
     pub fn extensions(&self) -> Vec<&str> {
         match self {
@@ -69,23 +66,22 @@ pub struct FileMetadata {
 /// 检测文件格式（基于扩展名和内容）
 pub fn detect_file_format(file_path: &str) -> Result<FileFormat> {
     let path = Path::new(file_path);
-    
+
     if !path.exists() {
         return Err(anyhow!("文件不存在: {}", file_path));
     }
-    
+
     // 第一步：基于扩展名
     let filename = path
         .file_name()
         .and_then(|n| n.to_str())
         .ok_or_else(|| anyhow!("无效的文件名"))?;
-    
+
     let format_from_ext = FileFormat::from_extension(filename);
-    
+
     // 第二步：验证内容（简单验证）
-    let content = fs::read_to_string(path)
-        .map_err(|e| anyhow!("读取文件失败: {}", e))?;
-    
+    let content = fs::read_to_string(path).map_err(|e| anyhow!("读取文件失败: {}", e))?;
+
     // 内容验证逻辑
     let verified_format = match format_from_ext {
         FileFormat::PO => {
@@ -119,7 +115,7 @@ pub fn detect_file_format(file_path: &str) -> Result<FileFormat> {
             }
         }
     };
-    
+
     // 注意：日志已移至 command 层，避免重复
     Ok(verified_format)
 }
@@ -128,7 +124,7 @@ pub fn detect_file_format(file_path: &str) -> Result<FileFormat> {
 pub fn get_file_metadata(file_path: &str) -> Result<FileMetadata> {
     let format = detect_file_format(file_path)?;
     // 注意：不再记录日志，避免与 detect_file_format 重复
-    
+
     // 根据格式提取元数据
     let metadata = match format {
         FileFormat::PO => extract_po_metadata(file_path)?,
@@ -136,22 +132,22 @@ pub fn get_file_metadata(file_path: &str) -> Result<FileMetadata> {
         FileFormat::XLIFF => extract_xliff_metadata(file_path)?,
         FileFormat::YAML => extract_yaml_metadata(file_path)?,
     };
-    
+
     Ok(metadata)
 }
 
 /// 提取 PO 文件元数据
 fn extract_po_metadata(file_path: &str) -> Result<FileMetadata> {
     use crate::services::POParser;
-    
+
     let parser = POParser::new()?;
     let entries = parser.parse_file(file_path)?;
-    
+
     // 从 PO header 提取语言信息（简化实现）
     let content = fs::read_to_string(file_path)?;
     let source_lang = extract_po_language(&content, "Language:");
     let target_lang = extract_po_language(&content, "Language:");
-    
+
     Ok(FileMetadata {
         format: FileFormat::PO,
         source_language: source_lang,
@@ -164,9 +160,9 @@ fn extract_po_metadata(file_path: &str) -> Result<FileMetadata> {
 /// 提取 JSON 文件元数据（Phase 4 简化实现）
 fn extract_json_metadata(file_path: &str) -> Result<FileMetadata> {
     let content = fs::read_to_string(file_path)?;
-    let json: serde_json::Value = serde_json::from_str(&content)
-        .map_err(|e| anyhow!("JSON 解析失败: {}", e))?;
-    
+    let json: serde_json::Value =
+        serde_json::from_str(&content).map_err(|e| anyhow!("JSON 解析失败: {}", e))?;
+
     // 计算条目数（简化：假设是 key-value 对象）
     let total_entries = if json.is_object() {
         json.as_object().map(|obj| obj.len()).unwrap_or(0)
@@ -175,7 +171,7 @@ fn extract_json_metadata(file_path: &str) -> Result<FileMetadata> {
     } else {
         0
     };
-    
+
     Ok(FileMetadata {
         format: FileFormat::JSON,
         source_language: None, // JSON 格式暂不提取
@@ -252,4 +248,3 @@ mod tests {
         assert_eq!(FileFormat::YAML.extensions(), vec![".yaml", ".yml"]);
     }
 }
-

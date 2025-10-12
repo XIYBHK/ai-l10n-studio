@@ -31,12 +31,12 @@ export interface TokenStats {
 }
 
 export interface TranslationStats {
-  total: number;           // 总条目数
-  tm_hits: number;         // TM命中数
-  deduplicated: number;    // 去重后数量
-  ai_translated: number;   // AI翻译数
+  total: number; // 总条目数
+  tm_hits: number; // TM命中数
+  deduplicated: number; // 去重后数量
+  ai_translated: number; // AI翻译数
   token_stats: TokenStats; // Token统计
-  tm_learned: number;      // 新学习短语数
+  tm_learned: number; // 新学习短语数
 }
 
 export interface TranslationMemory {

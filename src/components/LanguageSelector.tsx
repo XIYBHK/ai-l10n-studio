@@ -11,7 +11,7 @@ import type { CSSProperties } from 'react';
 const log = createModuleLogger('LanguageSelector');
 
 export interface LanguageSelectorProps {
-  value?: string;  // 语言代码
+  value?: string; // 语言代码
   onChange?: (langCode: string, langInfo: LanguageInfo | undefined) => void;
   placeholder?: string;
   style?: CSSProperties;
@@ -28,7 +28,7 @@ export function LanguageSelector({
   const { languages, isLoading } = useSupportedLanguages();
 
   const handleChange = (langCode: string) => {
-    const langInfo = languages.find(lang => lang.code === langCode);
+    const langInfo = languages.find((lang) => lang.code === langCode);
     onChange?.(langCode, langInfo);
     log.info('选择语言', { code: langCode, name: langInfo?.display_name });
   };
@@ -47,7 +47,7 @@ export function LanguageSelector({
         (option?.children?.toString() ?? '').toLowerCase().includes(input.toLowerCase())
       }
     >
-      {languages.map(lang => (
+      {languages.map((lang) => (
         <Select.Option key={lang.code} value={lang.code}>
           {lang.display_name} ({lang.english_name})
         </Select.Option>
@@ -55,4 +55,3 @@ export function LanguageSelector({
     </Select>
   );
 }
-

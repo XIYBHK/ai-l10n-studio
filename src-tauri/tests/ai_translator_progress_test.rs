@@ -5,7 +5,7 @@ use std::sync::{Arc, Mutex};
 // 注意：我们需要在 po-translator-gui crate 的 Cargo.toml 中将这些模块设为 pub，以便在集成测试中访问
 // 或者，我们直接在测试中重新定义一个简化的 AITranslator 模拟版本。
 // 为了简单起见，我们假设可以访问这些模块。
-use po_translator_gui::services::{AITranslator, AIConfig, ProviderType, TranslationMemory};
+use po_translator_gui::services::{AIConfig, AITranslator, ProviderType, TranslationMemory};
 
 // 模拟一个 AIConfig
 fn create_mock_config() -> AIConfig {
@@ -20,7 +20,7 @@ fn create_mock_config() -> AIConfig {
 
 #[tokio::test]
 async fn test_progress_callback_is_monotonic() -> Result<()> {
-    // --- 1. 设置 --- 
+    // --- 1. 设置 ---
 
     // 创建一个 AITranslator 实例
     // 我们需要一个可修改的 AITranslator，但 new_with_config 返回的是 Result
@@ -36,11 +36,11 @@ async fn test_progress_callback_is_monotonic() -> Result<()> {
 
     // 准备一个混合了 TM 命中和非命中项的列表
     let texts_to_translate = vec![
-        "Hello".to_string(),         // TM 命中 (index 0)
-        "Apple".to_string(),         // AI 翻译 (index 1)
-        "World".to_string(),         // TM 命中 (index 2)
-        "Banana".to_string(),        // AI 翻译 (index 3)
-        "Orange".to_string(),        // AI 翻译 (index 4)
+        "Hello".to_string(),  // TM 命中 (index 0)
+        "Apple".to_string(),  // AI 翻译 (index 1)
+        "World".to_string(),  // TM 命中 (index 2)
+        "Banana".to_string(), // AI 翻译 (index 3)
+        "Orange".to_string(), // AI 翻译 (index 4)
     ];
 
     // 用于记录回调接收到的索引顺序
@@ -53,14 +53,16 @@ async fn test_progress_callback_is_monotonic() -> Result<()> {
         indices.push(index);
     });
 
-    // --- 2. 执行 --- 
+    // --- 2. 执行 ---
 
     // 调用我们修改过的函数
     // 注意：translate_batch_internal 是私有的，我们需要通过公有方法调用它
     // 我们将使用 translate_batch，它内部会调用 internal 方法
-    let _ = translator.translate_batch(texts_to_translate, Some(progress_callback)).await?;
+    let _ = translator
+        .translate_batch(texts_to_translate, Some(progress_callback))
+        .await?;
 
-    // --- 3. 断言 --- 
+    // --- 3. 断言 ---
 
     let final_indices = received_indices.lock().unwrap();
     println!("收到的索引顺序: {:?}", *final_indices);

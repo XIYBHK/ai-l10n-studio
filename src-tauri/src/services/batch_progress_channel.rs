@@ -1,10 +1,9 @@
 /**
  * 批量翻译进度通道 - Tauri 2.x Channels API
- * 
+ *
  * 使用 IPC Channel 实现高效的流式进度更新
  * 相比传统 Event，性能提升 ~40%，内存占用降低 ~30%
  */
-
 use serde::{Deserialize, Serialize};
 use tauri::ipc::Channel;
 
@@ -48,9 +47,14 @@ impl BatchProgressEvent {
             index: None,
         }
     }
-    
+
     /// 创建带索引的进度事件
-    pub fn with_index(processed: usize, total: usize, current_item: Option<String>, index: usize) -> Self {
+    pub fn with_index(
+        processed: usize,
+        total: usize,
+        current_item: Option<String>,
+        index: usize,
+    ) -> Self {
         let percentage = if total > 0 {
             (processed as f32 / total as f32) * 100.0
         } else {
@@ -120,17 +124,14 @@ impl BatchProgressManager {
     /// 更新进度并发送到通道
     pub fn update(&mut self, channel: &Channel<BatchProgressEvent>, current_item: Option<String>) {
         self.processed += 1;
-        
+
         let elapsed = self.start_time.elapsed().as_secs_f32();
         let avg_time_per_item = elapsed / self.processed as f32;
         let remaining_items = self.total - self.processed;
         let estimated_remaining = avg_time_per_item * remaining_items as f32;
 
-        let event = BatchProgressEvent::new(
-            self.processed,
-            self.total,
-            current_item,
-        ).with_estimated_time(estimated_remaining);
+        let event = BatchProgressEvent::new(self.processed, self.total, current_item)
+            .with_estimated_time(estimated_remaining);
 
         // 通过 Channel 发送（比 Event 更高效）
         let _ = channel.send(event);
@@ -166,4 +167,3 @@ mod tests {
         assert!(!manager.is_complete());
     }
 }
-

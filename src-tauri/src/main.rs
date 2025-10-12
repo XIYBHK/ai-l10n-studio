@@ -18,7 +18,7 @@ fn main() {
     }
 
     log::info!("🚀 PO Translator GUI starting...");
-    
+
     // 初始化提示词日志
     services::init_prompt_logger();
 
@@ -26,13 +26,13 @@ fn main() {
         .plugin(tauri_plugin_shell::init())
         .plugin(tauri_plugin_dialog::init())
         .plugin(tauri_plugin_fs::init())
-        .plugin(tauri_plugin_store::Builder::new().build())  // Tauri 2.x: Store Plugin
-        .plugin(tauri_plugin_notification::init())  // Tauri 2.x: Notification Plugin
+        .plugin(tauri_plugin_store::Builder::new().build()) // Tauri 2.x: Store Plugin
+        .plugin(tauri_plugin_notification::init()) // Tauri 2.x: Notification Plugin
         // .plugin(tauri_plugin_updater::Builder::new().build())  // Tauri 2.x: Updater Plugin (开发阶段暂时禁用，生产环境时启用)
         .invoke_handler(tauri::generate_handler![
             parse_po_file,
             translate_entry,
-            translate_batch_with_channel,  // Tauri 2.x: Channel API (统一翻译入口)
+            translate_batch_with_channel, // Tauri 2.x: Channel API (统一翻译入口)
             get_translation_memory,
             get_builtin_phrases,
             save_translation_memory,
@@ -66,28 +66,28 @@ fn main() {
             // 文件格式检测 (Phase 4)
             detect_file_format,
             get_file_metadata,
-        // 语言检测 (Phase 5)
-        detect_text_language,
-        get_default_target_lang,
-        get_supported_langs,
-        // 系统语言检测 (Phase 6)
-        get_system_language,
-        // Phase 9: 后端国际化增强
-        utils::i18n::get_system_locale,
-        utils::i18n::get_available_languages,
-        // Contextual Refine (Phase 7)
-        contextual_refine,
-        // 提示词日志
-        get_prompt_logs,
-        clear_prompt_logs,
-        get_config_version,
-        // 🆕 AI 模型查询命令
-        get_provider_models,
-        get_model_info,
-        estimate_translation_cost,
-        calculate_precise_cost,
-        get_all_providers
-    ])
+            // 语言检测 (Phase 5)
+            detect_text_language,
+            get_default_target_lang,
+            get_supported_langs,
+            // 系统语言检测 (Phase 6)
+            get_system_language,
+            // Phase 9: 后端国际化增强
+            utils::i18n::get_system_locale,
+            utils::i18n::get_available_languages,
+            // Contextual Refine (Phase 7)
+            contextual_refine,
+            // 提示词日志
+            get_prompt_logs,
+            clear_prompt_logs,
+            get_config_version,
+            // 🆕 AI 模型查询命令
+            get_provider_models,
+            get_model_info,
+            estimate_translation_cost,
+            calculate_precise_cost,
+            get_all_providers
+        ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
 }

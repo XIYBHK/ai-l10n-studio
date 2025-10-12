@@ -10,7 +10,7 @@ interface UseTermLibraryOptions {
 
 export function useTermLibrary(options?: UseTermLibraryOptions) {
   const { enabled = true } = options || {};
-  
+
   const { data, error, isLoading, mutate } = useSWR<TermLibrary>(
     enabled ? KEY : null, // enabled=false 时不请求
     {
@@ -28,5 +28,3 @@ export function useTermLibrary(options?: UseTermLibraryOptions) {
     mutate,
   } as const;
 }
-
-

@@ -11,18 +11,18 @@ pub type SharedWriter = Arc<Mutex<FileLogWriter>>;
 /// 日志模块类型（对应项目主要模块）
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum Type {
-    App,           // 应用主程序
-    Translator,    // AI翻译引擎
-    Parser,        // PO文件解析器
-    Config,        // 配置管理
-    TM,            // 翻译记忆库 (Translation Memory)
-    TermLibrary,   // 术语库
-    FileFormat,    // 文件格式检测
-    Batch,         // 批量翻译
-    Frontend,      // 前端日志
-    FileOps,       // 文件操作
-    Init,          // 初始化
-    I18n,          // 国际化
+    App,         // 应用主程序
+    Translator,  // AI翻译引擎
+    Parser,      // PO文件解析器
+    Config,      // 配置管理
+    TM,          // 翻译记忆库 (Translation Memory)
+    TermLibrary, // 术语库
+    FileFormat,  // 文件格式检测
+    Batch,       // 批量翻译
+    Frontend,    // 前端日志
+    FileOps,     // 文件操作
+    Init,        // 初始化
+    I18n,        // 国际化
 }
 
 impl fmt::Display for Type {
@@ -200,4 +200,3 @@ mod tests {
         }
     }
 }
-

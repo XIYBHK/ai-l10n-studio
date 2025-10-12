@@ -66,17 +66,22 @@ export class ErrorBoundary extends Component<Props, State> {
             message="组件渲染错误"
             description={
               <div>
-                <p><strong>错误信息：</strong>{this.state.error?.message}</p>
+                <p>
+                  <strong>错误信息：</strong>
+                  {this.state.error?.message}
+                </p>
                 {this.state.error?.stack && (
                   <details style={{ marginTop: '10px' }}>
                     <summary>查看详细堆栈</summary>
-                    <pre style={{ 
-                      fontSize: '12px', 
-                      background: '#f5f5f5', 
-                      padding: '10px',
-                      overflow: 'auto',
-                      maxHeight: '200px'
-                    }}>
+                    <pre
+                      style={{
+                        fontSize: '12px',
+                        background: '#f5f5f5',
+                        padding: '10px',
+                        overflow: 'auto',
+                        maxHeight: '200px',
+                      }}
+                    >
                       {this.state.error.stack}
                     </pre>
                   </details>
@@ -98,4 +103,3 @@ export class ErrorBoundary extends Component<Props, State> {
     return this.props.children;
   }
 }
-

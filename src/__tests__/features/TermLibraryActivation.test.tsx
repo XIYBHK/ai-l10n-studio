@@ -49,13 +49,7 @@ describe('Term Library Activation Feature', () => {
 
   it('should emit "term:updated" event when user manually saves a translation', async () => {
     // 1. Render the component
-    render(
-      <EditorPane
-        entry={mockEntry}
-        onEntryUpdate={mockOnEntryUpdate}
-        apiKey="test-key"
-      />
-    );
+    render(<EditorPane entry={mockEntry} onEntryUpdate={mockOnEntryUpdate} apiKey="test-key" />);
 
     // 2. Simulate user typing a new translation
     const translationInput = screen.getByPlaceholderText('请输入翻译内容...');

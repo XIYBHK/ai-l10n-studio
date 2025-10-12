@@ -49,7 +49,7 @@ impl Language {
             Language::Arabic => "ar",
         }
     }
-    
+
     /// 获取语言显示名称
     pub fn display_name(&self) -> &str {
         match self {
@@ -65,7 +65,7 @@ impl Language {
             Language::Arabic => "العربية",
         }
     }
-    
+
     /// 获取语言英文名称
     pub fn english_name(&self) -> &str {
         match self {
@@ -81,7 +81,7 @@ impl Language {
             Language::Arabic => "Arabic",
         }
     }
-    
+
     /// 从语言代码创建
     pub fn from_code(code: &str) -> Option<Self> {
         match code.to_lowercase().as_str() {
@@ -125,7 +125,7 @@ pub fn detect_language(text: &str) -> Result<Language> {
     if text.trim().is_empty() {
         return Err(anyhow!("文本为空，无法检测语言"));
     }
-    
+
     // 计算各语言字符数量
     let mut chinese_count = 0;
     let mut japanese_count = 0;
@@ -133,7 +133,7 @@ pub fn detect_language(text: &str) -> Result<Language> {
     let mut english_count = 0;
     let mut arabic_count = 0;
     let mut cyrillic_count = 0;
-    
+
     for c in text.chars() {
         if is_chinese_char(c) {
             chinese_count += 1;
@@ -149,7 +149,7 @@ pub fn detect_language(text: &str) -> Result<Language> {
             cyrillic_count += 1;
         }
     }
-    
+
     // 找出最多的语言
     let max_count = chinese_count
         .max(japanese_count)
@@ -157,12 +157,12 @@ pub fn detect_language(text: &str) -> Result<Language> {
         .max(english_count)
         .max(arabic_count)
         .max(cyrillic_count);
-    
+
     if max_count == 0 {
         // 默认为英文
         return Ok(Language::English);
     }
-    
+
     if chinese_count == max_count {
         // 简化：默认简体中文（实际区分简繁需要更复杂的逻辑）
         Ok(Language::ChineseSimplified)
@@ -290,8 +290,14 @@ mod tests {
 
     #[test]
     fn test_language_from_code() {
-        assert_eq!(Language::from_code("zh-Hans"), Some(Language::ChineseSimplified));
-        assert_eq!(Language::from_code("zh-CN"), Some(Language::ChineseSimplified));
+        assert_eq!(
+            Language::from_code("zh-Hans"),
+            Some(Language::ChineseSimplified)
+        );
+        assert_eq!(
+            Language::from_code("zh-CN"),
+            Some(Language::ChineseSimplified)
+        );
         assert_eq!(Language::from_code("en"), Some(Language::English));
         assert_eq!(Language::from_code("EN-US"), Some(Language::English));
         assert_eq!(Language::from_code("ja"), Some(Language::Japanese));
@@ -313,4 +319,3 @@ mod tests {
         assert_eq!(langs[0].code, "zh-Hans");
     }
 }
-

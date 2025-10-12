@@ -4,13 +4,13 @@ import { invoke } from '@tauri-apps/api/core';
 
 /**
  * Phase 9: 增强版前端国际化配置
- * 
+ *
  * 特性：
  * 1. 系统语言自动检测（调用后端 Rust API）
  * 2. 动态加载语言文件（按需加载，减少初始加载）
  * 3. 语言优先级：用户设置 > 系统语言 > 默认语言
  * 4. 支持多语言扩展
- * 
+ *
  * 参考：clash-verge-rev/services/i18n.ts
  */
 
@@ -28,12 +28,12 @@ export const supportedLanguages = [
 
 // 语言代码映射（系统语言 -> 应用语言）
 const languageCodeMap: Record<string, string> = {
-  'zh': 'zh-CN',
+  zh: 'zh-CN',
   'zh-cn': 'zh-CN',
   'zh-tw': 'zh-CN', // 暂时都用简体中文
-  'en': 'en-US',
-  'ja': 'ja-JP',
-  'ko': 'ko-KR',
+  en: 'en-US',
+  ja: 'ja-JP',
+  ko: 'ko-KR',
 };
 
 /**
@@ -55,7 +55,10 @@ export async function loadLanguage(language: string): Promise<Record<string, any
     const module = await import(`./locales/${language}.json`);
     return module.default;
   } catch (error) {
-    console.warn(`[i18n] Failed to load language ${language}, fallback to ${DEFAULT_LANGUAGE}:`, error);
+    console.warn(
+      `[i18n] Failed to load language ${language}, fallback to ${DEFAULT_LANGUAGE}:`,
+      error
+    );
     // 降级到默认语言
     try {
       const fallback = await import(`./locales/${DEFAULT_LANGUAGE}.json`);
@@ -78,7 +81,7 @@ async function getSystemLanguage(): Promise<string> {
     return normalizeLanguageCode(systemLang);
   } catch (error) {
     console.warn('[i18n] Failed to get system language:', error);
-    
+
     // 降级：尝试使用浏览器语言
     const browserLang = navigator.language || 'zh-CN';
     console.log('[i18n] Using browser language:', browserLang);
@@ -93,17 +96,17 @@ async function getSystemLanguage(): Promise<string> {
 export async function getInitialLanguage(): Promise<string> {
   // 优先级1：用户手动设置（从 TauriStore 读取，由 useAppStore 管理）
   // 这里只检测系统语言，用户设置在 useAppStore 中处理
-  
+
   // 优先级2：系统语言
   try {
     const systemLanguage = await getSystemLanguage();
-    
+
     // 检查是否支持
     if (supportedLanguages.includes(systemLanguage)) {
       console.log('[i18n] Using system language:', systemLanguage);
       return systemLanguage;
     }
-    
+
     console.warn('[i18n] System language not supported:', systemLanguage);
   } catch (error) {
     console.warn('[i18n] System language detection failed:', error);
@@ -136,44 +139,40 @@ export async function changeLanguage(language: string): Promise<void> {
  */
 export async function initializeI18n(): Promise<typeof i18n> {
   const language = await getInitialLanguage();
-  
+
   // 加载初始语言资源
   const resources = await loadLanguage(language);
-  
-  await i18n
-    .use(initReactI18next)
-    .init({
-      resources: {
-        [language]: { translation: resources },
-      },
-      lng: language,
-      fallbackLng: DEFAULT_LANGUAGE,
-      interpolation: {
-        escapeValue: false,
-      },
-      // 性能优化
-      react: {
-        useSuspense: false, // 避免 Suspense 边界问题
-      },
-    });
+
+  await i18n.use(initReactI18next).init({
+    resources: {
+      [language]: { translation: resources },
+    },
+    lng: language,
+    fallbackLng: DEFAULT_LANGUAGE,
+    interpolation: {
+      escapeValue: false,
+    },
+    // 性能优化
+    react: {
+      useSuspense: false, // 避免 Suspense 边界问题
+    },
+  });
 
   console.log('[i18n] Initialized with language:', i18n.language);
   return i18n;
 }
 
 // 同步初始化（用于兼容性，实际语言会在异步初始化时更新）
-i18n
-  .use(initReactI18next)
-  .init({
-    resources: {},
-    lng: DEFAULT_LANGUAGE,
-    fallbackLng: DEFAULT_LANGUAGE,
-    interpolation: {
-      escapeValue: false,
-    },
-    react: {
-      useSuspense: false,
-    },
-  });
+i18n.use(initReactI18next).init({
+  resources: {},
+  lng: DEFAULT_LANGUAGE,
+  fallbackLng: DEFAULT_LANGUAGE,
+  interpolation: {
+    escapeValue: false,
+  },
+  react: {
+    useSuspense: false,
+  },
+});
 
 export default i18n;

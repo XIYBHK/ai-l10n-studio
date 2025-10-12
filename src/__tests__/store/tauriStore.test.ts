@@ -19,7 +19,9 @@ vi.mock('@tauri-apps/plugin-store', () => {
     has: vi.fn(async (key: string) => mockData.has(key)),
     delete: vi.fn(async (key: string) => mockData.delete(key)),
     clear: vi.fn(async () => mockData.clear()),
-    save: vi.fn(async () => { /* No-op for in-memory */ }),
+    save: vi.fn(async () => {
+      /* No-op for in-memory */
+    }),
     entries: vi.fn(async () => Array.from(mockData.entries())),
     keys: vi.fn(async () => Array.from(mockData.keys())),
     values: vi.fn(async () => Array.from(mockData.values())),
@@ -27,7 +29,7 @@ vi.mock('@tauri-apps/plugin-store', () => {
     onChange: vi.fn(() => Promise.resolve(() => {})),
     get length() {
       return mockData.size;
-    }
+    },
   };
 
   // This object simulates the static part of the Store class
@@ -220,4 +222,3 @@ describe('TauriStore', () => {
     });
   });
 });
-

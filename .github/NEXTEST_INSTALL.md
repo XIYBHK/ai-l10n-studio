@@ -33,6 +33,7 @@ cd src-tauri && cargo nextest run --lib
 ```
 
 **预期结果**：
+
 - ✅ 49 个测试全部通过
 - ⚡ 执行时间约 5 秒（比 cargo test 快 40%）
 - 🎨 彩色输出 + 进度条
@@ -40,4 +41,3 @@ cd src-tauri && cargo nextest run --lib
 ---
 
 安装完成后可以删除此文件。详细使用方法见 `NEXTEST_SETUP.md`。
-

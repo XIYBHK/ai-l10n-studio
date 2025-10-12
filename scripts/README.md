@@ -15,16 +15,19 @@ npm run i18n:check
 ```
 
 **功能：**
+
 - 扫描 `src/` 和 `src-tauri/` 目录的所有源代码文件
 - 检测 `src/i18n/locales/*.json` 中未被引用的键
 - 自动备份原文件为 `.old` 后缀
 - 生成清理后的精简 i18n 文件
 
 **白名单：**
+
 - `theme.light`, `theme.dark`, `theme.system`
 - `common.ok`, `common.cancel`, `common.confirm`
 
 **示例输出：**
+
 ```
 🔍 Checking unused i18n keys...
 
@@ -64,12 +67,14 @@ node scripts/portable.js x86_64-pc-windows-msvc
 ```
 
 **功能：**
+
 - 自动创建 `.config/PORTABLE` 标志文件（启用便携模式）
 - 打包主程序 `po-translator-gui.exe`
 - 打包资源文件 `resources/`
 - 生成 `PO-Translator_{version}_{arch}_portable.zip`
 
 **输出示例：**
+
 ```
 PO-Translator_1.0.0_x64_portable.zip
 ├── po-translator-gui.exe
@@ -82,6 +87,7 @@ PO-Translator_1.0.0_x64_portable.zip
 ```
 
 **便携模式特性：**
+
 - 所有配置文件存储在程序目录下的 `.config/`
 - 翻译记忆库和日志存储在程序目录
 - 可直接复制到 U 盘或其他目录运行
@@ -110,4 +116,3 @@ PO-Translator_1.0.0_x64_portable.zip
 ## 🔗 参考
 
 这些脚本改编自 [clash-verge-rev](https://github.com/clash-verge-rev/clash-verge-rev) 项目，已针对本项目进行适配和优化。
-

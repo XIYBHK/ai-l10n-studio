@@ -1,6 +1,13 @@
 import React, { useState, useEffect } from 'react';
 import { Modal, Table, Input, Button, message, Space, Popconfirm } from 'antd';
-import { DeleteOutlined, PlusOutlined, SearchOutlined, ClearOutlined, ExportOutlined, ImportOutlined } from '@ant-design/icons';
+import {
+  DeleteOutlined,
+  PlusOutlined,
+  SearchOutlined,
+  ClearOutlined,
+  ExportOutlined,
+  ImportOutlined,
+} from '@ant-design/icons';
 import { save, open } from '@tauri-apps/plugin-dialog';
 import { writeTextFile, readTextFile } from '@tauri-apps/plugin-fs';
 import { translationMemoryCommands } from '../services/commands'; // ✅ 迁移到统一命令层
@@ -32,8 +39,9 @@ export const MemoryManager: React.FC<MemoryManagerProps> = ({ visible, onClose }
   useEffect(() => {
     if (visible) {
       if (tm && (tm as any).memory) {
-        const entries: MemoryEntry[] = Object.entries((tm as any).memory)
-          .map(([source, target], index) => ({ key: `${index}`, source, target: target as string }));
+        const entries: MemoryEntry[] = Object.entries((tm as any).memory).map(
+          ([source, target], index) => ({ key: `${index}`, source, target: target as string })
+        );
         setMemories(entries);
         log.info('记忆库加载成功', { count: entries.length });
       } else if (!loadingTM) {
@@ -51,7 +59,10 @@ export const MemoryManager: React.FC<MemoryManagerProps> = ({ visible, onClose }
       const modalContentHeight = windowHeight - 200;
       const operationAreaHeight = 180; // 搜索框、添加框等的高度
       const paginationHeight = 60; // 分页组件高度
-      const newTableHeight = Math.max(200, modalContentHeight - operationAreaHeight - paginationHeight);
+      const newTableHeight = Math.max(
+        200,
+        modalContentHeight - operationAreaHeight - paginationHeight
+      );
       setTableHeight(newTableHeight);
     };
 
@@ -68,7 +79,7 @@ export const MemoryManager: React.FC<MemoryManagerProps> = ({ visible, onClose }
     setLoading(true);
     try {
       const memoryMap: Record<string, string> = {};
-      memories.forEach(entry => {
+      memories.forEach((entry) => {
         memoryMap[entry.source] = entry.target;
       });
 
@@ -94,7 +105,7 @@ export const MemoryManager: React.FC<MemoryManagerProps> = ({ visible, onClose }
   };
 
   const handleDelete = (key: string) => {
-    setMemories(memories.filter(entry => entry.key !== key));
+    setMemories(memories.filter((entry) => entry.key !== key));
   };
 
   const handleClearAll = async () => {
@@ -102,7 +113,7 @@ export const MemoryManager: React.FC<MemoryManagerProps> = ({ visible, onClose }
       setLoading(true);
       // 清空前端状态
       setMemories([]);
-      
+
       // 保存空的记忆库到后端
       await translationMemoryCommands.save({
         memory: {}, // 空的memory字段
@@ -113,7 +124,7 @@ export const MemoryManager: React.FC<MemoryManagerProps> = ({ visible, onClose }
         },
         last_updated: new Date().toISOString(),
       });
-      
+
       message.success('已清空所有记忆');
       log.info('记忆库已清空');
     } catch (error) {
@@ -127,26 +138,27 @@ export const MemoryManager: React.FC<MemoryManagerProps> = ({ visible, onClose }
   const handleLoadBuiltin = async () => {
     try {
       setLoading(true);
-      
+
       // 调用后端接口获取内置词库
-      const response = await translationMemoryCommands.getBuiltinPhrases() as any;
-      
+      const response = (await translationMemoryCommands.getBuiltinPhrases()) as any;
+
       if (response && response.memory) {
         // 合并当前记忆和内置短语
         const currentMemory: Record<string, string> = {};
-        memories.forEach(entry => {
+        memories.forEach((entry) => {
           currentMemory[entry.source] = entry.target;
         });
-        
+
         const mergedMemory = { ...response.memory, ...currentMemory };
-        
-        const entries: MemoryEntry[] = Object.entries(mergedMemory)
-          .map(([source, target], index) => ({
+
+        const entries: MemoryEntry[] = Object.entries(mergedMemory).map(
+          ([source, target], index) => ({
             key: `${index}`,
             source,
             target: target as string,
-          }));
-        
+          })
+        );
+
         setMemories(entries);
         message.success(`已加载 ${Object.keys(response.memory).length} 条内置短语`);
         log.info('内置词库加载成功', { count: Object.keys(response.memory).length });
@@ -161,16 +173,18 @@ export const MemoryManager: React.FC<MemoryManagerProps> = ({ visible, onClose }
   const handleExport = async () => {
     try {
       const filePath = await save({
-        filters: [{
-          name: 'JSON',
-          extensions: ['json']
-        }],
-        defaultPath: 'translation_memory.json'
+        filters: [
+          {
+            name: 'JSON',
+            extensions: ['json'],
+          },
+        ],
+        defaultPath: 'translation_memory.json',
       });
 
       if (filePath) {
         const memoryMap: Record<string, string> = {};
-        memories.forEach(entry => {
+        memories.forEach((entry) => {
           memoryMap[entry.source] = entry.target;
         });
 
@@ -195,23 +209,27 @@ export const MemoryManager: React.FC<MemoryManagerProps> = ({ visible, onClose }
   const handleImport = async () => {
     try {
       const filePath = await open({
-        filters: [{
-          name: 'JSON',
-          extensions: ['json']
-        }],
-        multiple: false
+        filters: [
+          {
+            name: 'JSON',
+            extensions: ['json'],
+          },
+        ],
+        multiple: false,
       });
 
       if (filePath && typeof filePath === 'string') {
         const content = await readTextFile(filePath);
         const data = JSON.parse(content);
-        
+
         if (data.memory) {
-          const entries: MemoryEntry[] = Object.entries(data.memory).map(([source, target], index) => ({
-            key: `${index}`,
-            source,
-            target: target as string,
-          }));
+          const entries: MemoryEntry[] = Object.entries(data.memory).map(
+            ([source, target], index) => ({
+              key: `${index}`,
+              source,
+              target: target as string,
+            })
+          );
           setMemories(entries);
           message.success(`已导入 ${entries.length} 条记忆`);
           log.info('记忆库导入成功', { path: filePath, count: entries.length });
@@ -242,14 +260,12 @@ export const MemoryManager: React.FC<MemoryManagerProps> = ({ visible, onClose }
 
   const handleEdit = (key: string, field: 'source' | 'target', value: string) => {
     setMemories(
-      memories.map(entry =>
-        entry.key === key ? { ...entry, [field]: value } : entry
-      )
+      memories.map((entry) => (entry.key === key ? { ...entry, [field]: value } : entry))
     );
   };
 
   const filteredMemories = memories.filter(
-    entry =>
+    (entry) =>
       entry.source.toLowerCase().includes(searchText.toLowerCase()) ||
       entry.target.toLowerCase().includes(searchText.toLowerCase())
   );
@@ -263,7 +279,7 @@ export const MemoryManager: React.FC<MemoryManagerProps> = ({ visible, onClose }
       render: (text: string, record: MemoryEntry) => (
         <Input
           value={text}
-          onChange={e => handleEdit(record.key, 'source', e.target.value)}
+          onChange={(e) => handleEdit(record.key, 'source', e.target.value)}
           size="small"
         />
       ),
@@ -276,7 +292,7 @@ export const MemoryManager: React.FC<MemoryManagerProps> = ({ visible, onClose }
       render: (text: string, record: MemoryEntry) => (
         <Input
           value={text}
-          onChange={e => handleEdit(record.key, 'target', e.target.value)}
+          onChange={(e) => handleEdit(record.key, 'target', e.target.value)}
           size="small"
         />
       ),
@@ -313,13 +329,13 @@ export const MemoryManager: React.FC<MemoryManagerProps> = ({ visible, onClose }
       destroyOnHidden={true}
       mask={false}
       style={{ top: 20 }}
-      styles={{ 
+      styles={{
         body: {
-          maxHeight: 'calc(100vh - 200px)', 
+          maxHeight: 'calc(100vh - 200px)',
           overflowY: 'auto',
           display: 'flex',
-          flexDirection: 'column'
-        }
+          flexDirection: 'column',
+        },
       }}
     >
       <div style={{ marginBottom: 16 }}>
@@ -353,21 +369,21 @@ export const MemoryManager: React.FC<MemoryManagerProps> = ({ visible, onClose }
           placeholder="搜索原文或译文..."
           prefix={<SearchOutlined />}
           value={searchText}
-          onChange={e => setSearchText(e.target.value)}
+          onChange={(e) => setSearchText(e.target.value)}
           style={{ marginBottom: 12 }}
         />
-        
+
         <Space.Compact style={{ width: '100%' }}>
           <Input
             placeholder="原文"
             value={newSource}
-            onChange={e => setNewSource(e.target.value)}
+            onChange={(e) => setNewSource(e.target.value)}
             onPressEnter={handleAdd}
           />
           <Input
             placeholder="译文"
             value={newTarget}
-            onChange={e => setNewTarget(e.target.value)}
+            onChange={(e) => setNewTarget(e.target.value)}
             onPressEnter={handleAdd}
           />
           <Button type="primary" icon={<PlusOutlined />} onClick={handleAdd}>
@@ -385,11 +401,10 @@ export const MemoryManager: React.FC<MemoryManagerProps> = ({ visible, onClose }
           pageSize: 10,
           showSizeChanger: true,
           showTotal: (total) => `共 ${total} 条记忆`,
-          position: ['bottomCenter']
+          position: ['bottomCenter'],
         }}
         scroll={{ y: tableHeight }}
       />
     </Modal>
   );
 };
-

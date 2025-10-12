@@ -1,11 +1,10 @@
+use anyhow::{Result, bail};
 /**
  * 路径验证器 - 确保文件访问在安全范围内
- * 
+ *
  * Tauri 2.x 安全增强
  */
-
 use std::path::PathBuf;
-use anyhow::{Result, bail};
 
 /// 路径验证器
 pub struct SafePathValidator {
@@ -36,7 +35,8 @@ impl SafePathValidator {
 
         // 2. 规范化路径（防止路径遍历攻击）
         let canonical = if path_buf.exists() {
-            path_buf.canonicalize()
+            path_buf
+                .canonicalize()
                 .map_err(|e| anyhow::anyhow!("无法规范化路径: {}", e))?
         } else {
             // 新文件，验证父目录
@@ -44,7 +44,8 @@ impl SafePathValidator {
                 if !parent.exists() {
                     bail!("父目录不存在: {:?}", parent);
                 }
-                parent.canonicalize()
+                parent
+                    .canonicalize()
                     .map_err(|e| anyhow::anyhow!("无法规范化父目录: {}", e))?
                     .join(path_buf.file_name().unwrap())
             } else {
@@ -95,13 +96,14 @@ impl SafePathValidator {
         }
 
         // 规范化路径
-        let canonical = path_buf.canonicalize()
+        let canonical = path_buf
+            .canonicalize()
             .map_err(|e| anyhow::anyhow!("无法规范化目录路径: {}", e))?;
 
         // 防止访问敏感目录
         let path_str = canonical.to_str().unwrap_or("").to_lowercase();
         let forbidden = ["system32", "windows", "program files", ".ssh"];
-        
+
         for pattern in &forbidden {
             if path_str.contains(pattern) {
                 bail!("禁止访问敏感目录: {}", pattern);
@@ -136,4 +138,3 @@ mod tests {
         assert!(result.is_err());
     }
 }
-

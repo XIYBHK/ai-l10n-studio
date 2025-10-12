@@ -1,14 +1,13 @@
 /**
  * 基于 Draft 模式的配置管理器（增强版）
- * 
+ *
  * 参考 clash-verge-rev 设计，提供：
  * 1. 原子性配置更新
  * 2. 草稿模式（修改不会立即生效）
  * 3. 自动事件通知（配置变更时通知前端）
  * 4. 并发安全
  */
-
-use anyhow::{anyhow, Result};
+use anyhow::{Result, anyhow};
 use std::fs;
 use std::path::PathBuf;
 use std::sync::Arc;
@@ -85,10 +84,9 @@ impl ConfigDraft {
 
     /// 从文件加载配置
     fn load_from_file<P: AsRef<std::path::Path>>(path: P) -> Result<AppConfig> {
-        let content = fs::read_to_string(path)
-            .map_err(|e| anyhow!("无法读取配置文件: {}", e))?;
-        let config: AppConfig = serde_json::from_str(&content)
-            .map_err(|e| anyhow!("无法解析配置文件: {}", e))?;
+        let content = fs::read_to_string(path).map_err(|e| anyhow!("无法读取配置文件: {}", e))?;
+        let config: AppConfig =
+            serde_json::from_str(&content).map_err(|e| anyhow!("无法解析配置文件: {}", e))?;
         Ok(config)
     }
 
@@ -103,14 +101,14 @@ impl ConfigDraft {
     }
 
     /// 获取草稿的可写引用（自动创建草稿）
-    /// 
+    ///
     /// 所有配置修改都应该在草稿上进行，最后调用 apply() 提交
     pub fn draft(&self) -> parking_lot::MappedRwLockWriteGuard<'_, Box<AppConfig>> {
         self.config.draft_mut()
     }
 
     /// 提交草稿并保存到磁盘
-    /// 
+    ///
     /// 成功后会自动：
     /// 1. 保存配置到磁盘
     /// 2. 发送配置更新事件（通知前端）
@@ -118,7 +116,7 @@ impl ConfigDraft {
         if let Some(_old_config) = self.config.apply() {
             // 保存到磁盘
             self.save_to_disk()?;
-            
+
             // 发送事件通知前端（异步执行，不阻塞当前线程）
             let config_clone = self.config.clone_latest();
             tokio::spawn(async move {
@@ -126,7 +124,7 @@ impl ConfigDraft {
                     log::warn!("发送配置更新事件失败: {}", e);
                 }
             });
-            
+
             Ok(())
         } else {
             // 没有草稿需要提交
@@ -145,7 +143,7 @@ impl ConfigDraft {
     }
 
     /// 直接修改正式配置并保存（不经过草稿）
-    /// 
+    ///
     /// ⚠️ 注意：这会跳过草稿机制，请谨慎使用
     /// 推荐使用 draft() + apply() 的方式
     pub fn update_direct(&self, updater: impl FnOnce(&mut AppConfig)) -> Result<()> {
@@ -154,7 +152,7 @@ impl ConfigDraft {
             updater(&mut config);
         }
         self.save_to_disk()?;
-        
+
         // 发送事件
         let config_clone = self.config.clone_data();
         tokio::spawn(async move {
@@ -162,22 +160,21 @@ impl ConfigDraft {
                 log::warn!("发送配置更新事件失败: {}", e);
             }
         });
-        
+
         Ok(())
     }
 
     /// 保存配置到磁盘
     fn save_to_disk(&self) -> Result<()> {
         let config = self.config.clone_latest();
-        let json = serde_json::to_string_pretty(&*config)
-            .map_err(|e| anyhow!("序列化配置失败: {}", e))?;
-        fs::write(&*self.config_path, json)
-            .map_err(|e| anyhow!("写入配置文件失败: {}", e))?;
+        let json =
+            serde_json::to_string_pretty(&*config).map_err(|e| anyhow!("序列化配置失败: {}", e))?;
+        fs::write(&*self.config_path, json).map_err(|e| anyhow!("写入配置文件失败: {}", e))?;
         Ok(())
     }
 
     /// 发送配置更新事件给前端
-    /// 
+    ///
     /// TODO: 事件发送需要在 Tauri 命令上下文中实现
     /// 当前先保留为空实现，在 Phase 2 迁移时从命令层发送事件
     #[allow(unused_variables)]
@@ -226,37 +223,37 @@ mod tests {
     async fn test_config_draft_basic() {
         let temp_dir = std::env::temp_dir();
         let config_path = temp_dir.join("test_config_draft.json");
-        
+
         // 清理旧文件
         let _ = fs::remove_file(&config_path);
-        
+
         let manager = ConfigDraft::new(Some(config_path.clone())).await.unwrap();
-        
+
         // 读取初始配置
         assert_eq!(manager.latest().provider, "moonshot");
-        
+
         // 修改草稿
         {
             let mut draft = manager.draft();
             draft.provider = "openai".to_string();
             draft.model = "gpt-4".to_string();
         }
-        
+
         // 正式配置未变
         assert_eq!(manager.data().provider, "moonshot");
-        
+
         // 草稿已变
         assert_eq!(manager.latest().provider, "openai");
         assert!(manager.has_draft());
-        
+
         // 提交草稿
         manager.apply().unwrap();
-        
+
         // 正式配置已更新
         assert_eq!(manager.data().provider, "openai");
         assert_eq!(manager.data().model, "gpt-4");
         assert!(!manager.has_draft());
-        
+
         // 清理
         let _ = fs::remove_file(&config_path);
     }
@@ -265,26 +262,26 @@ mod tests {
     async fn test_config_draft_discard() {
         let temp_dir = std::env::temp_dir();
         let config_path = temp_dir.join("test_config_discard.json");
-        
+
         let _ = fs::remove_file(&config_path);
-        
+
         let manager = ConfigDraft::new(Some(config_path.clone())).await.unwrap();
-        
+
         // 修改草稿
         {
             let mut draft = manager.draft();
             draft.provider = "claude".to_string();
         }
-        
+
         assert!(manager.has_draft());
-        
+
         // 丢弃草稿
         manager.discard();
-        
+
         // 正式配置未变
         assert_eq!(manager.data().provider, "moonshot");
         assert!(!manager.has_draft());
-        
+
         let _ = fs::remove_file(&config_path);
     }
 
@@ -292,21 +289,22 @@ mod tests {
     async fn test_config_update_helper() {
         let temp_dir = std::env::temp_dir();
         let config_path = temp_dir.join("test_config_update.json");
-        
+
         let _ = fs::remove_file(&config_path);
-        
+
         let manager = ConfigDraft::new(Some(config_path.clone())).await.unwrap();
-        
+
         // 使用便捷更新方法
-        manager.update(|config| {
-            config.provider = "gemini".to_string();
-            config.model = "gemini-pro".to_string();
-        }).unwrap();
-        
+        manager
+            .update(|config| {
+                config.provider = "gemini".to_string();
+                config.model = "gemini-pro".to_string();
+            })
+            .unwrap();
+
         assert_eq!(manager.data().provider, "gemini");
         assert_eq!(manager.data().model, "gemini-pro");
-        
+
         let _ = fs::remove_file(&config_path);
     }
 }
-

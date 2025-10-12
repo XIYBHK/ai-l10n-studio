@@ -1,6 +1,6 @@
 /**
  * 统计管理器 V2 - 使用 StatsEngine 的健壮实现
- * 
+ *
  * 职责：
  * 1. 监听后端事件并转换为 StatsEvent
  * 2. 调用 StatsEngine 处理事件
@@ -54,14 +54,14 @@ export function initializeStatsManagerV2() {
 
     // 批量进度只更新会话统计（实时UI反馈）
     statsEngine.processEvent(event, 'session');
-    
+
     // 更新 Store
     const sessionStats = statsEngine.getSessionStats();
     useSessionStore.getState().setSessionStats(sessionStats);
-    
-    log.debug('📊 批量进度统计已处理', { 
+
+    log.debug('📊 批量进度统计已处理', {
       eventId: event.meta.eventId,
-      stats: event.data 
+      stats: event.data,
     });
   });
 
@@ -91,15 +91,15 @@ export function initializeStatsManagerV2() {
 
     // 🔧 任务完成：只更新累计统计，不更新会话统计（会话统计已由批量进度事件累加）
     // 注意：translation:after 发送的是全量统计，不是增量，所以不能再累加到会话统计
-    
+
     // 更新 Store
     const sessionStats = statsEngine.getSessionStats();
-    
+
     useSessionStore.getState().setSessionStats(sessionStats);
     // 🔧 累计统计使用 Store 的累加方法
     useStatsStore.getState().updateCumulativeStats(event.data);
-    
-    log.info('✅ 任务完成统计已处理', { 
+
+    log.info('✅ 任务完成统计已处理', {
       eventId: event.meta.eventId,
       stats: event.data,
       sessionStats,
@@ -117,7 +117,7 @@ function normalizeStats(input: any): any {
   const token = input?.token_stats || input?.tokens || {};
   const prompt = token.prompt_tokens ?? token.input_tokens ?? 0;
   const completion = token.completion_tokens ?? token.output_tokens ?? 0;
-  const totalTokens = token.total_tokens ?? (prompt + completion);
+  const totalTokens = token.total_tokens ?? prompt + completion;
   const cost = token.cost ?? 0;
 
   return {
@@ -138,7 +138,7 @@ function normalizeStats(input: any): any {
 /** 检测翻译模式 */
 function detectTranslationMode(stats: any): 'channel' | 'event' | 'single' | 'refine' {
   const total = stats?.total ?? 0;
-  
+
   if (total === 1) {
     return 'single';
   } else if (total > 1 && total <= 20) {
@@ -178,4 +178,3 @@ export function resetCumulativeStats() {
 export function getStatsDebugInfo() {
   return statsEngine.getDebugInfo();
 }
-

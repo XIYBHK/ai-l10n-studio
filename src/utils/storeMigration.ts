@@ -1,6 +1,6 @@
 /**
  * Store 数据迁移工具
- * 
+ *
  * 从 localStorage 迁移数据到 TauriStore
  */
 
@@ -24,7 +24,8 @@ interface LocalStorageData {
       };
     };
   };
-  'app-storage'?: {  // 旧的 useAppStore
+  'app-storage'?: {
+    // 旧的 useAppStore
     state?: {
       theme?: 'light' | 'dark';
       language?: string;
@@ -44,7 +45,7 @@ interface LocalStorageData {
  */
 function getLocalStorageData(): LocalStorageData {
   const data: LocalStorageData = {};
-  
+
   try {
     const settingsData = localStorage.getItem('app-settings');
     if (settingsData) {
@@ -53,7 +54,7 @@ function getLocalStorageData(): LocalStorageData {
   } catch (error) {
     console.warn('[Migration] 读取 app-settings 失败:', error);
   }
-  
+
   try {
     const statsData = localStorage.getItem('app-stats');
     if (statsData) {
@@ -62,7 +63,7 @@ function getLocalStorageData(): LocalStorageData {
   } catch (error) {
     console.warn('[Migration] 读取 app-stats 失败:', error);
   }
-  
+
   try {
     const appData = localStorage.getItem('app-storage');
     if (appData) {
@@ -71,7 +72,7 @@ function getLocalStorageData(): LocalStorageData {
   } catch (error) {
     console.warn('[Migration] 读取 app-storage 失败:', error);
   }
-  
+
   return data;
 }
 
@@ -80,25 +81,25 @@ function getLocalStorageData(): LocalStorageData {
  */
 export async function needsMigration(): Promise<boolean> {
   // 检查 localStorage 是否有数据
-  const hasLocalStorage = 
+  const hasLocalStorage =
     localStorage.getItem('app-settings') !== null ||
     localStorage.getItem('app-stats') !== null ||
     localStorage.getItem('app-storage') !== null;
-  
+
   if (!hasLocalStorage) {
     return false;
   }
-  
+
   // 检查 TauriStore 是否已有数据
   try {
     await tauriStore.init();
     const hasTheme = await tauriStore.has('theme');
-    
+
     // 如果 TauriStore 已有数据，不需要迁移
     if (hasTheme) {
       return false;
     }
-    
+
     return true;
   } catch (error) {
     console.error('[Migration] 检查迁移状态失败:', error);
@@ -116,21 +117,19 @@ export async function migrateToTauriStore(): Promise<{
 }> {
   const migratedKeys: string[] = [];
   const errors: string[] = [];
-  
+
   console.log('[Migration] 开始迁移数据...');
-  
+
   try {
     // 初始化 TauriStore
     await tauriStore.init();
-    
+
     // 读取 localStorage 数据
     const localData = getLocalStorageData();
-    
+
     // 迁移主题
-    const theme = 
-      localData['app-settings']?.state?.theme ||
-      localData['app-storage']?.state?.theme;
-    
+    const theme = localData['app-settings']?.state?.theme || localData['app-storage']?.state?.theme;
+
     if (theme) {
       try {
         await tauriStore.setTheme(theme);
@@ -140,12 +139,11 @@ export async function migrateToTauriStore(): Promise<{
         errors.push(`主题迁移失败: ${error}`);
       }
     }
-    
+
     // 迁移语言
-    const language = 
-      localData['app-settings']?.state?.language ||
-      localData['app-storage']?.state?.language;
-    
+    const language =
+      localData['app-settings']?.state?.language || localData['app-storage']?.state?.language;
+
     if (language) {
       try {
         await tauriStore.setLanguage(language);
@@ -155,12 +153,12 @@ export async function migrateToTauriStore(): Promise<{
         errors.push(`语言迁移失败: ${error}`);
       }
     }
-    
+
     // 迁移累计统计
-    const stats = 
+    const stats =
       localData['app-stats']?.state?.cumulativeStats ||
       localData['app-storage']?.state?.cumulativeStats;
-    
+
     if (stats) {
       try {
         await tauriStore.updateCumulativeStats({
@@ -176,12 +174,12 @@ export async function migrateToTauriStore(): Promise<{
         errors.push(`累计统计迁移失败: ${error}`);
       }
     }
-    
+
     // 保存到磁盘
     await tauriStore.save();
-    
+
     console.log(`[Migration] 迁移完成，成功: ${migratedKeys.length}, 失败: ${errors.length}`);
-    
+
     return {
       success: errors.length === 0,
       migratedKeys,
@@ -202,7 +200,7 @@ export async function migrateToTauriStore(): Promise<{
  */
 export function cleanupLocalStorage(): void {
   console.log('[Migration] 清理旧的 localStorage 数据...');
-  
+
   try {
     localStorage.removeItem('app-settings');
     localStorage.removeItem('app-stats');
@@ -215,7 +213,7 @@ export function cleanupLocalStorage(): void {
 
 /**
  * 自动迁移工作流
- * 
+ *
  * 1. 检查是否需要迁移
  * 2. 执行迁移
  * 3. 清理旧数据
@@ -231,21 +229,21 @@ export async function autoMigrate(): Promise<{
   try {
     // 检查是否需要迁移
     const needs = await needsMigration();
-    
+
     if (!needs) {
       console.log('[Migration] 不需要迁移');
       return { migrated: false };
     }
-    
+
     console.log('[Migration] 检测到需要迁移数据');
-    
+
     // 执行迁移
     const result = await migrateToTauriStore();
-    
+
     // 如果迁移成功，清理旧数据
     if (result.success) {
       cleanupLocalStorage();
-      
+
       // 标记迁移完成
       try {
         await tauriStore.set('preferences', {
@@ -264,7 +262,7 @@ export async function autoMigrate(): Promise<{
         console.warn('[Migration] 保存迁移标记失败:', error);
       }
     }
-    
+
     return {
       migrated: true,
       result,
@@ -281,4 +279,3 @@ export async function autoMigrate(): Promise<{
     };
   }
 }
-

@@ -1,17 +1,16 @@
 /**
  * Draft 配置管理模式
- * 
+ *
  * 参考 clash-verge-rev 的设计，提供：
  * 1. 原子性配置更新（要么全部成功，要么全部回滚）
  * 2. 草稿模式（修改不会立即生效）
  * 3. 并发安全（多个请求同时修改不会冲突）
- * 
+ *
  * 设计原理：
  * - 使用 RwLock 保证线程安全
  * - 维护两份数据：committed（已提交）和 draft（草稿）
  * - 所有修改先在草稿上进行，确认后再提交到正式数据
  */
-
 use parking_lot::{
     MappedRwLockReadGuard, MappedRwLockWriteGuard, RwLock, RwLockReadGuard,
     RwLockUpgradableReadGuard, RwLockWriteGuard,
@@ -36,7 +35,7 @@ impl<T: Clone> From<T> for Draft<T> {
 
 impl<T: Clone> Draft<Box<T>> {
     /// 获取正式数据的可写引用（直接修改已提交的数据）
-    /// 
+    ///
     /// ⚠️ 注意：直接修改正式数据会跳过草稿机制，请谨慎使用
     pub fn data_mut(&self) -> MappedRwLockWriteGuard<'_, Box<T>> {
         RwLockWriteGuard::map(self.inner.write(), |inner| &mut inner.0)
@@ -48,21 +47,19 @@ impl<T: Clone> Draft<Box<T>> {
     }
 
     /// 获取或创建草稿，返回可写引用
-    /// 
+    ///
     /// 如果草稿不存在，会自动从正式数据克隆一份
     /// 这是推荐的修改方式：所有修改在草稿上进行，最后调用 apply() 提交
     pub fn draft_mut(&self) -> MappedRwLockWriteGuard<'_, Box<T>> {
         let guard = self.inner.upgradable_read();
-        
+
         // 如果草稿不存在，创建草稿
         if guard.1.is_none() {
             let mut guard = RwLockUpgradableReadGuard::upgrade(guard);
             guard.1 = Some(guard.0.clone());
-            return RwLockWriteGuard::map(guard, |inner| {
-                inner.1.as_mut().unwrap()
-            });
+            return RwLockWriteGuard::map(guard, |inner| inner.1.as_mut().unwrap());
         }
-        
+
         // 草稿已存在，直接返回
         RwLockWriteGuard::map(RwLockUpgradableReadGuard::upgrade(guard), |inner| {
             inner.1.as_mut().unwrap()
@@ -70,7 +67,7 @@ impl<T: Clone> Draft<Box<T>> {
     }
 
     /// 获取最新数据的只读引用（优先返回草稿，没有草稿则返回正式数据）
-    /// 
+    ///
     /// 这是获取"当前有效配置"的推荐方式
     pub fn latest_ref(&self) -> MappedRwLockReadGuard<'_, Box<T>> {
         RwLockReadGuard::map(self.inner.read(), |inner| {
@@ -79,19 +76,20 @@ impl<T: Clone> Draft<Box<T>> {
     }
 
     /// 提交草稿，将草稿数据应用到正式数据
-    /// 
+    ///
     /// 返回：
     /// - Some(old_data): 成功提交，返回旧的正式数据
     /// - None: 没有草稿需要提交
     pub fn apply(&self) -> Option<Box<T>> {
         let mut inner = self.inner.write();
-        inner.1.take().map(|draft| {
-            std::mem::replace(&mut inner.0, draft)
-        })
+        inner
+            .1
+            .take()
+            .map(|draft| std::mem::replace(&mut inner.0, draft))
     }
 
     /// 丢弃草稿，放弃所有未提交的修改
-    /// 
+    ///
     /// 返回：
     /// - Some(draft): 成功丢弃，返回被丢弃的草稿数据
     /// - None: 没有草稿需要丢弃
@@ -210,4 +208,3 @@ mod tests {
         assert_eq!(draft.data_ref().value, 300);
     }
 }
-

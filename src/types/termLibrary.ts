@@ -37,4 +37,3 @@ export interface TermDifference {
   user_term?: string;
   confidence: number; // 0-1
 }
-

@@ -15,7 +15,7 @@ describe('useAsync Hook', () => {
   it('应该正确执行异步函数并返回数据', async () => {
     const mockData = { id: 1, name: 'Test' };
     const asyncFn = vi.fn().mockResolvedValue(mockData);
-    
+
     const { result } = renderHook(() => useAsync(asyncFn));
 
     // 执行异步操作
@@ -52,9 +52,7 @@ describe('useAsync Hook', () => {
   });
 
   it('应该支持带参数的异步函数', async () => {
-    const asyncFn = vi.fn((id: number) => 
-      Promise.resolve({ id, name: `User ${id}` })
-    );
+    const asyncFn = vi.fn((id: number) => Promise.resolve({ id, name: `User ${id}` }));
 
     const { result } = renderHook(() => useAsync(asyncFn));
 
@@ -109,7 +107,7 @@ describe('useAsync Hook', () => {
     // 第二次执行（成功）
     await result.current.execute();
     await waitFor(() => expect(result.current.loading).toBe(false));
-    
+
     expect(result.current.error).toBeNull();
     expect(result.current.data).toBe('Success');
   });
@@ -118,9 +116,7 @@ describe('useAsync Hook', () => {
     let resolveCount = 0;
     const asyncFn = vi.fn(() => {
       resolveCount++;
-      return new Promise(resolve => 
-        setTimeout(() => resolve(resolveCount), 10)
-      );
+      return new Promise((resolve) => setTimeout(() => resolve(resolveCount), 10));
     });
 
     const { result } = renderHook(() => useAsync(asyncFn));
@@ -136,4 +132,3 @@ describe('useAsync Hook', () => {
     expect(result.current.data).toBe(3);
   });
 });
-
