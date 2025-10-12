@@ -2,34 +2,34 @@
 
 ## 2025-10-13 - 日志轮转功能（参考 clash-verge-rev）
 
-### ✅ 新增功能
-- **日志轮转**：自动管理日志文件大小和数量
+### 新增功能
+- **日志轮转**: 自动管理日志文件大小和数量
   - 单个文件超过指定大小（默认 128KB）时自动切换到新文件
   - 日志文件按时间戳命名（格式：`app_2025-10-13_15-30-00_latest.log`）
   - 自动保留最新的 N 个文件（默认 8 个），删除更旧的文件
   - 结合按天数保留策略，双重清理保障磁盘空间
 
-### 🛠️ 技术实现
-- **后端配置**：新增 `log_max_size`（单个文件最大大小）和 `log_max_count`（保留文件数量）配置项
-- **前端 UI**：在设置页面添加日志轮转配置界面，实时显示当前轮转策略
-- **参考源**：`clash-verge-rev/src-tauri/src/utils/init.rs`，使用 `flexi_logger` 的 `Criterion::Size` 和 `Cleanup::KeepLogFiles`
+### 技术实现
+- **后端配置**: 新增 `log_max_size`（单个文件最大大小）和 `log_max_count`（保留文件数量）配置项
+- **前端 UI**: 在设置页面添加日志轮转配置界面，实时显示当前轮转策略
+- **参考源**: `clash-verge-rev/src-tauri/src/utils/init.rs`，使用 `flexi_logger` 的 `Criterion::Size` 和 `Cleanup::KeepLogFiles`
 
-### 📊 代码统计
-- **1 个原子提交**：feat: 日志轮转功能
-- **4 个文件修改**：+96 行 / -17 行
+### 代码统计
+- 1 个原子提交: feat: 日志轮转功能
+- 4 个文件修改: +96 行 / -17 行
 
 ---
 
 ## 2025-10-13 - 质量提升：代码规范 + 日志管理 + Bug修复
 
-### ✅ 新增功能
+### 新增功能
 
 - **日志管理UI**: 添加日志配置界面到设置模态框
   - 日志级别选择器（error/warn/info/debug/trace）
   - 日志保留天数配置（0-365天，0表示永久保留）
   - 实时配置同步到 AppConfig
 
-### 🛠️ 工程改进
+### 工程改进
 
 - **代码规范工具**: 配置 Prettier + EditorConfig
   - 统一前端代码格式化（printWidth=100, singleQuote=true）
@@ -43,18 +43,18 @@
   - 保持当前实现（已足够优雅）
   - 为未来优化预留接口
 
-### 🐛 Bug修复
+### Bug修复
 
 - **并发安全**: 修复 parking_lot RwLock guard 跨 await 点问题
   - 解决 `future cannot be sent between threads safely` 编译错误
   - 优化 translate_entry, contextual_refine, translate_batch_with_channel 命令
   - 使用作用域限制 guard 生命周期
 
-### 📊 代码统计
+### 代码统计
 
-- **8 个原子提交**，可安全回滚
-- **+5,157 行 / -4,295 行**（格式化：144文件）
-- **+311 行**（新功能：日志UI + 错误处理脚本）
+- 8 个原子提交，可安全回滚
+- +5,157 行 / -4,295 行（格式化：144文件）
+- +311 行（新功能：日志UI + 错误处理脚本）
 
 ---
 
