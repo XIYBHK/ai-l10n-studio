@@ -5,7 +5,7 @@ use tauri::Emitter;
 // use tauri::State;
 
 use crate::services::{
-    AITranslator, BatchTranslator, ConfigManager, ConfigDraft, POParser, TermLibrary, TranslationMemory, TranslationReport,
+    AITranslator, BatchTranslator, ConfigDraft, POParser, TermLibrary, TranslationMemory, TranslationReport,
 };
 use crate::utils::paths::get_translation_memory_path;
 use crate::utils::path_validator::SafePathValidator;  // Tauri 2.x: 路径安全验证

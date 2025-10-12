@@ -1,5 +1,5 @@
 use serde::{Deserialize, Serialize};
-use crate::services::{AIConfig, AITranslator, ConfigManager, ConfigDraft};
+use crate::services::{AIConfig, AITranslator, ConfigDraft};
 
 /// 获取所有 AI 配置
 #[tauri::command]
@@ -221,8 +221,8 @@ pub async fn test_ai_connection(request: TestConnectionRequest) -> Result<TestCo
 pub async fn get_system_prompt() -> Result<String, String> {
     use crate::services::ai_translator::DEFAULT_SYSTEM_PROMPT;
     
-    let config_manager = ConfigManager::new(None).map_err(|e| e.to_string())?;
-    let config = config_manager.get_config();
+    let draft = ConfigDraft::global().await;
+    let config = draft.data();
     
     // 返回自定义提示词，如果没有则返回默认提示词
     Ok(config.system_prompt
@@ -233,18 +233,20 @@ pub async fn get_system_prompt() -> Result<String, String> {
 /// 更新系统提示词
 #[tauri::command]
 pub async fn update_system_prompt(prompt: String) -> Result<(), String> {
-    let mut config_manager = ConfigManager::new(None).map_err(|e| e.to_string())?;
+    let draft = ConfigDraft::global().await;
     
-    // 如果提示词为空，设置为 None（使用默认）
-    let app_config = config_manager.get_config_mut();
-    app_config.system_prompt = if prompt.trim().is_empty() {
-        None
-    } else {
-        Some(prompt)
-    };
+    // 在草稿上修改
+    {
+        let mut draft_config = draft.draft();
+        draft_config.system_prompt = if prompt.trim().is_empty() {
+            None
+        } else {
+            Some(prompt)
+        };
+    }
     
-    // 保存配置
-    config_manager.save().map_err(|e| e.to_string())?;
+    // 原子提交并保存
+    draft.apply().map_err(|e| e.to_string())?;
     
     crate::app_log!("✅ 系统提示词已更新");
     Ok(())
@@ -253,12 +255,16 @@ pub async fn update_system_prompt(prompt: String) -> Result<(), String> {
 /// 重置系统提示词为默认值
 #[tauri::command]
 pub async fn reset_system_prompt() -> Result<(), String> {
-    let mut config_manager = ConfigManager::new(None).map_err(|e| e.to_string())?;
+    let draft = ConfigDraft::global().await;
     
-    let app_config = config_manager.get_config_mut();
-    app_config.system_prompt = None;
+    // 在草稿上修改
+    {
+        let mut draft_config = draft.draft();
+        draft_config.system_prompt = None;
+    }
     
-    config_manager.save().map_err(|e| e.to_string())?;
+    // 原子提交并保存
+    draft.apply().map_err(|e| e.to_string())?;
     
     crate::app_log!("✅ 系统提示词已重置为默认值");
     Ok(())
