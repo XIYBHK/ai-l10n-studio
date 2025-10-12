@@ -8,55 +8,56 @@ This is a professional PO file translation tool built with Tauri (Rust + React).
 
 **Architecture**: Frontend (React + TypeScript + Ant Design) + Backend (Rust + Tauri)
 **Primary Purpose**: Professional translation workflow for localization files with AI assistance
-**Current Version**: Phase 8 完成（8/8 Phases, 87.5% Complete）
+**Current Version**: Phase 9+ (2025-01 架构重构完成)
 **Development Status**: Production Ready
 
-### Key Features (Phase 1-8)
+### Core Features
 
-- ✅ **Multi-AI Provider Support** (Phase 1): 8 AI services (Moonshot, OpenAI, iFlytek, Baidu, Alibaba, Zhipu, Claude, Gemini)
-- ✅ **Custom System Prompts** (Phase 2): User-customizable translation prompts
-- ✅ **Automated Testing** (Phase 3): 73 tests, 100% pass rate
-- ✅ **Multi-Format Files** (Phase 4): PO, JSON, XLIFF, YAML detection & metadata
-- ✅ **Multi-Language Translation** (Phase 5): 10 languages with auto-detection
-- ✅ **Application Localization** (Phase 6): System language detection, i18n support
-- ✅ **Contextual Refine** (Phase 7): Context-aware fine-tuned translation
-- ✅ **Performance Optimization** (Phase 8): Large file handling, progress throttling, memory optimization
+- **Multi-AI Provider Support**: 8 AI services (Moonshot, OpenAI, iFlytek, Baidu, Alibaba, Zhipu, Claude, Gemini)
+- **Custom System Prompts**: User-customizable translation prompts
+- **Automated Testing**: 73 tests, 100% pass rate, 82.8% coverage
+- **Multi-Format Files**: PO, JSON, XLIFF, YAML detection & metadata
+- **Multi-Language Translation**: 10 languages with auto-detection
+- **Application Localization**: System language detection, i18n support
+- **Contextual Refine**: Context-aware fine-tuned translation
+- **Performance Optimization**: Large file handling, progress throttling, memory optimization
+
+### Architecture Enhancements (2025-01)
+
+- **Unified Command Layer** (`commands.ts`): Type-safe Tauri command calls, 13 modular APIs
+- **AppDataProvider**: Centralized data management with SWR integration
+- **Draft Mode Config**: Atomic configuration updates with `parking_lot::RwLock`
+- **Enhanced Event Bridge**: Debouncing, throttling, robust cleanup
+- **Log Rotation**: Automatic log file management (size + count + retention)
 
 ## Development Commands
 
 ### Core Development
 
 ```bash
-# Start development server (first run is slow due to Rust compilation)
-npm run tauri:dev
-
-# Build production executable
-npm run tauri:build
-
-# Frontend only (for UI development)
-npm run dev
-
-# Build frontend only
-npm run build
-
-# Clean Rust build cache
-npm run tauri clean
+npm run tauri:dev      # Start development server (first run is slow due to Rust compilation)
+npm run tauri:build    # Build production executable
+npm run dev            # Frontend only (for UI development)
+npm run build          # Build frontend only
+npm run tauri clean    # Clean Rust build cache
 ```
 
-### Testing Commands
+### Testing & Code Quality
 
 ```bash
-# Run all tests (frontend + backend)
-npm run test           # Frontend tests with Vitest
+# Testing
+npm run test           # Frontend tests with Vitest (watch mode)
 npm run test:ui        # Vitest UI mode
 npm run test:run       # Run tests once without watch
 npm run test:coverage  # Run tests with coverage report
+npm run test -- path/to/test.spec.ts  # Run specific test file
+cd src-tauri && cargo test && cd ..   # Backend tests
 
-# Backend tests
-cd src-tauri && cargo test && cd ..
-
-# Run specific test file
-npm run test -- path/to/test.spec.ts
+# Code Quality
+npm run format         # Format frontend code with Prettier
+npm run format:check   # Check code format
+npm run fmt            # Format Rust code
+npm run lint:all       # Check all code format
 ```
 
 ### Troubleshooting
@@ -90,27 +91,28 @@ npm run build  # Build frontend only first
   - `ErrorBoundary.tsx` - Error boundary for error handling
 
 - **Services**: Frontend service layer
-  - `api.ts` - Unified Tauri API wrapper with error handling, logging, and organized API modules
-    - `termLibraryApi` - Terminology library operations
-    - `translationMemoryApi` - Translation memory operations
-    - `poFileApi` - PO file parsing and saving
-    - `configApi` - Application configuration
-    - `translatorApi` - AI translation (single and batch)
-    - `dialogApi` - File dialogs
-    - `logApi` - Application logs
-  - `eventDispatcher.ts` - Type-safe event system inspired by UE, handling:
-    - Translation lifecycle events (progress, stats, completion)
-    - File operation events (load, save, error)
-    - Terminology library events (add, remove, update)
-    - UI events (entry selection, updates)
-    - Configuration events
+  - `commands.ts` - **[NEW 2025-01]** Unified command layer, 13 modular APIs:
+    - `configCommands`, `aiConfigCommands`, `aiModelCommands`
+    - `systemPromptCommands`, `termLibraryCommands`, `translationMemoryCommands`
+    - `translatorCommands`, `poFileCommands`, `fileFormatCommands`
+    - `dialogCommands`, `i18nCommands`, `logCommands`, `systemCommands`
+  - `api.ts` - **[DEPRECATED]** Old API layer (partially migrated to `commands.ts`)
+  - `eventDispatcher.ts` - Type-safe event system inspired by UE
+  - `statsEngine.ts` - Event sourcing for translation statistics
+  - `formatters.ts` - Unified formatting utilities (cost, tokens, percentage)
+
+- **Providers**: React Context providers
+  - `AppDataProvider.tsx` - **[NEW 2025-01]** Centralized data management with SWR:
+    - Global data access via `useAppData()` hook
+    - Auto-refresh on backend events (config, term library, memory, etc.)
+    - Unified `refreshAll()` interface
 
 - **Hooks**: Custom React hooks
-  - `useTranslator.ts` - Translation operations (deprecated, use useAsync + API directly)
-  - `useTauriEventBridge.ts` - Bridges Tauri backend events to frontend event dispatcher
-  - `useAsync.ts` - Generic async operation handling
-  - `useTheme.ts` - Theme management
-  - `useEventListener.ts` - Event system integration
+  - `useAppData` - **[NEW 2025-01]** Access global data from AppDataProvider
+  - `useAsync` - Generic async operation handling (replaces `useTranslator`)
+  - `useTauriEventBridge.enhanced.ts` - **[NEW 2025-01]** Enhanced event bridge with debouncing/throttling
+  - `useTheme` - Theme management (light/dark/system)
+  - `useEventListener` - Event system integration
 
 - **Store**: Zustand state management
   - `useAppStore.ts` - Main application state with persistence for theme, language, and cumulative stats
@@ -127,28 +129,35 @@ npm run build  # Build frontend only first
 
 - **Services** (`services/`): Core business logic
   - `po_parser.rs` - PO file parsing and generation with nom parser
-  - `ai_translator.rs` - AI translation integration (Moonshot/OpenAI)
-  - `translation_memory.rs` - Translation memory system with 83+ built-in phrases and pattern matching
-  - `batch_translator.rs` - Batch translation with deduplication, progress tracking, and event emission
-  - `config_manager.rs` - Application configuration management with validation
+  - `ai_translator.rs` - AI translation integration (8 providers)
+  - `translation_memory.rs` - Translation memory system (83+ built-in phrases, pattern matching)
+  - `batch_translator.rs` - Batch translation (deduplication, progress tracking, event emission)
+  - `config_manager.rs` - **[DEPRECATED]** Old configuration management
+  - `config_draft.rs` - **[NEW 2025-01]** Draft mode configuration (atomic updates, `parking_lot::RwLock`)
   - `term_library.rs` - Terminology library management with style analysis
   - `mod.rs` - Service module organization
 
 - **Utils** (`utils/`): Shared utilities
-  - `logger.rs` - Structured logging system with tracing
+  - `draft.rs` - **[NEW 2025-01]** Generic Draft pattern implementation (from clash-verge-rev)
+  - `logging.rs` - Structured logging with `flexi_logger` (rotation, cleanup, `wrap_err!` macro)
+  - `init.rs` - **[NEW 2025-01]** Application initialization (portable mode, directories, logging)
+  - `paths.rs` - Path and file system utilities (portable mode support)
   - `common.rs` - Common utilities and helper functions
-  - `paths.rs` - Path and file system utilities
   - `mod.rs` - Utility module organization
 
-### Key Integration Points
+### Key Integration Points (Updated 2025-01)
 
-- **Tauri Commands**: All backend operations exposed through Tauri's invoke system with unified error handling
-- **Event System**: Type-safe event dispatcher bridges backend events to frontend components
-- **API Layer**: Centralized API wrapper with consistent error handling, logging, and organization
-- **State Management**: Zustand store synchronized with backend operations via events and API calls
+**Four-Layer Architecture**:
+```
+Components → AppDataProvider → Command Layer → Tauri IPC → Rust Services
+```
+
+- **Command Layer** (`commands.ts`): Type-safe Tauri invocations, unified error handling
+- **AppDataProvider**: Centralized data management, SWR caching, event-driven refresh
+- **Enhanced Event Bridge**: Debouncing (500ms), throttling, auto-cleanup on unmount
+- **Draft Mode Config** (`ConfigDraft`): Atomic updates with `parking_lot::RwLock`, auto-persist and event emission
 - **Translation Pipeline**: PO parsing → TM lookup → AI translation → TM update → Event emission
-- **Configuration**: JSON-based config stored in user data directory with validation
-- **Logging**: Structured logging system spanning both frontend and backend
+- **Logging**: Structured logging with rotation (128KB per file, keep 8 files, retention days)
 
 ## Technology Stack
 
@@ -163,11 +172,12 @@ npm run build  # Build frontend only first
 ### Backend
 
 - Tauri 2.x (desktop app framework)
-- Rust with Tokio (async runtime)
+- Rust Edition 2024 with Tokio (async runtime)
 - reqwest (HTTP client for AI APIs)
 - async-openai (OpenAI API client)
 - serde (JSON serialization)
-- tracing (logging system)
+- flexi_logger (structured logging with rotation)
+- parking_lot (高性能 RwLock for Draft mode)
 - nom (PO file parsing)
 - whatlang (language detection)
 - sys-locale (system language detection)
@@ -186,21 +196,52 @@ npm run build  # Build frontend only first
   - Google Gemini
 - Local file system for PO files and translation memory
 
-## Development Guidelines
+## Development Guidelines (Updated 2025-01)
 
-### API Usage
+### Command Layer Usage
 
-- Use the centralized API services from `services/api.ts` instead of direct Tauri invoke calls
-- All API calls have built-in error handling, logging, and user feedback
-- Prefer `useAsync` hook + API functions over specialized hooks (like `useTranslator`)
-- API modules are organized by feature: `termLibraryApi`, `translationMemoryApi`, `poFileApi`, etc.
+**Recommended Approach**:
+```typescript
+import { configCommands, aiConfigCommands, translatorCommands } from '@/services/commands';
+
+// Preferred: Use command layer
+const config = await configCommands.get();
+await aiConfigCommands.add(newConfig);
+const result = await translatorCommands.translateBatch(entries, targetLang);
+```
+
+**Deprecated**:
+```typescript
+// OLD: Direct API calls (partially deprecated)
+import { configApi, translatorApi } from '@/services/api';
+```
+
+### Data Access via AppDataProvider
+
+**Recommended Approach**:
+```typescript
+const { config, aiConfigs, termLibrary, refreshAll } = useAppData();
+
+// Unified refresh
+await refreshAll();
+```
+
+**What AppDataProvider provides**:
+- `config` - Application configuration
+- `aiConfigs` - AI provider configurations
+- `activeAiConfig` - Currently active AI config
+- `termLibrary` - Terminology library
+- `translationMemory` - Translation memory
+- `systemPrompt` - Custom system prompt
+- `supportedLanguages` - Supported language list
+- `refreshAll()` - Refresh all data
 
 ### Event System Integration
 
-- Subscribe to events via `eventDispatcher` for type-safe event handling
-- Use `useTauriEventBridge` to bridge backend events to frontend
-- Events cover translation lifecycle, file operations, terminology changes, and UI updates
-- Event history is available for debugging with `eventDispatcher.getEventHistory()`
+- `useTauriEventBridgeEnhanced` auto-integrates in AppDataProvider
+- Supports debouncing/throttling (default 500ms)
+- Auto-cleanup on component unmount
+- Events forwarded to `eventDispatcher` for compatibility
 
 ### File Operations
 
@@ -231,12 +272,40 @@ npm run build  # Build frontend only first
 - Development mode shows detailed logs in console
 - Event system provides debugging capabilities through event history
 
-### Configuration Management
+### Configuration Management (Draft Mode)
 
-- API keys and settings stored in Tauri's app data directory
-- Use `configApi` for all configuration operations with validation
-- Configuration changes are persisted immediately
-- Validation prevents invalid API configurations from being used
+**Backend (Rust)**:
+```rust
+// Read configuration (read-only access)
+let draft = ConfigDraft::global().await;
+{
+    let config = draft.data(); // MappedRwLockReadGuard
+    println!("API Key: {}", config.api_key);
+} // Guard auto-released
+
+// Modify configuration (atomic update)
+let draft = ConfigDraft::global().await;
+{
+    let mut config = draft.draft(); // MappedRwLockWriteGuard
+    config.ai_configs.push(new_config);
+}
+draft.apply()?; // Save to disk + emit event
+```
+
+**Frontend**:
+```typescript
+const { config, refreshAll } = useAppData();
+
+// Modify and save
+await configCommands.update(updatedConfig);
+// AppDataProvider auto-refreshes on `config:updated` event
+```
+
+**Key Features**:
+- Atomic updates (all-or-nothing)
+- Concurrent-safe (`parking_lot::RwLock`)
+- Auto-persist and event emission
+- Global singleton pattern
 
 ## Common Tasks
 
@@ -332,16 +401,11 @@ The application supports translation to/from 10 major languages with automatic d
 ### Documentation
 
 - `README.md` - Project introduction and quick start
-- `ARCHITECTURE_OVERVIEW.md` - Detailed architecture documentation
-- `API_REFERENCE_V2.md` - Complete API reference
-- `QUICK_API_REFERENCE.md` - Quick API lookup
-- `FEATURES_STATUS.md` - Feature completion status
-- `docs/` - Comprehensive documentation folder
-  - `docs/README.md` - Documentation index
-  - `docs/QUICK_START.md` - 5-minute quick start guide
-  - `docs/DEVELOPMENT_GUIDE.md` - Complete development tutorial
-  - `docs/TEST_COVERAGE_STATUS.md` - Test coverage report
-  - `docs/PHASE*_COMPLETION_SUMMARY.md` - Phase completion reports
+- `CLAUDE.md` - AI assistant guidance (this file)
+- `docs/API.md` - **[UPDATED 2025-01]** API reference (command layer, AppDataProvider, Draft mode)
+- `docs/Architecture.md` - **[UPDATED 2025-01]** Architecture overview (four-layer design)
+- `docs/DataContract.md` - **[UPDATED 2025-01]** Data contracts (types, Draft mode flow)
+- `docs/CHANGELOG.md` - **[UPDATED 2025-01]** Change history (architecture refactoring, log rotation)
 
 ### Configuration
 
@@ -351,11 +415,19 @@ The application supports translation to/from 10 major languages with automatic d
 - `vitest.config.ts` - Test configuration
 - `tsconfig.json` - TypeScript configuration
 
-### Key Source Files
+### Key Source Files (Updated 2025-01)
 
-- `src/services/api.ts` - Centralized API layer (13 modules)
+**Frontend**:
+- `src/services/commands.ts` - **[NEW]** Unified command layer (13 modules, 52 commands)
+- `src/providers/AppDataProvider.tsx` - **[NEW]** Centralized data provider (SWR + events)
+- `src/hooks/useTauriEventBridge.enhanced.ts` - **[NEW]** Enhanced event bridge
 - `src/services/eventDispatcher.ts` - Type-safe event system
 - `src/store/useAppStore.ts` - Main application state
+
+**Backend**:
 - `src-tauri/src/main.rs` - Backend entry point (52 registered commands)
+- `src-tauri/src/services/config_draft.rs` - **[NEW]** Draft mode configuration
+- `src-tauri/src/utils/draft.rs` - **[NEW]** Generic Draft pattern (from clash-verge-rev)
+- `src-tauri/src/utils/init.rs` - **[NEW]** Application initialization
 - `src-tauri/src/services/ai_translator.rs` - AI translation engine
 - `src-tauri/src/services/po_parser.rs` - PO file parser (nom-based)
