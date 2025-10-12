@@ -1,11 +1,11 @@
 use serde::{Deserialize, Serialize};
-use crate::services::{AIConfig, AITranslator, ConfigManager};
+use crate::services::{AIConfig, AITranslator, ConfigManager, ConfigDraft};
 
 /// 获取所有 AI 配置
 #[tauri::command]
 pub async fn get_all_ai_configs() -> Result<Vec<AIConfig>, String> {
-    let config_manager = ConfigManager::new(None).map_err(|e| e.to_string())?;
-    let config = config_manager.get_config();
+    let draft = ConfigDraft::global().await;
+    let config = draft.data();
     let configs = config.get_all_ai_configs().clone();
     
     // 调试：打印配置内容
@@ -26,8 +26,8 @@ pub async fn get_all_ai_configs() -> Result<Vec<AIConfig>, String> {
 /// 获取当前启用的 AI 配置
 #[tauri::command]
 pub async fn get_active_ai_config() -> Result<Option<AIConfig>, String> {
-    let config_manager = ConfigManager::new(None).map_err(|e| e.to_string())?;
-    let config = config_manager.get_config();
+    let draft = ConfigDraft::global().await;
+    let config = draft.data();
     Ok(config.get_active_ai_config().cloned())
 }
 

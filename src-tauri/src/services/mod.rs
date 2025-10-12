@@ -17,6 +17,7 @@ pub use ai_translator::*;
 pub use batch_translator::*;
 pub use batch_progress_channel::*;  // Tauri 2.x: IPC Channel 优化
 pub use config_manager::*;
+pub use config_draft::*;  // Phase 9: Draft 模式配置管理
 pub use po_parser::*;
 pub use translation_memory::*;
 pub use term_library::*;

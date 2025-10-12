@@ -5,7 +5,7 @@ use tauri::Emitter;
 // use tauri::State;
 
 use crate::services::{
-    AITranslator, BatchTranslator, ConfigManager, POParser, TermLibrary, TranslationMemory, TranslationReport,
+    AITranslator, BatchTranslator, ConfigManager, ConfigDraft, POParser, TermLibrary, TranslationMemory, TranslationReport,
 };
 use crate::utils::paths::get_translation_memory_path;
 use crate::utils::path_validator::SafePathValidator;  // Tauri 2.x: 路径安全验证
@@ -16,10 +16,10 @@ use ts_rs::TS;
 // ========== Phase 3: 辅助函数 - 获取自定义系统提示词 ==========
 
 /// 从配置中获取自定义系统提示词
-fn get_custom_system_prompt() -> Option<String> {
-    ConfigManager::new(None)
-        .ok()
-        .and_then(|manager| manager.get_config().system_prompt.clone())
+async fn get_custom_system_prompt() -> Option<String> {
+    let draft = ConfigDraft::global().await;
+    let config = draft.data();
+    config.system_prompt.clone()
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -102,12 +102,13 @@ pub async fn translate_entry(
     target_language: Option<String>
 ) -> Result<String, String> {
     // 从配置管理器获取启用的AI配置
-    let config_manager = ConfigManager::new(None).map_err(|e| format!("配置管理器初始化失败: {}", e))?;
-    let ai_config = config_manager.get_config().get_active_ai_config()
+    let draft = ConfigDraft::global().await;
+    let config = draft.data();
+    let ai_config = config.get_active_ai_config()
         .ok_or_else(|| "未找到启用的AI配置，请在设置中配置并启用AI服务".to_string())?
         .clone();
     
-    let custom_prompt = config_manager.get_config().system_prompt.clone();
+    let custom_prompt = config.system_prompt.clone();
     let mut translator = AITranslator::new_with_config(
         ai_config,
         true,
@@ -273,9 +274,9 @@ pub async fn translate_directory(
 // 配置管理命令
 #[tauri::command]
 pub async fn get_app_config() -> Result<serde_json::Value, String> {
-    let config_manager = ConfigManager::new(None).map_err(|e| e.to_string())?;
-    let config = config_manager.get_config();
-    serde_json::to_value(config).map_err(|e| e.to_string())
+    let draft = ConfigDraft::global().await;
+    let config = draft.data();
+    serde_json::to_value(&*config).map_err(|e| e.to_string())
 }
 
 #[tauri::command]
@@ -503,15 +504,16 @@ pub async fn contextual_refine(
     }
     
     // 1. 获取配置管理器
-    let config_manager = ConfigManager::new(None).map_err(|e| e.to_string())?;
+    let draft = ConfigDraft::global().await;
+    let config = draft.data();
     
     // 2. 获取活动的 AI 配置
-    let ai_config = config_manager.get_config().get_active_ai_config()
+    let ai_config = config.get_active_ai_config()
         .ok_or_else(|| "未找到启用的AI配置，请在设置中配置并启用AI服务".to_string())?
         .clone();
     
     // 3. 获取系统提示词
-    let custom_prompt = config_manager.get_config().system_prompt.clone();
+    let custom_prompt = config.system_prompt.clone();
     
     // 4. 创建翻译器（关键：use_tm = false，绕过翻译记忆库）
     let mut translator = AITranslator::new_with_config(
@@ -635,12 +637,13 @@ pub async fn translate_batch_with_channel(
     use crate::services::{BatchProgressManager, BatchStatsEvent, TokenStatsEvent};
     
     // 初始化配置和翻译器
-    let config_manager = ConfigManager::new(None).map_err(|e| format!("配置管理器初始化失败: {}", e))?;
-    let ai_config = config_manager.get_config().get_active_ai_config()
+    let draft = ConfigDraft::global().await;
+    let config = draft.data();
+    let ai_config = config.get_active_ai_config()
         .ok_or_else(|| "未找到启用的AI配置，请在设置中配置并启用AI服务".to_string())?
         .clone();
     
-    let custom_prompt = config_manager.get_config().system_prompt.clone();
+    let custom_prompt = config.system_prompt.clone();
     let mut translator = AITranslator::new_with_config(ai_config, true, custom_prompt.as_deref(), target_language)
         .map_err(|e| format!("AI翻译器初始化失败: {}", e))?;
     
