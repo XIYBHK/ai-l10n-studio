@@ -8,14 +8,12 @@ use crate::services::{ConfigManager, ConfigVersionInfo, ConfigDraft};
 pub async fn get_config_version() -> Result<ConfigVersionInfo, String> {
     let draft = ConfigDraft::global().await;
     let config = draft.data();
-    let active_config_index = config.get_active_ai_config_index();
-    let config_count = config.get_all_ai_configs().len();
     
     Ok(ConfigVersionInfo {
         version: config.version,
         timestamp: config.last_modified.clone(),
-        active_config_index,
-        config_count,
+        active_config_index: config.get_active_ai_config_index(),
+        config_count: config.get_all_ai_configs().len(),
     })
 }
 

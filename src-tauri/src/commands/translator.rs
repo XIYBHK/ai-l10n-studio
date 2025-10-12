@@ -281,26 +281,37 @@ pub async fn get_app_config() -> Result<serde_json::Value, String> {
 
 #[tauri::command]
 pub async fn update_app_config(config: serde_json::Value) -> Result<(), String> {
-    let mut config_manager = ConfigManager::new(None).map_err(|e| e.to_string())?;
     let app_config: crate::services::AppConfig =
         serde_json::from_value(config).map_err(|e| e.to_string())?;
-    config_manager
-        .update_config(|c| *c = app_config)
-        .map_err(|e| e.to_string())
+    
+    let draft = ConfigDraft::global().await;
+    
+    // 在草稿上替换整个配置
+    {
+        let mut draft_config = draft.draft();
+        *draft_config = app_config;
+    }
+    
+    // 原子提交并保存
+    draft.apply().map_err(|e| e.to_string())
 }
 
 #[tauri::command]
 pub async fn validate_config(config: serde_json::Value) -> Result<bool, String> {
     let app_config: crate::services::AppConfig =
         serde_json::from_value(config).map_err(|e| e.to_string())?;
-    // 创建一个临时的ConfigManager来验证配置
-    let mut config_manager = ConfigManager::new(None).map_err(|e| e.to_string())?;
-    config_manager
-        .update_config(|c| *c = app_config)
-        .map_err(|e| e.to_string())?;
-    config_manager
-        .validate_config()
-        .map_err(|e| e.to_string())?;
+    
+    // 验证配置：检查 AI 配置的必要字段
+    if app_config.ai_configs.is_empty() {
+        return Err("配置中至少需要一个 AI 配置".to_string());
+    }
+    
+    for (idx, ai_config) in app_config.ai_configs.iter().enumerate() {
+        if ai_config.api_key.is_empty() {
+            return Err(format!("AI 配置 {} 缺少 API Key", idx));
+        }
+    }
+    
     Ok(true)
 }
 

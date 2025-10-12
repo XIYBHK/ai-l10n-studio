@@ -34,12 +34,16 @@ pub async fn get_active_ai_config() -> Result<Option<AIConfig>, String> {
 /// 添加新的 AI 配置
 #[tauri::command]
 pub async fn add_ai_config(config: AIConfig) -> Result<(), String> {
-    let mut config_manager = ConfigManager::new(None).map_err(|e| e.to_string())?;
-    config_manager
-        .update_config(|c| {
-            c.add_ai_config(config);
-        })
-        .map_err(|e| e.to_string())?;
+    let draft = ConfigDraft::global().await;
+    
+    // 在草稿上修改
+    {
+        let mut draft_config = draft.draft();
+        draft_config.add_ai_config(config);
+    }
+    
+    // 原子提交并保存
+    draft.apply().map_err(|e| e.to_string())?;
     
     crate::app_log!("✅ 新增 AI 配置成功");
     Ok(())
@@ -48,14 +52,16 @@ pub async fn add_ai_config(config: AIConfig) -> Result<(), String> {
 /// 更新指定索引的 AI 配置
 #[tauri::command]
 pub async fn update_ai_config(index: usize, config: AIConfig) -> Result<(), String> {
-    let mut config_manager = ConfigManager::new(None).map_err(|e| e.to_string())?;
+    let draft = ConfigDraft::global().await;
     
-    // 直接更新配置
-    let app_config = config_manager.get_config_mut();
-    app_config.update_ai_config(index, config).map_err(|e| e.to_string())?;
+    // 在草稿上修改
+    {
+        let mut draft_config = draft.draft();
+        draft_config.update_ai_config(index, config).map_err(|e| e.to_string())?;
+    }
     
-    // 保存配置
-    config_manager.save().map_err(|e| e.to_string())?;
+    // 原子提交并保存
+    draft.apply().map_err(|e| e.to_string())?;
     
     crate::app_log!("✅ 更新 AI 配置成功，索引: {}", index);
     Ok(())
@@ -64,14 +70,16 @@ pub async fn update_ai_config(index: usize, config: AIConfig) -> Result<(), Stri
 /// 删除指定索引的 AI 配置
 #[tauri::command]
 pub async fn remove_ai_config(index: usize) -> Result<(), String> {
-    let mut config_manager = ConfigManager::new(None).map_err(|e| e.to_string())?;
+    let draft = ConfigDraft::global().await;
     
-    // 直接删除配置
-    let app_config = config_manager.get_config_mut();
-    app_config.remove_ai_config(index).map_err(|e| e.to_string())?;
+    // 在草稿上修改
+    {
+        let mut draft_config = draft.draft();
+        draft_config.remove_ai_config(index).map_err(|e| e.to_string())?;
+    }
     
-    // 保存配置
-    config_manager.save().map_err(|e| e.to_string())?;
+    // 原子提交并保存
+    draft.apply().map_err(|e| e.to_string())?;
     
     crate::app_log!("✅ 删除 AI 配置成功，索引: {}", index);
     Ok(())
@@ -80,14 +88,16 @@ pub async fn remove_ai_config(index: usize) -> Result<(), String> {
 /// 设置启用的 AI 配置
 #[tauri::command]
 pub async fn set_active_ai_config(index: usize) -> Result<(), String> {
-    let mut config_manager = ConfigManager::new(None).map_err(|e| e.to_string())?;
+    let draft = ConfigDraft::global().await;
     
-    // 直接设置启用配置
-    let app_config = config_manager.get_config_mut();
-    app_config.set_active_ai_config(index).map_err(|e| e.to_string())?;
+    // 在草稿上修改
+    {
+        let mut draft_config = draft.draft();
+        draft_config.set_active_ai_config(index).map_err(|e| e.to_string())?;
+    }
     
-    // 保存配置
-    config_manager.save().map_err(|e| e.to_string())?;
+    // 原子提交并保存
+    draft.apply().map_err(|e| e.to_string())?;
     
     crate::app_log!("✅ 设置启用配置成功，索引: {}", index);
     Ok(())
