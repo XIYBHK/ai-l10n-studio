@@ -1,13 +1,15 @@
-## API 索引（简版）
+## API 索引
 
-### 🆕 统一命令层 (`src/services/commands.ts`) - 2025-01
+### 统一命令层 (2025-10)
 
-**最新架构**：所有 Tauri 后端调用已迁移到统一命令层，提供：
+**位置**: `src/services/commands.ts`
 
-- ✅ **类型安全**：52 个命令的完整 TypeScript 类型定义
-- ✅ **统一错误处理**：集中式 `invoke()` 包装器，自动日志和用户提示
-- ✅ **模块化组织**：13 个命令模块（`configCommands`, `aiConfigCommands`, `translatorCommands` 等）
-- ✅ **易于维护**：命令名称统一管理在 `COMMANDS` 常量中
+所有 Tauri 后端调用已迁移到统一命令层：
+
+- **类型安全**: 52 个命令的完整 TypeScript 类型定义
+- **统一错误处理**: 集中式 `invoke()` 包装器，自动日志和用户提示
+- **模块化组织**: 13 个命令模块（`configCommands`, `aiConfigCommands`, `translatorCommands` 等）
+- **易于维护**: 命令名称统一管理在 `COMMANDS` 常量中
 
 **推荐用法**：
 ```typescript
@@ -36,36 +38,41 @@ const result = await translatorCommands.translateBatch(entries, targetLang);
 
 ---
 
-### ⚠️ 已废弃：旧 API 层 (`src/services/api.ts`)
+### 已废弃：旧 API 层
 
-**迁移状态**（2025-01-13 完成）：
+**位置**: `src/services/api.ts`
 
-- ❌ **已删除**：`termLibraryApi`, `translationMemoryApi`, `logApi`, `promptLogApi`
-- ❌ **已删除**：`aiConfigApi`, `systemPromptApi`, `aiModelApi`
-- ❌ **已删除**：`poFileApi`, `dialogApi`, `translatorApi`, `languageApi`
-- ✅ **保留**：`configApi`, `fileFormatApi`, `systemApi`（尚未迁移）
+**迁移状态** (2025-10-13完成):
 
-**迁移完成清单**：所有前端组件已迁移到命令层，旧 API 实现已完全移除。
+已删除模块:
+- `termLibraryApi`, `translationMemoryApi`, `logApi`, `promptLogApi`
+- `aiConfigApi`, `systemPromptApi`, `aiModelApi`
+- `poFileApi`, `dialogApi`, `translatorApi`, `languageApi`
+
+保留模块（尚未迁移）:
+- `configApi`, `fileFormatApi`, `systemApi`
+
+所有前端组件已迁移到命令层，旧 API 实现已完全移除。
 
 ---
 
-### 封装的 Tauri Commands（52 个）
+### Tauri Commands (52 个)
 
 13 个功能模块，自动处理错误、日志和用户反馈：
 
-**核心 API 模块**：
+**命令模块**:
 
-- 📄 `poFileApi.*` - 文件解析/保存（PO/JSON/XLIFF/YAML）
-- 🤖 `translatorApi.*` - AI 翻译（8 厂商，单条/批量/通道模式）
-- 🎯 `aiModelApi.*` - **多AI供应商**（模型查询、精确成本计算、USD定价）
-- 💾 `translationMemoryApi.*` - 翻译记忆库（83+ 内置短语，模式匹配）
-- 📚 `termLibraryApi.*` - 术语库管理（风格分析、批量导入）
-- ⚙️ `configApi.*` - 配置管理（AI/代理/系统设置，实时校验）
-- 📊 `statsApi.*` - 统计聚合（Token/去重/性能指标）
-- 🌐 `languageApi.*` - 语言检测（10 语言，自动识别）
-- 📝 `logApi.*` - 结构化日志（开发/生产模式）
+- `poFileCommands` - 文件解析/保存（PO/JSON/XLIFF/YAML）
+- `translatorCommands` - AI 翻译（8 厂商，单条/批量/通道模式）
+- `aiModelCommands` - 多AI供应商（模型查询、精确成本计算、USD定价）
+- `translationMemoryCommands` - 翻译记忆库（83+ 内置短语，模式匹配）
+- `termLibraryCommands` - 术语库管理（风格分析、批量导入）
+- `configCommands` - 配置管理（AI/代理/系统设置，实时校验）
+- `statsCommands` - 统计聚合（Token/去重/性能指标）
+- `i18nCommands` - 语言检测（10 语言，自动识别）
+- `logCommands` - 结构化日志（开发/生产模式）
 
-### 🆕 统一数据提供者 (`AppDataProvider`) - 2025-01
+### 🆕 统一数据提供者 (`AppDataProvider`) - 2025-10
 
 **架构升级**：使用 React Context 集中管理全局数据，配合 SWR 实现自动缓存和重验证：
 
@@ -96,7 +103,7 @@ const { config, aiConfigs, termLibrary, refreshAll } = useAppData();
 
 ---
 
-### 🆕 增强事件桥接 (`useTauriEventBridge.enhanced.ts`) - 2025-01
+### 🆕 增强事件桥接 (`useTauriEventBridge.enhanced.ts`) - 2025-10
 
 **改进点**：
 
@@ -126,7 +133,7 @@ useTauriEventBridgeEnhanced([
 
 ### ⚠️ 已废弃：旧事件桥接 (`useTauriEventBridge.ts`)
 
-**迁移状态**（2025-01-13 完成）：
+**迁移状态**（2025-10-13 完成）：
 - ❌ **已删除**：旧的 `useTauriEventBridge.ts` 文件
 - ✅ **已迁移**：所有事件监听器已迁移到增强版本
 - ✅ **兼容性**：增强版本自动转发事件到 `eventDispatcher`
@@ -261,12 +268,12 @@ const costDisplay = formatCost(0.0042); // "0.42¢"
 const costDisplay = cost < 0.01 ? `${(cost * 100).toFixed(2)}¢` : `$${cost.toFixed(4)}`;
 ```
 
-**代码质量改进**: 详见 `docs/CHANGELOG.md` (2025-01-13 质量提升)  
+**代码质量改进**: 详见 `docs/CHANGELOG.md` (2025-10-13 质量提升)  
 **完整参考**: `CLAUDE.md` §Architecture Overview
 
 ---
 
-## 🆕 后端配置管理（Draft 模式） - 2025-01
+## 🆕 后端配置管理（Draft 模式） - 2025-10
 
 ### ConfigDraft - 原子配置更新
 

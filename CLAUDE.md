@@ -8,7 +8,7 @@ This is a professional PO file translation tool built with Tauri (Rust + React).
 
 **Architecture**: Frontend (React + TypeScript + Ant Design) + Backend (Rust + Tauri)
 **Primary Purpose**: Professional translation workflow for localization files with AI assistance
-**Current Version**: Phase 9+ (2025-01 架构重构完成)
+**Current Version**: Phase 9+ (2025-10 架构重构完成)
 **Development Status**: Production Ready
 
 ### Core Features
@@ -22,7 +22,7 @@ This is a professional PO file translation tool built with Tauri (Rust + React).
 - **Contextual Refine**: Context-aware fine-tuned translation
 - **Performance Optimization**: Large file handling, progress throttling, memory optimization
 
-### Architecture Enhancements (2025-01)
+### Architecture Enhancements (2025-10)
 
 - **Unified Command Layer** (`commands.ts`): Type-safe Tauri command calls, 13 modular APIs
 - **AppDataProvider**: Centralized data management with SWR integration
@@ -91,7 +91,7 @@ npm run build  # Build frontend only first
   - `ErrorBoundary.tsx` - Error boundary for error handling
 
 - **Services**: Frontend service layer
-  - `commands.ts` - **[NEW 2025-01]** Unified command layer, 13 modular APIs:
+  - `commands.ts` - **[NEW 2025-10]** Unified command layer, 13 modular APIs:
     - `configCommands`, `aiConfigCommands`, `aiModelCommands`
     - `systemPromptCommands`, `termLibraryCommands`, `translationMemoryCommands`
     - `translatorCommands`, `poFileCommands`, `fileFormatCommands`
@@ -102,15 +102,15 @@ npm run build  # Build frontend only first
   - `formatters.ts` - Unified formatting utilities (cost, tokens, percentage)
 
 - **Providers**: React Context providers
-  - `AppDataProvider.tsx` - **[NEW 2025-01]** Centralized data management with SWR:
+  - `AppDataProvider.tsx` - **[NEW 2025-10]** Centralized data management with SWR:
     - Global data access via `useAppData()` hook
     - Auto-refresh on backend events (config, term library, memory, etc.)
     - Unified `refreshAll()` interface
 
 - **Hooks**: Custom React hooks
-  - `useAppData` - **[NEW 2025-01]** Access global data from AppDataProvider
+  - `useAppData` - **[NEW 2025-10]** Access global data from AppDataProvider
   - `useAsync` - Generic async operation handling (replaces `useTranslator`)
-  - `useTauriEventBridge.enhanced.ts` - **[NEW 2025-01]** Enhanced event bridge with debouncing/throttling
+  - `useTauriEventBridge.enhanced.ts` - **[NEW 2025-10]** Enhanced event bridge with debouncing/throttling
   - `useTheme` - Theme management (light/dark/system)
   - `useEventListener` - Event system integration
 
@@ -133,19 +133,19 @@ npm run build  # Build frontend only first
   - `translation_memory.rs` - Translation memory system (83+ built-in phrases, pattern matching)
   - `batch_translator.rs` - Batch translation (deduplication, progress tracking, event emission)
   - `config_manager.rs` - **[DEPRECATED]** Old configuration management
-  - `config_draft.rs` - **[NEW 2025-01]** Draft mode configuration (atomic updates, `parking_lot::RwLock`)
+  - `config_draft.rs` - **[NEW 2025-10]** Draft mode configuration (atomic updates, `parking_lot::RwLock`)
   - `term_library.rs` - Terminology library management with style analysis
   - `mod.rs` - Service module organization
 
 - **Utils** (`utils/`): Shared utilities
-  - `draft.rs` - **[NEW 2025-01]** Generic Draft pattern implementation (from clash-verge-rev)
+  - `draft.rs` - **[NEW 2025-10]** Generic Draft pattern implementation (from clash-verge-rev)
   - `logging.rs` - Structured logging with `flexi_logger` (rotation, cleanup, `wrap_err!` macro)
-  - `init.rs` - **[NEW 2025-01]** Application initialization (portable mode, directories, logging)
+  - `init.rs` - **[NEW 2025-10]** Application initialization (portable mode, directories, logging)
   - `paths.rs` - Path and file system utilities (portable mode support)
   - `common.rs` - Common utilities and helper functions
   - `mod.rs` - Utility module organization
 
-### Key Integration Points (Updated 2025-01)
+### Key Integration Points (Updated 2025-10)
 
 **Four-Layer Architecture**:
 ```
@@ -196,7 +196,7 @@ Components → AppDataProvider → Command Layer → Tauri IPC → Rust Services
   - Google Gemini
 - Local file system for PO files and translation memory
 
-## Development Guidelines (Updated 2025-01)
+## Development Guidelines (Updated 2025-10)
 
 ### Command Layer Usage
 
@@ -402,10 +402,10 @@ The application supports translation to/from 10 major languages with automatic d
 
 - `README.md` - Project introduction and quick start
 - `CLAUDE.md` - AI assistant guidance (this file)
-- `docs/API.md` - **[UPDATED 2025-01]** API reference (command layer, AppDataProvider, Draft mode)
-- `docs/Architecture.md` - **[UPDATED 2025-01]** Architecture overview (four-layer design)
-- `docs/DataContract.md` - **[UPDATED 2025-01]** Data contracts (types, Draft mode flow)
-- `docs/CHANGELOG.md` - **[UPDATED 2025-01]** Change history (architecture refactoring, log rotation)
+- `docs/API.md` - **[UPDATED 2025-10]** API reference (command layer, AppDataProvider, Draft mode)
+- `docs/Architecture.md` - **[UPDATED 2025-10]** Architecture overview (four-layer design)
+- `docs/DataContract.md` - **[UPDATED 2025-10]** Data contracts (types, Draft mode flow)
+- `docs/CHANGELOG.md` - **[UPDATED 2025-10]** Change history (architecture refactoring, log rotation)
 
 ### Configuration
 
@@ -415,7 +415,7 @@ The application supports translation to/from 10 major languages with automatic d
 - `vitest.config.ts` - Test configuration
 - `tsconfig.json` - TypeScript configuration
 
-### Key Source Files (Updated 2025-01)
+### Key Source Files (Updated 2025-10)
 
 **Frontend**:
 - `src/services/commands.ts` - **[NEW]** Unified command layer (13 modules, 52 commands)

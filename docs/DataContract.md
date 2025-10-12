@@ -10,7 +10,7 @@
 
 - `AIConfig` - AI 提供商配置（API Key、模型、参数）
 - `AppConfig` - 应用全局配置（代理、日志、性能）
-  - **🆕 日志配置**（2025-01）：
+  - **🆕 日志配置**（2025-10）：
     - `log_level?: string` - 日志级别（error/warn/info/debug/trace）
     - `log_retention_days?: number` - 日志保留天数（0 = 永久）
     - `log_max_size?: number` - 单个文件最大大小（KB，默认 128KB）
@@ -320,7 +320,7 @@ API 层自动反序列化
 
 ---
 
-## 🆕 后端配置管理契约（Draft 模式） - 2025-01
+## 🆕 后端配置管理契约（Draft 模式） - 2025-10
 
 ### ConfigDraft 数据流
 
