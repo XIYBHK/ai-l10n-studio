@@ -3,6 +3,7 @@
 use crate::services::language_detector::{
     Language, LanguageInfo, detect_language, get_default_target_language, get_supported_languages,
 };
+use crate::wrap_err; // 错误处理宏
 
 /// 检测文本语言
 #[tauri::command]

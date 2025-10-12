@@ -10,6 +10,7 @@ use crate::services::{
 };
 use crate::utils::path_validator::SafePathValidator;
 use crate::utils::paths::get_translation_memory_path; // Tauri 2.x: 路径安全验证
+use crate::wrap_err; // 错误处理宏
 
 #[cfg(feature = "ts-rs")]
 use ts_rs::TS;

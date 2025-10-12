@@ -1,6 +1,7 @@
 // ========== Phase 4: 文件格式检测命令 ==========
 
 use crate::services::file_format::{FileFormat, FileMetadata};
+use crate::wrap_err; // 错误处理宏
 
 /// 检测文件格式
 #[tauri::command]

@@ -1,4 +1,5 @@
 use crate::services::{AIConfig, AITranslator, ConfigDraft};
+use crate::wrap_err; // 错误处理宏
 use serde::{Deserialize, Serialize};
 
 /// 获取所有 AI 配置
