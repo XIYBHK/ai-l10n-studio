@@ -3,9 +3,9 @@
 // ========== Phase 5: 语言选择器组件 ==========
 
 import { Select } from 'antd';
-import { type LanguageInfo } from '../services/api';
+import { type LanguageInfo } from '../services/api'; // TODO: Phase 1.5 清理时，移动类型定义到 types/
 import { createModuleLogger } from '../utils/logger';
-import { useSupportedLanguages } from '../hooks/useLanguage';
+import { useSupportedLanguages } from '../hooks/useLanguage'; // ✅ 已使用统一命令层
 import type { CSSProperties } from 'react';
 
 const log = createModuleLogger('LanguageSelector');

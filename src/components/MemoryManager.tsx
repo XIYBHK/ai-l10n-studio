@@ -3,7 +3,7 @@ import { Modal, Table, Input, Button, message, Space, Popconfirm } from 'antd';
 import { DeleteOutlined, PlusOutlined, SearchOutlined, ClearOutlined, ExportOutlined, ImportOutlined } from '@ant-design/icons';
 import { save, open } from '@tauri-apps/plugin-dialog';
 import { writeTextFile, readTextFile } from '@tauri-apps/plugin-fs';
-import { translationMemoryApi } from '../services/api';
+import { translationMemoryCommands } from '../services/commands'; // ✅ 迁移到统一命令层
 import { createModuleLogger } from '../utils/logger';
 import { useTranslationMemory } from '../hooks/useTranslationMemory';
 
@@ -72,7 +72,7 @@ export const MemoryManager: React.FC<MemoryManagerProps> = ({ visible, onClose }
         memoryMap[entry.source] = entry.target;
       });
 
-      await translationMemoryApi.save({
+      await translationMemoryCommands.save({
         memory: memoryMap,
         stats: {
           total_entries: memories.length,
@@ -104,7 +104,7 @@ export const MemoryManager: React.FC<MemoryManagerProps> = ({ visible, onClose }
       setMemories([]);
       
       // 保存空的记忆库到后端
-      await translationMemoryApi.save({
+      await translationMemoryCommands.save({
         memory: {}, // 空的memory字段
         stats: {
           total_entries: 0,
@@ -129,7 +129,7 @@ export const MemoryManager: React.FC<MemoryManagerProps> = ({ visible, onClose }
       setLoading(true);
       
       // 调用后端接口获取内置词库
-      const response = await translationMemoryApi.getBuiltinPhrases() as any;
+      const response = await translationMemoryCommands.getBuiltinPhrases() as any;
       
       if (response && response.memory) {
         // 合并当前记忆和内置短语

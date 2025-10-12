@@ -12,7 +12,7 @@ import {
 } from '@ant-design/icons';
 import { useTheme } from '../hooks/useTheme';
 import { LanguageSelector } from './LanguageSelector';
-import type { LanguageInfo } from '../services/api';
+import type { LanguageInfo } from '../services/api'; // TODO: Phase 1.5 清理时，移动类型定义到 types/
 
 const { Text } = Typography;
 

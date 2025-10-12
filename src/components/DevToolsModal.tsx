@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { Modal, Input, Button, Space, message, Tabs } from 'antd';
 import { CopyOutlined, ReloadOutlined, ClearOutlined, FileOutlined, BugOutlined, DownloadOutlined, SaveOutlined, FileTextOutlined } from '@ant-design/icons';
-import { logApi, promptLogApi } from '../services/api';
+import { logCommands } from '../services/commands'; // ✅ 迁移到统一命令层 (promptLogApi 已通过 hooks 使用)
 import Draggable from 'react-draggable';
 import { FileDropTest } from './FileDropTest';
 import { createModuleLogger } from '../utils/logger';
@@ -100,7 +100,7 @@ export const DevToolsModal: React.FC<DevToolsModalProps> = ({
 
   const handleClear = async () => {
     try {
-      await logApi.clear();
+      await logCommands.clear();
       await refreshBackendLogs();
       message.success('日志已清空');
       log.info('日志已清空');
@@ -360,7 +360,7 @@ export const DevToolsModal: React.FC<DevToolsModalProps> = ({
                       icon={<ClearOutlined />}
                       onClick={async () => {
                         try {
-                          await promptLogApi.clear();
+                          await logCommands.clearPromptLogs();
                           refreshPromptLogs();
                           message.success('提示词日志已清空');
                           log.info('提示词日志已清空');

@@ -33,7 +33,7 @@ import {
   InfoCircleOutlined,
   BgColorsOutlined
 } from '@ant-design/icons';
-import { aiConfigApi, systemPromptApi, aiModelApi } from '../services/api';
+import { aiConfigCommands, systemPromptCommands, aiModelCommands } from '../services/commands'; // ✅ 迁移到统一命令层
 import { AIConfig, ProviderType, PROVIDER_INFO_MAP } from '../types/aiProvider';
 import { createModuleLogger } from '../utils/logger';
 import { useAsync } from '../hooks/useAsync';
@@ -95,8 +95,8 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
   
   // 异步操作hooks
   const { prompt, mutate: mutatePrompt } = useSystemPrompt();
-  const { execute: savePrompt, loading: savingPrompt } = useAsync(systemPromptApi.updatePrompt);
-  const { execute: resetPrompt, loading: resettingPrompt } = useAsync(systemPromptApi.resetPrompt);
+  const { execute: savePrompt, loading: savingPrompt } = useAsync(systemPromptCommands.set);
+  const { execute: resetPrompt, loading: resettingPrompt } = useAsync(systemPromptCommands.reset);
 
   useEffect(() => {
     if (visible) {
@@ -126,7 +126,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
     
     // 加载该供应商的可用模型列表
     try {
-      const models = await aiModelApi.getProviderModels(provider);
+      const models = await aiModelCommands.getProviderModels(provider);
       setAvailableModels(models);
       log.info('已加载模型列表', { provider, count: models.length });
       
@@ -159,7 +159,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
     
     // 自动加载 Moonshot 的模型列表
     try {
-      const models = await aiModelApi.getProviderModels(ProviderType.Moonshot);
+      const models = await aiModelCommands.getProviderModels(ProviderType.Moonshot);
       setAvailableModels(models);
       
       // 查找推荐模型
@@ -190,7 +190,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
     
     // 加载该供应商的模型列表
     try {
-      const models = await aiModelApi.getProviderModels(config.provider);
+      const models = await aiModelCommands.getProviderModels(config.provider);
       setAvailableModels(models);
       
       // 如果有当前模型，加载其信息
@@ -240,22 +240,22 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
       };
 
       if (isAddingNew) {
-        await aiConfigApi.addConfig(config);
+        await aiConfigCommands.add(config);
         message.success('添加配置成功');
         
         // 刷新配置列表
         await mutateAll();
         
         // 如果是第一个配置，自动设为启用
-        const updatedConfigs = await aiConfigApi.getAllConfigs();
+        const updatedConfigs = await aiConfigCommands.getAll();
         if (updatedConfigs.length === 1) {
-          await aiConfigApi.setActiveConfig(0);
+          await aiConfigCommands.setActive('0');
           setActiveIndex(0);
           await mutateActive();
           message.success('已自动设为启用配置', 2);
         }
       } else if (editingIndex !== null) {
-        await aiConfigApi.updateConfig(editingIndex, config);
+        await aiConfigCommands.update(editingIndex.toString(), config);
         message.success('更新配置成功');
         
         await mutateAll();
@@ -276,7 +276,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
 
   const handleDelete = async (index: number) => {
     try {
-      await aiConfigApi.removeConfig(index);
+      await aiConfigCommands.delete(index.toString());
       message.success('删除配置成功');
       
       // 重置编辑状态，防止索引超出范围
@@ -300,7 +300,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
 
   const handleSetActive = async (index: number) => {
     try {
-      await aiConfigApi.setActiveConfig(index);
+      await aiConfigCommands.setActive(index.toString());
       setActiveIndex(index);
       message.success('设置启用配置成功');
       log.info('设置启用配置成功', { index });
@@ -325,7 +325,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
           }
         : undefined;
       
-      const result = await aiConfigApi.testConnection(
+      const result = await aiConfigCommands.testConnection(
         values.provider,
         values.apiKey,
         values.baseUrl || undefined,

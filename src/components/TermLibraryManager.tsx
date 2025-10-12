@@ -11,7 +11,7 @@ import { TermEntry } from '../types/termLibrary';
 import { useTermLibrary } from '../hooks/useTermLibrary';
 import { useTheme } from '../hooks/useTheme';
 import { createModuleLogger } from '../utils/logger';
-import { termLibraryApi } from '../services/api';
+import { termLibraryCommands } from '../services/commands'; // ✅ 迁移到统一命令层
 
 const { TextArea } = Input;
 const log = createModuleLogger('TermLibraryManager');
@@ -47,7 +47,7 @@ export const TermLibraryManager: React.FC<TermLibraryManagerProps> = ({
   // 删除术语
   const handleDelete = async (source: string) => {
     try {
-      await termLibraryApi.removeTerm(source);
+      await termLibraryCommands.removeTerm(source);
       message.success('术语已删除');
       await mutate();
     } catch (error) {
@@ -73,7 +73,7 @@ export const TermLibraryManager: React.FC<TermLibraryManagerProps> = ({
       const original = library?.terms.find((t: TermEntry) => t.source === editingKey);
       if (!original) return;
 
-      await termLibraryApi.addTerm({
+      await termLibraryCommands.addTerm({
         source: editingTerm.source,
         userTranslation: editingTerm.user_translation,
         aiTranslation: original.ai_translation,
@@ -106,7 +106,7 @@ export const TermLibraryManager: React.FC<TermLibraryManagerProps> = ({
     log.info('开始生成风格总结', { termCount: library?.metadata.total_terms || 0 });
     setLoading(true);
     try {
-      const summary = await termLibraryApi.generateStyleSummary(apiKey);
+      const summary = await termLibraryCommands.generateStyleSummary(apiKey);
       const summaryText = typeof summary === 'string' ? summary : String(summary);
       log.info('风格总结生成成功', { summary: summaryText.substring(0, 50) + '...' });
       message.success('风格总结已生成');

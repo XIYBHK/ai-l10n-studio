@@ -17,7 +17,9 @@ import { useAsync } from './hooks/useAsync';
 import { TranslationStats, POEntry } from './types/tauri';
 import { createModuleLogger } from './utils/logger';
 import { eventDispatcher } from './services/eventDispatcher';
-import { poFileApi, dialogApi, languageApi, translatorApi, apiClient, type LanguageInfo } from './services/api';
+import { poFileCommands, dialogCommands, i18nCommands, translatorCommands } from './services/commands';
+import { apiClient } from './services/apiClient';
+import type { LanguageInfo } from './services/api'; // TODO: 类型定义应移动到 types/ (Phase 1.5)
 import { ConfigSyncManager } from './services/configSync';
 import './i18n/config';
 import './App.css';
@@ -49,7 +51,7 @@ function App() {
   // 注意：theme 由 useTheme hook 管理，language 由 i18n 管理
   
   // 🔧 直接使用 API + useAsync，替代废弃的 useTranslator Hook
-  const { execute: parsePOFile } = useAsync(poFileApi.parse);
+  const { execute: parsePOFile } = useAsync(poFileCommands.parse);
   const channelTranslation = useChannelTranslation(); // Tauri 2.x: Channel API for high-performance batch translation
   const [settingsVisible, setSettingsVisible] = useState(false);
   const [devToolsVisible, setDevToolsVisible] = useState(false);
@@ -264,12 +266,12 @@ function App() {
         .join(' ');
       
       if (sampleTexts) {
-        const detectedLang = await languageApi.detectLanguage(sampleTexts);
+        const detectedLang = await i18nCommands.detectLanguage(sampleTexts);
         setSourceLanguage(detectedLang.display_name);
         log.info('检测到源语言', { code: detectedLang.code, name: detectedLang.display_name });
         
         // 获取默认目标语言
-        const defaultTarget = await languageApi.getDefaultTargetLanguage(detectedLang.code);
+        const defaultTarget = await i18nCommands.getDefaultTargetLanguage(detectedLang.code);
         setTargetLanguage(defaultTarget.code);
         log.info('设置默认目标语言', { code: defaultTarget.code, name: defaultTarget.display_name });
       }
@@ -290,7 +292,7 @@ function App() {
 
   const openFile = async () => {
     try {
-      const filePath = await dialogApi.openFile();
+      const filePath = await dialogCommands.openFile();
       if (filePath) {
         const entries = await parsePOFile(filePath) as POEntry[];
         setEntries(entries);
@@ -349,7 +351,7 @@ function App() {
     }
     
     try {
-      await poFileApi.save(currentFilePath, entries);
+      await poFileCommands.save(currentFilePath, entries);
       message.success('保存成功！');
       
       // 触发文件保存事件
@@ -373,9 +375,9 @@ function App() {
   // 另存为
   const saveAsFile = async () => {
     try {
-      const filePath = await dialogApi.saveFile();
+      const filePath = await dialogCommands.saveFile();
       if (filePath) {
-        await poFileApi.save(filePath, entries);
+        await poFileCommands.save(filePath, entries);
         setCurrentFilePath(filePath);
         message.success('保存成功！');
         
@@ -626,7 +628,7 @@ function App() {
 
       // 调用精翻 API
       // 注意：后端会从配置管理器获取启用的AI配置
-      const results = await translatorApi.contextualRefine(
+      const results = await translatorCommands.contextualRefine(
         requests,
         targetLanguage
       );

@@ -1,7 +1,7 @@
 // Phase 7: Contextual Refine API 测试
 
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { translatorApi } from '../../services/api';
+import { translatorCommands } from '../../services/commands';
 import type { ContextualRefineRequest } from '../../types/tauri';
 
 // Mock Tauri invoke
@@ -15,7 +15,7 @@ describe('Contextual Refine API', () => {
     vi.clearAllMocks();
   });
 
-  describe('translatorApi.contextualRefine', () => {
+  describe('translatorCommands.contextualRefine', () => {
     it('应该正确调用 Tauri 命令', async () => {
       const requests: ContextualRefineRequest[] = [
         {
@@ -33,9 +33,8 @@ describe('Contextual Refine API', () => {
 
       mockInvoke.mockResolvedValue(expectedResults);
 
-      const results = await translatorApi.contextualRefine(
+      const results = await translatorCommands.contextualRefine(
         requests,
-        apiKey,
         targetLanguage
       );
 
@@ -60,9 +59,8 @@ describe('Contextual Refine API', () => {
       const expectedResults = ['保存', '取消', '确定'];
       mockInvoke.mockResolvedValue(expectedResults);
 
-      const results = await translatorApi.contextualRefine(
+      const results = await translatorCommands.contextualRefine(
         requests,
-        'test-key',
         'zh-CN'
       );
 
@@ -73,9 +71,8 @@ describe('Contextual Refine API', () => {
     it('应该处理空请求数组', async () => {
       mockInvoke.mockResolvedValue([]);
 
-      const results = await translatorApi.contextualRefine(
+      const results = await translatorCommands.contextualRefine(
         [],
-        'test-key',
         'zh-CN'
       );
 
@@ -87,9 +84,8 @@ describe('Contextual Refine API', () => {
       mockInvoke.mockRejectedValue(new Error(errorMessage));
 
       await expect(
-        translatorApi.contextualRefine(
+        translatorCommands.contextualRefine(
           [{ msgid: 'Test' }],
-          'test-key',
           'zh-CN'
         )
       ).rejects.toThrow();
@@ -105,7 +101,7 @@ describe('Contextual Refine API', () => {
 
       mockInvoke.mockResolvedValue(['你好']);
 
-      await translatorApi.contextualRefine(requests, 'test-key', 'zh-CN');
+      await translatorCommands.contextualRefine(requests, 'zh-CN');
 
       expect(mockInvoke).toHaveBeenCalledWith(
         'contextual_refine',
@@ -130,9 +126,8 @@ describe('Contextual Refine API', () => {
 
       mockInvoke.mockResolvedValue(['保存文件']);
 
-      await translatorApi.contextualRefine(
+      await translatorCommands.contextualRefine(
         [fullContextRequest],
-        'test-key',
         'zh-CN'
       );
 
@@ -156,9 +151,8 @@ describe('Contextual Refine API', () => {
       for (const { lang, expected } of testCases) {
         mockInvoke.mockResolvedValue([expected]);
 
-        await translatorApi.contextualRefine(
+        await translatorCommands.contextualRefine(
           [request],
-          'test-key',
           lang
         );
 
@@ -223,7 +217,7 @@ describe('Contextual Refine API', () => {
 
       mockInvoke.mockResolvedValue(['翻译结果']);
 
-      await translatorApi.contextualRefine([request], 'test-key', 'zh-CN');
+      await translatorCommands.contextualRefine([request], 'zh-CN');
 
       expect(mockInvoke).toHaveBeenCalled();
     });
@@ -237,7 +231,7 @@ describe('Contextual Refine API', () => {
 
       mockInvoke.mockResolvedValue(['特殊字符测试']);
 
-      await translatorApi.contextualRefine([request], 'test-key', 'zh-CN');
+      await translatorCommands.contextualRefine([request], 'zh-CN');
 
       expect(mockInvoke).toHaveBeenCalled();
     });
@@ -251,7 +245,7 @@ describe('Contextual Refine API', () => {
 
       mockInvoke.mockResolvedValue(['']);
 
-      await translatorApi.contextualRefine([request], 'test-key', 'zh-CN');
+      await translatorCommands.contextualRefine([request], 'zh-CN');
 
       expect(mockInvoke).toHaveBeenCalled();
     });

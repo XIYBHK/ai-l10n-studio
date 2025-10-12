@@ -15,8 +15,9 @@ import type {
   TranslationStats, 
   ContextualRefineRequest 
 } from '../types/tauri';
-import type { AIConfig } from '../types/aiProvider';
+import type { AIConfig, ProviderType } from '../types/aiProvider';
 import type { TermLibrary } from '../types/termLibrary';
+import type { ModelInfo } from '../types/generated/ModelInfo';
 
 // ========================================
 // 命令常量定义（集中管理，避免硬编码）
@@ -35,6 +36,13 @@ export const COMMANDS = {
   AI_CONFIG_ADD: 'add_ai_config',
   AI_CONFIG_UPDATE: 'update_ai_config',
   AI_CONFIG_DELETE: 'delete_ai_config',
+  AI_CONFIG_TEST_CONNECTION: 'test_ai_connection',
+  
+  // AI 模型相关
+  AI_MODEL_GET_PROVIDER_MODELS: 'get_provider_models',
+  AI_MODEL_GET_INFO: 'get_model_info',
+  AI_MODEL_ESTIMATE_COST: 'estimate_translation_cost',
+  AI_MODEL_CALCULATE_COST: 'calculate_precise_cost',
   
   // 系统提示词相关
   SYSTEM_PROMPT_GET: 'get_system_prompt',
@@ -79,6 +87,8 @@ export const COMMANDS = {
   // 语言和本地化相关
   I18N_GET_SUPPORTED: 'get_supported_langs',  // 修正：与后端命令一致
   I18N_GET_SYSTEM_LOCALE: 'get_system_locale',
+  LANGUAGE_DETECT: 'detect_text_language',
+  LANGUAGE_GET_DEFAULT_TARGET: 'get_default_target_lang',
 } as const;
 
 // ========================================
@@ -145,6 +155,73 @@ export const aiConfigCommands = {
   async delete(id: string) {
     return invoke<void>(COMMANDS.AI_CONFIG_DELETE, { id }, {
       errorMessage: '删除AI配置失败',
+    });
+  },
+
+  async testConnection(provider: ProviderType, apiKey: string, baseUrl?: string, model?: string, proxy?: any) {
+    const request = {
+      provider,
+      api_key: apiKey,
+      base_url: baseUrl || null,
+      model: model || null,
+      proxy: proxy || null,
+    };
+    
+    return invoke<{ success: boolean; message: string }>(
+      COMMANDS.AI_CONFIG_TEST_CONNECTION, 
+      { request }, 
+      {
+        errorMessage: 'AI连接测试失败',
+        silent: true,
+      }
+    );
+  },
+};
+
+/**
+ * AI 模型命令
+ */
+export const aiModelCommands = {
+  async getProviderModels(provider: string) {
+    return invoke<ModelInfo[]>(COMMANDS.AI_MODEL_GET_PROVIDER_MODELS, { provider }, {
+      errorMessage: '获取模型列表失败',
+    });
+  },
+
+  async getModelInfo(provider: string, modelId: string) {
+    return invoke<ModelInfo | null>(COMMANDS.AI_MODEL_GET_INFO, { provider, modelId }, {
+      errorMessage: '获取模型信息失败',
+    });
+  },
+
+  async estimateCost(provider: string, modelId: string, totalChars: number, cacheHitRate?: number) {
+    return invoke<number>(COMMANDS.AI_MODEL_ESTIMATE_COST, {
+      provider,
+      modelId,
+      totalChars,
+      cacheHitRate: cacheHitRate ?? null,
+    }, {
+      errorMessage: '估算成本失败',
+    });
+  },
+
+  async calculatePreciseCost(
+    provider: string,
+    modelId: string,
+    inputTokens: number,
+    outputTokens: number,
+    cacheWriteTokens?: number,
+    cacheReadTokens?: number
+  ) {
+    return invoke<number>(COMMANDS.AI_MODEL_CALCULATE_COST, {
+      provider,
+      modelId,
+      inputTokens,
+      outputTokens,
+      cacheWriteTokens: cacheWriteTokens ?? null,
+      cacheReadTokens: cacheReadTokens ?? null,
+    }, {
+      errorMessage: '计算成本失败',
     });
   },
 };
@@ -366,6 +443,18 @@ export const i18nCommands = {
   async getSystemLocale() {
     return invoke<string>(COMMANDS.I18N_GET_SYSTEM_LOCALE, undefined, {
       errorMessage: '获取系统语言失败',
+    });
+  },
+
+  async detectLanguage(text: string) {
+    return invoke<{ code: string; display_name: string }>(COMMANDS.LANGUAGE_DETECT, { text }, {
+      errorMessage: '语言检测失败',
+    });
+  },
+
+  async getDefaultTargetLanguage(sourceLanguageCode: string) {
+    return invoke<{ code: string; display_name: string }>(COMMANDS.LANGUAGE_GET_DEFAULT_TARGET, { sourceLanguageCode }, {
+      errorMessage: '获取默认目标语言失败',
     });
   },
 };
