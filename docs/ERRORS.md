@@ -12,6 +12,39 @@
 
 ### 错误类型与解决方案
 
+#### 0. Vite 扫描参考项目代码 (运行时错误)
+
+**错误**:
+```
+X [ERROR] No matching export in "src/services/api.ts" for import "getAxios"
+ref/clash-verge-rev/src/pages/_layout.tsx:35:9
+```
+
+**原因**: Vite 依赖扫描默认会扫描整个项目目录，包括 `ref/` 参考项目目录
+
+**解决**:
+```typescript
+// vite.config.ts
+export default defineConfig({
+  server: {
+    watch: {
+      ignored: ['**/src-tauri/**', '**/ref/**'], // 排除参考项目
+    },
+  },
+  optimizeDeps: {
+    exclude: ['src-tauri', 'ref'],
+    entries: ['index.html', 'src/**/*.{ts,tsx}'], // 明确指定源码目录
+  },
+});
+```
+
+**预防措施**:
+- 参考项目或示例代码应放在 `ref/` 或 `examples/` 目录
+- 在 `.gitignore` 和 `vite.config.ts` 中同时排除这些目录
+- 使用 `entries` 明确指定需要扫描的文件模式
+
+---
+
 #### 1. 命令层 API 名称不一致
 
 **错误**:
