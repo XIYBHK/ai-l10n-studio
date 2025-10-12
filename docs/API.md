@@ -72,9 +72,11 @@ const result = await translatorCommands.translateBatch(entries, targetLang);
 - `i18nCommands` - 语言检测（10 语言，自动识别）
 - `logCommands` - 结构化日志（开发/生产模式）
 
-### 🆕 统一数据提供者 (`AppDataProvider`) - 2025-10
+### 统一数据提供者 (2025-10)
 
-**架构升级**：使用 React Context 集中管理全局数据，配合 SWR 实现自动缓存和重验证：
+**位置**: `src/providers/AppDataProvider.tsx`
+
+使用 React Context 集中管理全局数据，配合 SWR 实现自动缓存和重验证：
 
 ```typescript
 // main.tsx - 全局包裹
@@ -86,14 +88,14 @@ const result = await translatorCommands.translateBatch(entries, targetLang);
 const { config, aiConfigs, termLibrary, refreshAll } = useAppData();
 ```
 
-**核心特性**：
-- ✅ **统一刷新接口**：`refreshAll()` 一键刷新所有数据
-- ✅ **SWR 集成**：自动缓存、后台重验证、错误重试
-- ✅ **增强事件桥接**：集成 `useDefaultTauriEventBridge()`，自动同步后端事件
-- ✅ **类型安全**：完整 TypeScript 类型推断
+**核心特性**:
+- 统一刷新接口: `refreshAll()` 一键刷新所有数据
+- SWR 集成: 自动缓存、后台重验证、错误重试
+- 增强事件桥接: 集成 `useDefaultTauriEventBridge()`，自动同步后端事件
+- 类型安全: 完整 TypeScript 类型推断
 
-**提供的数据**：
-- `config` - 应用配置（来自 `configCommands.get()`）
+**提供的数据**:
+- `config` - 应用配置
 - `aiConfigs` - AI 配置列表
 - `activeAiConfig` - 当前启用的 AI 配置
 - `termLibrary` - 术语库
@@ -103,21 +105,23 @@ const { config, aiConfigs, termLibrary, refreshAll } = useAppData();
 
 ---
 
-### 🆕 增强事件桥接 (`useTauriEventBridge.enhanced.ts`) - 2025-10
+### 增强事件桥接 (2025-10)
 
-**改进点**：
+**位置**: `src/hooks/useTauriEventBridge.enhanced.ts`
 
-1. **防抖和节流**：避免高频事件导致的性能问题
+**改进点**:
+
+1. **防抖和节流**: 避免高频事件导致的性能问题
    ```typescript
    CommonEventConfigs.configUpdated(500); // 配置更新，节流 500ms
    CommonEventConfigs.translationStatsUpdate(500); // 统计更新，节流 500ms
    ```
 
-2. **鲁棒清理**：组件卸载时自动清理所有监听器
-3. **事件转发**：自动转发到 `eventDispatcher` 保持兼容性
-4. **预设配置**：`useDefaultTauriEventBridge()` 一键启用所有常用事件
+2. **鲁棒清理**: 组件卸载时自动清理所有监听器
+3. **事件转发**: 自动转发到 `eventDispatcher` 保持兼容性
+4. **预设配置**: `useDefaultTauriEventBridge()` 一键启用所有常用事件
 
-**推荐用法**：
+**推荐用法**:
 ```typescript
 // 使用默认配置（已集成到 AppDataProvider）
 useDefaultTauriEventBridge();
@@ -131,26 +135,33 @@ useTauriEventBridgeEnhanced([
 
 ---
 
-### ⚠️ 已废弃：旧事件桥接 (`useTauriEventBridge.ts`)
+### 已废弃：旧事件桥接
 
-**迁移状态**（2025-10-13 完成）：
-- ❌ **已删除**：旧的 `useTauriEventBridge.ts` 文件
-- ✅ **已迁移**：所有事件监听器已迁移到增强版本
-- ✅ **兼容性**：增强版本自动转发事件到 `eventDispatcher`
+**位置**: `src/hooks/useTauriEventBridge.ts`
+
+**迁移状态** (2025-10-13完成):
+- 已删除: 旧的 `useTauriEventBridge.ts` 文件
+- 已迁移: 所有事件监听器已迁移到增强版本
+- 兼容性: 增强版本自动转发事件到 `eventDispatcher`
 
 ---
 
-### 现代化 React Hooks
+### React Hooks
 
-- `useAsync` - 统一异步操作（✅ 推荐，替代旧的 useTranslator）
-- `useAppData` - 🆕 统一数据访问（从 AppDataProvider）
-- `useConfig` - ⚠️ 已被 `useAppData` 部分替代，仍可用于特殊场景
-- `useLanguage` - 语言状态与检测
-- `useTermLibrary` / `useTranslationMemory` - ⚠️ 已被 `useAppData` 替代
+**推荐使用**:
+- `useAsync` - 统一异步操作（替代旧的 useTranslator）
+- `useAppData` - 统一数据访问（从 AppDataProvider）
 - `useChannelTranslation` - Channel API 批量翻译（实时进度，高性能）
-- `useDefaultTauriEventBridge` - 🆕 增强事件监听（集成在 AppDataProvider）
+- `useDefaultTauriEventBridge` - 增强事件监听（集成在 AppDataProvider）
 
-### 类型安全事件系统 (`eventDispatcher`)
+**特殊场景**:
+- `useConfig` - 已被 `useAppData` 部分替代，仍可用于特殊场景
+- `useLanguage` - 语言状态与检测
+- `useTermLibrary` / `useTranslationMemory` - 已被 `useAppData` 替代
+
+### 类型安全事件系统
+
+**位置**: `src/services/eventDispatcher.ts`
 
 受 Unreal Engine 启发，全类型推断，配合增强事件桥接使用：
 
@@ -163,41 +174,43 @@ eventDispatcher.on('translation:progress', (data) => {
 // 一次性订阅
 eventDispatcher.once('translation:complete', handleComplete);
 
-// 历史记录（调试神器）
+// 历史记录
 eventDispatcher.getEventHistory();
 ```
 
-**与增强事件桥接集成**：
+**与增强事件桥接集成**:
 - `useTauriEventBridgeEnhanced` 自动将 Tauri 事件转发到 `eventDispatcher`
 - 支持防抖和节流，避免高频事件导致的性能问题
 - 组件卸载时自动清理，防止内存泄漏
 
-### SWR 数据缓存（已集成到 AppDataProvider）
+### SWR 数据缓存
 
 自动缓存、后台重验证、乐观更新，现已通过 `AppDataProvider` 统一管理：
 
 ```typescript
-// ✅ 推荐：使用 AppDataProvider
+// 推荐：使用 AppDataProvider
 const { config, refreshAll } = useAppData();
 
-// ⚠️ 旧方式（仍可用于特殊场景）
+// 旧方式（仍可用于特殊场景）
 const { data, error, isLoading } = useSWR('config', configCommands.get);
 ```
 
-**AppDataProvider 优势**：
+**AppDataProvider 优势**:
 - 统一的数据访问接口
 - 自动集成事件监听和缓存失效
 - 一键刷新所有数据（`refreshAll()`）
 
-### 🆕 多AI供应商架构 (`aiModelApi`)
+### 多AI供应商架构
 
-**核心能力**：
+**命令模块**: `aiModelCommands`
 
-- ✅ **精确成本计算** - 基于 ModelInfo，支持缓存定价（节省高达90%）
-- ✅ **统一定价** - USD per 1M tokens，强制 ModelInfo 存在
-- ✅ **10个预定义模型** - OpenAI (4), Moonshot (4), DeepSeek (2)
-- ✅ **设置页预设模型** - 下拉选择器显示所有可用模型及定价
-- ✅ **统计面板集成** - 实时显示精确成本（USD）
+**核心能力**:
+
+- 精确成本计算 - 基于 ModelInfo，支持缓存定价（节省高达90%）
+- 统一定价 - USD per 1M tokens，强制 ModelInfo 存在
+- 10个预定义模型 - OpenAI (4), Moonshot (4), DeepSeek (2)
+- 设置页预设模型 - 下拉选择器显示所有可用模型及定价
+- 统计面板集成 - 实时显示精确成本（USD）
 
 **API 方法**：
 
@@ -243,49 +256,52 @@ BatchStatsEvent { token_stats: { cost } } → Channel 发送
 AIWorkspace 统计面板 → 显示 `$0.0023`（小额4位）或 `$12.35`（大额2位）
 ```
 
-**供应商配置整合**（`src/types/aiProvider.ts`）：
+**供应商配置整合** (`src/types/aiProvider.ts`):
 
-- ✅ **统一配置源** - `PROVIDER_INFO_MAP` 包含所有8个供应商的默认配置
-- ✅ **自动生成** - SettingsModal 从 `PROVIDER_INFO_MAP` 动态生成供应商列表
-- ✅ **类型安全** - `ProviderType` 枚举确保类型一致性
-- ✅ **模型预设** - 每个供应商都有 `defaultModel`，可被预设模型列表覆盖
+- 统一配置源 - `PROVIDER_INFO_MAP` 包含所有8个供应商的默认配置
+- 自动生成 - SettingsModal 从 `PROVIDER_INFO_MAP` 动态生成供应商列表
+- 类型安全 - `ProviderType` 枚举确保类型一致性
+- 模型预设 - 每个供应商都有 `defaultModel`，可被预设模型列表覆盖
 
-**统一格式化工具**（`src/utils/formatters.ts`）：
+**统一格式化工具** (`src/utils/formatters.ts`):
 
-- ✅ **单一数据源** - 所有格式化逻辑集中在一个模块
-- ✅ **全局一致** - `formatCost()` 确保所有地方显示成本的格式完全相同
-- ✅ **易于维护** - 修改一处，全局生效（如 `0.42¢` vs `$0.0042`）
-- ✅ **可复用** - `formatTokens()`, `formatPercentage()`, `formatDuration()` 等
+- 单一数据源 - 所有格式化逻辑集中在一个模块
+- 全局一致 - `formatCost()` 确保所有地方显示成本的格式完全相同
+- 易于维护 - 修改一处，全局生效
+- 可复用 - `formatTokens()`, `formatPercentage()`, `formatDuration()` 等
 
 ```typescript
 // 统一的格式化函数
 import { formatCost, formatTokens, formatPercentage } from '@/utils/formatters';
 
-// ✅ 正确：使用统一函数
+// 推荐：使用统一函数
 const costDisplay = formatCost(0.0042); // "0.42¢"
 
-// ❌ 错误：手动格式化（分散逻辑）
+// 避免：手动格式化（分散逻辑）
 const costDisplay = cost < 0.01 ? `${(cost * 100).toFixed(2)}¢` : `$${cost.toFixed(4)}`;
 ```
 
-**代码质量改进**: 详见 `docs/CHANGELOG.md` (2025-10-13 质量提升)  
-**完整参考**: `CLAUDE.md` §Architecture Overview
+**参考文档**:
+- 代码质量改进: `docs/CHANGELOG.md` (2025-10-13 质量提升)
+- 完整参考: `CLAUDE.md` §Architecture Overview
 
 ---
 
-## 🆕 后端配置管理（Draft 模式） - 2025-10
+## 后端配置管理（Draft 模式）
 
 ### ConfigDraft - 原子配置更新
 
-参考 `clash-verge-rev`，使用 `parking_lot::RwLock` + Draft 模式实现配置的原子更新：
+**位置**: `src-tauri/src/services/config_draft.rs`
 
-**核心特性**：
-- ✅ **并发安全**：使用 `parking_lot::RwLock` 保证线程安全
-- ✅ **原子更新**：配置修改要么全部成功，要么全部失败
-- ✅ **自动持久化**：`apply()` 方法自动保存到磁盘并发送更新事件
-- ✅ **全局单例**：`ConfigDraft::global()` 提供全局访问
+参考 `clash-verge-rev`，使用 `parking_lot::RwLock` + Draft 模式实现配置的原子更新。
 
-**使用示例**：
+**核心特性**:
+- 并发安全: 使用 `parking_lot::RwLock` 保证线程安全
+- 原子更新: 配置修改要么全部成功，要么全部失败
+- 自动持久化: `apply()` 方法自动保存到磁盘并发送更新事件
+- 全局单例: `ConfigDraft::global()` 提供全局访问
+
+**使用示例**:
 
 ```rust
 // 读取配置（只读访问）
@@ -299,25 +315,24 @@ let draft = ConfigDraft::global().await;
 {
     let mut config = draft.draft(); // MappedRwLockWriteGuard
     config.ai_configs.push(new_config);
-    // draft 在作用域结束时自动释放写锁
 }
 draft.apply()?; // 保存到磁盘 + 发送事件
 
-// ❌ 错误示例：guard 跨 await 点
+// 错误示例：guard 跨 await 点
 let config = draft.data();
 some_async_fn().await; // 编译错误：Send bound not satisfied
 ```
 
-**API 方法**：
+**API 方法**:
 - `ConfigDraft::global()` - 获取全局配置实例（async，首次调用时初始化）
 - `data()` - 获取当前提交的配置（只读）
 - `draft()` - 获取草稿配置（可写，修改后需调用 `apply()`）
 - `apply()` - 提交草稿，保存到磁盘并发送更新事件
 
-**迁移状态**：
-- ✅ **已迁移**：所有 `ConfigManager` 调用已迁移到 `ConfigDraft`
-- ❌ **已废弃**：旧的 `ConfigManager::new()` + `save_config()` 模式
-- ✅ **清理完成**：所有命令文件已完成迁移（`ai_config.rs`, `translator.rs` 等）
+**迁移状态**:
+- 已迁移: 所有 `ConfigManager` 调用已迁移到 `ConfigDraft`
+- 已废弃: 旧的 `ConfigManager::new()` + `save_config()` 模式
+- 清理完成: 所有命令文件已完成迁移
 
 ---
 
