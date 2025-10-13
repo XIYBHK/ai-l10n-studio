@@ -1,0 +1,89 @@
+{
+  "menu": {
+    "import": "Import PO File",
+    "save": "Save",
+    "batchTranslate": "Batch Translate",
+    "translating": "Translating...",
+    "settings": "Settings"
+  },
+  "theme": {
+    "light": "Light",
+    "dark": "Dark",
+    "system": "System"
+  },
+  "entryList": {
+    "total": "Total: {{count}}",
+    "selected": "({{count}} selected)",
+    "untranslated": "Untranslated",
+    "needsReview": "Needs Review",
+    "translated": "Translated",
+    "confirmAll": "Confirm All",
+    "confirmSelected": "Confirm Selected",
+    "translateSelected": "Translate Selected",
+    "shortcuts": "Ctrl+A Select All | Ctrl+C Copy | Esc Cancel",
+    "confirm": "Confirm"
+  },
+  "editor": {
+    "context": "Context",
+    "original": "Original",
+    "translation": "Translation",
+    "autoTranslate": "AI Translate",
+    "copied": "Copied",
+    "translationCompleted": "Translation Completed",
+    "translationFailed": "Translation Failed"
+  },
+  "aiWorkspace": {
+    "title": "AI Workspace",
+    "translating": "Translating...",
+    "memory": "Memory",
+    "currentBatch": "Current Batch - Efficiency",
+    "memoryHits": "Memory Hits",
+    "deduplication": "Deduplication",
+    "aiTranslated": "AI Calls",
+    "tmLearned": "Learned Phrases",
+    "tokenUsage": "Token Usage",
+    "input": "Input",
+    "output": "Output",
+    "total": "Total",
+    "estimatedCost": "Estimated Cost",
+    "efficiency": "Saved {{count}} API calls via memory and deduplication",
+    "reset": "Reset"
+  },
+  "memoryManager": {
+    "title": "Translation Memory",
+    "search": "Search...",
+    "add": "Add",
+    "original": "Original",
+    "translation": "Translation",
+    "actions": "Actions",
+    "edit": "Edit",
+    "delete": "Delete",
+    "save": "Save",
+    "cancel": "Cancel",
+    "total": "Total: {{count}}",
+    "saveSuccess": "Memory saved successfully",
+    "saveFailed": "Failed to save memory"
+  },
+  "settings": {
+    "title": "Settings",
+    "apiKey": "API Key",
+    "apiKeyPlaceholder": "Enter Moonshot API Key",
+    "model": "Translation Model",
+    "sourceLanguage": "Source Language",
+    "targetLanguage": "Target Language",
+    "save": "Save",
+    "cancel": "Cancel",
+    "saveSuccess": "Settings saved successfully",
+    "saveFailed": "Failed to save settings"
+  },
+  "common": {
+    "confirm": "Confirm",
+    "cancel": "Cancel",
+    "save": "Save",
+    "delete": "Delete",
+    "close": "Close",
+    "warning": "Warning",
+    "error": "Error",
+    "success": "Success"
+  }
+}

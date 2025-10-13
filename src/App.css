@@ -1,0 +1,109 @@
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+#root {
+  width: 100vw;
+  height: 100vh;
+  overflow: hidden;
+}
+
+body {
+  margin: 0;
+  padding: 0;
+  overflow: hidden;
+}
+
+/* 禁用表格行的文本选择 */
+.no-text-select,
+.no-text-select * {
+  user-select: none;
+  -webkit-user-select: none;
+  -moz-user-select: none;
+  -ms-user-select: none;
+}
+
+/* 允许输入框和文本域的文本选择 */
+input,
+textarea {
+  user-select: text !important;
+  -webkit-user-select: text !important;
+  -moz-user-select: text !important;
+  -ms-user-select: text !important;
+}
+
+/* Ant Design Table 样式覆盖 */
+.ant-table-tbody > tr {
+  user-select: none;
+}
+
+/* 选中行样式 - 使用 CSS 变量支持暗色模式 */
+[data-theme='light'] .ant-table-tbody > tr:hover {
+  background-color: #f5f5f5 !important;
+}
+
+[data-theme='dark'] .ant-table-tbody > tr:hover {
+  background-color: #262626 !important;
+}
+
+[data-theme='light'] .ant-table-tbody > tr.table-row-selected {
+  background-color: #e6f7ff !important;
+}
+
+[data-theme='dark'] .ant-table-tbody > tr.table-row-selected {
+  background-color: #111b26 !important;
+}
+
+[data-theme='light'] .ant-table-tbody > tr.table-row-selected:hover {
+  background-color: #d9f0ff !important;
+}
+
+[data-theme='dark'] .ant-table-tbody > tr.table-row-selected:hover {
+  background-color: #0d1a26 !important;
+}
+
+/* 移除复选框列的样式 */
+.ant-table-selection-column {
+  display: none;
+}
+
+/* 自定义滚动条样式 */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  background: rgba(0, 0, 0, 0.2);
+  border-radius: 3px;
+  transition: background 0.2s;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: rgba(0, 0, 0, 0.4);
+}
+
+/* 暗色模式滚动条 */
+[data-theme='dark'] ::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.2);
+}
+
+[data-theme='dark'] ::-webkit-scrollbar-thumb:hover {
+  background: rgba(255, 255, 255, 0.4);
+}
+
+/* Firefox 滚动条样式 */
+* {
+  scrollbar-width: thin;
+  scrollbar-color: rgba(0, 0, 0, 0.2) transparent;
+}
+
+[data-theme='dark'] * {
+  scrollbar-color: rgba(255, 255, 255, 0.2) transparent;
+}

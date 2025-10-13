@@ -1,0 +1,89 @@
+{
+  "menu": {
+    "import": "导入PO文件",
+    "save": "保存",
+    "batchTranslate": "批量翻译",
+    "translating": "翻译中...",
+    "settings": "设置"
+  },
+  "theme": {
+    "light": "浅色",
+    "dark": "深色",
+    "system": "跟随系统"
+  },
+  "entryList": {
+    "total": "共 {{count}} 条",
+    "selected": "(已选 {{count}})",
+    "untranslated": "未翻译",
+    "needsReview": "待确认",
+    "translated": "已翻译",
+    "confirmAll": "确认所有",
+    "confirmSelected": "确认已选中",
+    "translateSelected": "翻译选中",
+    "shortcuts": "Ctrl+A 全选 | Ctrl+C 复制 | Esc 取消",
+    "confirm": "确认"
+  },
+  "editor": {
+    "context": "上下文",
+    "original": "原文",
+    "translation": "译文",
+    "autoTranslate": "AI翻译",
+    "copied": "已复制",
+    "translationCompleted": "翻译完成",
+    "translationFailed": "翻译失败"
+  },
+  "aiWorkspace": {
+    "title": "AI 工作区",
+    "translating": "翻译中...",
+    "memory": "记忆库",
+    "currentBatch": "本次翻译 - 处理效率",
+    "memoryHits": "记忆库命中",
+    "deduplication": "去重优化",
+    "aiTranslated": "AI调用次数",
+    "tmLearned": "新学习短语",
+    "tokenUsage": "Token消耗",
+    "input": "输入",
+    "output": "输出",
+    "total": "总计",
+    "estimatedCost": "预估费用",
+    "efficiency": "通过记忆库和去重节省了 {{count}} 次API调用",
+    "reset": "重置"
+  },
+  "memoryManager": {
+    "title": "翻译记忆库",
+    "search": "搜索...",
+    "add": "添加",
+    "original": "原文",
+    "translation": "译文",
+    "actions": "操作",
+    "edit": "编辑",
+    "delete": "删除",
+    "save": "保存",
+    "cancel": "取消",
+    "total": "共 {{count}} 条",
+    "saveSuccess": "记忆库保存成功",
+    "saveFailed": "记忆库保存失败"
+  },
+  "settings": {
+    "title": "设置",
+    "apiKey": "API密钥",
+    "apiKeyPlaceholder": "请输入Moonshot API密钥",
+    "model": "翻译模型",
+    "sourceLanguage": "源语言",
+    "targetLanguage": "目标语言",
+    "save": "保存",
+    "cancel": "取消",
+    "saveSuccess": "设置保存成功",
+    "saveFailed": "设置保存失败"
+  },
+  "common": {
+    "confirm": "确认",
+    "cancel": "取消",
+    "save": "保存",
+    "delete": "删除",
+    "close": "关闭",
+    "warning": "警告",
+    "error": "错误",
+    "success": "成功"
+  }
+}

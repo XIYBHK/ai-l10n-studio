@@ -1,0 +1,39 @@
+# Nextest 配置文件
+# 文档: https://nexte.st/docs/configuration/
+
+[profile.default]
+# 默认配置：开发环境
+retries = 0
+test-threads = "num-cpus"  # 使用所有 CPU 核心
+slow-timeout = { period = "60s", terminate-after = 2 }
+
+# 成功的测试不显示输出
+success-output = "never"
+# 失败的测试显示完整输出
+failure-output = "immediate-final"
+
+[profile.ci]
+# CI 环境配置
+retries = 2  # CI 环境重试 2 次
+test-threads = "num-cpus"
+
+# 生成 JUnit XML 报告
+junit.path = "target/nextest/ci/junit.xml"
+
+# 显示慢速测试（超过 10 秒）
+slow-timeout = { period = "10s", terminate-after = 3 }
+
+# 总是显示测试输出
+success-output = "final"
+failure-output = "immediate-final"
+
+[profile.local]
+# 本地快速测试配置
+retries = 0
+test-threads = "num-cpus"
+slow-timeout = { period = "30s" }
+
+# 只显示失败
+success-output = "never"
+failure-output = "immediate"
+
