@@ -49,7 +49,7 @@
     "react-window-infinite-loader": "^2.0.0",
     "swr": "^2.2.5",
     "vite-plugin-tauri": "^4.0.0",
-    "zustand": "^4.4.7"
+    "zustand": "^5.0.8"
   },
   "devDependencies": {
     "@tauri-apps/cli": "^2.8.4",
