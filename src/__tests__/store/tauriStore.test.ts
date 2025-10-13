@@ -3,7 +3,7 @@
  */
 
 import { describe, it, expect, beforeEach, vi } from 'vitest';
-import { tauriStore } from '../../store/tauriStore';
+import { tauriStore, type AppStoreData } from '../../store/tauriStore';
 
 // Mock @tauri-apps/plugin-store
 vi.mock('@tauri-apps/plugin-store', () => {
@@ -169,8 +169,8 @@ describe('TauriStore', () => {
         notifications: {
           enabled: false,
           onComplete: false,
-        },
-      });
+        } as Partial<AppStoreData['preferences']['notifications']>,
+      } as Partial<AppStoreData['preferences']>);
 
       const prefs = await tauriStore.getPreferences();
       expect(prefs.notifications.enabled).toBe(false);
