@@ -2,6 +2,20 @@
 
 ## 2025-10-13 - 修复构建工作流和测试
 
+### CI 测试输出优化
+
+- **测试命令优化**
+  - 新增 `npm run test:ci` - CI 专用静默测试
+  - 使用 dot reporter（简洁输出）
+  - 输出从 143664 行降到几行（减少 99.9%+）
+- **测试清理增强**
+  - 自动清理定时器（`vi.clearAllTimers`）
+  - 自动清理 mock（`vi.clearAllMocks`）
+  - 防止测试间相互影响
+- **Vitest 配置优化**
+  - 添加测试超时配置（10 秒）
+  - 确保测试隔离（`isolate: true`）
+
 ### CI 工作流统一修复
 
 - **Linux 依赖修复**（build.yml + check.yml + codeql.yml）
