@@ -27,7 +27,6 @@ describe('Contextual Refine API', () => {
         },
       ];
 
-      const apiKey = 'test-api-key';
       const targetLanguage = 'zh-CN';
       const expectedResults = ['你好'];
 
@@ -37,7 +36,6 @@ describe('Contextual Refine API', () => {
 
       expect(mockInvoke).toHaveBeenCalledWith('contextual_refine', {
         requests,
-        apiKey,
         targetLanguage,
       });
       expect(results).toEqual(expectedResults);

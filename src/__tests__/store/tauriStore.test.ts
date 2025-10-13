@@ -57,7 +57,7 @@ describe('TauriStore', () => {
 
     it('应该返回默认主题', async () => {
       const theme = await tauriStore.getTheme();
-      expect(theme).toBe('light');
+      expect(theme).toBe('system'); // Phase 9: 默认跟随系统
     });
 
     it('应该能够设置和获取语言', async () => {
@@ -164,19 +164,19 @@ describe('TauriStore', () => {
     });
 
     it('应该能够更新嵌套的通知设置', async () => {
+      // 更新部分通知设置
       await tauriStore.updatePreferences({
         notifications: {
           enabled: false,
           onComplete: false,
-          onError: false,
-          onProgress: false,
         },
       });
 
       const prefs = await tauriStore.getPreferences();
       expect(prefs.notifications.enabled).toBe(false);
       expect(prefs.notifications.onComplete).toBe(false);
-      expect(prefs.notifications.onError).toBe(true); // 未改变
+      expect(prefs.notifications.onError).toBe(true); // 未传入，保持默认值
+      expect(prefs.notifications.onProgress).toBe(false); // 未传入，保持默认值
     });
   });
 
