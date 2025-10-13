@@ -1,0 +1,102 @@
+[package]
+name = "po-translator-gui"
+version = "0.0.0"
+description = "PO文件AI翻译工具"
+authors = ["you"]
+license = ""
+repository = ""
+edition = "2024"
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[build-dependencies]
+tauri-build = { version = "2", features = [] }
+
+[dependencies]
+tauri = { version = "2", features = ["rustls-tls"] }
+tauri-plugin-shell = "2"
+tauri-plugin-dialog = "2"
+tauri-plugin-fs = "2"
+tauri-plugin-store = "2"  # Tauri 2.x: 持久化存储
+tauri-plugin-notification = "2"  # Tauri 2.x: 系统通知
+tauri-plugin-updater = "2"  # Tauri 2.x: 自动更新
+serde = { version = "1.0", features = ["derive"] }
+serde_json = "1.0"
+tokio = { version = "1.0", features = ["full"] }
+reqwest = { version = "0.12", features = ["json"] }
+async-openai = "0.20"
+regex = "1.0"
+uuid = { version = "1.0", features = ["v4"] }
+chrono = { version = "0.4", features = ["serde"] }
+anyhow = "1.0"
+thiserror = "1.0"
+nom = "7.0"
+encoding_rs = "0.8"
+dirs = "5.0"
+indexmap = { version = "2.0", features = ["serde"] }
+lazy_static = "1.4"
+# 日志系统
+tracing = "0.1"
+tracing-subscriber = { version = "0.3", features = ["env-filter", "fmt", "time"] }
+# Phase 5: 语言检测
+whatlang = "0.16"
+# Phase 6: 系统语言检测
+sys-locale = "0.3"
+# Phase 9: 工程化增强
+once_cell = "1.21.3"       # 全局状态（便携标志）
+flexi_logger = "0.31.7"    # 日志系统
+log = "0.4"                # 日志门面
+dunce = "1.0"              # 路径规范化
+parking_lot = "0.12"       # Draft 配置管理（RwLock）
+# 类型生成自动化
+ts-rs = { version = "7.1", optional = true }
+
+[features]
+# this feature is used for production builds or when `devPath` points to the filesystem
+# DO NOT REMOVE!!
+custom-protocol = ["tauri/custom-protocol"]
+# 启用类型生成
+ts-rs = ["dep:ts-rs"]
+
+[profile.release]
+opt-level = "z"     # 优化体积
+lto = true          # 链接时优化
+codegen-units = 1   # 单个代码生成单元
+strip = true        # 移除调试符号
+panic = "abort"     # 减小二进制体积
+
+[lints.clippy]
+# Core categories - most important for code safety and correctness
+correctness = { level = "deny", priority = -1 }
+suspicious = { level = "deny", priority = -1 }
+
+# Critical safety lints - warn for now due to extensive existing usage
+unwrap_used = "warn"
+expect_used = "warn"
+panic = "deny"
+unimplemented = "deny"
+
+# Development quality lints
+todo = "warn"
+dbg_macro = "warn"
+
+# Performance lints
+clone_on_ref_ptr = "warn"
+rc_clone_in_vec_init = "warn"
+large_stack_arrays = "warn"
+large_const_arrays = "warn"
+
+# Mutex and async lints - strict control
+async_yields_async = "deny" # Prevents missing await in async blocks
+mutex_atomic = "deny"       # Use atomics instead of Mutex<bool/int>
+mutex_integer = "deny"      # Use AtomicInt instead of Mutex<int>
+rc_mutex = "deny"           # Single-threaded Rc with Mutex is wrong
+unused_async = "deny"
+await_holding_lock = "deny"
+large_futures = "deny"
+future_not_send = "deny"
+
+# Common style improvements
+redundant_else = "deny"
+needless_continue = "deny"
+needless_raw_string_hashes = "deny"
