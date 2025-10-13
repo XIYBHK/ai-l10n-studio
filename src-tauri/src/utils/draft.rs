@@ -57,10 +57,14 @@ impl<T: Clone> Draft<Box<T>> {
         if guard.1.is_none() {
             let mut guard = RwLockUpgradableReadGuard::upgrade(guard);
             guard.1 = Some(guard.0.clone());
+            // 逻辑保证：第59行已设置 Some，此处 unwrap 安全
+            #[allow(clippy::unwrap_used)]
             return RwLockWriteGuard::map(guard, |inner| inner.1.as_mut().unwrap());
         }
 
         // 草稿已存在，直接返回
+        // 逻辑保证：上面条件不成立时，guard.1 必为 Some
+        #[allow(clippy::unwrap_used)]
         RwLockWriteGuard::map(RwLockUpgradableReadGuard::upgrade(guard), |inner| {
             inner.1.as_mut().unwrap()
         })
@@ -114,6 +118,7 @@ impl<T: Clone> Draft<Box<T>> {
 }
 
 #[cfg(test)]
+#[allow(clippy::unwrap_used)]
 mod tests {
     use super::*;
 
@@ -164,6 +169,7 @@ mod tests {
     }
 
     #[test]
+    #[allow(clippy::unwrap_used)]
     fn test_draft_discard() {
         let config = Box::new(TestConfig {
             value: 100,

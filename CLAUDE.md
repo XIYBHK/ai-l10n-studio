@@ -148,6 +148,7 @@ npm run build  # Build frontend only first
 ### Key Integration Points (Updated 2025-10)
 
 **Four-Layer Architecture**:
+
 ```
 Components → AppDataProvider → Command Layer → Tauri IPC → Rust Services
 ```
@@ -201,6 +202,7 @@ Components → AppDataProvider → Command Layer → Tauri IPC → Rust Services
 ### Command Layer Usage
 
 **Recommended Approach**:
+
 ```typescript
 import { configCommands, aiConfigCommands, translatorCommands } from '@/services/commands';
 
@@ -211,6 +213,7 @@ const result = await translatorCommands.translateBatch(entries, targetLang);
 ```
 
 **Deprecated**:
+
 ```typescript
 // OLD: Direct API calls (partially deprecated)
 import { configApi, translatorApi } from '@/services/api';
@@ -219,6 +222,7 @@ import { configApi, translatorApi } from '@/services/api';
 ### Data Access via AppDataProvider
 
 **Recommended Approach**:
+
 ```typescript
 const { config, aiConfigs, termLibrary, refreshAll } = useAppData();
 
@@ -227,6 +231,7 @@ await refreshAll();
 ```
 
 **What AppDataProvider provides**:
+
 - `config` - Application configuration
 - `aiConfigs` - AI provider configurations
 - `activeAiConfig` - Currently active AI config
@@ -275,6 +280,7 @@ await refreshAll();
 ### Configuration Management (Draft Mode)
 
 **Backend (Rust)**:
+
 ```rust
 // Read configuration (read-only access)
 let draft = ConfigDraft::global().await;
@@ -293,6 +299,7 @@ draft.apply()?; // Save to disk + emit event
 ```
 
 **Frontend**:
+
 ```typescript
 const { config, refreshAll } = useAppData();
 
@@ -302,6 +309,7 @@ await configCommands.update(updatedConfig);
 ```
 
 **Key Features**:
+
 - Atomic updates (all-or-nothing)
 - Concurrent-safe (`parking_lot::RwLock`)
 - Auto-persist and event emission
@@ -418,6 +426,7 @@ The application supports translation to/from 10 major languages with automatic d
 ### Key Source Files (Updated 2025-10)
 
 **Frontend**:
+
 - `src/services/commands.ts` - **[NEW]** Unified command layer (13 modules, 52 commands)
 - `src/providers/AppDataProvider.tsx` - **[NEW]** Centralized data provider (SWR + events)
 - `src/hooks/useTauriEventBridge.enhanced.ts` - **[NEW]** Enhanced event bridge
@@ -425,6 +434,7 @@ The application supports translation to/from 10 major languages with automatic d
 - `src/store/useAppStore.ts` - Main application state
 
 **Backend**:
+
 - `src-tauri/src/main.rs` - Backend entry point (52 registered commands)
 - `src-tauri/src/services/config_draft.rs` - **[NEW]** Draft mode configuration
 - `src-tauri/src/utils/draft.rs` - **[NEW]** Generic Draft pattern (from clash-verge-rev)

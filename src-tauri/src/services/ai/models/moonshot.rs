@@ -74,6 +74,7 @@ pub fn get_moonshot_models() -> Vec<ModelInfo> {
 }
 
 #[cfg(test)]
+#[allow(clippy::unwrap_used)]
 mod tests {
     use super::*;
 

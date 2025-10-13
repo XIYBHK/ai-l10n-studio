@@ -4,7 +4,7 @@ use crate::app_log;
 /// 检测系统语言
 /// 返回 BCP 47 语言标签（如 "zh-CN", "en-US"）
 #[tauri::command]
-pub async fn get_system_language() -> Result<String, String> {
+pub fn get_system_language() -> Result<String, String> {
     app_log!("[系统语言] 检测系统语言...");
 
     // 使用 sys-locale 检测系统语言
@@ -37,9 +37,8 @@ fn normalize_locale(locale: &str) -> String {
             return "zh-CN".to_string(); // 简体中文
         } else if lower.contains("hant") || lower.contains("tw") || lower.contains("hk") {
             return "zh-TW".to_string(); // 繁体中文
-        } else {
-            return "zh-CN".to_string(); // 默认简体
         }
+        return "zh-CN".to_string(); // 默认简体
     }
 
     if lower.starts_with("en") {
@@ -83,6 +82,7 @@ fn normalize_locale(locale: &str) -> String {
 }
 
 #[cfg(test)]
+#[allow(clippy::unwrap_used)]
 mod tests {
     use super::*;
 

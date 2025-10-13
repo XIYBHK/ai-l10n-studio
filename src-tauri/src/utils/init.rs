@@ -1,6 +1,6 @@
 use crate::services::ConfigDraft;
-use crate::utils::paths;
 use crate::utils::logging::Type as LogType;
+use crate::utils::paths;
 use crate::{logging, logging_error};
 use anyhow::Result;
 use flexi_logger::{Cleanup, Criterion, Duplicate, FileSpec, LogSpecBuilder, Logger};
@@ -57,8 +57,8 @@ async fn init_logger() -> Result<()> {
         let draft = ConfigDraft::global().await;
         let config = draft.data();
         (
-            config.log_max_size.unwrap_or(128),  // 默认 128KB
-            config.log_max_count.unwrap_or(8),   // 默认 8 个文件
+            config.log_max_size.unwrap_or(128), // 默认 128KB
+            config.log_max_count.unwrap_or(8),  // 默认 8 个文件
         )
     };
 
@@ -95,8 +95,8 @@ async fn init_logger() -> Result<()> {
         let draft = ConfigDraft::global().await;
         let config = draft.data();
         (
-            config.log_max_size.unwrap_or(128),  // 默认 128KB
-            config.log_max_count.unwrap_or(8),   // 默认 8 个文件
+            config.log_max_size.unwrap_or(128), // 默认 128KB
+            config.log_max_count.unwrap_or(8),  // 默认 8 个文件
         )
     };
 
@@ -154,22 +154,21 @@ pub async fn delete_old_logs(retention_days: Option<u32>) -> Result<()> {
     let mut entries = tokio::fs::read_dir(&log_dir).await?;
 
     while let Some(entry) = entries.next_entry().await? {
-        if let Ok(metadata) = entry.metadata().await {
-            if metadata.is_file() {
-                if let Ok(modified) = metadata.modified() {
-                    let modified_time: chrono::DateTime<chrono::Local> = modified.into();
-                    if modified_time < cutoff {
-                        if let Err(e) = tokio::fs::remove_file(entry.path()).await {
-                            logging_error!(
-                                LogType::Init,
-                                "Failed to delete log file {:?}: {}",
-                                entry.path(),
-                                e
-                            );
-                        } else {
-                            deleted_count += 1;
-                        }
-                    }
+        if let Ok(metadata) = entry.metadata().await
+            && metadata.is_file()
+            && let Ok(modified) = metadata.modified()
+        {
+            let modified_time: chrono::DateTime<chrono::Local> = modified.into();
+            if modified_time < cutoff {
+                if let Err(e) = tokio::fs::remove_file(entry.path()).await {
+                    logging_error!(
+                        LogType::Init,
+                        "Failed to delete log file {:?}: {}",
+                        entry.path(),
+                        e
+                    );
+                } else {
+                    deleted_count += 1;
                 }
             }
         }
@@ -190,6 +189,7 @@ pub async fn delete_old_logs(retention_days: Option<u32>) -> Result<()> {
 // ========== 测试 ==========
 
 #[cfg(test)]
+#[allow(clippy::unwrap_used)]
 mod tests {
     use super::*;
 

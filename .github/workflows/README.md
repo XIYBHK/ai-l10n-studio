@@ -13,9 +13,10 @@
 
 **执行内容：**
 
-- ✅ 前端 ESLint 检查
-- ✅ Rust 代码格式检查 (rustfmt)
-- ✅ Rust 静态分析 (clippy)
+- ✅ 代码格式检查 (Prettier + rustfmt)
+- ✅ 前端测试 (Vitest)
+- ✅ 前端构建 (TypeScript + Vite)
+- ✅ Rust 静态分析 (clippy with Cargo.toml lints)
 - ✅ Rust 单元测试
 
 ### 2. Build - 多平台构建 (build.yml)

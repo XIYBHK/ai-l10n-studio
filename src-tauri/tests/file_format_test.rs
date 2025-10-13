@@ -1,3 +1,5 @@
+#![allow(clippy::unwrap_used)]
+
 // ========== Phase 4: 文件格式检测测试 ==========
 
 use po_translator_gui::services::file_format::{FileFormat, detect_file_format, get_file_metadata};

@@ -1,3 +1,5 @@
+#![allow(clippy::manual_contains)]
+
 // 测试 is_simple_phrase 函数的正确性
 
 #[cfg(test)]

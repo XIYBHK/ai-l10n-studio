@@ -47,7 +47,11 @@ impl SafePathValidator {
                 parent
                     .canonicalize()
                     .map_err(|e| anyhow::anyhow!("无法规范化父目录: {}", e))?
-                    .join(path_buf.file_name().unwrap())
+                    .join(
+                        path_buf
+                            .file_name()
+                            .ok_or_else(|| anyhow::anyhow!("Invalid file path: no file name"))?,
+                    )
             } else {
                 path_buf
             }
@@ -121,20 +125,21 @@ impl Default for SafePathValidator {
 }
 
 #[cfg(test)]
+#[allow(clippy::unwrap_used)]
 mod tests {
     use super::*;
 
     #[test]
     fn test_validate_po_file() {
-        let validator = SafePathValidator::new();
+        let _validator = SafePathValidator::new();
         // 这个测试需要实际文件存在才能通过
         // 仅作为示例
     }
 
     #[test]
     fn test_reject_forbidden_extension() {
-        let validator = SafePathValidator::new();
-        let result = validator.validate_file_path("test.exe");
-        assert!(result.is_err());
+        let _validator = SafePathValidator::new();
+        let _result = _validator.validate_file_path("test.exe");
+        assert!(_result.is_err());
     }
 }

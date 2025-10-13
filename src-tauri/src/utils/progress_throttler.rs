@@ -1,5 +1,5 @@
-///! 进度更新节流器
-///! 用于优化频繁的进度更新，避免UI卡顿
+//! 进度更新节流器
+//! 用于优化频繁的进度更新，避免UI卡顿
 use std::sync::Arc;
 use std::sync::atomic::{AtomicU64, Ordering};
 use std::time::{SystemTime, UNIX_EPOCH};
@@ -27,7 +27,7 @@ impl ProgressThrottler {
     }
 
     /// 使用默认配置创建（100ms间隔）
-    pub fn default() -> Self {
+    pub fn with_default_interval() -> Self {
         Self::new(100)
     }
 
@@ -96,7 +96,7 @@ impl BatchProgressTracker {
         Self {
             total,
             current: 0,
-            throttler: ProgressThrottler::default(),
+            throttler: ProgressThrottler::with_default_interval(),
             checkpoint_percentages: vec![0, 25, 50, 75, 100],
         }
     }
@@ -177,6 +177,7 @@ impl BatchProgressTracker {
 }
 
 #[cfg(test)]
+#[allow(clippy::unwrap_used)]
 mod tests {
     use super::*;
     use std::thread::sleep;

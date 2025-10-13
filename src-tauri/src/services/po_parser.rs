@@ -171,7 +171,7 @@ impl POParser {
         content.push_str("\"Content-Type: text/plain; charset=UTF-8\\n\"\n");
         content.push_str("\"Content-Transfer-Encoding: 8bit\\n\"\n");
         content.push_str("\"Plural-Forms: nplurals=INTEGER; plural=EXPRESSION;\\n\"\n");
-        content.push_str("\n");
+        content.push('\n');
 
         for entry in entries {
             // 添加注释
@@ -190,7 +190,7 @@ impl POParser {
             // 添加翻译文本
             content.push_str(&format!("msgstr \"{}\"\n", entry.msgstr));
 
-            content.push_str("\n");
+            content.push('\n');
         }
 
         fs::write(file_path, content)?;
@@ -199,6 +199,7 @@ impl POParser {
 }
 
 impl Default for POParser {
+    #[allow(clippy::expect_used)]
     fn default() -> Self {
         Self::new().expect("Failed to create POParser")
     }

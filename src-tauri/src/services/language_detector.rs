@@ -241,6 +241,7 @@ fn is_cyrillic_char(c: char) -> bool {
 }
 
 #[cfg(test)]
+#[allow(clippy::unwrap_used)]
 mod tests {
     use super::*;
 

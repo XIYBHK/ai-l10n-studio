@@ -138,6 +138,7 @@ pub fn init_app_directories() -> Result<()> {
 // ========== 测试 ==========
 
 #[cfg(test)]
+#[allow(clippy::unwrap_used)]
 mod tests {
     use super::*;
 

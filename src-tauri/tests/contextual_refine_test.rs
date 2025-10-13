@@ -1,3 +1,5 @@
+#![allow(clippy::unwrap_used, clippy::expect_used)]
+
 // Phase 7: Contextual Refine 功能测试
 
 use po_translator_gui::commands::ContextualRefineRequest;

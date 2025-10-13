@@ -80,6 +80,7 @@ pub fn get_openai_models() -> Vec<ModelInfo> {
 }
 
 #[cfg(test)]
+#[allow(clippy::unwrap_used)]
 mod tests {
     use super::*;
 

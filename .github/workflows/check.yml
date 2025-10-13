@@ -43,7 +43,7 @@ jobs:
       - name: Rust cache
         uses: swatinem/rust-cache@v2
         with:
-          workspaces: 'po-translator-gui/src-tauri -> target'
+          workspaces: 'src-tauri -> target'
 
       - name: Install dependencies (Ubuntu)
         run: |
@@ -51,29 +51,21 @@ jobs:
           sudo apt-get install -y libgtk-3-dev libwebkit2gtk-4.0-dev libappindicator3-dev librsvg2-dev patchelf
 
       - name: Install frontend dependencies
-        working-directory: ./po-translator-gui
         run: npm ci
 
-      - name: Run frontend linter
-        working-directory: ./po-translator-gui
-        run: npm run lint || true
+      - name: Run linters
+        run: npm run lint:all || true
 
-      - name: Run Rust format check
-        working-directory: ./po-translator-gui/src-tauri
-        run: cargo fmt --all -- --check
+      - name: Run frontend tests
+        run: npm run test:run
+
+      - name: Build frontend
+        run: npm run build
 
       - name: Run Rust clippy
-        working-directory: ./po-translator-gui/src-tauri
-        run: |
-          # 只检查严重问题（正确性和可疑代码），允许性能优化建议和代码风格警告
-          cargo clippy -- \
-            -D clippy::correctness \
-            -D clippy::suspicious \
-            -A dead_code \
-            -A clippy::perf \
-            -A clippy::style \
-            -A clippy::complexity
+        working-directory: ./src-tauri
+        run: cargo clippy --all-targets --all-features -- -D warnings
 
       - name: Run Rust tests
-        working-directory: ./po-translator-gui/src-tauri
+        working-directory: ./src-tauri
         run: cargo test

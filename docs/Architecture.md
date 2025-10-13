@@ -25,6 +25,7 @@ Rust 持久化层 (JSON文件)
 ```
 
 **核心改进**:
+
 - 统一数据访问: `AppDataProvider` 集中管理所有全局数据
 - 命令层重构: `commands.ts` 替代旧的 `api.ts`，模块化组织
 - Draft 模式: `ConfigDraft` 实现配置的原子更新和并发安全
@@ -51,12 +52,14 @@ const { config, aiConfigs, termLibrary, refreshAll } = useAppData();
 ```
 
 **核心特性**:
+
 - SWR 集成: 自动缓存配置/TM/术语库（避免重复 IPC 调用）
 - 统一刷新: `refreshAll()` 一键刷新所有数据
 - 事件同步: 集成增强事件桥接，自动失效缓存
 - 类型安全: 完整 TypeScript 类型推断
 
 **替代的旧模式**:
+
 - 旧: 每个组件单独调用 `useSWR`
 - 新: 统一通过 `useAppData` 访问全局数据
 
@@ -234,6 +237,7 @@ draft.apply()?; // 保存到磁盘 + 发送事件
 ```
 
 **核心特性**：
+
 - ✅ **并发安全**：`parking_lot::RwLock` 保证线程安全
 - ✅ **原子更新**：配置修改要么全部成功，要么全部失败
 - ✅ **自动持久化**：`apply()` 自动保存到磁盘并发送更新事件
