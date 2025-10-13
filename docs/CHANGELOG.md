@@ -2,14 +2,14 @@
 
 ## 2025-10-13 - 修复构建工作流和测试
 
-### Build 工作流修复
+### CI 工作流修复
 
-- **Linux 构建修复**
+- **Linux 依赖修复**（build.yml + check.yml）
   - 添加 `libsoup-3.0-dev` 依赖（Tauri 2.x 必需）
   - 更新 webkit 版本：`libwebkit2gtk-4.0-dev` → `libwebkit2gtk-4.1-dev`
-- **Windows 产物路径修正**
+- **Windows 产物路径修正**（build.yml）
   - exe 文件名：`PO-Translator.exe` → `po-translator-gui.exe`（与 Cargo.toml 一致）
-- **构建步骤优化**
+- **构建步骤优化**（build.yml）
   - 分离 Windows 和 macOS 构建步骤名称，避免日志混淆
 
 ### 测试修复（4个失败测试）
