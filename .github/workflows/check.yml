@@ -57,7 +57,7 @@ jobs:
         run: npm run lint:all || true
 
       - name: Run frontend tests
-        run: npm run test:run
+        run: npm run test:ci
 
       - name: Build frontend
         run: npm run build

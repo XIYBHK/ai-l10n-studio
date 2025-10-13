@@ -2,9 +2,13 @@ import { afterEach, vi } from 'vitest';
 import { cleanup } from '@testing-library/react';
 import '@testing-library/jest-dom';
 
-// 清理每个测试后的 DOM
+// 清理每个测试后的 DOM 和异步任务
 afterEach(() => {
   cleanup();
+  // 清理所有定时器
+  vi.clearAllTimers();
+  // 清理所有 mock（但保留全局 mock 定义）
+  vi.clearAllMocks();
 });
 
 // Mock window.crypto
