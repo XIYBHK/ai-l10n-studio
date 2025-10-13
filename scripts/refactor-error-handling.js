@@ -1,12 +1,12 @@
 #!/usr/bin/env node
 /**
  * 临时脚本：批量重构错误处理（轻量级方案）
- * 
+ *
  * 策略：参考 clash-verge-rev 项目
  * - 只在 Tauri 命令入口使用 wrap_err!
  * - 内部函数保持简单的 map_err
  * - 避免日志冗余和性能开销
- * 
+ *
  * 使用方式：
  * - Dry-run: node scripts/refactor-error-handling.js --dry-run
  * - 执行替换: node scripts/refactor-error-handling.js
@@ -49,7 +49,7 @@ function isTauriCommand(lines, index) {
  */
 function analyzeFile(filePath) {
   const fullPath = path.join(__dirname, '..', filePath);
-  
+
   if (!fs.existsSync(fullPath)) {
     console.log(`⚠️  文件不存在: ${filePath}`);
     return { suggestions: [], stats: { total: 0, commands: 0 } };
@@ -57,7 +57,7 @@ function analyzeFile(filePath) {
 
   const content = fs.readFileSync(fullPath, 'utf-8');
   const lines = content.split('\n');
-  
+
   const suggestions = [];
   let inCommand = false;
   let commandStart = -1;
@@ -65,7 +65,7 @@ function analyzeFile(filePath) {
 
   for (let i = 0; i < lines.length; i++) {
     const line = lines[i];
-    
+
     // 检测命令开始
     if (line.includes('#[tauri::command]')) {
       inCommand = true;
@@ -134,18 +134,18 @@ console.log('   ✓ 内部函数保持 .map_err(|e| e.to_string())');
 console.log('   ✓ 参考 clash-verge-rev 的轻量级模式\n');
 console.log('='.repeat(70) + '\n');
 
-targetFiles.forEach(filePath => {
+targetFiles.forEach((filePath) => {
   const { suggestions, stats } = analyzeFile(filePath);
-  
+
   if (suggestions.length > 0) {
     console.log(`📄 ${filePath}`);
     console.log(`   命令数: ${stats.commands} | 建议优化: ${suggestions.length}\n`);
-    
+
     suggestions.slice(0, 5).forEach((sug, idx) => {
       console.log(`   [${idx + 1}] 行 ${sug.lineNum} - ${sug.type}`);
       console.log(`       ${sug.suggestion}`);
       console.log(`       上下文:`);
-      sug.context.split('\n').forEach(line => {
+      sug.context.split('\n').forEach((line) => {
         console.log(`         ${line}`);
       });
       console.log('');

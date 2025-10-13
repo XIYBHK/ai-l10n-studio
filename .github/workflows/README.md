@@ -1,6 +1,6 @@
 # GitHub Actions 工作流说明
 
-本项目包含三个 GitHub Actions 工作流，用于自动化构建、测试和发布流程。
+本项目包含五个 GitHub Actions 工作流，用于自动化构建、测试、安全扫描和发布流程。
 
 ## 📋 工作流列表
 
@@ -13,9 +13,10 @@
 
 **执行内容：**
 
-- ✅ 前端 ESLint 检查
-- ✅ Rust 代码格式检查 (rustfmt)
-- ✅ Rust 静态分析 (clippy)
+- ✅ 代码格式检查 (Prettier + rustfmt)
+- ✅ 前端测试 (Vitest)
+- ✅ 前端构建 (TypeScript + Vite)
+- ✅ Rust 静态分析 (clippy with Cargo.toml lints)
 - ✅ Rust 单元测试
 
 ### 2. Build - 多平台构建 (build.yml)
@@ -47,6 +48,33 @@
 - 自动创建 GitHub Release (草稿)
 - 上传所有平台的安装包
 
+### 4. CodeQL - 安全扫描 (codeql.yml)
+
+**触发条件：**
+
+- Push 到 `main` 分支
+- Pull Request 到 `main` 分支
+- 每周一自动扫描
+- 手动触发
+
+**扫描内容：**
+
+- JavaScript/TypeScript 代码安全漏洞
+- Rust 代码安全漏洞
+- 代码质量问题
+
+**结果查看：** GitHub Security 标签页
+
+### 5. Dependabot - 依赖更新 (dependabot.yml)
+
+**自动更新：**
+
+- npm 依赖（每周）
+- Rust 依赖（每周）
+- GitHub Actions（每月）
+
+**工作方式：** 自动创建 PR 更新过期依赖
+
 ## 🚀 使用方法
 
 ### 开发流程
@@ -69,9 +97,9 @@
 1. **更新版本号**
 
    ```bash
-   # 更新 po-translator-gui/package.json 的 version
-   # 更新 po-translator-gui/src-tauri/Cargo.toml 的 version
-   # 更新 po-translator-gui/src-tauri/tauri.conf.json 的 version
+   # 更新 package.json 的 version
+   # 更新 src-tauri/Cargo.toml 的 version
+   # 更新 src-tauri/tauri.conf.json 的 version
    ```
 
 2. **创建并推送标签**
@@ -98,7 +126,6 @@
 1. 生成密钥对：
 
    ```bash
-   cd po-translator-gui
    npm run tauri signer generate -- -w ~/.tauri/myapp.key
    ```
 
@@ -136,19 +163,18 @@
 
 3. **本地复现**
    ```bash
-   cd po-translator-gui
    npm ci
    npm run tauri build
    ```
 
 ### Ubuntu 构建失败
 
-确保所有系统依赖已安装：
+确保所有系统依赖已安装（Tauri 2.x 要求）：
 
 ```bash
 sudo apt-get update
-sudo apt-get install -y libgtk-3-dev libwebkit2gtk-4.0-dev \
-  libappindicator3-dev librsvg2-dev patchelf
+sudo apt-get install -y libgtk-3-dev libwebkit2gtk-4.1-dev \
+  libappindicator3-dev librsvg2-dev patchelf libsoup-3.0-dev
 ```
 
 ## 📝 注意事项

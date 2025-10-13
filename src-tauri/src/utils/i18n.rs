@@ -83,12 +83,13 @@ pub fn get_system_language() -> String {
 
 /// 异步翻译函数（简化版，不依赖配置）
 /// 用法：`let text = t("key.path.to.translation").await;`
+#[allow(clippy::unused_async)]
 pub async fn t(key: &str) -> String {
-    t_with_lang(key, None).await
+    t_with_lang(key, None)
 }
 
 /// 使用指定语言翻译（或使用系统语言）
-pub async fn t_with_lang(key: &str, lang: Option<&str>) -> String {
+pub fn t_with_lang(key: &str, lang: Option<&str>) -> String {
     let current_lang = lang.map(String::from).unwrap_or_else(get_system_language);
 
     // 1. 尝试从缓存读取
@@ -133,7 +134,6 @@ pub async fn t_with_lang(key: &str, lang: Option<&str>) -> String {
 pub fn get_system_locale() -> String {
     get_system_language()
 }
-
 /// Tauri Command: 获取支持的语言列表
 #[tauri::command]
 pub fn get_available_languages() -> Vec<String> {
@@ -143,6 +143,7 @@ pub fn get_available_languages() -> Vec<String> {
 // ========== 测试 ==========
 
 #[cfg(test)]
+#[allow(clippy::unwrap_used)]
 mod tests {
     use super::*;
 

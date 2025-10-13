@@ -44,6 +44,7 @@ pub fn get_deepseek_models() -> Vec<ModelInfo> {
 }
 
 #[cfg(test)]
+#[allow(clippy::unwrap_used)]
 mod tests {
     use super::*;
 

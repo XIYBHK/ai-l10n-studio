@@ -1,5 +1,7 @@
 // 配置管理模块测试
 
+#![allow(clippy::unwrap_used)]
+
 #[cfg(test)]
 mod config_manager_tests {
     use po_translator_gui::services::{AIConfig, AppConfig, ProviderType, ProxyConfig};

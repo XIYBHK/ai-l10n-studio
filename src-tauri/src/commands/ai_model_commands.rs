@@ -59,7 +59,7 @@ pub fn estimate_translation_cost(
     let hit_rate = cache_hit_rate.unwrap_or(0.3); // 默认30%缓存命中率
 
     // 验证缓存命中率范围
-    if hit_rate < 0.0 || hit_rate > 1.0 {
+    if !(0.0..=1.0).contains(&hit_rate) {
         return Err("缓存命中率必须在 0.0-1.0 之间".to_string());
     }
 
@@ -139,6 +139,7 @@ pub fn get_all_providers() -> Vec<String> {
 }
 
 #[cfg(test)]
+#[allow(clippy::unwrap_used, clippy::expect_used)]
 mod tests {
     use super::*;
 

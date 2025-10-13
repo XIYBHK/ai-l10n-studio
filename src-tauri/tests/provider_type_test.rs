@@ -1,5 +1,7 @@
 // AI 供应商类型测试
 
+#![allow(clippy::unwrap_used)]
+
 #[cfg(test)]
 mod provider_type_tests {
     use po_translator_gui::services::ProviderType;

@@ -218,6 +218,7 @@ fn extract_po_language(content: &str, key: &str) -> Option<String> {
 }
 
 #[cfg(test)]
+#[allow(clippy::unwrap_used)]
 mod tests {
     use super::*;
 

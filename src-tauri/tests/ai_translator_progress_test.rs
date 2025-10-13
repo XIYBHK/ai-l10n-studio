@@ -1,3 +1,5 @@
+#![allow(clippy::unwrap_used, unused_imports)]
+
 use anyhow::Result;
 use std::sync::{Arc, Mutex};
 

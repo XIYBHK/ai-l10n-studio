@@ -50,7 +50,7 @@ pub fn is_simple_phrase(text: &str) -> bool {
         "Whether", "How", "What", "When", "Where", "Why", "Which", "Who",
     ];
     let first_word = text.split_whitespace().next().unwrap_or("");
-    if question_starters.iter().any(|&q| first_word == q) {
+    if question_starters.contains(&first_word) {
         return false;
     }
 
@@ -81,6 +81,7 @@ pub fn is_simple_phrase(text: &str) -> bool {
 }
 
 #[cfg(test)]
+#[allow(clippy::unwrap_used)]
 mod tests {
     use super::*;
 

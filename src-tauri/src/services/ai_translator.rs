@@ -13,13 +13,13 @@ use ts_rs::TS;
 
 // ========== 默认系统提示词 (Phase 3) ==========
 
-pub const DEFAULT_SYSTEM_PROMPT: &str = r#"专业游戏本地化翻译。
+pub const DEFAULT_SYSTEM_PROMPT: &str = r"专业游戏本地化翻译。
 规则:
 1. 术语保留英文: Actor/Blueprint/Component/Transform/Mesh/Material/Widget/Collision/Array/Float/Integer
 2. 固定翻译: Asset→资产, Unique→去重, Slice→截取, Primitives→基础类型, Constant Speed→匀速, Stream→流送, Ascending→升序, Descending→降序
 3. Category: 保持XTools等命名空间和|符号, 如 XTools|Sort|Actor → XTools|排序|Actor
 4. 保留所有特殊符号: |、{}、%%、[]、()、\n、\t、{0}、{1}等
-5. 特殊表达: in-place→原地, by value→按值, True/False保持原样"#;
+5. 特殊表达: in-place→原地, by value→按值, True/False保持原样";
 
 // ========== Phase 1: AI 供应商配置系统 ==========
 
@@ -174,8 +174,10 @@ pub struct AITranslator {
     provider: ProviderType, // 🔧 添加：保存 provider 类型用于费用计算
     system_prompt: String,
     conversation_history: Vec<ChatMessage>,
+    #[allow(dead_code)]
     max_history_tokens: usize,
     token_stats: TokenStats,
+    #[allow(dead_code)]
     use_tm: bool,
     tm: Option<TranslationMemory>,
     // Phase 5: 目标语言（用于生成翻译提示词）
@@ -235,7 +237,7 @@ impl AITranslator {
         // 从文件加载TM（合并内置短语和已保存的翻译）
         let tm = if use_tm {
             Some(TranslationMemory::new_from_file(
-                &get_translation_memory_path(),
+                get_translation_memory_path(),
             )?)
         } else {
             None
@@ -319,7 +321,7 @@ impl AITranslator {
         // 从文件加载TM
         let tm = if use_tm {
             Some(TranslationMemory::new_from_file(
-                &get_translation_memory_path(),
+                get_translation_memory_path(),
             )?)
         } else {
             None
@@ -669,7 +671,7 @@ impl AITranslator {
 
         // ✨ Step 5: 修复 - 在所有翻译完成后，按顺序统一上报进度
         if let Some(ref callback) = progress_callback {
-            for (i, text) in texts.iter().enumerate() {
+            for (i, _text) in texts.iter().enumerate() {
                 if !result[i].is_empty() {
                     callback(i, result[i].clone());
                 }
@@ -751,7 +753,7 @@ impl AITranslator {
                         chat_response = Some(parsed);
                         break;
                     }
-                    Err(e) => {
+                    Err(_e) => {
                         last_error = Some(anyhow::anyhow!("error decoding response body"));
                         if retry < max_retries - 1 {
                             let delay = 2u64.pow(retry as u32);
@@ -999,6 +1001,9 @@ impl AITranslator {
             self.token_stats.total_tokens += usage.total_tokens;
 
             // 使用 ModelInfo 计算精确成本
+            // Fail Fast 架构设计：多AI供应商架构要求强制 ModelInfo 存在
+            // 模型不存在 = 配置错误，应立即失败而非降级（见 docs/Architecture.md:195）
+            #[allow(clippy::expect_used)]
             let model_info = self
                 .provider
                 .get_model_info(&self.model)
@@ -1102,6 +1107,8 @@ impl AITranslator {
             .collect();
 
         // 优先提取以数字序号开头的行（支持多种格式）
+        // 正则表达式是常量，编译时保证正确性
+        #[allow(clippy::unwrap_used)]
         let number_prefix_regex = regex::Regex::new(r"^\d+[\.\)、:\s]+(.+)$").unwrap();
         let mut translations = Vec::new();
 

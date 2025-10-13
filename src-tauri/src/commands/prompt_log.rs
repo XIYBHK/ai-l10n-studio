@@ -1,5 +1,4 @@
 /// 提示词日志相关的 Tauri 命令
-
 /// 获取提示词日志（格式化的文本）
 #[tauri::command]
 pub fn get_prompt_logs() -> Result<String, String> {

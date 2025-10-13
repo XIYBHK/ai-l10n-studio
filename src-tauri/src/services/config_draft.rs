@@ -34,7 +34,7 @@ impl ConfigDraft {
     pub async fn global() -> &'static ConfigDraft {
         GLOBAL_CONFIG
             .get_or_init(|| async {
-                Self::new(None).await.unwrap_or_else(|e| {
+                Self::new(None).unwrap_or_else(|e| {
                     log::error!("初始化配置管理器失败: {}, 使用默认配置", e);
                     // 使用临时路径创建默认配置
                     let temp_path = std::env::temp_dir().join("config.json");
@@ -48,7 +48,7 @@ impl ConfigDraft {
     }
 
     /// 创建新的配置管理器实例
-    pub async fn new(config_path: Option<PathBuf>) -> Result<Self> {
+    pub fn new(config_path: Option<PathBuf>) -> Result<Self> {
         let config_path = config_path.unwrap_or_else(|| {
             paths::app_home_dir()
                 .map(|dir| dir.join("config.json"))
@@ -120,7 +120,7 @@ impl ConfigDraft {
             // 发送事件通知前端（异步执行，不阻塞当前线程）
             let config_clone = self.config.clone_latest();
             tokio::spawn(async move {
-                if let Err(e) = Self::emit_config_updated(&config_clone).await {
+                if let Err(e) = Self::emit_config_updated(&config_clone) {
                     log::warn!("发送配置更新事件失败: {}", e);
                 }
             });
@@ -156,7 +156,7 @@ impl ConfigDraft {
         // 发送事件
         let config_clone = self.config.clone_data();
         tokio::spawn(async move {
-            if let Err(e) = Self::emit_config_updated(&config_clone).await {
+            if let Err(e) = Self::emit_config_updated(&config_clone) {
                 log::warn!("发送配置更新事件失败: {}", e);
             }
         });
@@ -178,7 +178,7 @@ impl ConfigDraft {
     /// TODO: 事件发送需要在 Tauri 命令上下文中实现
     /// 当前先保留为空实现，在 Phase 2 迁移时从命令层发送事件
     #[allow(unused_variables)]
-    async fn emit_config_updated(config: &AppConfig) -> Result<()> {
+    fn emit_config_updated(config: &AppConfig) -> Result<()> {
         // 事件发送逻辑将在 Phase 2 迁移时从命令层实现
         // 参考：src-tauri/src/commands/ai_config.rs 中的事件发送
         Ok(())
@@ -216,6 +216,7 @@ impl ConfigDraft {
 }
 
 #[cfg(test)]
+#[allow(clippy::unwrap_used)]
 mod tests {
     use super::*;
 
@@ -227,7 +228,7 @@ mod tests {
         // 清理旧文件
         let _ = fs::remove_file(&config_path);
 
-        let manager = ConfigDraft::new(Some(config_path.clone())).await.unwrap();
+        let manager = ConfigDraft::new(Some(config_path.clone())).unwrap();
 
         // 读取初始配置
         assert_eq!(manager.latest().provider, "moonshot");
@@ -265,7 +266,7 @@ mod tests {
 
         let _ = fs::remove_file(&config_path);
 
-        let manager = ConfigDraft::new(Some(config_path.clone())).await.unwrap();
+        let manager = ConfigDraft::new(Some(config_path.clone())).unwrap();
 
         // 修改草稿
         {
@@ -292,7 +293,7 @@ mod tests {
 
         let _ = fs::remove_file(&config_path);
 
-        let manager = ConfigDraft::new(Some(config_path.clone())).await.unwrap();
+        let manager = ConfigDraft::new(Some(config_path.clone())).unwrap();
 
         // 使用便捷更新方法
         manager

@@ -62,7 +62,7 @@ describe('Term Library Activation Feature', () => {
     // We use waitFor to give the component time to process the save logic
     await waitFor(() => {
       expect(eventDispatcher.emit).toHaveBeenCalledWith('term:updated', {
-        reason: 'manual_save',
+        source: 'manual_save', // 事件参数从 reason 改为 source
       });
     });
 

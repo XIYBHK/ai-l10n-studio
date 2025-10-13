@@ -1,5 +1,4 @@
 use crate::services::{AIConfig, AITranslator, ConfigDraft};
-use crate::wrap_err; // 错误处理宏
 use serde::{Deserialize, Serialize};
 
 /// 获取所有 AI 配置
@@ -197,12 +196,11 @@ pub async fn test_ai_connection(
 
                     // 更新提示词日志的响应
                     let logs = crate::services::get_prompt_logs();
-                    if let Some(last_idx) = logs.len().checked_sub(1) {
-                        if !results.is_empty() {
-                            let response =
-                                format!("✅ 测试成功 ({}ms)\n结果: {}", elapsed, results[0]);
-                            crate::services::update_prompt_response(last_idx, response);
-                        }
+                    if let Some(last_idx) = logs.len().checked_sub(1)
+                        && !results.is_empty()
+                    {
+                        let response = format!("✅ 测试成功 ({}ms)\n结果: {}", elapsed, results[0]);
+                        crate::services::update_prompt_response(last_idx, response);
                     }
 
                     Ok(TestConnectionResult {

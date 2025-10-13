@@ -1,7 +1,8 @@
+//! 文件分块处理工具
+//! 用于优化大文件的读取和处理性能
+
 use anyhow::{Context, Result};
 use std::fs::metadata;
-///! 文件分块处理工具
-///! 用于优化大文件的读取和处理性能
 use std::path::Path;
 
 /// 文件大小常量（单位：字节）
@@ -115,6 +116,7 @@ pub fn chunk_vec<T: Clone>(items: Vec<T>, chunk_size: usize) -> Vec<Vec<T>> {
 }
 
 #[cfg(test)]
+#[allow(clippy::unwrap_used)]
 mod tests {
     use super::*;
 

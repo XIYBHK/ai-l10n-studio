@@ -10,7 +10,6 @@ use crate::services::{
 };
 use crate::utils::path_validator::SafePathValidator;
 use crate::utils::paths::get_translation_memory_path; // Tauri 2.x: 路径安全验证
-use crate::wrap_err; // 错误处理宏
 
 #[cfg(feature = "ts-rs")]
 use ts_rs::TS;
@@ -18,6 +17,7 @@ use ts_rs::TS;
 // ========== Phase 3: 辅助函数 - 获取自定义系统提示词 ==========
 
 /// 从配置中获取自定义系统提示词
+#[allow(dead_code)]
 async fn get_custom_system_prompt() -> Option<String> {
     let draft = ConfigDraft::global().await;
     let config = draft.data();
@@ -57,6 +57,8 @@ pub struct TranslationPair {
 
 // Phase 7: Contextual Refine 请求结构体
 #[derive(Debug, Clone, Serialize, Deserialize)]
+#[cfg_attr(feature = "ts-rs", derive(TS))]
+#[cfg_attr(feature = "ts-rs", ts(export, export_to = "../src/types/generated/"))]
 pub struct ContextualRefineRequest {
     pub msgid: String,
     pub msgctxt: Option<String>,
@@ -87,7 +89,7 @@ fn save_term_library(library: &TermLibrary, path: &std::path::PathBuf) -> Result
 
 // Tauri 命令
 #[tauri::command]
-pub async fn parse_po_file(file_path: String) -> Result<Vec<POEntry>, String> {
+pub fn parse_po_file(file_path: String) -> Result<Vec<POEntry>, String> {
     // Tauri 2.x: 路径安全验证
     let validator = SafePathValidator::new();
     let safe_path = validator
@@ -96,7 +98,11 @@ pub async fn parse_po_file(file_path: String) -> Result<Vec<POEntry>, String> {
 
     let parser = POParser::new().map_err(|e| e.to_string())?;
     parser
-        .parse_file(safe_path.to_str().unwrap().to_string())
+        .parse_file(
+            safe_path
+                .to_str()
+                .ok_or_else(|| "Invalid UTF-8 in file path".to_string())?,
+        )
         .map_err(|e| e.to_string())
 }
 
@@ -171,7 +177,7 @@ pub struct BatchResult {
 // ✅ 统一使用 translate_batch_with_channel (Channel API)
 
 #[tauri::command]
-pub async fn get_translation_memory() -> Result<TranslationMemory, String> {
+pub fn get_translation_memory() -> Result<TranslationMemory, String> {
     let memory_path = get_translation_memory_path().to_string_lossy().to_string();
 
     // 使用 new_from_file 而不是 load_from_file，因为它能正确处理Python格式的JSON
@@ -182,7 +188,7 @@ pub async fn get_translation_memory() -> Result<TranslationMemory, String> {
 }
 
 #[tauri::command]
-pub async fn get_builtin_phrases() -> Result<serde_json::Value, String> {
+pub fn get_builtin_phrases() -> Result<serde_json::Value, String> {
     let builtin = crate::services::translation_memory::get_builtin_memory();
     let memory_map: std::collections::HashMap<String, String> = builtin.into_iter().collect();
 
@@ -192,7 +198,7 @@ pub async fn get_builtin_phrases() -> Result<serde_json::Value, String> {
 }
 
 #[tauri::command]
-pub async fn save_translation_memory(memory: TranslationMemory) -> Result<(), String> {
+pub fn save_translation_memory(memory: TranslationMemory) -> Result<(), String> {
     let memory_path = get_translation_memory_path().to_string_lossy().to_string();
 
     // 确保 data 目录存在
@@ -205,7 +211,7 @@ pub async fn save_translation_memory(memory: TranslationMemory) -> Result<(), St
 
 // 文件操作命令
 #[tauri::command]
-pub async fn open_file_dialog(app: tauri::AppHandle) -> Result<Option<String>, String> {
+pub fn open_file_dialog(app: tauri::AppHandle) -> Result<Option<String>, String> {
     use std::sync::mpsc;
     use tauri_plugin_dialog::DialogExt;
 
@@ -227,7 +233,7 @@ pub async fn open_file_dialog(app: tauri::AppHandle) -> Result<Option<String>, S
 }
 
 #[tauri::command]
-pub async fn save_file_dialog(app: tauri::AppHandle) -> Result<Option<String>, String> {
+pub fn save_file_dialog(app: tauri::AppHandle) -> Result<Option<String>, String> {
     use std::sync::mpsc;
     use tauri_plugin_dialog::DialogExt;
 
@@ -249,7 +255,7 @@ pub async fn save_file_dialog(app: tauri::AppHandle) -> Result<Option<String>, S
 }
 
 #[tauri::command]
-pub async fn save_po_file(file_path: String, entries: Vec<POEntry>) -> Result<(), String> {
+pub fn save_po_file(file_path: String, entries: Vec<POEntry>) -> Result<(), String> {
     // Tauri 2.x: 路径安全验证
     let validator = SafePathValidator::new();
     let safe_path = validator
@@ -258,7 +264,12 @@ pub async fn save_po_file(file_path: String, entries: Vec<POEntry>) -> Result<()
 
     let parser = POParser::new().map_err(|e| e.to_string())?;
     parser
-        .write_file(safe_path.to_str().unwrap().to_string(), &entries)
+        .write_file(
+            safe_path
+                .to_str()
+                .ok_or_else(|| "Invalid UTF-8 in file path".to_string())?,
+            &entries,
+        )
         .map_err(|e| e.to_string())
 }
 
@@ -303,7 +314,7 @@ pub async fn update_app_config(config: serde_json::Value) -> Result<(), String> 
 }
 
 #[tauri::command]
-pub async fn validate_config(config: serde_json::Value) -> Result<bool, String> {
+pub fn validate_config(config: serde_json::Value) -> Result<bool, String> {
     let app_config: crate::services::AppConfig =
         serde_json::from_value(config).map_err(|e| e.to_string())?;
 
@@ -323,12 +334,12 @@ pub async fn validate_config(config: serde_json::Value) -> Result<bool, String> 
 
 // 日志相关命令
 #[tauri::command]
-pub async fn get_app_logs() -> Result<Vec<String>, String> {
+pub fn get_app_logs() -> Result<Vec<String>, String> {
     Ok(crate::utils::logger::get_logs())
 }
 
 #[tauri::command]
-pub async fn clear_app_logs() -> Result<(), String> {
+pub fn clear_app_logs() -> Result<(), String> {
     crate::utils::logger::clear_logs();
     Ok(())
 }
@@ -347,14 +358,14 @@ fn get_term_library_path() -> std::path::PathBuf {
 
 /// 获取术语库
 #[tauri::command]
-pub async fn get_term_library() -> Result<TermLibrary, String> {
+pub fn get_term_library() -> Result<TermLibrary, String> {
     let path = get_term_library_path();
     TermLibrary::load_from_file(path).map_err(|e| e.to_string())
 }
 
 /// 添加术语到术语库
 #[tauri::command]
-pub async fn add_term_to_library(
+pub fn add_term_to_library(
     source: String,
     user_translation: String,
     ai_translation: String,
@@ -374,7 +385,7 @@ pub async fn add_term_to_library(
 
 /// 从术语库删除术语
 #[tauri::command]
-pub async fn remove_term_from_library(source: String) -> Result<(), String> {
+pub fn remove_term_from_library(source: String) -> Result<(), String> {
     let path = get_term_library_path();
     let mut library = TermLibrary::load_from_file(&path).map_err(|e| e.to_string())?;
 
@@ -449,29 +460,29 @@ fn build_contextual_prompt(request: &ContextualRefineRequest, target_language: &
     let mut context_parts = Vec::new();
 
     // 1. 添加上下文信息（如果有）
-    if let Some(msgctxt) = &request.msgctxt {
-        if !msgctxt.is_empty() {
-            context_parts.push(format!("【上下文】: {}", msgctxt));
-        }
+    if let Some(msgctxt) = &request.msgctxt
+        && !msgctxt.is_empty()
+    {
+        context_parts.push(format!("【上下文】: {}", msgctxt));
     }
 
     // 2. 添加注释信息（如果有）
-    if let Some(comment) = &request.comment {
-        if !comment.is_empty() {
-            context_parts.push(format!("【开发者注释】: {}", comment));
-        }
+    if let Some(comment) = &request.comment
+        && !comment.is_empty()
+    {
+        context_parts.push(format!("【开发者注释】: {}", comment));
     }
 
     // 3. 添加前后条目信息（提供语境连贯性）
-    if let Some(prev) = &request.previous_entry {
-        if !prev.is_empty() {
-            context_parts.push(format!("【前一条译文】: {}", prev));
-        }
+    if let Some(prev) = &request.previous_entry
+        && !prev.is_empty()
+    {
+        context_parts.push(format!("【前一条译文】: {}", prev));
     }
-    if let Some(next) = &request.next_entry {
-        if !next.is_empty() {
-            context_parts.push(format!("【后一条译文】: {}", next));
-        }
+    if let Some(next) = &request.next_entry
+        && !next.is_empty()
+    {
+        context_parts.push(format!("【后一条译文】: {}", next));
     }
 
     // 4. 目标语言指示
@@ -502,7 +513,7 @@ fn build_contextual_prompt(request: &ContextualRefineRequest, target_language: &
         for part in &context_parts {
             prompt.push_str(&format!("{}\n", part));
         }
-        prompt.push_str("\n");
+        prompt.push('\n');
     }
 
     // 添加待翻译文本
@@ -581,7 +592,8 @@ pub async fn contextual_refine(
         // 记录完整的AI请求（JSON格式）
         // 构建提示词日志（只显示实际发送给AI的内容）
         let full_prompt = format!(
-            "【System Prompt】:\n{}\n【User Prompt】:\n{}",
+            "【System Prompt】:\n{}
+【User Prompt】:\n{}",
             translator.current_system_prompt(),
             prompt
         );
@@ -657,7 +669,7 @@ pub async fn contextual_refine(
 
 /// 检查是否需要更新风格总结
 #[tauri::command]
-pub async fn should_update_style_summary() -> Result<bool, String> {
+pub fn should_update_style_summary() -> Result<bool, String> {
     let path = get_term_library_path();
     let library = TermLibrary::load_from_file(&path).map_err(|e| e.to_string())?;
     Ok(library.should_update_style_summary())

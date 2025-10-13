@@ -2,7 +2,7 @@ version: 2
 updates:
   # npm 依赖检查
   - package-ecosystem: 'npm'
-    directory: '/po-translator-gui'
+    directory: '/'
     schedule:
       interval: 'weekly'
     open-pull-requests-limit: 10
@@ -12,7 +12,7 @@ updates:
 
   # Rust 依赖检查
   - package-ecosystem: 'cargo'
-    directory: '/po-translator-gui/src-tauri'
+    directory: '/src-tauri'
     schedule:
       interval: 'weekly'
     open-pull-requests-limit: 10
