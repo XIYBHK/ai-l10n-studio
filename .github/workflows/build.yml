@@ -52,7 +52,7 @@ jobs:
         if: matrix.platform == 'ubuntu-22.04'
         run: |
           sudo apt-get update
-          sudo apt-get install -y libgtk-3-dev libwebkit2gtk-4.0-dev libappindicator3-dev librsvg2-dev patchelf
+          sudo apt-get install -y libgtk-3-dev libwebkit2gtk-4.1-dev libappindicator3-dev librsvg2-dev patchelf libsoup-3.0-dev
 
       - name: Install NSIS (Windows only)
         if: matrix.platform == 'windows-latest'
@@ -66,8 +66,12 @@ jobs:
         if: matrix.platform == 'ubuntu-22.04'
         run: npm run tauri build -- --bundles deb
 
-      - name: Build Tauri app (Windows/macOS)
-        if: matrix.platform != 'ubuntu-22.04'
+      - name: Build Tauri app (Windows)
+        if: matrix.platform == 'windows-latest'
+        run: npm run tauri build
+
+      - name: Build Tauri app (macOS)
+        if: matrix.platform == 'macos-latest'
         run: npm run tauri build
 
       - name: Debug - List Windows build output
@@ -89,7 +93,7 @@ jobs:
           path: |
             src-tauri/target/release/bundle/msi/*.msi
             src-tauri/target/release/bundle/nsis/*.exe
-            src-tauri/target/release/PO-Translator.exe
+            src-tauri/target/release/po-translator-gui.exe
           if-no-files-found: warn
           retention-days: 30
 
