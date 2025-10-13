@@ -1,0 +1,71 @@
+# GitHub 语言检测配置
+Python
+*.py
+*.pyw
+*.pyi
+*.pyx
+
+TypeScript
+*.ts
+*.tsx
+*.d.ts
+
+JavaScript
+*.js
+*.jsx
+*.mjs
+*.cjs
+
+HTML
+*.html
+*.htm
+*.xhtml
+
+CSS
+*.css
+*.scss
+*.sass
+*.less
+
+JSON
+*.json
+*.jsonc
+
+Markdown
+*.md
+*.markdown
+
+Shell
+*.sh
+*.bash
+*.zsh
+*.fish
+
+Batch
+*.bat
+*.cmd
+*.ps1
+
+Rust
+*.rs
+
+TOML
+*.toml
+
+# 忽略的文件模式
+node_modules/** linguist-generated
+dist/** linguist-generated
+build/** linguist-generated
+target/** linguist-generated
+src-tauri/target/** linguist-generated
+__pycache__/** linguist-generated
+*.min.js linguist-generated
+*.min.css linguist-generated
+
+# 生成的类型与架构文件
+src/types/generated/** linguist-generated
+src-tauri/gen/** linguist-generated
+
+# 归档的原型与备份（不计入语言统计）
+archive/python-prototype/** linguist-vendored
+archive/backups/** linguist-vendored
