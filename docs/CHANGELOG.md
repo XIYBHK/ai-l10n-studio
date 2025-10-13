@@ -2,15 +2,21 @@
 
 ## 2025-10-13 - 修复构建工作流和测试
 
-### CI 工作流修复
+### CI 工作流统一修复
 
-- **Linux 依赖修复**（build.yml + check.yml）
+- **Linux 依赖修复**（build.yml + check.yml + codeql.yml）
   - 添加 `libsoup-3.0-dev` 依赖（Tauri 2.x 必需）
   - 更新 webkit 版本：`libwebkit2gtk-4.0-dev` → `libwebkit2gtk-4.1-dev`
+- **路径修正**（所有工作流）
+  - 移除错误的 `po-translator-gui/` 路径前缀
+  - dependabot.yml: npm 依赖目录 `/` + Rust 依赖目录 `/src-tauri`
 - **Windows 产物路径修正**（build.yml）
   - exe 文件名：`PO-Translator.exe` → `po-translator-gui.exe`（与 Cargo.toml 一致）
 - **构建步骤优化**（build.yml）
   - 分离 Windows 和 macOS 构建步骤名称，避免日志混淆
+- **文档更新**（workflows/README.md）
+  - 添加 CodeQL 和 Dependabot 说明
+  - 更新所有命令路径
 
 ### 测试修复（4个失败测试）
 
