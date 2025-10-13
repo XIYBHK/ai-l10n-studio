@@ -1,0 +1,7 @@
+{
+  "$schema": "../gen/schemas/desktop-schema.json",
+  "identifier": "translation",
+  "description": "翻译功能权限 - 不需要文件系统访问",
+  "windows": ["main"],
+  "permissions": ["shell:default", "shell:allow-open"]
+}
