@@ -1,5 +1,28 @@
 # 更新日志
 
+## 2025-10-13 - 修复构建工作流和测试
+
+### Build 工作流修复
+
+- **Linux 构建修复**
+  - 添加 `libsoup-3.0-dev` 依赖（Tauri 2.x 必需）
+  - 更新 webkit 版本：`libwebkit2gtk-4.0-dev` → `libwebkit2gtk-4.1-dev`
+- **Windows 产物路径修正**
+  - exe 文件名：`PO-Translator.exe` → `po-translator-gui.exe`（与 Cargo.toml 一致）
+- **构建步骤优化**
+  - 分离 Windows 和 macOS 构建步骤名称，避免日志混淆
+
+### 测试修复（4个失败测试）
+
+根据实际实现更新测试代码：
+
+- `contextualRefine.test.ts`: 移除已废弃的 `apiKey` 参数（后端从 ConfigDraft 获取）
+- `tauriStore.test.ts`: 默认主题从 `'light'` 改为 `'system'`（Phase 9）
+- `tauriStore.test.ts`: 修正通知设置部分更新测试
+- `TermLibraryActivation.test.tsx`: 事件参数 `{ reason }` → `{ source }`
+
+测试结果：62/62 全部通过
+
 ## 2025-10-13 - 修复 Clippy 警告和 CI 配置
 
 ### 架构冲突修复
