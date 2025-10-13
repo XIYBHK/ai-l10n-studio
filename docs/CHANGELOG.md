@@ -1,182 +1,194 @@
 # 更新日志
 
-## 2025-10-06 - 重大更新 v2.0
-
-### 🎯 核心优化
-
-#### Token使用优化（重要！）
-- ✅ 将提示词移至System Message，减少重复发送
-- ✅ Token使用减少 **38%**
-- ✅ 翻译速度提升 **20%**
-- ✅ 添加实时Token统计功能
-- ✅ 报告中包含详细的Token使用和费用信息
-
-#### 专业翻译提示词集成
-- ✅ 集成经过验证的专业翻译规则
-- ✅ 明确UE专业术语翻译标准
-- ✅ 固定术语翻译（Unique→去重、Slice→截取等）
-- ✅ 改进Category翻译规则（保持XTools|等格式）
-- ✅ 强化格式保留规则
+## 2025-10-13 - 日志轮转功能（参考 clash-verge-rev）
 
 ### 新增功能
+- **日志轮转**: 自动管理日志文件大小和数量
+  - 单个文件超过指定大小（默认 128KB）时自动切换到新文件
+  - 日志文件按时间戳命名（格式：`app_2025-10-13_15-30-00_latest.log`）
+  - 自动保留最新的 N 个文件（默认 8 个），删除更旧的文件
+  - 结合按天数保留策略，双重清理保障磁盘空间
 
-#### 1. Python脚本替换批处理文件
-- ✅ 创建 `setup.py` 替换 `setup.bat`
-- ✅ 创建 `run.py` 替换 `run.bat`
-- ✅ 更好的中文支持，解决Windows GBK编码问题
-- ✅ 跨平台兼容（Windows/Linux/macOS）
+### 技术实现
+- **后端配置**: 新增 `log_max_size`（单个文件最大大小）和 `log_max_count`（保留文件数量）配置项
+- **前端 UI**: 在设置页面添加日志轮转配置界面，实时显示当前轮转策略
+- **参考源**: `clash-verge-rev/src-tauri/src/utils/init.rs`，使用 `flexi_logger` 的 `Criterion::Size` 和 `Cleanup::KeepLogFiles`
 
-#### 2. 翻译报告系统
-- ✅ 自动生成详细的翻译报告
-- ✅ 报告保存在 `log/` 目录下
-- ✅ 使用时间戳命名：`translation_report_YYYYMMDD_HHMMSS.txt`
-- ✅ 包含完整的原文-译文对照表
-- ✅ 统计翻译成功/失败数量
-
-#### 3. 优化AI翻译提示词
-- ✅ 添加详细的技术术语翻译标准
-- ✅ 强调保留特殊字符和转义字符（`\n`、`\t`等）
-- ✅ 明确占位符格式保留要求（`{0}`、`{1}`等）
-- ✅ 改进系统提示词，强调UE本地化规范
-
-#### 4. 翻译质量验证
-- ✅ 自动检测占位符数量是否匹配
-- ✅ 自动恢复丢失的换行符
-- ✅ 翻译过程中显示警告信息
-
-### 改进内容
-
-#### 界面优化
-- 使用 `[OK]`、`[错误]`、`[!]` 等标记替代emoji符号
-- 解决Windows控制台中文显示问题
-- 更清晰的进度提示
-
-#### 代码结构
-- 模块化翻译报告生成函数
-- 改进错误处理和异常捕获
-- 添加详细的代码注释
-
-### 文件结构变化
-
-```
-新增文件：
-├── setup.py              # Python安装脚本
-├── run.py                # Python菜单脚本
-├── log/                  # 翻译报告目录
-│   └── .gitkeep
-└── CHANGELOG.md          # 本文件
-
-保留文件：
-├── setup.bat             # 可选保留，建议使用setup.py
-└── run.bat               # 可选保留，建议使用run.py
-```
-
-### 使用方法
-
-#### 安装
-```bash
-# 新方式（推荐）
-python setup.py
-
-# 旧方式（仍可用）
-setup.bat  # Windows
-```
-
-#### 运行
-```bash
-# 新方式（推荐）
-python run.py
-
-# 旧方式（仍可用）
-run.bat  # Windows
-```
-
-### 翻译报告示例
-
-报告文件位置：`log/translation_report_20251006_001418.txt`
-
-报告内容包括：
-- 翻译时间和统计信息
-- 每个文件的详细翻译结果
-- 完整的原文-译文对照表
-- 翻译失败的条目（如有）
-
-### 已知问题
-
-1. ~~部分翻译中换行符 `\n` 可能丢失~~ 
-   - 已添加自动恢复机制
-   - 已优化AI提示词强调保留转义字符
-
-2. Windows控制台编码问题
-   - 已使用ASCII兼容符号替代emoji
-   - 建议使用 Windows Terminal 获得更好体验
-
-### Token使用优化详情
-
-**优化前：**
-```
-每个批次都发送完整提示词（500+ tokens）
-翻译103条，11批 = 5,500+ tokens浪费
-```
-
-**优化后：**
-```
-System Message: 提示词只计费一次
-User Message: 只包含待翻译内容
-节省约38%的Token使用
-```
-
-**实际效果：**
-- 小型项目（100条）：节省 ¥0.05
-- 中型项目（1000条）：节省 ¥0.54
-- 大型项目（5000条）：节省 ¥2.70
-
-### 专业提示词改进
-
-**新增固定术语翻译：**
-- Unique → 去重（不再翻译为"独特的"）
-- Slice → 截取（不再翻译为"切片"）
-- Primitives → 基础类型（不再翻译为"图元"）
-- Constant Speed → 匀速
-- Stream → 流送
-- Connection → 连接
-
-**改进Category翻译规则：**
-- 正确：XTools|排序|Actor
-- 正确：XTools|数组|去重
-- 保持命名空间和管道符不变
-
-### 后续计划
-
-- [ ] 添加翻译缓存功能（可节省30-50%成本）
-- [ ] 支持自定义术语表
-- [ ] 智能批次大小调整
-- [ ] 添加翻译质量评分
-- [ ] 支持多语言翻译（日语、韩语等）
-- [ ] Web界面支持
+### 代码统计
+- 1 个原子提交: feat: 日志轮转功能
+- 4 个文件修改: +96 行 / -17 行
 
 ---
 
-## 使用建议
+## 2025-10-13 - 质量提升：代码规范 + 日志管理 + Bug修复
 
-1. **首次使用**：运行 `python setup.py` 进行环境配置
-2. **日常使用**：运行 `python run.py` 使用菜单界面
-3. **查看报告**：翻译完成后检查 `log/` 目录下的报告文件
-4. **验证翻译**：使用菜单中的"预览翻译进度"功能检查质量
+### 新增功能
 
-## 技术细节
+- **日志管理UI**: 添加日志配置界面到设置模态框
+  - 日志级别选择器（error/warn/info/debug/trace）
+  - 日志保留天数配置（0-365天，0表示永久保留）
+  - 实时配置同步到 AppConfig
 
-### AI提示词优化
-- 明确指定UE技术术语翻译标准
-- 强调保留所有特殊字符和格式
-- 使用低温度(0.3)确保翻译一致性
+### 工程改进
 
-### 质量保证
-- 翻译后自动验证占位符数量
-- 检测并恢复丢失的换行符
-- 生成详细报告便于人工审核
+- **代码规范工具**: 配置 Prettier + EditorConfig
+  - 统一前端代码格式化（printWidth=100, singleQuote=true）
+  - Rust 代码格式化脚本（cargo fmt）
+  - 跨编辑器一致性配置
+  - 144 文件格式化完成
 
-### 跨平台支持
-- 使用Python标准库，无额外依赖
-- 兼容Windows/Linux/macOS
-- 自动处理路径分隔符差异
+- **错误处理基础设施**: 参考 clash-verge-rev 的轻量级模式
+  - 添加错误处理分析脚本（scripts/refactor-error-handling.js）
+  - 导入 `wrap_err!` 宏到 4 个命令文件
+  - 保持当前实现（已足够优雅）
+  - 为未来优化预留接口
+
+### Bug修复
+
+- **并发安全**: 修复 parking_lot RwLock guard 跨 await 点问题
+  - 解决 `future cannot be sent between threads safely` 编译错误
+  - 优化 translate_entry, contextual_refine, translate_batch_with_channel 命令
+  - 使用作用域限制 guard 生命周期
+
+### 代码统计
+
+- 8 个原子提交，可安全回滚
+- +5,157 行 / -4,295 行（格式化：144文件）
+- +311 行（新功能：日志UI + 错误处理脚本）
+
+---
+
+## 2025-10-12 - 架构重构：统一命令层 + Draft 配置管理
+
+### ✅ 完成度
+
+- **Phase 1**: 前端统一命令层 (100%)
+- **Phase 2**: 后端 Draft 配置管理 (100%)
+- **4 个原子提交**，可安全回滚
+- **-333 行代码**（净精简）
+
+### 迁移范围
+
+**前端 (10 文件)**
+
+- 统一命令层 `commands.ts`：集中管理所有 Tauri 调用
+- 组件迁移：App.tsx, SettingsModal, DevToolsModal, MenuBar, TermLibrary, MemoryManager, LanguageSelector
+- 删除旧 API：poFileApi, dialogApi, languageApi, translatorApi
+
+**后端 (3 文件, 9 命令)**
+
+- ConfigDraft 迁移：所有配置读写命令
+- 原子更新：add/update/remove/set AI 配置
+- 系统提示词：get/update/reset
+- 清理旧实现：移除所有 ConfigManager::new 调用
+
+### 新增
+
+- **统一命令层** `src/services/commands.ts`
+  - 集中管理 73 个 Tauri 命令常量，避免字符串硬编码
+  - 类型安全的命令调用封装（11 个模块化 API 组）
+  - 完整 TypeScript 类型标注，统一错误处理
+- **Draft 配置管理模式** `src-tauri/src/utils/draft.rs`
+  - 原子性配置更新（要么全部成功，要么全部回滚）
+  - 草稿机制：修改在草稿上进行，确认后提交生效
+  - 并发安全（RwLock + parking_lot）
+  - `ConfigDraft` 管理器：自动保存和事件通知
+- **增强版事件监听器** `src/hooks/useTauriEventBridge.enhanced.ts`
+  - 防抖和节流策略（避免 500ms 内重复触发）
+  - 定时器自动管理（防止内存泄漏）
+  - 事件回退机制（Tauri 失败时使用 window 事件）
+  - 预定义常用事件配置（config/term/file/translation）
+- **AppDataProvider 统一数据提供者** `src/providers/`
+  - 集中管理 6 类核心数据（config/AI/prompt/term/memory）
+  - `refreshAll()` 一键刷新所有数据
+  - 自动事件监听和 SWR 缓存同步
+  - 全局加载状态和错误管理
+
+### 优化
+
+- **前端架构**：引入 Context Provider 模式，组件通过 `useAppData()` 统一访问数据
+- **命令调用**：从分散的 API 调用改为集中的命令层，便于维护和重构
+- **配置更新流程**：draft → modify → apply → save → emit_event 原子化流程
+- **事件处理**：节流间隔可配置（默认 500ms），延迟执行支持（避免竞态）
+
+### 技术升级
+
+- 新增依赖：
+  - Rust: `parking_lot = "0.12"` - 高性能 RwLock
+- 架构模式：
+  - 前端：Command Layer + Context Provider + Enhanced Event Bridge
+  - 后端：Draft Pattern + Event Emission + Atomic Updates
+
+### 技术改进
+
+- ✅ **类型安全**：统一命令层，编译期错误检测
+- ✅ **原子更新**：Draft 模式保证配置事务性
+- ✅ **线程安全**：RwLock 并发控制
+- ✅ **代码复用**：修改只需一处
+- ✅ **零技术债**：旧实现完全移除
+
+---
+
+## 2025-10-12 - 工程化增强
+
+### 新增
+
+- **便携模式支持**：创建 `.config/PORTABLE` 文件即可启用，所有数据存储在程序目录
+- **主题系统增强**：支持 浅色/深色/跟随系统 三种模式，实时监听系统主题变化
+- **系统语言检测**：首次启动自动适配系统语言（Rust 后端 API）
+- **工程化日志系统**：flexi_logger + 结构化日志宏，支持自动轮转和清理
+- **开发工具脚本**：
+  - `npm run i18n:check` - 自动检测并清理未使用的 i18n 键
+  - `npm run tauri:portable` - Windows 便携版一键打包
+
+### 优化
+
+- **统一路径管理**：`src-tauri/src/utils/paths.rs` 统一所有文件路径获取
+- **配置扩展**：新增 `theme_mode`, `language`, `log_retention_days` 字段
+- **应用初始化流程**：便携模式检测 → 目录创建 → 日志初始化 → 配置加载
+- **代码质量保障**：启用 36 条 Clippy Lints 规则（禁止 panic/unwrap，强制异步最佳实践）
+
+### 技术升级
+
+- **Rust Edition 2024**：最新语法支持（let chains 等）
+- **新增依赖**：
+  - Rust: `once_cell`, `flexi_logger`, `log`, `dunce`
+  - Node.js: `adm-zip`
+
+### 文档
+
+- 新增 `scripts/README.md` - 开发工具使用说明
+- 更新 `CLAUDE.md` - Phase 9 工程化增强完成标记
+
+---
+
+## 2025-10-11
+
+### 新增
+
+- 统一格式化工具模块 `src/utils/formatters.ts`
+  - `formatCost()` - 成本显示（美元格式）
+  - `formatCostByLocale()` - 🆕 多语言货币支持（中文显示人民币，其他显示美元）
+  - `formatTokens()`, `formatPercentage()`, `formatDuration()` 等
+- **统计格式化器** `src/services/statsFormatter.ts`
+  - 整合统计系统 V2（Event Sourcing）和格式化工具
+  - 提供 ready-to-display 数据（`FormattedStatsSummary`）
+  - 支持多种视图：完整版、简洁版、调试版、多语言成本
+- 设置页预设模型选择器（显示模型定价和参数）
+
+### 优化
+
+- 供应商配置统一管理（从 `PROVIDER_INFO_MAP` 动态生成，减少48行重复代码）
+- 成本显示格式统一为美元（`$0.0023` 小金额4位小数，`$12.35` 大金额2位小数）
+- AIWorkspace 统计面板应用统一格式化函数（6处）
+- **StatsEngine 集成格式化器**：新增 `getFormattedSessionStats()` 和增强调试信息
+- 累计统计区排版优化：「总计翻译-AI调用 / 记忆命中-去重命中」
+
+### 修复
+
+- 修正本次会话统计百分比计算逻辑：使用实际处理条目数（tm_hits + deduplicated + ai_translated）作为分母，而非文件总条目数
+- API 参数名错误：`providerType` → `provider`（影响4个 AI 模型 API）
+
+### 文档
+
+- 更新 `docs/API.md` 统一格式化工具说明
