@@ -468,11 +468,12 @@ pub fn get_frontend_logs() -> Result<Vec<String>, String> {
                             .lines()
                             .map(|line| line.to_string())
                             .collect();
+                        let lines_count = lines.len(); // 🔧 在移动前保存长度
                         all_lines.extend(lines);
                         found_files += 1;
                         
                         crate::app_log!("✅ [前端日志] 读取文件: {} ({} 行)", 
-                            entry.file_name().to_string_lossy(), lines.len());
+                            entry.file_name().to_string_lossy(), lines_count);
                     }
                 }
                 
