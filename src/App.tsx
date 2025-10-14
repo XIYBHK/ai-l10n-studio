@@ -23,7 +23,7 @@ import {
   translatorCommands,
 } from './services/commands';
 import { apiClient } from './services/apiClient';
-import type { LanguageInfo } from './services/api'; // TODO: 类型定义应移动到 types/ (Phase 1.5)
+import type { LanguageInfo } from './types/generated/LanguageInfo';
 import { ConfigSyncManager } from './services/configSync';
 import './i18n/config';
 import './App.css';
@@ -325,6 +325,12 @@ function App() {
   };
 
   const translateAll = async () => {
+    // 🚨 并发保护：防止重复翻译
+    if (isTranslating) {
+      log.warn('翻译正在进行中，忽略重复请求');
+      return;
+    }
+
     // 检查是否有启用的AI配置
     if (!active || !active.apiKey) {
       // 静默打开设置，避免阻塞弹窗

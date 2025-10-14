@@ -33,6 +33,9 @@ class ConfigSyncManager {
   private validationInterval: number | null = null;
   private unsubscribeConfigChanges: (() => void) | null = null;
   private readonly VALIDATION_INTERVAL_MS = 5000; // 5秒验证一次
+  
+  // 🚨 添加验证锁，防止重复验证
+  private isValidating = false;
 
   /**
    * 初始化配置同步
@@ -78,6 +81,16 @@ class ConfigSyncManager {
    * 验证前后端配置一致性
    */
   async validate(): Promise<ConfigValidationResult> {
+    // 🚨 防止重复验证
+    if (this.isValidating) {
+      log.debug('验证正在进行中，跳过本次验证');
+      return {
+        isValid: true,
+        issues: ['验证进行中'],
+      };
+    }
+
+    this.isValidating = true;
     const issues: string[] = [];
 
     try {
@@ -134,6 +147,9 @@ class ConfigSyncManager {
         isValid: false,
         issues,
       };
+    } finally {
+      // 🚨 确保验证锁被释放
+      this.isValidating = false;
     }
   }
 
