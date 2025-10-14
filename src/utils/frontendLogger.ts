@@ -4,6 +4,7 @@
  */
 
 import { writeTextFile, BaseDirectory, mkdir, readDir, remove } from '@tauri-apps/plugin-fs';
+import { systemCommands } from '../services/commands';
 
 class FrontendLogger {
   private logs: string[] = [];
@@ -232,10 +233,18 @@ class FrontendLogger {
     }
   }
 
-  private async cleanOldLogFiles(maxFiles: number = 5) {
+  private async cleanOldLogFiles(maxFiles: number = 5, logDirPath?: string | null) {
     try {
-      // 读取 data 目录下的所有文件
-      const entries = await readDir('data', { baseDir: BaseDirectory.AppData });
+      let entries;
+      
+      // 🔄 根据目录类型选择不同的读取方式
+      if (logDirPath) {
+        // 使用统一日志目录（绝对路径）
+        entries = await readDir(logDirPath);
+      } else {
+        // 回退到 AppData/data 目录
+        entries = await readDir('data', { baseDir: BaseDirectory.AppData });
+      }
 
       // 过滤出前端日志文件
       const logFiles = entries
@@ -250,8 +259,15 @@ class FrontendLogger {
         const filesToDelete = logFiles.slice(maxFiles);
         for (const file of filesToDelete) {
           if (file.name) {
-            await remove(`data/${file.name}`, { baseDir: BaseDirectory.AppData });
-            this.originalConsole.log(`🗑️ 清理旧日志: ${file.name}`);
+            // 🔄 根据目录类型选择删除方式
+            if (logDirPath) {
+              // 统一日志目录：使用绝对路径
+              await remove(`${logDirPath}/${file.name}`);
+            } else {
+              // AppData 目录：使用相对路径
+              await remove(`data/${file.name}`, { baseDir: BaseDirectory.AppData });
+            }
+            this.originalConsole.log(`🗑️ 清理旧前端日志: ${file.name}`);
           }
         }
       }
@@ -264,38 +280,65 @@ class FrontendLogger {
         // 目录不存在是正常情况
         return;
       }
-      this.originalConsole.warn('清理旧日志文件失败:', error);
+      this.originalConsole.warn('清理旧前端日志文件失败:', error);
     }
   }
 
   async saveLogs() {
     try {
-      // 确保 data 目录存在
+      if (this.logs.length === 0) {
+        this.originalConsole.log('📝 前端日志为空，跳过保存');
+        return '';
+      }
+
+      // 🔄 获取后端日志目录路径，实现前后端日志统一存放
+      let logDirPath: string | null = null;
+      let useUnifiedDir = false;
+      
       try {
-        await mkdir('data', { baseDir: BaseDirectory.AppData, recursive: true });
+        logDirPath = await systemCommands.getLogDirectoryPath();
+        useUnifiedDir = true;
+        this.originalConsole.log(`📁 [前端日志] 使用统一日志目录: ${logDirPath}`);
       } catch (error) {
-        // 目录已存在的错误可以忽略
-        if (!(error as any)?.message?.includes('already exists')) {
-          this.originalConsole.warn('创建 data 目录失败:', error);
+        this.originalConsole.warn('⚠️ 获取统一日志目录失败，回退到 AppData/data:', error);
+        // 回退到原有方式
+        try {
+          await mkdir('data', { baseDir: BaseDirectory.AppData, recursive: true });
+        } catch (mkdirError) {
+          // 目录已存在的错误可以忽略
+          if (!(mkdirError as any)?.message?.includes('already exists')) {
+            this.originalConsole.warn('创建 data 目录失败:', mkdirError);
+          }
         }
       }
 
       // 清理旧文件（保留最近5个）
-      await this.cleanOldLogFiles(5);
+      await this.cleanOldLogFiles(5, logDirPath);
 
       const timestamp = new Date().toISOString().replace(/[:.]/g, '-').slice(0, -5);
-      const filename = `frontend-${timestamp}.log`; // 使用 .log 扩展名，与后端保持一致
+      const filename = `frontend-${timestamp}.log`; // 🔄 前端日志统一前缀：frontend-
       const content = this.logs.join('\n');
       const sizeKB = (new Blob([content]).size / 1024).toFixed(2);
 
-      await writeTextFile(`data/${filename}`, content, { baseDir: BaseDirectory.AppData });
+      // 🔄 根据目录类型选择写入方式
+      if (useUnifiedDir && logDirPath) {
+        // 直接使用绝对路径写入后端日志目录
+        const fullPath = `${logDirPath}/${filename}`;
+        await writeTextFile(fullPath, content);
+        this.originalConsole.log(
+          `✅ [统一日志] 前端日志已保存: ${filename} (${sizeKB} KB, ${this.logs.length} 条) → ${logDirPath}`
+        );
+      } else {
+        // 回退到 AppData/data 目录
+        await writeTextFile(`data/${filename}`, content, { baseDir: BaseDirectory.AppData });
+        this.originalConsole.log(
+          `✅ [分离日志] 前端日志已保存: ${filename} (${sizeKB} KB, ${this.logs.length} 条) → AppData/data`
+        );
+      }
 
-      this.originalConsole.log(
-        `✅ 前端日志已保存: ${filename} (${sizeKB} KB, ${this.logs.length} 条)`
-      );
       return filename;
     } catch (error) {
-      this.originalConsole.error('保存前端日志失败:', error);
+      this.originalConsole.error('❌ 保存前端日志失败:', error);
       throw error;
     }
   }

@@ -76,6 +76,7 @@ fn main() {
             // 系统语言检测 (Phase 6)
             get_system_language,
             // 系统相关命令
+            get_log_directory_path,
             open_log_directory,
             // Phase 9: 后端国际化增强
             utils::i18n::get_system_locale,

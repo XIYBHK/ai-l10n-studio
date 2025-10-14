@@ -107,6 +107,19 @@ mod tests {
 }
 
 /// 打开日志目录
+/// 获取日志目录路径
+#[tauri::command]
+pub fn get_log_directory_path() -> Result<String, String> {
+    let log_dir = paths::app_logs_dir()
+        .map_err(|e| format!("获取日志目录路径失败: {}", e))?;
+    
+    // 确保目录存在
+    paths::ensure_dir(&log_dir)
+        .map_err(|e| format!("创建日志目录失败: {}", e))?;
+    
+    Ok(log_dir.to_string_lossy().to_string())
+}
+
 /// 在系统文件管理器中打开应用日志目录
 #[tauri::command]
 pub fn open_log_directory() -> Result<(), String> {

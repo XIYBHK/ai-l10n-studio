@@ -88,6 +88,7 @@ export const COMMANDS = {
   LANGUAGE_GET_DEFAULT_TARGET: 'get_default_target_lang',
 
   // 系统相关
+  SYSTEM_GET_LOG_DIRECTORY: 'get_log_directory_path',
   SYSTEM_OPEN_LOG_DIRECTORY: 'open_log_directory',
 } as const;
 
@@ -393,9 +394,10 @@ export const translationMemoryCommands = {
  */
 export const poFileCommands = {
   async parse(filePath: string) {
+    // 🔄 参数转换：filePath → file_path (后端期望snake_case)
     return invoke<POEntry[]>(
       COMMANDS.PO_PARSE,
-      { filePath },
+      { filePath }, // 系统自动转换为 file_path
       {
         errorMessage: '解析 PO 文件失败',
       }
@@ -587,6 +589,15 @@ export const i18nCommands = {
  * 系统命令
  */
 export const systemCommands = {
+  /**
+   * 获取日志目录路径
+   */
+  async getLogDirectoryPath() {
+    return invoke<string>(COMMANDS.SYSTEM_GET_LOG_DIRECTORY, undefined, {
+      errorMessage: '获取日志目录路径失败',
+    });
+  },
+
   /**
    * 打开日志目录
    * 在文件管理器中打开应用日志目录

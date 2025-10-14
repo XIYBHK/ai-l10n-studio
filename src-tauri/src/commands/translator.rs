@@ -396,64 +396,105 @@ pub fn clear_app_logs() -> Result<(), String> {
     Ok(())
 }
 
-// 🔄 获取前端日志文件内容（从前端保存的日志文件读取）
+// 🔄 获取前端日志文件内容（优先从统一日志目录读取）
 #[tauri::command]
 pub fn get_frontend_logs() -> Result<Vec<String>, String> {
     use std::fs;
     
-    // 🔧 使用项目统一的路径管理系统
-    let data_dir = crate::utils::paths::app_data_dir()
-        .map_err(|e| format!("无法获取数据目录: {}", e))?;
+    crate::app_log!("🔄 [前端日志] 开始读取前端日志文件");
     
-    if !data_dir.exists() {
-        return Ok(vec!["前端日志目录不存在，可能还没有保存过日志".to_string()]);
+    // 🔄 优先尝试从统一日志目录读取
+    let mut log_directories = Vec::new();
+    
+    // 1. 统一日志目录（优先）
+    if let Ok(log_dir) = crate::utils::paths::app_logs_dir() {
+        log_directories.push((log_dir, "统一日志目录"));
     }
     
-    // 查找前端日志文件
-    match fs::read_dir(&data_dir) {
-        Ok(entries) => {
-            let mut frontend_log_files: Vec<_> = entries
-                .filter_map(|entry| entry.ok())
-                .filter(|entry| {
-                    let file_name = entry.file_name();
-                    let name = file_name.to_string_lossy();
-                    name.starts_with("frontend-") && name.ends_with(".log")
-                })
-                .collect();
-            
-            if frontend_log_files.is_empty() {
-                return Ok(vec!["暂无前端日志文件".to_string()]);
-            }
-            
-            // 按修改时间排序，最新的在前
-            frontend_log_files.sort_by_key(|entry| {
-                entry.metadata()
-                    .and_then(|m| m.modified())
-                    .unwrap_or(std::time::SystemTime::UNIX_EPOCH)
-            });
-            frontend_log_files.reverse();
-            
-            // 读取最多3个最新的前端日志文件
-            let mut all_lines = Vec::new();
-            for (i, entry) in frontend_log_files.iter().take(3).enumerate() {
-                if i > 0 {
-                    all_lines.push(format!("========== {} ==========", 
-                        entry.file_name().to_string_lossy()));
+    // 2. AppData/data 目录（回退）
+    if let Ok(data_dir) = crate::utils::paths::app_data_dir() {
+        log_directories.push((data_dir, "AppData数据目录"));
+    }
+    
+    let mut all_lines = Vec::new();
+    let mut found_files = 0;
+    
+    // 尝试从各个目录读取前端日志
+    for (dir_path, dir_name) in log_directories {
+        if !dir_path.exists() {
+            crate::app_log!("📂 [前端日志] {} 不存在: {:?}", dir_name, dir_path);
+            continue;
+        }
+        
+        crate::app_log!("📂 [前端日志] 检查 {}: {:?}", dir_name, dir_path);
+        
+        // 查找前端日志文件
+        match fs::read_dir(&dir_path) {
+            Ok(entries) => {
+                let mut frontend_log_files: Vec<_> = entries
+                    .filter_map(|entry| entry.ok())
+                    .filter(|entry| {
+                        let file_name = entry.file_name();
+                        let name = file_name.to_string_lossy();
+                        name.starts_with("frontend-") && name.ends_with(".log")
+                    })
+                    .collect();
+                
+                if frontend_log_files.is_empty() {
+                    crate::app_log!("📭 [前端日志] {} 中没有前端日志文件", dir_name);
+                    continue;
                 }
                 
-                if let Ok(content) = fs::read_to_string(entry.path()) {
-                    let lines: Vec<String> = content
-                        .lines()
-                        .map(|line| line.to_string())
-                        .collect();
-                    all_lines.extend(lines);
+                // 按修改时间排序，最新的在前
+                frontend_log_files.sort_by_key(|entry| {
+                    entry.metadata()
+                        .and_then(|m| m.modified())
+                        .unwrap_or(std::time::SystemTime::UNIX_EPOCH)
+                });
+                frontend_log_files.reverse();
+                
+                crate::app_log!("📄 [前端日志] {} 找到 {} 个前端日志文件", 
+                    dir_name, frontend_log_files.len());
+                
+                // 读取最多3个最新的前端日志文件
+                for (i, entry) in frontend_log_files.iter().take(3).enumerate() {
+                    if found_files > 0 || i > 0 {
+                        all_lines.push(format!("========== {} ==========", 
+                            entry.file_name().to_string_lossy()));
+                    }
+                    
+                    if let Ok(content) = fs::read_to_string(entry.path()) {
+                        let lines: Vec<String> = content
+                            .lines()
+                            .map(|line| line.to_string())
+                            .collect();
+                        all_lines.extend(lines);
+                        found_files += 1;
+                        
+                        crate::app_log!("✅ [前端日志] 读取文件: {} ({} 行)", 
+                            entry.file_name().to_string_lossy(), lines.len());
+                    }
+                }
+                
+                // 如果找到了文件，就不再继续查找其他目录
+                if found_files > 0 {
+                    break;
                 }
             }
-            
-            Ok(all_lines)
+            Err(e) => {
+                crate::app_log!("❌ [前端日志] 无法读取 {}: {}", dir_name, e);
+                continue;
+            }
         }
-        Err(e) => Err(format!("读取前端日志目录失败: {}", e))
     }
+    
+    if found_files == 0 {
+        crate::app_log!("📭 [前端日志] 所有目录都没有找到前端日志文件");
+        return Ok(vec!["前端日志文件不存在，可能还没有保存过日志".to_string()]);
+    }
+    
+    crate::app_log!("✅ [前端日志] 读取完成，共 {} 个文件，{} 行", found_files, all_lines.len());
+    Ok(all_lines)
 }
 
 // ==================== 术语库相关命令 ====================
