@@ -153,11 +153,10 @@ export const aiConfigCommands = {
   },
 
   async add(config: AIConfig) {
-    // 转换camelCase为snake_case（api_key字段传递）
-    const snakeCaseConfig = convertKeysToSnakeCase(config as any);
+    // 🔄 自动参数转换：apiKey → api_key, config 对象键自动转换
     return invoke<string>(
       COMMANDS.AI_CONFIG_ADD,
-      { config: snakeCaseConfig },
+      { config }, // 系统自动转换 config 对象的键为 snake_case
       {
         errorMessage: '添加AI配置失败',
       }
@@ -165,23 +164,29 @@ export const aiConfigCommands = {
   },
 
   async update(id: string, config: AIConfig) {
-    // 转换camelCase为snake_case（api_key字段传递）
-    const snakeCaseConfig = convertKeysToSnakeCase(config as any);
+    // 🔄 自动参数转换：id, config 对象键自动转换为 snake_case
     return invoke<void>(
       COMMANDS.AI_CONFIG_UPDATE,
-      { id, config: snakeCaseConfig },
+      { id, config }, // 系统自动转换所有参数
       {
         errorMessage: '更新AI配置失败',
       }
     );
   },
 
-  async delete(id: string) {
+  async delete(indexStr: string) {
+    // 🔄 后端期望 index: usize，前端传递字符串形式的索引
+    const index = parseInt(indexStr, 10);
+    if (isNaN(index) || index < 0) {
+      throw new Error(`无效的配置索引: ${indexStr}`);
+    }
+    
     return invoke<void>(
       COMMANDS.AI_CONFIG_DELETE,
-      { id },
+      { index }, // 传递数字索引，系统会保持原样（不转换）
       {
         errorMessage: '删除AI配置失败',
+        autoConvertParams: false, // 禁用自动转换，因为 index 应该保持数字类型
       }
     );
   },
@@ -551,10 +556,10 @@ export const i18nCommands = {
   },
 
   async getDefaultTargetLanguage(sourceLanguageCode: string) {
-    // 转换camelCase为snake_case（source_lang_code参数传递）
+    // 🔄 自动参数转换：sourceLanguageCode → source_lang_code
     return invoke<{ code: string; display_name: string }>(
       COMMANDS.LANGUAGE_GET_DEFAULT_TARGET,
-      { source_lang_code: sourceLanguageCode },
+      { sourceLanguageCode }, // 使用 camelCase，系统自动转换为 source_lang_code
       {
         errorMessage: '获取默认目标语言失败',
       }

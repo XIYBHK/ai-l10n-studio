@@ -283,3 +283,5 @@ docs/examples/data/*.json
 ref/
 .cursor/rules/
 docs/PLAN_STATUS_AUDIT.md
+/.cursor
+/.specify

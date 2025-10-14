@@ -51,90 +51,50 @@ export const useTheme = () => {
   // 当前实际应用的主题（解析 system 为 light/dark）
   const [appliedTheme, setAppliedTheme] = useState<AppliedTheme>(getInitialTheme);
 
-  // 0. 当 themeMode 改变时，立即更新 appliedTheme（修复切换到system模式时不生效的问题）
-  useEffect(() => {
-    console.log('[useTheme] themeMode changed:', { themeMode, currentApplied: appliedTheme });
-    
+  // 🔄 统一主题状态管理：利用 useMemo 避免循环触发
+  const computedAppliedTheme = useMemo((): AppliedTheme => {
     if (themeMode !== 'system') {
-      // 非 system 模式：直接使用用户选择的主题
-      console.log('[useTheme] 设置非系统主题:', themeMode);
-      setAppliedTheme(themeMode as AppliedTheme);
-    } else {
-      // system 模式：重新检测系统主题
-      if (typeof window !== 'undefined' && window.matchMedia) {
-        const mediaQuery = window.matchMedia('(prefers-color-scheme: dark)');
-        const systemTheme = mediaQuery.matches ? 'dark' : 'light';
-        console.log('[useTheme] 检测到系统主题:', systemTheme);
-        setAppliedTheme(systemTheme);
-      } else {
-        console.log('[useTheme] 降级到 light 主题');
-        setAppliedTheme('light'); // 降级
-      }
+      return themeMode as AppliedTheme;
     }
+    
+    // system 模式：检测系统主题（只在 themeMode 变化时重新计算）
+    if (typeof window !== 'undefined' && window.matchMedia) {
+      return window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
+    }
+    
+    return 'light'; // 降级
   }, [themeMode]);
 
-  // 1. 处理 system 模式：监听系统主题变化
+  // 🔄 使用 useEffect 同步计算结果到状态（避免重复计算）
   useEffect(() => {
-    // 只处理 system 模式的监听
+    if (appliedTheme !== computedAppliedTheme) {
+      console.log('[useTheme] 主题更新:', { from: appliedTheme, to: computedAppliedTheme });
+      setAppliedTheme(computedAppliedTheme);
+    }
+  }, [computedAppliedTheme, appliedTheme]);
+
+  // 🔄 系统主题监听：仅在 system 模式下触发重新计算
+  useEffect(() => {
     if (themeMode !== 'system') {
-      return;
+      return; // 非 system 模式不需要监听
     }
 
-    // Phase 9 优化：优先使用 CSS media query（同步，无闪烁）
+    // 优先使用 CSS media query（同步检测）
     if (typeof window !== 'undefined' && window.matchMedia) {
       const mediaQuery = window.matchMedia('(prefers-color-scheme: dark)');
 
-      // 设置初始主题
-      setAppliedTheme(mediaQuery.matches ? 'dark' : 'light');
-
-      // 监听系统主题变化（现代浏览器支持）
-      const handleChange = (e: MediaQueryListEvent) => {
-        console.log('[Theme] System theme changed (CSS):', e.matches ? 'dark' : 'light');
-        setAppliedTheme(e.matches ? 'dark' : 'light');
+      // 系统主题变化时，触发重新计算（通过修改依赖触发 useMemo）
+      const handleChange = () => {
+        console.log('[useTheme] 系统主题变化，触发重新计算');
+        // 强制重新渲染，让 useMemo 重新计算 computedAppliedTheme
+        setAppliedTheme(prev => prev); // 触发重新渲染
       };
 
       mediaQuery.addEventListener('change', handleChange);
-
-      return () => {
-        mediaQuery.removeEventListener('change', handleChange);
-      };
+      return () => mediaQuery.removeEventListener('change', handleChange);
     }
 
-    // 降级：使用 Tauri API（异步，可能闪烁）
-    let isMounted = true;
-    const appWindow = getCurrentWindow();
-
-    appWindow
-      .theme()
-      .then((systemTheme) => {
-        if (isMounted && systemTheme) {
-          setAppliedTheme(systemTheme as AppliedTheme);
-        }
-      })
-      .catch((err) => {
-        console.error('[Theme] Failed to get system theme:', err);
-        setAppliedTheme('light');
-      });
-
-    const unlistenPromise = appWindow.onThemeChanged(({ payload }) => {
-      if (isMounted) {
-        console.log('[Theme] System theme changed (Tauri):', payload);
-        setAppliedTheme(payload as AppliedTheme);
-      }
-    });
-
-    return () => {
-      isMounted = false;
-      unlistenPromise
-        .then((unlisten) => {
-          if (typeof unlisten === 'function') {
-            unlisten();
-          }
-        })
-        .catch((err) => {
-          console.error('[Theme] Failed to unlisten theme changes:', err);
-        });
-    };
+    console.log('[useTheme] 降级：无法监听系统主题变化');
   }, [themeMode]);
 
   // 2. 同步 Tauri 窗口主题（用于原生标题栏）

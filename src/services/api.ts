@@ -6,6 +6,7 @@
 import { message } from 'antd';
 import { createModuleLogger } from '../utils/logger';
 import { apiClient } from './apiClient';
+import { convertKeysToSnakeCase } from '../utils/paramConverter';
 
 const log = createModuleLogger('API');
 
@@ -20,6 +21,7 @@ interface ApiOptions {
   retry?: number; // 重试次数
   retryDelay?: number; // 重试延迟（毫秒）
   dedup?: boolean; // 请求去重
+  autoConvertParams?: boolean; // 是否自动转换参数为 snake_case（默认true）
 }
 
 /**
@@ -38,15 +40,29 @@ export async function invoke<T>(
     retry,
     retryDelay,
     dedup,
+    autoConvertParams = true, // 默认启用自动参数转换
   } = options;
 
   try {
+    // 🔄 自动参数转换：camelCase → snake_case
+    let processedArgs = args;
+    if (autoConvertParams && args) {
+      processedArgs = convertKeysToSnakeCase(args as Record<string, any>);
+      
+      if (!silent && JSON.stringify(args) !== JSON.stringify(processedArgs)) {
+        log.debug(`🔄 参数转换: ${command}`, { 
+          original: args, 
+          converted: processedArgs 
+        });
+      }
+    }
+
     if (!silent) {
-      log.debug(`📤 API调用: ${command}`, args);
+      log.debug(`📤 API调用: ${command}`, processedArgs);
     }
 
     // 使用增强的 API 客户端
-    const result = await apiClient.invoke<T>(command, args as Record<string, any>, {
+    const result = await apiClient.invoke<T>(command, processedArgs as Record<string, any>, {
       timeout,
       retry,
       retryDelay,
