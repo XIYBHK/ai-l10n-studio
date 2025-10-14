@@ -14,7 +14,6 @@ import type { POEntry, TranslationStats, ContextualRefineRequest } from '../type
 import type { AIConfig, ProviderType } from '../types/aiProvider';
 import type { TermLibrary } from '../types/termLibrary';
 import type { ModelInfo } from '../types/generated/ModelInfo';
-import { convertKeysToSnakeCase } from '../utils/paramConverter';
 
 // ========================================
 // 命令常量定义（集中管理，避免硬编码）

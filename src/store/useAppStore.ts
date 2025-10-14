@@ -43,7 +43,6 @@ interface AppState {
 
   // 主题和语言
   setTheme: (theme: ThemeMode) => void;
-  toggleTheme: () => void; // Deprecated: 使用 useTheme.toggleTheme()
   setLanguage: (language: Language) => void;
 
   // 累计统计
@@ -136,15 +135,6 @@ export const useAppStore = create<AppState>()((set, get) => ({
     set({ theme });
     // 异步保存到 TauriStore
     tauriStore.setTheme(theme).catch((err) => console.error('[useAppStore] 保存主题失败:', err));
-  },
-  toggleTheme: () => {
-    // Phase 9: 支持三种模式循环切换 (Deprecated, 推荐使用 useTheme.toggleTheme())
-    const current = get().theme;
-    const newTheme: ThemeMode =
-      current === 'light' ? 'dark' : current === 'dark' ? 'system' : 'light';
-    set({ theme: newTheme });
-    // 异步保存到 TauriStore
-    tauriStore.setTheme(newTheme).catch((err) => console.error('[useAppStore] 保存主题失败:', err));
   },
   setLanguage: (language) => {
     const current = get().language;

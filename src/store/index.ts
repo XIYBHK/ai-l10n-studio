@@ -1,25 +1,21 @@
 /**
- * 状态管理统一导出
+ * Store 模块统一导出
  *
- * 新架构：分离瞬态和持久化状态
- * - useSessionStore: 会话状态（不持久化）
- * - useSettingsStore: 用户设置（持久化）
+ * 优化后的架构（2025-10-14）：
+ * - useAppStore: 主要应用状态管理（主题、语言、文件状态、配置等）
+ * - useSessionStore: 会话状态（条目、翻译状态等）
  * - useStatsStore: 累计统计（持久化）
- *
- * 旧架构（向后兼容）：
- * - useAppStore: 所有状态混合
+ * - tauriStore: 底层持久化存储抽象
  */
 
 // 直接导入加载函数，避免循环依赖问题
-import { loadSettings } from './useSettingsStore';
+import { loadPersistedState } from './useAppStore';
 import { loadStats } from './useStatsStore';
 
+export { useAppStore } from './useAppStore'; // 主要应用状态管理
 export { useSessionStore } from './useSessionStore';
-export { useSettingsStore } from './useSettingsStore';
 export { useStatsStore } from './useStatsStore';
 export { tauriStore } from './tauriStore';
-// useAppStore 已废弃，所有组件已迁移到新 Stores
-// export { useAppStore } from './useAppStore';
 
 /**
  * 初始化所有持久化状态
@@ -30,7 +26,7 @@ export async function initializeStores() {
 
   try {
     // 并行加载所有持久化状态
-    await Promise.all([loadSettings(), loadStats()]);
+    await Promise.all([loadPersistedState(), loadStats()]);
 
     console.log('[Store] 所有 Store 初始化成功');
   } catch (error) {
@@ -40,22 +36,27 @@ export async function initializeStores() {
 }
 
 /**
- * ✅ 迁移完成（2025-10-08）
+ * ✅ 架构优化完成（2025-10-14）
  *
- * 所有组件已迁移到新的 Store 架构：
- * - useSessionStore: 会话状态（entries, currentEntry, isTranslating 等）
- * - useSettingsStore: 用户设置（theme, language）
- * - useStatsStore: 累计统计（cumulativeStats）
+ * 设计原则：
+ * - 不向后兼容，只使用最优设计模式
+ * - useAppStore 作为单一主要状态源
+ * - 清晰的关注点分离
+ * - 统一的持久化机制
+ * - 类型安全的状态管理
  *
- * 已迁移的组件：
- * ✅ App.tsx
- * ✅ EntryList.tsx
- * ✅ EditorPane.tsx
- * ✅ AIWorkspace.tsx
- * ✅ useTheme.ts
+ * 已优化的组件：
+ * ✅ App.tsx - 使用 useAppStore
+ * ✅ EntryList.tsx - 使用 useSessionStore
+ * ✅ EditorPane.tsx - 使用 useSessionStore  
+ * ✅ AIWorkspace.tsx - 使用 useSessionStore
+ * ✅ useTheme.ts - 基于 useAppStore 的主题管理
+ * ✅ SettingsModal.tsx - 使用统一命令层和 AppDataProvider
  *
- * 性能优势：
- * ✅ 减少不必要的持久化开销
- * ✅ 更清晰的关注点分离
- * ✅ 更容易测试和维护
+ * 架构优势：
+ * ✅ 单一状态源，避免重复
+ * ✅ 统一的参数转换机制
+ * ✅ 自动化的本地日志存储
+ * ✅ 系统性的主题管理
+ * ✅ 更好的类型安全和维护性
  */

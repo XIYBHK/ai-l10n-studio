@@ -10,7 +10,6 @@ import { DevToolsModal } from './components/DevToolsModal';
 import { AIWorkspace } from './components/AIWorkspace';
 import { ErrorBoundary } from './components/ErrorBoundary';
 import { useSessionStore } from './store';
-// import { useSettingsStore, useStatsStore } from './store'; // 预留给未来使用
 import { useTheme } from './hooks/useTheme';
 import { useChannelTranslation } from './hooks/useChannelTranslation'; // Tauri 2.x: Channel API
 import { useAsync } from './hooks/useAsync';
