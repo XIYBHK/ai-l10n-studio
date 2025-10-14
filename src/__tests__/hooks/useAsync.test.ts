@@ -67,7 +67,7 @@ describe('useAsync Hook', () => {
 
   it('应该支持多次执行', async () => {
     let callCount = 0;
-    const asyncFn = vi.fn(() => {
+    const asyncFn = vi.fn().mockImplementation(() => {
       callCount++;
       return Promise.resolve(callCount);
     });
@@ -76,13 +76,17 @@ describe('useAsync Hook', () => {
 
     // 第一次执行
     await result.current.execute();
-    await waitFor(() => expect(result.current.loading).toBe(false));
-    expect(result.current.data).toBe(1);
+    await waitFor(() => {
+      expect(result.current.loading).toBe(false);
+      expect(result.current.data).toBe(1);
+    });
 
     // 第二次执行
     await result.current.execute();
-    await waitFor(() => expect(result.current.loading).toBe(false));
-    expect(result.current.data).toBe(2);
+    await waitFor(() => {
+      expect(result.current.loading).toBe(false);
+      expect(result.current.data).toBe(2);
+    });
 
     expect(asyncFn).toHaveBeenCalledTimes(2);
   });
