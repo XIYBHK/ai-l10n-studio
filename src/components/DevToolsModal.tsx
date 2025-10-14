@@ -15,7 +15,7 @@ import Draggable from 'react-draggable';
 import { FileDropTest } from './FileDropTest';
 import { createModuleLogger } from '../utils/logger';
 import { frontendLogger } from '../utils/frontendLogger';
-import { useBackendLogs, usePromptLogs } from '../hooks/useLogs';
+import { useBackendLogs, useFrontendLogs, usePromptLogs } from '../hooks/useLogs';
 
 const { TextArea } = Input;
 const log = createModuleLogger('DevToolsModal');
@@ -26,7 +26,6 @@ interface DevToolsModalProps {
 }
 
 export const DevToolsModal: React.FC<DevToolsModalProps> = ({ visible, onClose }) => {
-  const [frontendLogs, setFrontendLogs] = useState<string>('');
   // 只有在窗口打开时才启用 SWR 和轮询
   const {
     logs,
@@ -44,6 +43,16 @@ export const DevToolsModal: React.FC<DevToolsModalProps> = ({ visible, onClose }
     enabled: visible,
     refreshInterval: 2000,
   });
+  
+  // 🔄 前端日志
+  const {
+    logs: frontendLogs,
+    isLoading: frontendLoading,
+    refresh: refreshFrontendLogs,
+  } = useFrontendLogs({
+    enabled: visible,
+    refreshInterval: 5000, // 前端日志刷新频率较低
+  });
   const backendLogText =
     typeof logs === 'string' ? logs : logs ? JSON.stringify(logs, null, 2) : '';
   const promptLogText =
@@ -58,15 +67,11 @@ export const DevToolsModal: React.FC<DevToolsModalProps> = ({ visible, onClose }
 
   // 移除了手动刷新的 useEffect，因为 SWR 的 enabled 参数会在 visible=true 时自动请求
 
-  // 加载前端日志（仅在打开时加载一次）
-  useEffect(() => {
-    if (visible) {
-      setFrontendLogs(frontendLogger.getLogs());
-    }
-  }, [visible]);
-
-  const refreshFrontendLogs = () => {
-    setFrontendLogs(frontendLogger.getLogs());
+  // 🔄 前端日志操作函数（使用新的文件读取系统）
+  const handleClearFrontendLogs = () => {
+    frontendLogger.clearLogs();
+    refreshFrontendLogs(); // 刷新来显示空日志
+    message.success('前端日志已清空');
   };
 
   // SWR 已处理日志加载与轮询
@@ -269,19 +274,19 @@ export const DevToolsModal: React.FC<DevToolsModalProps> = ({ visible, onClose }
             children: (
               <div>
                 <Space style={{ marginBottom: 12 }}>
-                  <Button icon={<ReloadOutlined />} onClick={refreshFrontendLogs}>
+                  <Button 
+                    icon={<ReloadOutlined />} 
+                    onClick={refreshFrontendLogs}
+                    loading={frontendLoading}
+                  >
                     刷新
                   </Button>
                   <Button icon={<SaveOutlined />} onClick={handleSaveFrontendLogs} type="primary">
-                    保存到数据目录
+                    手动保存
                   </Button>
                   <Button
                     icon={<ClearOutlined />}
-                    onClick={() => {
-                      frontendLogger.clearLogs();
-                      setFrontendLogs('');
-                      message.success('前端日志已清空');
-                    }}
+                    onClick={handleClearFrontendLogs}
                     danger
                   >
                     清空
@@ -301,14 +306,16 @@ export const DevToolsModal: React.FC<DevToolsModalProps> = ({ visible, onClose }
                 >
                   💡 自动捕获：模块日志（[App]、[EditorPane] 等）+ 错误/警告，已过滤框架噪音
                   <br />
-                  📁 文件管理：内存最多 500 条，保存到文件时自动保留最近 5 个文件
+                  📁 文件管理：内存最多 500 条，自动保存每 5 分钟或 100 条日志，保留最近 5 个文件
+                  <br />
+                  🔄 显示保存到本地的前端日志文件内容（最新 3 个文件）
                 </div>
 
                 <TextArea
                   value={frontendLogs}
                   readOnly
                   rows={20}
-                  placeholder="等待前端日志输出..."
+                  placeholder="等待前端日志输出...(从保存的日志文件读取)"
                   style={{
                     fontFamily: 'Consolas, Monaco, "Courier New", monospace',
                     fontSize: '12px',

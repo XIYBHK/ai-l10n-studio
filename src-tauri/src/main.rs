@@ -47,6 +47,7 @@ fn main() {
             validate_config,
             get_app_logs,
             clear_app_logs,
+            get_frontend_logs, // 🔄 前端日志查看命令
             // 术语库相关
             get_term_library,
             add_term_to_library,

@@ -7,6 +7,9 @@ import { writeTextFile, BaseDirectory, mkdir, readDir, remove } from '@tauri-app
 
 class FrontendLogger {
   private logs: string[] = [];
+  private autoSaveTimer: NodeJS.Timeout | null = null;
+  private readonly AUTO_SAVE_INTERVAL = 5 * 60 * 1000; // 5分钟自动保存
+  private readonly MAX_LOGS_BEFORE_SAVE = 100; // 累积100条日志后自动保存
   private maxLogs = 500; // 最多保存500条日志
   private originalConsole = {
     log: console.log,
@@ -185,6 +188,48 @@ class FrontendLogger {
     if (this.logs.length > this.maxLogs) {
       this.logs.shift();
     }
+    
+    // 🔄 自动保存机制：日志数量达到阈值时自动保存
+    if (this.logs.length % this.MAX_LOGS_BEFORE_SAVE === 0) {
+      this.scheduleAutoSave();
+    }
+  }
+  
+  private scheduleAutoSave() {
+    // 避免重复调度
+    if (this.autoSaveTimer) {
+      clearTimeout(this.autoSaveTimer);
+    }
+    
+    // 延迟保存，避免频繁IO
+    this.autoSaveTimer = setTimeout(() => {
+      this.saveLogs().catch(error => {
+        this.originalConsole.error('自动保存前端日志失败:', error);
+      });
+    }, 2000); // 2秒延迟
+  }
+  
+  startAutoSave() {
+    // 启动定时自动保存
+    if (this.autoSaveTimer) {
+      clearInterval(this.autoSaveTimer);
+    }
+    
+    // 每5分钟自动保存一次
+    this.autoSaveTimer = setInterval(() => {
+      if (this.logs.length > 0) {
+        this.saveLogs().catch(error => {
+          this.originalConsole.error('定时保存前端日志失败:', error);
+        });
+      }
+    }, this.AUTO_SAVE_INTERVAL);
+  }
+  
+  stopAutoSave() {
+    if (this.autoSaveTimer) {
+      clearInterval(this.autoSaveTimer);
+      this.autoSaveTimer = null;
+    }
   }
 
   private async cleanOldLogFiles(maxFiles: number = 5) {
@@ -194,7 +239,7 @@ class FrontendLogger {
 
       // 过滤出前端日志文件
       const logFiles = entries
-        .filter((entry) => entry.name?.startsWith('frontend-logs-') && entry.name?.endsWith('.txt'))
+        .filter((entry) => entry.name?.startsWith('frontend-') && entry.name?.endsWith('.log'))
         .sort((a, b) => {
           // 按文件名（时间戳）倒序排序，最新的在前
           return (b.name || '').localeCompare(a.name || '');
@@ -239,7 +284,7 @@ class FrontendLogger {
       await this.cleanOldLogFiles(5);
 
       const timestamp = new Date().toISOString().replace(/[:.]/g, '-').slice(0, -5);
-      const filename = `frontend-logs-${timestamp}.txt`;
+      const filename = `frontend-${timestamp}.log`; // 使用 .log 扩展名，与后端保持一致
       const content = this.logs.join('\n');
       const sizeKB = (new Blob([content]).size / 1024).toFixed(2);
 
@@ -268,8 +313,22 @@ class FrontendLogger {
   }
 }
 
-// 创建单例
+// 创建单例并启动自动保存
 export const frontendLogger = new FrontendLogger();
+
+// 🔄 启动自动保存功能
+frontendLogger.startAutoSave();
+
+// 🔄 页面关闭时保存最后的日志
+if (typeof window !== 'undefined') {
+  window.addEventListener('beforeunload', () => {
+    frontendLogger.stopAutoSave();
+    // 异步保存（best effort）
+    frontendLogger.saveLogs().catch(() => {
+      // 静默失败，避免阻塞页面关闭
+    });
+  });
+}
 
 // 导出到window供调试使用
 if (typeof window !== 'undefined') {

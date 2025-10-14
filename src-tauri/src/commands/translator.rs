@@ -332,16 +332,131 @@ pub fn validate_config(config: serde_json::Value) -> Result<bool, String> {
     Ok(true)
 }
 
-// 日志相关命令
+// 日志相关命令 - 读取实际日志文件而非内存缓冲区
 #[tauri::command]
 pub fn get_app_logs() -> Result<Vec<String>, String> {
-    Ok(crate::utils::logger::get_logs())
+    use std::fs;
+    use std::path::Path;
+    
+    // 优先读取实际的日志文件，而不是内存缓冲区
+    match crate::utils::paths::app_logs_dir() {
+        Ok(log_dir) => {
+            // 查找最新的应用日志文件（按修改时间排序）
+            if let Ok(entries) = fs::read_dir(&log_dir) {
+                let mut app_log_files: Vec<_> = entries
+                    .filter_map(|entry| entry.ok())
+                    .filter(|entry| {
+                        entry.file_name().to_string_lossy().starts_with("app")
+                            && entry.file_name().to_string_lossy().ends_with(".log")
+                    })
+                    .collect();
+                
+                // 按修改时间排序，最新的在前
+                app_log_files.sort_by_key(|entry| {
+                    entry.metadata()
+                        .and_then(|m| m.modified())
+                        .unwrap_or(std::time::SystemTime::UNIX_EPOCH)
+                });
+                app_log_files.reverse();
+                
+                // 读取最多3个最新的日志文件
+                let mut all_lines = Vec::new();
+                for (i, entry) in app_log_files.iter().take(3).enumerate() {
+                    if i > 0 {
+                        all_lines.push(format!("========== {} ==========", 
+                            entry.file_name().to_string_lossy()));
+                    }
+                    
+                    if let Ok(content) = fs::read_to_string(entry.path()) {
+                        let lines: Vec<String> = content
+                            .lines()
+                            .map(|line| line.to_string())
+                            .collect();
+                        all_lines.extend(lines);
+                    }
+                }
+                
+                if !all_lines.is_empty() {
+                    return Ok(all_lines);
+                }
+            }
+            
+            // 降级：如果没有找到日志文件，使用内存缓冲区
+            Ok(crate::utils::logger::get_logs())
+        }
+        Err(_) => {
+            // 降级：如果无法获取日志目录，使用内存缓冲区
+            Ok(crate::utils::logger::get_logs())
+        }
+    }
 }
 
 #[tauri::command]
 pub fn clear_app_logs() -> Result<(), String> {
     crate::utils::logger::clear_logs();
     Ok(())
+}
+
+// 🔄 获取前端日志文件内容（从前端保存的日志文件读取）
+#[tauri::command]
+pub fn get_frontend_logs() -> Result<Vec<String>, String> {
+    use std::fs;
+    use tauri::api::path::data_dir;
+    
+    // 获取前端日志目录（通常在 AppData/data 目录下）
+    let data_dir = data_dir()
+        .ok_or("无法获取数据目录".to_string())?
+        .join("com.potranslator.gui")
+        .join("data");
+    
+    if !data_dir.exists() {
+        return Ok(vec!["前端日志目录不存在，可能还没有保存过日志".to_string()]);
+    }
+    
+    // 查找前端日志文件
+    match fs::read_dir(&data_dir) {
+        Ok(entries) => {
+            let mut frontend_log_files: Vec<_> = entries
+                .filter_map(|entry| entry.ok())
+                .filter(|entry| {
+                    let name = entry.file_name().to_string_lossy();
+                    name.starts_with("frontend-") && name.ends_with(".log")
+                })
+                .collect();
+            
+            if frontend_log_files.is_empty() {
+                return Ok(vec!["暂无前端日志文件".to_string()]);
+            }
+            
+            // 按修改时间排序，最新的在前
+            frontend_log_files.sort_by_key(|entry| {
+                entry.metadata()
+                    .and_then(|m| m.modified())
+                    .unwrap_or(std::time::SystemTime::UNIX_EPOCH)
+            });
+            frontend_log_files.reverse();
+            
+            // 读取最多3个最新的前端日志文件
+            let mut all_lines = Vec::new();
+            for (i, entry) in frontend_log_files.iter().take(3).enumerate() {
+                if i > 0 {
+                    all_lines.push(format!("========== {} ==========", 
+                        entry.file_name().to_string_lossy()));
+                }
+                
+                if let Ok(content) = fs::read_to_string(entry.path()) {
+                    let lines: Vec<String> = content
+                        .lines()
+                        .map(|line| line.to_string())
+                        .collect();
+                    all_lines.extend(lines);
+                }
+            }
+            
+            Ok(all_lines)
+        }
+        Err(e) => Err(format!("读取前端日志目录失败: {}", e))
+    }
 }
 
 // ==================== 术语库相关命令 ====================

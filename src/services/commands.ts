@@ -78,6 +78,7 @@ export const COMMANDS = {
   // 日志相关
   LOG_GET: 'get_app_logs',
   LOG_CLEAR: 'clear_app_logs',
+  LOG_FRONTEND_GET: 'get_frontend_logs', // 🔄 前端日志获取
   PROMPT_LOG_GET: 'get_prompt_logs',
   PROMPT_LOG_CLEAR: 'clear_prompt_logs',
 
@@ -501,21 +502,30 @@ export const dialogCommands = {
 };
 
 /**
- * 日志命令
+ * 日志命令（支持前后端日志分离）
  */
 export const logCommands = {
+  // 后端应用日志
   async get() {
-    return invoke<string>(COMMANDS.LOG_GET, undefined, {
-      errorMessage: '获取日志失败',
+    return invoke<string[]>(COMMANDS.LOG_GET, undefined, {
+      errorMessage: '获取后端日志失败',
     });
   },
 
   async clear() {
     return invoke<void>(COMMANDS.LOG_CLEAR, undefined, {
-      errorMessage: '清空日志失败',
+      errorMessage: '清空后端日志失败',
     });
   },
 
+  // 🔄 前端日志（从保存的文件读取）
+  async getFrontend() {
+    return invoke<string[]>(COMMANDS.LOG_FRONTEND_GET, undefined, {
+      errorMessage: '获取前端日志失败',
+    });
+  },
+
+  // 提示词日志
   async getPromptLogs() {
     return invoke<string>(COMMANDS.PROMPT_LOG_GET, undefined, {
       errorMessage: '获取提示词日志失败',
