@@ -43,7 +43,7 @@ export const COMMANDS = {
 
   // 系统提示词相关
   SYSTEM_PROMPT_GET: 'get_system_prompt',
-  SYSTEM_PROMPT_SET: 'set_system_prompt',
+  SYSTEM_PROMPT_SET: 'update_system_prompt', // 修正：与后端命令名一致
   SYSTEM_PROMPT_RESET: 'reset_system_prompt',
 
   // 术语库相关
