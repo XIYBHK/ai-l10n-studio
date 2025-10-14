@@ -414,13 +414,14 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({ visible, onClose }
   // Phase 9: 语言切换处理（无刷新，响应式更新）
   const handleLanguageChange = async (language: string) => {
     try {
-      // 1. 切换 i18n 语言（响应式，无需刷新）
-      await i18n.changeLanguage(language);
+      // 1. 切换 i18n 语言（使用自定义函数，确保资源正确加载）
+      const { changeLanguage } = await import('../i18n/config');
+      await changeLanguage(language);
       setCurrentLanguage(language);
 
       // 2. 保存到 TauriStore（通过 useAppStore）
       const { useAppStore } = await import('../store/useAppStore');
-      useAppStore.getState().setLanguage(language as any);
+      useAppStore.getState().setLanguage(language as 'zh-CN' | 'en-US');
 
       message.success(`语言已切换为 ${language === 'zh-CN' ? '简体中文' : 'English'}`);
       log.info('应用语言已切换', { language });
