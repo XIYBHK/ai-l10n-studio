@@ -129,6 +129,12 @@ export const useAppStore = create<AppState>()((set, get) => ({
 
   // 主题和语言 (持久化到 TauriStore)
   setTheme: (theme) => {
+    const current = get().theme;
+    // 避免重复设置相同主题（修复点击两次问题）
+    if (current === theme) {
+      return;
+    }
+    
     set({ theme });
     // 异步保存到 TauriStore
     tauriStore.setTheme(theme).catch((err) => console.error('[useAppStore] 保存主题失败:', err));
@@ -143,6 +149,12 @@ export const useAppStore = create<AppState>()((set, get) => ({
     tauriStore.setTheme(newTheme).catch((err) => console.error('[useAppStore] 保存主题失败:', err));
   },
   setLanguage: (language) => {
+    const current = get().language;
+    // 避免重复设置相同语言
+    if (current === language) {
+      return;
+    }
+    
     set({ language });
     // 异步保存到 TauriStore
     tauriStore
@@ -235,13 +247,13 @@ export async function loadPersistedState() {
     // 初始化 TauriStore
     await tauriStore.init();
 
-    // 加载主题
+    // 加载主题（直接设置状态，避免循环调用 tauriStore.setTheme）
     const theme = await tauriStore.getTheme();
-    useAppStore.getState().setTheme(theme);
+    useAppStore.setState({ theme });
 
-    // 加载语言
+    // 加载语言（直接设置状态，避免循环调用 tauriStore.setLanguage）
     const language = await tauriStore.getLanguage();
-    useAppStore.getState().setLanguage(language as any);
+    useAppStore.setState({ language: language as any });
 
     // 加载累计统计
     const stats = await tauriStore.getCumulativeStats();
