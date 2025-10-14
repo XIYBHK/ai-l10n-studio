@@ -51,11 +51,26 @@ export const useTheme = () => {
   // 当前实际应用的主题（解析 system 为 light/dark）
   const [appliedTheme, setAppliedTheme] = useState<AppliedTheme>(getInitialTheme);
 
-  // 1. 处理 system 模式：监听系统主题变化
+  // 0. 当 themeMode 改变时，立即更新 appliedTheme（修复切换到system模式时不生效的问题）
   useEffect(() => {
     if (themeMode !== 'system') {
       // 非 system 模式：直接使用用户选择的主题
       setAppliedTheme(themeMode as AppliedTheme);
+    } else {
+      // system 模式：重新检测系统主题
+      if (typeof window !== 'undefined' && window.matchMedia) {
+        const mediaQuery = window.matchMedia('(prefers-color-scheme: dark)');
+        setAppliedTheme(mediaQuery.matches ? 'dark' : 'light');
+      } else {
+        setAppliedTheme('light'); // 降级
+      }
+    }
+  }, [themeMode]);
+
+  // 1. 处理 system 模式：监听系统主题变化
+  useEffect(() => {
+    // 只处理 system 模式的监听
+    if (themeMode !== 'system') {
       return;
     }
 
