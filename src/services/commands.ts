@@ -551,9 +551,10 @@ export const i18nCommands = {
   },
 
   async getDefaultTargetLanguage(sourceLanguageCode: string) {
+    // 转换camelCase为snake_case（source_lang_code参数传递）
     return invoke<{ code: string; display_name: string }>(
       COMMANDS.LANGUAGE_GET_DEFAULT_TARGET,
-      { sourceLanguageCode },
+      { source_lang_code: sourceLanguageCode },
       {
         errorMessage: '获取默认目标语言失败',
       }
