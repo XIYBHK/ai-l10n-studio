@@ -51,7 +51,13 @@ export function convertKeysToSnakeCase<T extends Record<string, any>>(
   const result: Record<string, any> = {};
   for (const key in obj) {
     if (Object.prototype.hasOwnProperty.call(obj, key)) {
-      result[toSnakeCase(key)] = obj[key];
+      const value = obj[key];
+      // 🔄 递归转换嵌套对象的键
+      if (value && typeof value === 'object' && !Array.isArray(value) && value.constructor === Object) {
+        result[toSnakeCase(key)] = convertKeysToSnakeCase(value);
+      } else {
+        result[toSnakeCase(key)] = value;
+      }
     }
   }
   return result;
@@ -73,7 +79,13 @@ export function convertKeysToCamelCase<T extends Record<string, any>>(
   const result: Record<string, any> = {};
   for (const key in obj) {
     if (Object.prototype.hasOwnProperty.call(obj, key)) {
-      result[toCamelCase(key)] = obj[key];
+      const value = obj[key];
+      // 🔄 递归转换嵌套对象的键
+      if (value && typeof value === 'object' && !Array.isArray(value) && value.constructor === Object) {
+        result[toCamelCase(key)] = convertKeysToCamelCase(value);
+      } else {
+        result[toCamelCase(key)] = value;
+      }
     }
   }
   return result;

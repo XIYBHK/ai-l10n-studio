@@ -247,10 +247,15 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({ visible, onClose }
   const handleSaveConfig = async () => {
     try {
       const values = await form.validateFields();
+      
+      // 🚨 修复参数转换问题：区分新增和编辑模式的 apiKey 处理
       const config: AIConfig = {
         provider: values.provider,
-        // 留空表示不变，避免把密钥覆盖为空字符串
-        apiKey: values.apiKey || undefined,
+        // 新增模式：apiKey 必填，不能为空
+        // 编辑模式：apiKey 可以为空（表示保持原值不变）
+        apiKey: isAddingNew 
+          ? (values.apiKey?.trim() || '') // 新增时确保不为 undefined
+          : (values.apiKey || undefined), // 编辑时允许 undefined（保持原值）
         baseUrl: values.baseUrl || undefined,
         model: values.model || undefined,
         proxy: values.proxy?.enabled
@@ -262,7 +267,15 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({ visible, onClose }
           : undefined,
       };
 
+      // 🚨 新增模式下额外验证 apiKey
+      if (isAddingNew && !config.apiKey) {
+        message.error('API 密钥不能为空');
+        return;
+      }
+
       if (isAddingNew) {
+        // 🐛 Debug: 打印配置对象，用于调试参数转换
+        log.debug('即将添加AI配置', { config });
         await aiConfigCommands.add(config);
         message.success('添加配置成功');
 
@@ -559,11 +572,16 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({ visible, onClose }
                   <Form.Item
                     label="API 密钥"
                     name="apiKey"
-                    rules={[{ required: true, message: '请输入 API 密钥' }]}
+                    rules={[
+                      { 
+                        required: isAddingNew, // 🚨 只有新增模式才必填
+                        message: '请输入 API 密钥' 
+                      }
+                    ]}
                     extra={
                       editingIndex !== null
                         ? '已保存的密钥会以掩码形式显示，留空则保持原值不变'
-                        : null
+                        : '请输入您的 API 密钥'
                     }
                   >
                     <Input.Password
