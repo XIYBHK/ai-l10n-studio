@@ -32,8 +32,9 @@ import {
   BellOutlined,
   InfoCircleOutlined,
   BgColorsOutlined,
+  FolderOpenOutlined,
 } from '@ant-design/icons';
-import { aiConfigCommands, systemPromptCommands, aiModelCommands } from '../services/commands'; // ✅ 迁移到统一命令层
+import { aiConfigCommands, systemPromptCommands, aiModelCommands, systemCommands } from '../services/commands'; // ✅ 迁移到统一命令层
 import { AIConfig, ProviderType, PROVIDER_INFO_MAP } from '../types/aiProvider';
 import { createModuleLogger } from '../utils/logger';
 import { useAsync } from '../hooks/useAsync';
@@ -445,6 +446,18 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({ visible, onClose }
     } catch (error) {
       log.logError(error, '保存日志配置失败');
       message.error('保存日志配置失败');
+    }
+  };
+
+  // 打开日志目录
+  const handleOpenLogDirectory = async () => {
+    try {
+      await systemCommands.openLogDirectory();
+      message.success('已打开日志目录');
+      log.info('打开日志目录成功');
+    } catch (error) {
+      log.logError(error, '打开日志目录失败');
+      message.error('打开日志目录失败');
     }
   };
 
@@ -1018,9 +1031,22 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({ visible, onClose }
                   icon={<InfoCircleOutlined />}
                 />
 
-                <Button type="primary" onClick={handleSaveLogConfig} block>
-                  保存日志配置
-                </Button>
+                <Row gutter={12}>
+                  <Col span={12}>
+                    <Button type="primary" onClick={handleSaveLogConfig} block>
+                      保存日志配置
+                    </Button>
+                  </Col>
+                  <Col span={12}>
+                    <Button 
+                      icon={<FolderOpenOutlined />} 
+                      onClick={handleOpenLogDirectory} 
+                      block
+                    >
+                      打开日志目录
+                    </Button>
+                  </Col>
+                </Row>
               </Space>
             </Form>
           </Card>
