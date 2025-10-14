@@ -14,6 +14,7 @@ import type { POEntry, TranslationStats, ContextualRefineRequest } from '../type
 import type { AIConfig, ProviderType } from '../types/aiProvider';
 import type { TermLibrary } from '../types/termLibrary';
 import type { ModelInfo } from '../types/generated/ModelInfo';
+import { convertKeysToSnakeCase } from '../utils/paramConverter';
 
 // ========================================
 // 命令常量定义（集中管理，避免硬编码）
@@ -152,9 +153,11 @@ export const aiConfigCommands = {
   },
 
   async add(config: AIConfig) {
+    // 转换camelCase为snake_case（api_key字段传递）
+    const snakeCaseConfig = convertKeysToSnakeCase(config as any);
     return invoke<string>(
       COMMANDS.AI_CONFIG_ADD,
-      { config },
+      { config: snakeCaseConfig },
       {
         errorMessage: '添加AI配置失败',
       }
@@ -162,9 +165,11 @@ export const aiConfigCommands = {
   },
 
   async update(id: string, config: AIConfig) {
+    // 转换camelCase为snake_case（api_key字段传递）
+    const snakeCaseConfig = convertKeysToSnakeCase(config as any);
     return invoke<void>(
       COMMANDS.AI_CONFIG_UPDATE,
-      { id, config },
+      { id, config: snakeCaseConfig },
       {
         errorMessage: '更新AI配置失败',
       }
