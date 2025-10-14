@@ -336,7 +336,6 @@ pub fn validate_config(config: serde_json::Value) -> Result<bool, String> {
 #[tauri::command]
 pub fn get_app_logs() -> Result<Vec<String>, String> {
     use std::fs;
-    use std::path::Path;
     
     // 优先读取实际的日志文件，而不是内存缓冲区
     match crate::utils::paths::app_logs_dir() {
@@ -401,13 +400,10 @@ pub fn clear_app_logs() -> Result<(), String> {
 #[tauri::command]
 pub fn get_frontend_logs() -> Result<Vec<String>, String> {
     use std::fs;
-    use tauri::api::path::data_dir;
     
-    // 获取前端日志目录（通常在 AppData/data 目录下）
-    let data_dir = data_dir()
-        .ok_or("无法获取数据目录".to_string())?
-        .join("com.potranslator.gui")
-        .join("data");
+    // 🔧 使用项目统一的路径管理系统
+    let data_dir = crate::utils::paths::app_data_dir()
+        .map_err(|e| format!("无法获取数据目录: {}", e))?;
     
     if !data_dir.exists() {
         return Ok(vec!["前端日志目录不存在，可能还没有保存过日志".to_string()]);
@@ -419,7 +415,8 @@ pub fn get_frontend_logs() -> Result<Vec<String>, String> {
             let mut frontend_log_files: Vec<_> = entries
                 .filter_map(|entry| entry.ok())
                 .filter(|entry| {
-                    let name = entry.file_name().to_string_lossy();
+                    let file_name = entry.file_name();
+                    let name = file_name.to_string_lossy();
                     name.starts_with("frontend-") && name.ends_with(".log")
                 })
                 .collect();
