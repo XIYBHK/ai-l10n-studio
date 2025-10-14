@@ -74,6 +74,8 @@ fn main() {
             get_supported_langs,
             // 系统语言检测 (Phase 6)
             get_system_language,
+            // 系统相关命令
+            open_log_directory,
             // Phase 9: 后端国际化增强
             utils::i18n::get_system_locale,
             utils::i18n::get_available_languages,

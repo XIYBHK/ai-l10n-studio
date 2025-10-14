@@ -1,5 +1,7 @@
 // Phase 6: 系统相关命令
 use crate::app_log;
+use crate::utils::paths;
+use std::process::Command;
 
 /// 检测系统语言
 /// 返回 BCP 47 语言标签（如 "zh-CN", "en-US"）
@@ -102,4 +104,52 @@ mod tests {
         assert_eq!(normalize_locale("ja-JP"), "ja-JP");
         assert_eq!(normalize_locale("ja"), "ja-JP");
     }
+}
+
+/// 打开日志目录
+/// 在系统文件管理器中打开应用日志目录
+#[tauri::command]
+pub fn open_log_directory() -> Result<(), String> {
+    app_log!("[系统] 打开日志目录...");
+
+    // 获取日志目录路径
+    let log_dir = paths::app_logs_dir()
+        .map_err(|e| format!("获取日志目录路径失败: {}", e))?;
+
+    app_log!("[系统] 日志目录路径: {:?}", log_dir);
+
+    // 确保目录存在
+    paths::ensure_dir(&log_dir)
+        .map_err(|e| format!("创建日志目录失败: {}", e))?;
+
+    // 根据操作系统打开文件管理器
+    #[cfg(target_os = "windows")]
+    {
+        app_log!("[系统] 使用 Windows Explorer 打开...");
+        Command::new("explorer")
+            .arg(&log_dir)
+            .spawn()
+            .map_err(|e| format!("打开文件管理器失败: {}", e))?;
+    }
+
+    #[cfg(target_os = "macos")]
+    {
+        app_log!("[系统] 使用 macOS Finder 打开...");
+        Command::new("open")
+            .arg(&log_dir)
+            .spawn()
+            .map_err(|e| format!("打开文件管理器失败: {}", e))?;
+    }
+
+    #[cfg(target_os = "linux")]
+    {
+        app_log!("[系统] 使用 Linux 文件管理器打开...");
+        Command::new("xdg-open")
+            .arg(&log_dir)
+            .spawn()
+            .map_err(|e| format!("打开文件管理器失败: {}", e))?;
+    }
+
+    app_log!("[系统] ✅ 日志目录已打开");
+    Ok(())
 }

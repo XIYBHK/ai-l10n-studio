@@ -85,6 +85,9 @@ export const COMMANDS = {
   I18N_GET_SYSTEM_LOCALE: 'get_system_locale',
   LANGUAGE_DETECT: 'detect_text_language',
   LANGUAGE_GET_DEFAULT_TARGET: 'get_default_target_lang',
+
+  // 系统相关
+  SYSTEM_OPEN_LOG_DIRECTORY: 'open_log_directory',
 } as const;
 
 // ========================================
@@ -550,5 +553,20 @@ export const i18nCommands = {
         errorMessage: '获取默认目标语言失败',
       }
     );
+  },
+};
+
+/**
+ * 系统命令
+ */
+export const systemCommands = {
+  /**
+   * 打开日志目录
+   * 在文件管理器中打开应用日志目录
+   */
+  async openLogDirectory() {
+    return invoke<void>(COMMANDS.SYSTEM_OPEN_LOG_DIRECTORY, undefined, {
+      errorMessage: '打开日志目录失败',
+    });
   },
 };
