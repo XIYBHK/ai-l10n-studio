@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { useAppStore } from '../store/useAppStore';
 import {
   Modal,
   Form,
@@ -39,7 +40,6 @@ import { AIConfig, ProviderType, PROVIDER_INFO_MAP } from '../types/aiProvider';
 import { createModuleLogger } from '../utils/logger';
 import { useAsync } from '../hooks/useAsync';
 import { useAIConfigs, useSystemPrompt } from '../hooks/useConfig';
-import i18n from '../i18n/config'; // Phase 6
 import { notificationManager } from '../utils/notificationManager'; // Tauri 2.x: Notification
 import type { ModelInfo } from '../types/generated/ModelInfo';
 import { ThemeModeSwitch } from './ThemeModeSwitch'; // Phase 9
@@ -63,6 +63,9 @@ const PROVIDER_CONFIGS = Object.values(ProviderType).map((type) => ({
 export const SettingsModal: React.FC<SettingsModalProps> = ({ visible, onClose }) => {
   const [form] = Form.useForm();
   const { configs, active, mutateAll, mutateActive } = useAIConfigs();
+  
+  // 🔄 统一状态管理：使用 useAppStore 而非本地状态
+  const { language: currentLanguage, setLanguage } = useAppStore();
   const [activeIndex, setActiveIndex] = useState<number | null>(null);
   const [editingIndex, setEditingIndex] = useState<number | null>(null);
   const [isAddingNew, setIsAddingNew] = useState(false);
@@ -70,24 +73,10 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({ visible, onClose }
   const [currentModelInfo, setCurrentModelInfo] = useState<ModelInfo | null>(null);
   const [availableModels, setAvailableModels] = useState<ModelInfo[]>([]);
 
-  // Phase 3: 系统提示词状态
-  const [systemPrompt, setSystemPrompt] = useState<string>('');
+  // 🔄 系统提示词表单状态：与SWR数据同步的本地编辑状态
+  const [promptText, setPromptText] = useState<string>(''); // 表单输入的本地状态
   const [isPromptModified, setIsPromptModified] = useState(false);
 
-  // Phase 9: 语言设置状态（监听 i18n 变化）
-  const [currentLanguage, setCurrentLanguage] = useState<string>(i18n.language);
-
-  // 监听 i18n 语言变化，自动更新 Select 组件
-  useEffect(() => {
-    const handleLanguageChanged = () => {
-      setCurrentLanguage(i18n.language);
-    };
-
-    i18n.on('languageChanged', handleLanguageChanged);
-    return () => {
-      i18n.off('languageChanged', handleLanguageChanged);
-    };
-  }, []);
 
   // Notification设置状态
   const [notificationEnabled, setNotificationEnabled] = useState(notificationManager.isEnabled());
@@ -130,8 +119,8 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({ visible, onClose }
 
   useEffect(() => {
     if (visible) {
-      // SWR 自动加载
-      setSystemPrompt(prompt || '');
+      // 🔄 同步SWR数据到本地表单状态
+      setPromptText(prompt || '');
       setIsPromptModified(false);
       // 计算当前 activeIndex
       if (active) {
@@ -382,15 +371,15 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({ visible, onClose }
     }
   };
 
-  // Phase 3: 系统提示词处理函数
+  // 🔄 系统提示词处理函数：使用统一的表单状态
   const handlePromptChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
-    setSystemPrompt(e.target.value);
+    setPromptText(e.target.value);
     setIsPromptModified(true);
   };
 
   const handleSavePrompt = async () => {
     try {
-      await savePrompt(systemPrompt);
+      await savePrompt(promptText);
       setIsPromptModified(false);
       message.success('系统提示词已保存');
       log.info('系统提示词已保存');
@@ -404,7 +393,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({ visible, onClose }
     try {
       await resetPrompt();
       await mutatePrompt();
-      setSystemPrompt(prompt || '');
+      setPromptText(prompt || '');
       message.success('系统提示词已重置为默认值');
       log.info('系统提示词已重置');
     } catch (error) {
@@ -412,17 +401,15 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({ visible, onClose }
     }
   };
 
-  // Phase 9: 语言切换处理（无刷新，响应式更新）
+  // 🔄 语言切换处理：使用统一状态管理，无需动态导入
   const handleLanguageChange = async (language: string) => {
     try {
       // 1. 切换 i18n 语言（使用自定义函数，确保资源正确加载）
       const { changeLanguage } = await import('../i18n/config');
       await changeLanguage(language);
-      setCurrentLanguage(language);
 
-      // 2. 保存到 TauriStore（通过 useAppStore）
-      const { useAppStore } = await import('../store/useAppStore');
-      useAppStore.getState().setLanguage(language as 'zh-CN' | 'en-US');
+      // 2. 保存到 useAppStore（直接调用，无需动态导入）
+      setLanguage(language as 'zh-CN' | 'en-US');
 
       message.success(`语言已切换为 ${language === 'zh-CN' ? '简体中文' : 'English'}`);
       log.info('应用语言已切换', { language });
@@ -792,7 +779,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({ visible, onClose }
         <div>
           <Card size="small" title="系统提示词编辑器" style={{ marginBottom: 16 }}>
             <Input.TextArea
-              value={systemPrompt}
+              value={promptText}
               onChange={handlePromptChange}
               placeholder="输入自定义系统提示词..."
               autoSize={{ minRows: 12, maxRows: 20 }}

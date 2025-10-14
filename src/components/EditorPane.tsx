@@ -9,6 +9,7 @@ import { TermConfirmModal } from './TermConfirmModal';
 import { ErrorBoundary } from './ErrorBoundary';
 import { createModuleLogger } from '../utils/logger';
 import { eventDispatcher } from '../services/eventDispatcher';
+import { termLibraryCommands } from '../services/commands';
 
 const { TextArea } = Input;
 const log = createModuleLogger('EditorPane');
@@ -374,7 +375,7 @@ export const EditorPane: React.FC<EditorPaneProps> = ({
               log.info('用户确认术语弹窗', { addToLibrary });
               try {
                 if (addToLibrary) {
-                  const { invoke } = await import('@tauri-apps/api/core');
+                  // 🔄 使用统一命令层而非直接API调用
                   const termData = {
                     source: detectedDifference.original,
                     userTranslation: detectedDifference.userTranslation,
@@ -383,17 +384,17 @@ export const EditorPane: React.FC<EditorPaneProps> = ({
                   };
                   log.debug('添加术语到术语库', termData);
 
-                  await invoke('add_term_to_library', termData);
+                  await termLibraryCommands.addTerm(termData);
 
                   log.info('术语添加成功');
 
                   // 检查是否需要生成风格总结
-                  const shouldUpdate = await invoke<boolean>('should_update_style_summary');
+                  const shouldUpdate = await termLibraryCommands.shouldUpdateStyleSummary();
                   log.debug('检查是否需要更新风格总结', { shouldUpdate });
 
                   if (shouldUpdate && apiKey) {
                     message.info('正在生成风格总结...', 1);
-                    await invoke('generate_style_summary', { apiKey });
+                    await termLibraryCommands.generateStyleSummary(apiKey);
                     message.success('术语已添加，风格总结已更新');
                   } else {
                     message.success('术语已添加到术语库');
