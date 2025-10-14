@@ -34,18 +34,34 @@ pub async fn get_active_ai_config() -> Result<Option<AIConfig>, String> {
 /// 添加新的 AI 配置
 #[tauri::command]
 pub async fn add_ai_config(config: AIConfig) -> Result<(), String> {
+    crate::app_log!("🔄 [AI配置] 添加新配置，提供商: {:?}", config.provider);
+    crate::app_log!("📋 [AI配置] 配置详情: URL={}, Model={}, API Key={}...", 
+        config.base_url.as_deref().unwrap_or("默认"),
+        config.model.as_deref().unwrap_or("默认"),
+        config.api_key.chars().take(8).collect::<String>()
+    );
+    
     let draft = ConfigDraft::global().await;
 
     // 在草稿上修改
     {
         let mut draft_config = draft.draft();
+        let current_count = draft_config.ai_configs.len();
+        crate::app_log!("📊 [AI配置] 添加前配置数量: {}", current_count);
+        
         draft_config.add_ai_config(config);
+        
+        let new_count = draft_config.ai_configs.len();
+        crate::app_log!("📊 [AI配置] 添加后配置数量: {}", new_count);
     }
 
     // 原子提交并保存
-    draft.apply().map_err(|e| e.to_string())?;
+    draft.apply().map_err(|e| {
+        crate::app_log!("❌ [AI配置] 保存配置失败: {}", e);
+        e.to_string()
+    })?;
 
-    crate::app_log!("✅ 新增 AI 配置成功");
+    crate::app_log!("✅ [AI配置] 新增配置成功");
     Ok(())
 }
 
@@ -92,20 +108,36 @@ pub async fn remove_ai_config(index: usize) -> Result<(), String> {
 /// 设置启用的 AI 配置
 #[tauri::command]
 pub async fn set_active_ai_config(index: usize) -> Result<(), String> {
+    crate::app_log!("🔄 [AI配置] 设置启用配置，索引: {}", index);
+    
     let draft = ConfigDraft::global().await;
 
     // 在草稿上修改
     {
         let mut draft_config = draft.draft();
+        let total_configs = draft_config.ai_configs.len();
+        crate::app_log!("📊 [AI配置] 当前配置总数: {}, 目标索引: {}", total_configs, index);
+        
+        if index >= total_configs {
+            crate::app_log!("❌ [AI配置] 索引超出范围: {} >= {}", index, total_configs);
+            return Err(format!("配置索引超出范围: {} >= {}", index, total_configs));
+        }
+        
         draft_config
             .set_active_ai_config(index)
-            .map_err(|e| e.to_string())?;
+            .map_err(|e| {
+                crate::app_log!("❌ [AI配置] 设置启用配置失败: {}", e);
+                e.to_string()
+            })?;
     }
 
     // 原子提交并保存
-    draft.apply().map_err(|e| e.to_string())?;
+    draft.apply().map_err(|e| {
+        crate::app_log!("❌ [AI配置] 保存配置失败: {}", e);
+        e.to_string()
+    })?;
 
-    crate::app_log!("✅ 设置启用配置成功，索引: {}", index);
+    crate::app_log!("✅ [AI配置] 设置启用配置成功，索引: {}", index);
     Ok(())
 }
 
@@ -236,36 +268,62 @@ pub async fn test_ai_connection(
 #[tauri::command]
 pub async fn get_system_prompt() -> Result<String, String> {
     use crate::services::ai_translator::DEFAULT_SYSTEM_PROMPT;
+    
+    crate::app_log!("🔄 [系统提示词] 获取系统提示词");
 
     let draft = ConfigDraft::global().await;
     let config = draft.data();
 
     // 返回自定义提示词，如果没有则返回默认提示词
-    Ok(config
+    let prompt = config
         .system_prompt
         .clone()
-        .unwrap_or_else(|| DEFAULT_SYSTEM_PROMPT.to_string()))
+        .unwrap_or_else(|| DEFAULT_SYSTEM_PROMPT.to_string());
+    
+    let is_custom = config.system_prompt.is_some();
+    let prompt_len = prompt.len();
+    crate::app_log!("📄 [系统提示词] 返回提示词: {} (长度: {} 字符)", 
+        if is_custom { "自定义" } else { "默认" }, prompt_len);
+    
+    Ok(prompt)
 }
 
 /// 更新系统提示词
 #[tauri::command]
 pub async fn update_system_prompt(prompt: String) -> Result<(), String> {
+    let prompt_len = prompt.len();
+    let is_empty = prompt.trim().is_empty();
+    crate::app_log!("🔄 [系统提示词] 更新系统提示词: {} (长度: {} 字符)", 
+        if is_empty { "清空" } else { "设置自定义" }, prompt_len);
+    
     let draft = ConfigDraft::global().await;
 
     // 在草稿上修改
     {
         let mut draft_config = draft.draft();
-        draft_config.system_prompt = if prompt.trim().is_empty() {
+        let old_prompt_exists = draft_config.system_prompt.is_some();
+        
+        draft_config.system_prompt = if is_empty {
+            crate::app_log!("🗑️ [系统提示词] 清空自定义提示词，将使用默认提示词");
             None
         } else {
+            crate::app_log!("📝 [系统提示词] 设置自定义提示词 ({}字符)", prompt.len());
             Some(prompt)
         };
+        
+        crate::app_log!("📊 [系统提示词] 状态变化: {} -> {}", 
+            if old_prompt_exists { "自定义" } else { "默认" },
+            if draft_config.system_prompt.is_some() { "自定义" } else { "默认" }
+        );
     }
 
     // 原子提交并保存
-    draft.apply().map_err(|e| e.to_string())?;
-
-    crate::app_log!("✅ 系统提示词已更新");
+    draft.apply().map_err(|e| {
+        crate::app_log!("❌ [系统提示词] 保存失败: {}", e);
+        e.to_string()
+    })?;
+    
+    crate::app_log!("✅ [系统提示词] 更新成功");
     Ok(())
 }
 

@@ -41,9 +41,12 @@ pub fn clear_logs() {
 }
 
 /// 宏：简化日志调用
+/// 🔄 修改为使用标准日志系统，确保日志写入文件
 #[macro_export]
 macro_rules! app_log {
     ($($arg:tt)*) => {
+        log::info!(target: "app", "{}", format!($($arg)*));
+        // 🔄 同时保存到内存缓冲区以保持兼容性
         $crate::utils::logger::log(format!($($arg)*))
     };
 }

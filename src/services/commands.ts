@@ -142,12 +142,19 @@ export const aiConfigCommands = {
     });
   },
 
-  async setActive(id: string) {
+  async setActive(indexStr: string) {
+    // 🔄 后端期望 index: usize，前端传递字符串形式的索引
+    const index = parseInt(indexStr, 10);
+    if (isNaN(index) || index < 0) {
+      throw new Error(`无效的配置索引: ${indexStr}`);
+    }
+    
     return invoke<void>(
       COMMANDS.AI_CONFIG_SET_ACTIVE,
-      { id },
+      { index }, // 传递数字索引，系统会保持原样（不转换）
       {
         errorMessage: '设置活动AI配置失败',
+        autoConvertParams: false, // 禁用自动转换，因为 index 应该保持数字类型
       }
     );
   },
