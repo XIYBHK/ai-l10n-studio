@@ -32,7 +32,7 @@ export const COMMANDS = {
   AI_CONFIG_SET_ACTIVE: 'set_active_ai_config',
   AI_CONFIG_ADD: 'add_ai_config',
   AI_CONFIG_UPDATE: 'update_ai_config',
-  AI_CONFIG_DELETE: 'delete_ai_config',
+  AI_CONFIG_DELETE: 'remove_ai_config',
   AI_CONFIG_TEST_CONNECTION: 'test_ai_connection',
 
   // AI 模型相关

@@ -130,11 +130,15 @@ export const useAppStore = create<AppState>()((set, get) => ({
   // 主题和语言 (持久化到 TauriStore)
   setTheme: (theme) => {
     const current = get().theme;
+    console.log('[useAppStore] setTheme 调用:', { current, theme, willSkip: current === theme });
+    
     // 避免重复设置相同主题（修复点击两次问题）
     if (current === theme) {
+      console.log('[useAppStore] setTheme 跳过：相同主题');
       return;
     }
     
+    console.log('[useAppStore] setTheme 执行状态更新');
     set({ theme });
     // 异步保存到 TauriStore
     tauriStore.setTheme(theme).catch((err) => console.error('[useAppStore] 保存主题失败:', err));
