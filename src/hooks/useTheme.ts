@@ -64,17 +64,25 @@ export function initializeGlobalSystemThemeManager(setSystemTheme: (theme: 'ligh
     let lastSystemTheme: AppliedTheme = mediaQuery.matches ? 'dark' : 'light';
     
     // 🏗️ 全局系统主题变化处理器（直接更新全局状态）
-    const handleSystemThemeChange = () => {
+    const handleSystemThemeChange = (forceUpdate = false) => {
       const newSystemTheme = mediaQuery.matches ? 'dark' : 'light';
       
-      if (lastSystemTheme !== newSystemTheme) {
+      if (lastSystemTheme !== newSystemTheme || forceUpdate) {
         const log = createModuleLogger('SystemThemeManager');
-        log.debug('全局系统主题变化', { 
-          systemIsDark: mediaQuery.matches,
-          from: lastSystemTheme,
-          to: newSystemTheme,
-          timestamp: new Date().toLocaleTimeString()
-        });
+        if (forceUpdate) {
+          log.debug('🚀 初始化系统主题', { 
+            systemIsDark: mediaQuery.matches,
+            initialTheme: newSystemTheme,
+            timestamp: new Date().toLocaleTimeString()
+          });
+        } else {
+          log.debug('全局系统主题变化', { 
+            systemIsDark: mediaQuery.matches,
+            from: lastSystemTheme,
+            to: newSystemTheme,
+            timestamp: new Date().toLocaleTimeString()
+          });
+        }
         lastSystemTheme = newSystemTheme;
 
         // 🏗️ 直接更新全局状态（不再发送事件，避免多实例重复处理）
@@ -84,12 +92,13 @@ export function initializeGlobalSystemThemeManager(setSystemTheme: (theme: 'ligh
       }
     };
 
-    // 🚀 立即执行一次，确保当前状态同步
-    handleSystemThemeChange();
+    // 🚀 立即执行一次，强制同步初始状态
+    handleSystemThemeChange(true);
     
-    mediaQuery.addEventListener('change', handleSystemThemeChange);
+    const changeListener = () => handleSystemThemeChange();
+    mediaQuery.addEventListener('change', changeListener);
     systemThemeCleanup = () => {
-      mediaQuery.removeEventListener('change', handleSystemThemeChange);
+      mediaQuery.removeEventListener('change', changeListener);
       systemThemeListenerInitialized = false;
       systemThemeCleanup = null;
       globalSetSystemTheme = null; // 清理引用
@@ -144,18 +153,7 @@ export const useTheme = () => {
 
   // 🏗️ 直接计算实际主题（无状态延迟，参考 clash-verge-rev）
   const appliedTheme = useMemo((): AppliedTheme => {
-    if (themeMode !== 'system') {
-      log.debug('非系统模式', { themeMode, result: themeMode });
-      return themeMode as AppliedTheme;
-    }
-    
-    log.debug('系统模式，使用全局systemTheme', { 
-      themeMode, 
-      systemTheme, 
-      result: systemTheme,
-      timestamp: new Date().toLocaleTimeString()
-    });
-    return systemTheme;
+    return themeMode === 'system' ? systemTheme : (themeMode as AppliedTheme);
   }, [themeMode, systemTheme]);
 
   // 🏗️ 组件初始化：确保全局管理器已初始化（参考 clash-verge-rev）
