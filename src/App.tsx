@@ -724,6 +724,15 @@ function App() {
     };
   }, [isResizing]);
 
+  // 🔍 临时调试：ConfigProvider 接收到的主题配置
+  useEffect(() => {
+    log.debug('🎨 ConfigProvider 主题配置', { 
+      themeConfig: JSON.stringify(themeConfig, null, 2),
+      algorithm: algorithm?.toString?.() || algorithm,
+      timestamp: new Date().toLocaleTimeString()
+    });
+  }, [themeConfig, algorithm]);
+
   return (
     <ConfigProvider
       theme={{
