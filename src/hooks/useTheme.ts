@@ -3,6 +3,55 @@ import { theme as antTheme } from 'antd';
 import { getCurrentWindow } from '@tauri-apps/api/window';
 import { useAppStore } from '../store/useAppStore';
 import { lightTheme, darkTheme, semanticColors } from '../theme/config';
+import { createModuleLogger } from '../utils/logger';
+
+// 🏗️ 使用项目标准的防重复初始化框架模式（参考 StatsManagerV2）
+let systemThemeListenerInitialized = false;
+let systemThemeCleanup: (() => void) | null = null;
+
+// 🏗️ 全局主题变化日志控制（防重复日志）
+let lastLoggedThemeTransition: string | null = null;
+
+/**
+ * 🏗️ 智能主题变化日志记录器（全局去重）
+ */
+function logThemeChange(from: AppliedTheme, to: AppliedTheme, themeMode: ThemeMode, reason: string) {
+  const transitionKey = `${from}->${to}:${themeMode}:${reason}`;
+  
+  // 🔇 防重复：相同的主题变化只记录一次
+  if (lastLoggedThemeTransition === transitionKey) {
+    return;
+  }
+  
+  lastLoggedThemeTransition = transitionKey;
+  
+  // 📝 使用全局日志记录器
+  const log = createModuleLogger('useTheme');
+  log.debug('主题更新', { 
+    from, 
+    to, 
+    themeMode,
+    reason,
+    timestamp: new Date().toLocaleTimeString()
+  });
+  
+  // 🕐 500ms后清除记录，允许后续相同变化
+  setTimeout(() => {
+    if (lastLoggedThemeTransition === transitionKey) {
+      lastLoggedThemeTransition = null;
+    }
+  }, 500);
+}
+
+/**
+ * 🏗️ 清理全局系统主题监听器
+ * 用于应用卸载时清理资源
+ */
+export function cleanupGlobalSystemThemeListener() {
+  if (systemThemeCleanup) {
+    systemThemeCleanup();
+  }
+}
 
 /**
  * 主题模式类型
@@ -16,6 +65,9 @@ export type ThemeMode = 'light' | 'dark' | 'system';
  * 实际应用的主题（不含 system）
  */
 export type AppliedTheme = 'light' | 'dark';
+
+// 创建模块专用日志记录器
+const log = createModuleLogger('useTheme');
 
 /**
  * Phase 9: 增强版主题系统
@@ -51,51 +103,125 @@ export const useTheme = () => {
   // 当前实际应用的主题（解析 system 为 light/dark）
   const [appliedTheme, setAppliedTheme] = useState<AppliedTheme>(getInitialTheme);
 
-  // 🔄 统一主题状态管理：利用 useMemo 避免循环触发
+  // 🔄 实时系统主题检测状态（立即同步检测）
+  const [systemTheme, setSystemTheme] = useState<AppliedTheme>(() => {
+    if (typeof window !== 'undefined' && window.matchMedia) {
+      const isDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+      const detectedTheme = isDark ? 'dark' : 'light';
+      
+      // 🔍 调试：记录系统主题初始检测
+      log.debug('系统主题初始检测', { 
+        isDark, 
+        detectedTheme,
+        mediaQuery: '(prefers-color-scheme: dark)'
+      });
+      
+      return detectedTheme;
+    }
+    
+    log.warn('降级：无法检测系统主题，使用light');
+    return 'light';
+  });
+
+  // 🔄 统一主题状态管理：根据模式计算实际主题
   const computedAppliedTheme = useMemo((): AppliedTheme => {
     if (themeMode !== 'system') {
       return themeMode as AppliedTheme;
     }
-    
-    // system 模式：检测系统主题（只在 themeMode 变化时重新计算）
-    if (typeof window !== 'undefined' && window.matchMedia) {
-      return window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
-    }
-    
-    return 'light'; // 降级
-  }, [themeMode]);
+    return systemTheme;
+  }, [themeMode, systemTheme]);
 
   // 🔄 使用 useEffect 同步计算结果到状态（避免重复计算）
   useEffect(() => {
     if (appliedTheme !== computedAppliedTheme) {
-      console.log('[useTheme] 主题更新:', { from: appliedTheme, to: computedAppliedTheme });
+      // 🏗️ 使用全局去重日志记录器
+      logThemeChange(
+        appliedTheme, 
+        computedAppliedTheme, 
+        themeMode,
+        themeMode === 'system' ? '系统主题变化' : '用户切换主题'
+      );
       setAppliedTheme(computedAppliedTheme);
     }
-  }, [computedAppliedTheme, appliedTheme]);
+  }, [computedAppliedTheme, appliedTheme, themeMode]); // 🔄 包含themeMode依赖
 
-  // 🔄 系统主题监听：仅在 system 模式下触发重新计算
+  // 🏗️ 系统主题监听：使用项目标准的防重复框架模式（参考 StatsManagerV2）
   useEffect(() => {
-    if (themeMode !== 'system') {
-      return; // 非 system 模式不需要监听
-    }
-
-    // 优先使用 CSS media query（同步检测）
     if (typeof window !== 'undefined' && window.matchMedia) {
-      const mediaQuery = window.matchMedia('(prefers-color-scheme: dark)');
+      
+      // 🏗️ 使用项目标准的防重复初始化框架模式
+      if (!systemThemeListenerInitialized) {
+        systemThemeListenerInitialized = true;
+        
+        const mediaQuery = window.matchMedia('(prefers-color-scheme: dark)');
+        let lastSystemTheme: AppliedTheme = mediaQuery.matches ? 'dark' : 'light';
 
-      // 系统主题变化时，触发重新计算（通过修改依赖触发 useMemo）
-      const handleChange = () => {
-        console.log('[useTheme] 系统主题变化，触发重新计算');
-        // 强制重新渲染，让 useMemo 重新计算 computedAppliedTheme
-        setAppliedTheme(prev => prev); // 触发重新渲染
+        // 🏗️ 全局系统主题变化处理器
+        const handleSystemThemeChange = () => {
+          const newSystemTheme = mediaQuery.matches ? 'dark' : 'light';
+          
+          // 只在真正变化时记录日志和发送事件
+          if (lastSystemTheme !== newSystemTheme) {
+            log.debug('系统主题变化', { 
+              systemIsDark: mediaQuery.matches,
+              from: lastSystemTheme,
+              to: newSystemTheme,
+              timestamp: new Date().toLocaleTimeString()
+            });
+            lastSystemTheme = newSystemTheme;
+
+            // 🚀 通过自定义事件通知所有 useTheme 实例
+            window.dispatchEvent(new CustomEvent('system-theme-change', { 
+              detail: { 
+                theme: newSystemTheme,
+                timestamp: Date.now() // 添加时间戳用于调试
+              } 
+            }));
+          }
+        };
+
+        // 🚀 立即执行一次，确保当前状态同步
+        handleSystemThemeChange();
+
+        mediaQuery.addEventListener('change', handleSystemThemeChange);
+        systemThemeCleanup = () => {
+          mediaQuery.removeEventListener('change', handleSystemThemeChange);
+          systemThemeListenerInitialized = false;
+          systemThemeCleanup = null;
+        };
+
+        log.debug('初始化系统主题监听器', { theme: lastSystemTheme });
+      }
+
+      // 🔄 监听自定义事件，更新当前实例的状态
+      const handleCustomThemeEvent = (event: CustomEvent) => {
+        const newTheme = event.detail.theme;
+        const timestamp = event.detail.timestamp;
+        
+        log.debug('接收系统主题事件', { 
+          newTheme, 
+          timestamp, 
+          currentSystemTheme: systemTheme 
+        });
+        
+        setSystemTheme(currentTheme => {
+          if (currentTheme !== newTheme) {
+            log.debug('更新systemTheme状态', { from: currentTheme, to: newTheme });
+            return newTheme;
+          }
+          return currentTheme;
+        });
       };
 
-      mediaQuery.addEventListener('change', handleChange);
-      return () => mediaQuery.removeEventListener('change', handleChange);
+      window.addEventListener('system-theme-change', handleCustomThemeEvent as EventListener);
+      
+      return () => {
+        window.removeEventListener('system-theme-change', handleCustomThemeEvent as EventListener);
+      };
+    } else {
+      log.warn('降级：无法监听系统主题变化');
     }
-
-    console.log('[useTheme] 降级：无法监听系统主题变化');
-  }, [themeMode]);
+  }, []); // 只在组件挂载时执行一次
 
   // 2. 同步 Tauri 窗口主题（用于原生标题栏）
   useEffect(() => {
@@ -120,21 +246,41 @@ export const useTheme = () => {
   }, [appliedTheme]);
 
   // 4. 主题切换函数
-  const toggleTheme = () => {
-    // 循环切换：light -> dark -> system -> light
-    const nextMode: ThemeMode =
-      themeMode === 'light' ? 'dark' : themeMode === 'dark' ? 'system' : 'light';
+  const toggleTheme = (source: string = '未知') => {
+    // 🔄 新逻辑：基于当前实际应用的主题来切换，而不是基于模式
+    // 这样确保每次点击都有明确的视觉反馈
+    const nextMode: ThemeMode = appliedTheme === 'light' ? 'dark' : 'light';
 
-    console.log('[useTheme] toggleTheme 调用:', { 
+    log.debug('用户点击按钮', { 
+      source: `${source}按钮`,
       currentMode: themeMode, 
-      nextMode,
-      appliedTheme
+      currentApplied: appliedTheme,
+      nextMode: `${nextMode}（基于appliedTheme）`,
+      timestamp: new Date().toLocaleTimeString()
     });
     
     setThemeMode(nextMode);
   };
 
-  const setTheme = (mode: ThemeMode) => {
+  const setTheme = (mode: ThemeMode, source: string = '未知') => {
+    // 🔄 防止设置相同的主题模式
+    if (themeMode === mode) {
+      log.debug('跳过重复设置', { 
+        mode,
+        source: `${source}选择`,
+        reason: '主题模式相同'
+      });
+      return;
+    }
+
+    log.debug('直接设置主题', { 
+      source: `${source}选择`,
+      currentMode: themeMode,
+      targetMode: mode,
+      appliedTheme,
+      timestamp: new Date().toLocaleTimeString()
+    });
+    
     setThemeMode(mode);
   };
 

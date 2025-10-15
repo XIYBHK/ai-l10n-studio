@@ -1,6 +1,10 @@
 import { create } from 'zustand';
 import { POEntry, TranslationReport, AppConfig, TranslationStats } from '../types/tauri';
 import { tauriStore } from './tauriStore';
+import { createModuleLogger } from '../utils/logger';
+
+// 创建模块专用日志记录器
+const log = createModuleLogger('useAppStore');
 
 // Phase 9: 支持三种主题模式
 type ThemeMode = 'light' | 'dark' | 'system';
@@ -128,13 +132,26 @@ export const useAppStore = create<AppState>()((set, get) => ({
 
   // 主题和语言 (持久化到 TauriStore)
   setTheme: (theme) => {
-    const current = get().theme;
-    console.log('[useAppStore] setTheme 调用:', { current, theme });
+    // 🔄 防止重复设置相同主题（减少无意义的状态更新和日志）
+    const currentTheme = get().theme;
+    if (currentTheme === theme) {
+      log.debug('跳过重复主题设置', { 
+        theme, 
+        reason: '主题相同', 
+        timestamp: new Date().toLocaleTimeString() 
+      });
+      return;
+    }
     
-    console.log('[useAppStore] setTheme 执行状态更新');
+    log.debug('设置主题', { 
+      from: currentTheme,
+      to: theme, 
+      timestamp: new Date().toLocaleTimeString() 
+    });
+    log.debug('执行状态更新');
     set({ theme });
     // 异步保存到 TauriStore
-    tauriStore.setTheme(theme).catch((err) => console.error('[useAppStore] 保存主题失败:', err));
+    tauriStore.setTheme(theme).catch((err) => log.error('保存主题失败', err));
   },
   setLanguage: (language) => {
     const current = get().language;
@@ -230,7 +247,7 @@ export const useAppStore = create<AppState>()((set, get) => ({
  */
 export async function loadPersistedState() {
   try {
-    console.log('[useAppStore] 加载持久化状态...');
+    log.info('加载持久化状态...');
 
     // 初始化 TauriStore
     await tauriStore.init();
@@ -261,8 +278,8 @@ export async function loadPersistedState() {
       },
     });
 
-    console.log('[useAppStore] 持久化状态加载成功', { theme, language, stats });
+    log.info('持久化状态加载成功', { theme, language, stats });
   } catch (error) {
-    console.error('[useAppStore] 加载持久化状态失败:', error);
+    log.error('加载持久化状态失败', error);
   }
 }
