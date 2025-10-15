@@ -79,14 +79,12 @@ function App() {
   // 🏗️ 获取全局状态管理函数
   const setSystemTheme = useAppStore((state) => state.setSystemTheme);
 
-  // 🔧 启动时初始化和重置状态
+  // 🔧 启动时重置状态
   useEffect(() => {
-    // 🏗️ 初始化全局系统主题管理器（参考 clash-verge-rev）
-    initializeGlobalSystemThemeManager(setSystemTheme);
-    
+    // 🏗️ 系统主题管理器由 useTheme 初始化，避免重复初始化
     resetSessionStats();
     log.info('🔄 应用启动，会话统计已重置');
-  }, [setSystemTheme]); // 依赖setSystemTheme函数
+  }, []); // 移除setSystemTheme依赖，避免重复初始化
 
   // 配置同步管理器
   const configSyncRef = useRef<ConfigSyncManager | null>(null);

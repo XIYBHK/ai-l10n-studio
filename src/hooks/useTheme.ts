@@ -142,49 +142,21 @@ export const useTheme = () => {
   const systemTheme = useAppStore((state: any) => state.systemTheme);
   const setSystemTheme = useAppStore((state: any) => state.setSystemTheme);
 
-  // Phase 9: 智能初始主题推断（避免闪烁）
-  // 1. 如果用户选择了 light/dark，直接使用
-  // 2. 如果是 system，先用系统 prefers-color-scheme 检测（同步，无闪烁）
-  const getInitialTheme = (): AppliedTheme => {
+  // 🏗️ 直接计算实际主题（无状态延迟，参考 clash-verge-rev）
+  const appliedTheme = useMemo((): AppliedTheme => {
     if (themeMode !== 'system') {
+      log.debug('非系统模式', { themeMode, result: themeMode });
       return themeMode as AppliedTheme;
     }
-
-    // 使用 CSS media query 同步检测系统主题（无闪烁）
-    if (typeof window !== 'undefined' && window.matchMedia) {
-      return window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
-    }
-
-    return 'light'; // 降级
-  };
-
-  // 当前实际应用的主题（解析 system 为 light/dark）
-  const [appliedTheme, setAppliedTheme] = useState<AppliedTheme>(getInitialTheme);
-
-  // 🏗️ 系统主题状态由全局useAppStore管理（参考 clash-verge-rev）
-  // 不再需要局部useState，避免多实例重复处理
-
-  // 🔄 统一主题状态管理：根据模式计算实际主题
-  const computedAppliedTheme = useMemo((): AppliedTheme => {
-    if (themeMode !== 'system') {
-      return themeMode as AppliedTheme;
-    }
+    
+    log.debug('系统模式，使用全局systemTheme', { 
+      themeMode, 
+      systemTheme, 
+      result: systemTheme,
+      timestamp: new Date().toLocaleTimeString()
+    });
     return systemTheme;
   }, [themeMode, systemTheme]);
-
-  // 🔄 使用 useEffect 同步计算结果到状态（避免重复计算）
-  useEffect(() => {
-    if (appliedTheme !== computedAppliedTheme) {
-      // 🏗️ 使用全局去重日志记录器
-      logThemeChange(
-        appliedTheme, 
-        computedAppliedTheme, 
-        themeMode,
-        themeMode === 'system' ? '系统主题变化' : '用户切换主题'
-      );
-      setAppliedTheme(computedAppliedTheme);
-    }
-  }, [computedAppliedTheme, appliedTheme, themeMode]); // 🔄 包含themeMode依赖
 
   // 🏗️ 组件初始化：确保全局管理器已初始化（参考 clash-verge-rev）
   useEffect(() => {

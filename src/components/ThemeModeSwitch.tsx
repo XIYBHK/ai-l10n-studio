@@ -60,7 +60,7 @@ export const ThemeModeSwitch: React.FC<ThemeModeSwitchProps> = ({ style, classNa
       className={className}
       options={options}
       value={themeMode}
-      onChange={(value) => setTheme(value as ThemeMode)}
+      onChange={(value) => setTheme(value as ThemeMode, '设置页面Segmented')}
     />
   );
 };

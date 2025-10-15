@@ -16,6 +16,10 @@ import { createModuleLogger } from '../utils/logger';
 
 const log = createModuleLogger('TauriEventBridge');
 
+// 🏗️ 使用项目标准的防重复初始化框架模式
+let globalInitialized = false;
+let globalCleanupFns: Array<() => void> = [];
+
 interface EventConfig {
   /** 事件名称 */
   name: string;
@@ -279,13 +283,21 @@ export const CommonEventConfigs = {
 };
 
 /**
- * 默认事件桥接器（使用预定义配置）
- *
- * 这是最常用的事件监听器，适合大多数场景
- * 替代旧版本的 useTauriEventBridge
+ * 🏗️ 全局事件桥接初始化器（使用项目标准的防重复框架模式）
+ * 
+ * 参考 StatsManagerV2 的设计模式
  */
-export function useDefaultTauriEventBridge() {
-  useTauriEventBridgeEnhanced([
+export function initializeGlobalTauriEventBridge() {
+  if (globalInitialized) {
+    log.debug('事件桥接器已初始化，跳过');
+    return;
+  }
+  globalInitialized = true;
+
+  log.info('🚀 初始化 Tauri 事件监听器（全局单例）');
+
+  // 预定义的事件配置
+  const events: EventConfig[] = [
     // SWR 数据同步事件
     CommonEventConfigs.configUpdated(),
     CommonEventConfigs.termUpdated(),
@@ -297,5 +309,113 @@ export function useDefaultTauriEventBridge() {
     CommonEventConfigs.refineStart(),
     CommonEventConfigs.refineComplete(),
     CommonEventConfigs.refineError(),
-  ]);
+  ];
+
+  // 节流状态：记录每个事件的最后触发时间
+  const lastTriggerTime: Record<string, number> = {};
+
+  // 检查是否应该节流
+  const shouldThrottle = (eventName: string, throttleMs?: number): boolean => {
+    if (!throttleMs) return false;
+
+    const now = Date.now();
+    const lastTime = lastTriggerTime[eventName] || 0;
+
+    if (now - lastTime < throttleMs) {
+      return true; // 在节流期内，跳过
+    }
+
+    lastTriggerTime[eventName] = now;
+    return false;
+  };
+
+  // 创建带节流的事件处理器
+  const createThrottledHandler = (config: EventConfig) => {
+    return (event?: any) => {
+      // 检查节流
+      if (shouldThrottle(config.name, config.throttleMs)) {
+        log.debug(`事件 ${config.name} 被节流，跳过执行`);
+        return;
+      }
+
+      // 执行处理函数
+      if (config.delayMs && config.delayMs > 0) {
+        setTimeout(() => {
+          log.debug(`执行延迟事件: ${config.name}`);
+          config.handler(event);
+        }, config.delayMs);
+      } else {
+        config.handler(event);
+      }
+    };
+  };
+
+  // 初始化所有事件监听器
+  const initializeListeners = async () => {
+    for (const eventConfig of events) {
+      const throttledHandler = createThrottledHandler(eventConfig);
+
+      try {
+        // 尝试使用 Tauri 原生事件系统
+        const unlisten = await listen(eventConfig.name, throttledHandler);
+        globalCleanupFns.push(unlisten);
+        log.debug(`✅ 监听事件: ${eventConfig.name}`);
+      } catch (error) {
+        // Tauri 事件失败，使用 window 事件作为回退
+        log.warn(`⚠️ Tauri 监听 ${eventConfig.name} 失败，使用 window 事件回退`, error);
+
+        window.addEventListener(eventConfig.name, throttledHandler as EventListener);
+        globalCleanupFns.push(() => {
+          window.removeEventListener(eventConfig.name, throttledHandler as EventListener);
+        });
+      }
+    }
+
+    log.info(`✅ 初始化完成，共监听 ${events.length} 个事件`);
+  };
+
+  // 启动异步初始化
+  void initializeListeners();
+}
+
+/**
+ * 🏗️ 全局清理函数
+ */
+export function cleanupGlobalTauriEventBridge() {
+  if (!globalInitialized) return;
+
+  log.debug('🧹 清理全局事件监听器...');
+
+  // 执行所有清理函数
+  globalCleanupFns.forEach((fn) => {
+    try {
+      fn();
+    } catch (error) {
+      log.warn('清理函数执行失败', error);
+    }
+  });
+
+  globalCleanupFns.length = 0;
+  globalInitialized = false;
+
+  log.debug('✅ 全局事件监听器清理完成');
+}
+
+/**
+ * 默认事件桥接器（使用全局单例模式）
+ *
+ * 🏗️ 使用项目标准的防重复初始化框架模式
+ * 参考 StatsManagerV2 的设计
+ */
+export function useDefaultTauriEventBridge() {
+  useEffect(() => {
+    // 使用全局单例初始化器
+    initializeGlobalTauriEventBridge();
+
+    // 组件卸载时不清理（保持全局状态）
+    // 只在应用完全卸载时才清理
+    return () => {
+      // 这里不做清理，保持全局事件监听器
+    };
+  }, []); // 空依赖数组，只在组件挂载时执行一次
 }

@@ -8,7 +8,7 @@
  * - 请求去重
  */
 
-import { invoke } from '@tauri-apps/api/core';
+import { invoke } from './tauriInvoke';
 import { createModuleLogger } from '../utils/logger';
 
 const log = createModuleLogger('APIClient');
@@ -172,8 +172,11 @@ class APIClient {
       }, timeout);
 
       try {
-        // 执行实际的调用
-        const result = await invoke<T>(command, params);
+        // 执行实际的调用（启用自动参数转换）
+        const result = await invoke<T>(command, params, {
+          autoConvertParams: true, // 🔄 启用参数转换
+          silent: false, // 保留调试日志
+        });
         clearTimeout(timeoutId);
         resolve(result);
       } catch (error) {

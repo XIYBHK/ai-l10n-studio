@@ -26,6 +26,9 @@ import { useTranslationMemory } from '../hooks/useTranslationMemory';
 import { useDefaultTauriEventBridge } from '../hooks/useTauriEventBridge.enhanced';
 import { createModuleLogger } from '../utils/logger';
 
+// 🏗️ 使用项目标准的防重复初始化框架模式（参考 StatsManagerV2）
+let appDataProviderLogged = false;
+
 const log = createModuleLogger('AppDataProvider');
 
 // ========================================
@@ -83,7 +86,11 @@ interface AppDataProviderProps {
 }
 
 export function AppDataProvider({ children }: AppDataProviderProps) {
-  log.debug('渲染 AppDataProvider');
+  // 🏗️ 使用项目标准的防重复框架模式，减少日志频率
+  if (!appDataProviderLogged) {
+    appDataProviderLogged = true;
+    log.debug('渲染 AppDataProvider（初次）');
+  }
 
   // ===== 数据源集成 =====
   const {
@@ -200,7 +207,7 @@ export function AppDataProvider({ children }: AppDataProviderProps) {
       termLibrary,
       translationMemory,
 
-      // 刷新方法
+      // 刷新方法（使用 useCallback 稳定引用）
       refreshConfig,
       refreshAIConfigs,
       refreshSystemPrompt,
@@ -213,6 +220,7 @@ export function AppDataProvider({ children }: AppDataProviderProps) {
       hasError,
     }),
     [
+      // 🔄 简化依赖数组，只包含真正影响 context value 的数据
       // 数据依赖
       config,
       aiConfigs,
@@ -220,18 +228,11 @@ export function AppDataProvider({ children }: AppDataProviderProps) {
       systemPrompt,
       termLibrary,
       translationMemory,
-
-      // 方法依赖
-      refreshConfig,
-      refreshAIConfigs,
-      refreshSystemPrompt,
-      refreshTermLibrary,
-      refreshTranslationMemory,
-      refreshAll,
-
       // 状态依赖
       isLoading,
       hasError,
+      // 方法依赖（已通过 useCallback 稳定）
+      refreshAll,
     ]
   );
 
