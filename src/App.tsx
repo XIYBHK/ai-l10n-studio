@@ -11,6 +11,7 @@ import { AIWorkspace } from './components/AIWorkspace';
 import { ErrorBoundary } from './components/ErrorBoundary';
 import { useSessionStore } from './store';
 import { useTheme, initializeGlobalSystemThemeManager } from './hooks/useTheme';
+import { useAppStore } from './store/useAppStore';
 import { useChannelTranslation } from './hooks/useChannelTranslation'; // Tauri 2.x: Channel API
 import { useAsync } from './hooks/useAsync';
 import { TranslationStats, POEntry } from './types/tauri';
@@ -75,14 +76,17 @@ function App() {
   // 使用 ref 防止重复检查AI配置
   const hasCheckedAIConfig = useRef(false);
 
+  // 🏗️ 获取全局状态管理函数
+  const setSystemTheme = useAppStore((state) => state.setSystemTheme);
+
   // 🔧 启动时初始化和重置状态
   useEffect(() => {
     // 🏗️ 初始化全局系统主题管理器（参考 clash-verge-rev）
-    initializeGlobalSystemThemeManager();
+    initializeGlobalSystemThemeManager(setSystemTheme);
     
     resetSessionStats();
     log.info('🔄 应用启动，会话统计已重置');
-  }, []); // 空依赖数组，只在挂载时执行一次
+  }, [setSystemTheme]); // 依赖setSystemTheme函数
 
   // 配置同步管理器
   const configSyncRef = useRef<ConfigSyncManager | null>(null);

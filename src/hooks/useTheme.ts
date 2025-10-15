@@ -43,23 +43,27 @@ function logThemeChange(from: AppliedTheme, to: AppliedTheme, themeMode: ThemeMo
   }, 500);
 }
 
+// 🏗️ 全局管理器状态（用于缓存setSystemTheme函数）
+let globalSetSystemTheme: ((theme: 'light' | 'dark') => void) | null = null;
+
 /**
  * 🏗️ 全局系统主题管理器初始化（参考 clash-verge-rev）
  * 在应用启动时调用，确保全局状态正确初始化
  */
-export function initializeGlobalSystemThemeManager() {
+export function initializeGlobalSystemThemeManager(setSystemTheme: (theme: 'light' | 'dark') => void) {
   // 🏗️ 使用项目标准的防重复初始化模式
   if (systemThemeListenerInitialized) {
     return;
   }
   
   systemThemeListenerInitialized = true;
+  globalSetSystemTheme = setSystemTheme; // 缓存函数引用
   
   if (typeof window !== 'undefined' && window.matchMedia) {
     const mediaQuery = window.matchMedia('(prefers-color-scheme: dark)');
     let lastSystemTheme: AppliedTheme = mediaQuery.matches ? 'dark' : 'light';
     
-    // 🏗️ 全局系统主题变化处理器
+    // 🏗️ 全局系统主题变化处理器（直接更新全局状态）
     const handleSystemThemeChange = () => {
       const newSystemTheme = mediaQuery.matches ? 'dark' : 'light';
       
@@ -73,13 +77,10 @@ export function initializeGlobalSystemThemeManager() {
         });
         lastSystemTheme = newSystemTheme;
 
-        // 🚀 通过自定义事件通知所有 useTheme 实例
-        window.dispatchEvent(new CustomEvent('system-theme-change', { 
-          detail: { 
-            theme: newSystemTheme,
-            timestamp: Date.now()
-          } 
-        }));
+        // 🏗️ 直接更新全局状态（不再发送事件，避免多实例重复处理）
+        if (globalSetSystemTheme) {
+          globalSetSystemTheme(newSystemTheme);
+        }
       }
     };
 
@@ -91,6 +92,7 @@ export function initializeGlobalSystemThemeManager() {
       mediaQuery.removeEventListener('change', handleSystemThemeChange);
       systemThemeListenerInitialized = false;
       systemThemeCleanup = null;
+      globalSetSystemTheme = null; // 清理引用
     };
   }
 }
@@ -184,34 +186,14 @@ export const useTheme = () => {
     }
   }, [computedAppliedTheme, appliedTheme, themeMode]); // 🔄 包含themeMode依赖
 
-  // 🏗️ 初始化全局系统主题管理器（参考 clash-verge-rev）
+  // 🏗️ 组件初始化：确保全局管理器已初始化（参考 clash-verge-rev）
   useEffect(() => {
-    // 🏗️ 确保全局管理器已初始化
-    initializeGlobalSystemThemeManager();
+    // 🏗️ 确保全局管理器已初始化，传递setSystemTheme函数
+    initializeGlobalSystemThemeManager(setSystemTheme);
     
-    // 🏗️ 监听自定义事件，更新全局systemTheme状态
-    const handleCustomThemeEvent = (event: CustomEvent) => {
-      const newTheme = event.detail.theme;
-      const timestamp = event.detail.timestamp;
-      
-      log.debug('接收系统主题事件', { 
-        newTheme, 
-        timestamp, 
-        currentSystemTheme: systemTheme 
-      });
-      
-      // 🏗️ 直接更新全局状态，内置重复检测逻辑
-      setSystemTheme(newTheme);
-    };
-
-    if (typeof window !== 'undefined') {
-      window.addEventListener('system-theme-change', handleCustomThemeEvent as EventListener);
-      
-      return () => {
-        window.removeEventListener('system-theme-change', handleCustomThemeEvent as EventListener);
-      };
-    }
-  }, []); // 只在组件挂载时执行一次
+    // 🏗️ 不再需要监听事件，直接从全局状态读取
+    // 全局管理器会直接更新 useAppStore.systemTheme
+  }, [setSystemTheme]); // 依赖setSystemTheme函数
 
   // 2. 同步 Tauri 窗口主题（用于原生标题栏）
   useEffect(() => {
