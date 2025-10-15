@@ -11,8 +11,8 @@ pub fn log(message: String) {
     let timestamp = Local::now().format("%H:%M:%S");
     let log_entry = format!("[{}] {}", timestamp, message);
 
-    // 打印到控制台（保持原有行为）
-    println!("{}", message);
+    // 🔇 移除重复的控制台输出，避免与标准日志系统重复
+    // println!("{}", message);
 
     // 保存到缓冲区
     if let Ok(mut buffer) = LOG_BUFFER.lock() {
