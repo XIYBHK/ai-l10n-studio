@@ -274,8 +274,6 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({ visible, onClose }
       }
 
       if (isAddingNew) {
-        // 🐛 Debug: 打印配置对象，用于调试参数转换
-        log.debug('即将添加AI配置', { config });
         await aiConfigCommands.add(config);
         message.success('添加配置成功');
 

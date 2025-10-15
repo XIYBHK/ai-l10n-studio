@@ -212,40 +212,21 @@ export const useTheme = () => {
   }, [appliedTheme]);
 
   // 4. 主题切换函数
-  const toggleTheme = (source: string = '未知') => {
+  const toggleTheme = () => {
     // 🔄 新逻辑：基于当前实际应用的主题来切换，而不是基于模式
     // 这样确保每次点击都有明确的视觉反馈
     const nextMode: ThemeMode = appliedTheme === 'light' ? 'dark' : 'light';
 
-    log.debug('用户点击按钮', { 
-      source: `${source}按钮`,
-      currentMode: themeMode, 
-      currentApplied: appliedTheme,
-      nextMode: `${nextMode}（基于appliedTheme）`,
-      timestamp: new Date().toLocaleTimeString()
-    });
     
     setThemeMode(nextMode);
   };
 
-  const setTheme = (mode: ThemeMode, source: string = '未知') => {
+  const setTheme = (mode: ThemeMode) => {
     // 🔄 防止设置相同的主题模式
     if (themeMode === mode) {
-      log.debug('跳过重复设置', { 
-        mode,
-        source: `${source}选择`,
-        reason: '主题模式相同'
-      });
       return;
     }
 
-    log.debug('直接设置主题', { 
-      source: `${source}选择`,
-      currentMode: themeMode,
-      targetMode: mode,
-      appliedTheme,
-      timestamp: new Date().toLocaleTimeString()
-    });
     
     setThemeMode(mode);
   };

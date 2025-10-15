@@ -51,12 +51,6 @@ export const EditorPane: React.FC<EditorPaneProps> = ({
     }
   }, [entry]); // 只在 entry 变化时重置，不依赖 aiTranslation
 
-  // 单独记录 aiTranslation 的变化（用于调试）
-  useEffect(() => {
-    if (aiTranslation) {
-      log.debug('AI译文已更新', { aiTranslation });
-    }
-  }, [aiTranslation]);
 
   const handleTranslationChange = (value: string) => {
     setTranslation(value);

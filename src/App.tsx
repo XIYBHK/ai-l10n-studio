@@ -10,8 +10,7 @@ import { DevToolsModal } from './components/DevToolsModal';
 import { AIWorkspace } from './components/AIWorkspace';
 import { ErrorBoundary } from './components/ErrorBoundary';
 import { useSessionStore } from './store';
-import { useTheme, initializeGlobalSystemThemeManager } from './hooks/useTheme';
-import { useAppStore } from './store/useAppStore';
+import { useTheme } from './hooks/useTheme';
 import { useChannelTranslation } from './hooks/useChannelTranslation'; // Tauri 2.x: Channel API
 import { useAsync } from './hooks/useAsync';
 import { TranslationStats, POEntry } from './types/tauri';
@@ -71,15 +70,13 @@ function App() {
   const [sourceLanguage, setSourceLanguage] = useState<string>('');
   const [targetLanguage, setTargetLanguage] = useState<string>('zh-CN'); // 默认目标语言：简体中文
 
-  const { themeConfig, algorithm, toggleTheme, isDark, colors, appliedTheme, themeMode } = useTheme();
+  const { themeConfig, algorithm, toggleTheme, isDark, colors } = useTheme();
   
   // 主题状态管理已稳定，移除调试日志
 
   // 使用 ref 防止重复检查AI配置
   const hasCheckedAIConfig = useRef(false);
 
-  // 🏗️ 获取全局状态管理函数
-  const setSystemTheme = useAppStore((state) => state.setSystemTheme);
 
   // 🔧 启动时重置状态
   useEffect(() => {
@@ -715,14 +712,6 @@ function App() {
     };
   }, [isResizing]);
 
-  // 🔍 临时调试：ConfigProvider 接收到的主题配置
-  useEffect(() => {
-    log.debug('🎨 ConfigProvider 主题配置', { 
-      themeConfig: JSON.stringify(themeConfig, null, 2),
-      algorithm: algorithm?.toString?.() || algorithm,
-      timestamp: new Date().toLocaleTimeString()
-    });
-  }, [themeConfig, algorithm]);
 
   return (
     <ConfigProvider
@@ -745,7 +734,7 @@ function App() {
             isTranslating={isTranslating}
             hasEntries={entries.length > 0}
             isDarkMode={isDark}
-            onThemeToggle={() => toggleTheme('主页工具栏')}
+            onThemeToggle={toggleTheme}
             sourceLanguage={sourceLanguage}
             targetLanguage={targetLanguage}
             onTargetLanguageChange={handleTargetLanguageChange}

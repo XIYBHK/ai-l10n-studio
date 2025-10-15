@@ -154,12 +154,6 @@ export const useAppStore = create<AppState>()((set, get) => ({
       return;
     }
     
-    log.debug('设置主题', { 
-      from: currentTheme,
-      to: theme, 
-      timestamp: new Date().toLocaleTimeString() 
-    });
-    log.debug('执行状态更新');
     set({ theme });
     // 异步保存到 TauriStore
     tauriStore.setTheme(theme).catch((err) => log.error('保存主题失败', err));
