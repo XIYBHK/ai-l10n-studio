@@ -90,6 +90,7 @@ export const COMMANDS = {
   // 系统相关
   SYSTEM_GET_LOG_DIRECTORY: 'get_log_directory_path',
   SYSTEM_OPEN_LOG_DIRECTORY: 'open_log_directory',
+  SYSTEM_GET_NATIVE_THEME: 'get_native_system_theme',
 } as const;
 
 // ========================================
@@ -605,6 +606,16 @@ export const systemCommands = {
   async openLogDirectory() {
     return invoke<void>(COMMANDS.SYSTEM_OPEN_LOG_DIRECTORY, undefined, {
       errorMessage: '打开日志目录失败',
+    });
+  },
+
+  /**
+   * 获取系统主题（原生API）
+   * 直接从操作系统获取主题设置，避免webview环境的检测问题
+   */
+  async getNativeSystemTheme() {
+    return invoke<string>(COMMANDS.SYSTEM_GET_NATIVE_THEME, undefined, {
+      errorMessage: '获取系统主题失败',
     });
   },
 };

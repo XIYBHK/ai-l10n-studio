@@ -78,6 +78,7 @@ fn main() {
             // 系统相关命令
             get_log_directory_path,
             open_log_directory,
+            get_native_system_theme,
             // Phase 9: 后端国际化增强
             utils::i18n::get_system_locale,
             utils::i18n::get_available_languages,
