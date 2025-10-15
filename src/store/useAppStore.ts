@@ -28,6 +28,9 @@ interface AppState {
   // 主题和语言（持久化）
   theme: ThemeMode;
   language: Language;
+  
+  // 🏗️ 系统主题状态（全局管理，参考 clash-verge-rev）
+  systemTheme: 'light' | 'dark';
 
   // 累计统计（持久化）
   cumulativeStats: TranslationStats;
@@ -48,6 +51,9 @@ interface AppState {
   // 主题和语言
   setTheme: (theme: ThemeMode) => void;
   setLanguage: (language: Language) => void;
+  
+  // 🏗️ 系统主题管理（全局单例）
+  setSystemTheme: (systemTheme: 'light' | 'dark') => void;
 
   // 累计统计
   updateCumulativeStats: (stats: TranslationStats) => void;
@@ -70,6 +76,11 @@ export const useAppStore = create<AppState>()((set, get) => ({
   config: null,
   theme: 'system', // Phase 9: 默认跟随系统
   language: 'zh-CN',
+  
+  // 🏗️ 系统主题状态（运行时检测，不持久化）
+  systemTheme: (typeof window !== 'undefined' && window.matchMedia 
+    ? (window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light')
+    : 'light') as 'light' | 'dark',
   cumulativeStats: {
     total: 0,
     tm_hits: 0,
@@ -165,6 +176,19 @@ export const useAppStore = create<AppState>()((set, get) => ({
     tauriStore
       .setLanguage(language)
       .catch((err) => console.error('[useAppStore] 保存语言失败:', err));
+  },
+
+  // 🏗️ 系统主题管理（全局单例，不持久化）
+  setSystemTheme: (systemTheme) => {
+    const current = get().systemTheme;
+    if (current === systemTheme) {
+      log.debug('跳过重复系统主题设置', { systemTheme, reason: '系统主题相同' });
+      return;
+    }
+    
+    log.debug('更新全局系统主题', { from: current, to: systemTheme });
+    set({ systemTheme });
+    // 🔄 系统主题不需要持久化到TauriStore，每次启动时重新检测
   },
 
   // 累计统计 (持久化到 TauriStore)

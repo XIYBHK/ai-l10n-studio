@@ -44,6 +44,58 @@ function logThemeChange(from: AppliedTheme, to: AppliedTheme, themeMode: ThemeMo
 }
 
 /**
+ * 🏗️ 全局系统主题管理器初始化（参考 clash-verge-rev）
+ * 在应用启动时调用，确保全局状态正确初始化
+ */
+export function initializeGlobalSystemThemeManager() {
+  // 🏗️ 使用项目标准的防重复初始化模式
+  if (systemThemeListenerInitialized) {
+    return;
+  }
+  
+  systemThemeListenerInitialized = true;
+  
+  if (typeof window !== 'undefined' && window.matchMedia) {
+    const mediaQuery = window.matchMedia('(prefers-color-scheme: dark)');
+    let lastSystemTheme: AppliedTheme = mediaQuery.matches ? 'dark' : 'light';
+    
+    // 🏗️ 全局系统主题变化处理器
+    const handleSystemThemeChange = () => {
+      const newSystemTheme = mediaQuery.matches ? 'dark' : 'light';
+      
+      if (lastSystemTheme !== newSystemTheme) {
+        const log = createModuleLogger('SystemThemeManager');
+        log.debug('全局系统主题变化', { 
+          systemIsDark: mediaQuery.matches,
+          from: lastSystemTheme,
+          to: newSystemTheme,
+          timestamp: new Date().toLocaleTimeString()
+        });
+        lastSystemTheme = newSystemTheme;
+
+        // 🚀 通过自定义事件通知所有 useTheme 实例
+        window.dispatchEvent(new CustomEvent('system-theme-change', { 
+          detail: { 
+            theme: newSystemTheme,
+            timestamp: Date.now()
+          } 
+        }));
+      }
+    };
+
+    // 🚀 立即执行一次，确保当前状态同步
+    handleSystemThemeChange();
+    
+    mediaQuery.addEventListener('change', handleSystemThemeChange);
+    systemThemeCleanup = () => {
+      mediaQuery.removeEventListener('change', handleSystemThemeChange);
+      systemThemeListenerInitialized = false;
+      systemThemeCleanup = null;
+    };
+  }
+}
+
+/**
  * 🏗️ 清理全局系统主题监听器
  * 用于应用卸载时清理资源
  */
@@ -83,6 +135,10 @@ const log = createModuleLogger('useTheme');
 export const useTheme = () => {
   const themeMode = useAppStore((state: any) => state.theme);
   const setThemeMode = useAppStore((state: any) => state.setTheme);
+  
+  // 🏗️ 使用全局systemTheme状态（参考 clash-verge-rev）
+  const systemTheme = useAppStore((state: any) => state.systemTheme);
+  const setSystemTheme = useAppStore((state: any) => state.setSystemTheme);
 
   // Phase 9: 智能初始主题推断（避免闪烁）
   // 1. 如果用户选择了 light/dark，直接使用
@@ -103,25 +159,8 @@ export const useTheme = () => {
   // 当前实际应用的主题（解析 system 为 light/dark）
   const [appliedTheme, setAppliedTheme] = useState<AppliedTheme>(getInitialTheme);
 
-  // 🔄 实时系统主题检测状态（立即同步检测）
-  const [systemTheme, setSystemTheme] = useState<AppliedTheme>(() => {
-    if (typeof window !== 'undefined' && window.matchMedia) {
-      const isDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
-      const detectedTheme = isDark ? 'dark' : 'light';
-      
-      // 🔍 调试：记录系统主题初始检测
-      log.debug('系统主题初始检测', { 
-        isDark, 
-        detectedTheme,
-        mediaQuery: '(prefers-color-scheme: dark)'
-      });
-      
-      return detectedTheme;
-    }
-    
-    log.warn('降级：无法检测系统主题，使用light');
-    return 'light';
-  });
+  // 🏗️ 系统主题状态由全局useAppStore管理（参考 clash-verge-rev）
+  // 不再需要局部useState，避免多实例重复处理
 
   // 🔄 统一主题状态管理：根据模式计算实际主题
   const computedAppliedTheme = useMemo((): AppliedTheme => {
@@ -145,81 +184,32 @@ export const useTheme = () => {
     }
   }, [computedAppliedTheme, appliedTheme, themeMode]); // 🔄 包含themeMode依赖
 
-  // 🏗️ 系统主题监听：使用项目标准的防重复框架模式（参考 StatsManagerV2）
+  // 🏗️ 初始化全局系统主题管理器（参考 clash-verge-rev）
   useEffect(() => {
-    if (typeof window !== 'undefined' && window.matchMedia) {
+    // 🏗️ 确保全局管理器已初始化
+    initializeGlobalSystemThemeManager();
+    
+    // 🏗️ 监听自定义事件，更新全局systemTheme状态
+    const handleCustomThemeEvent = (event: CustomEvent) => {
+      const newTheme = event.detail.theme;
+      const timestamp = event.detail.timestamp;
       
-      // 🏗️ 使用项目标准的防重复初始化框架模式
-      if (!systemThemeListenerInitialized) {
-        systemThemeListenerInitialized = true;
-        
-        const mediaQuery = window.matchMedia('(prefers-color-scheme: dark)');
-        let lastSystemTheme: AppliedTheme = mediaQuery.matches ? 'dark' : 'light';
+      log.debug('接收系统主题事件', { 
+        newTheme, 
+        timestamp, 
+        currentSystemTheme: systemTheme 
+      });
+      
+      // 🏗️ 直接更新全局状态，内置重复检测逻辑
+      setSystemTheme(newTheme);
+    };
 
-        // 🏗️ 全局系统主题变化处理器
-        const handleSystemThemeChange = () => {
-          const newSystemTheme = mediaQuery.matches ? 'dark' : 'light';
-          
-          // 只在真正变化时记录日志和发送事件
-          if (lastSystemTheme !== newSystemTheme) {
-            log.debug('系统主题变化', { 
-              systemIsDark: mediaQuery.matches,
-              from: lastSystemTheme,
-              to: newSystemTheme,
-              timestamp: new Date().toLocaleTimeString()
-            });
-            lastSystemTheme = newSystemTheme;
-
-            // 🚀 通过自定义事件通知所有 useTheme 实例
-            window.dispatchEvent(new CustomEvent('system-theme-change', { 
-              detail: { 
-                theme: newSystemTheme,
-                timestamp: Date.now() // 添加时间戳用于调试
-              } 
-            }));
-          }
-        };
-
-        // 🚀 立即执行一次，确保当前状态同步
-        handleSystemThemeChange();
-
-        mediaQuery.addEventListener('change', handleSystemThemeChange);
-        systemThemeCleanup = () => {
-          mediaQuery.removeEventListener('change', handleSystemThemeChange);
-          systemThemeListenerInitialized = false;
-          systemThemeCleanup = null;
-        };
-
-        log.debug('初始化系统主题监听器', { theme: lastSystemTheme });
-      }
-
-      // 🔄 监听自定义事件，更新当前实例的状态
-      const handleCustomThemeEvent = (event: CustomEvent) => {
-        const newTheme = event.detail.theme;
-        const timestamp = event.detail.timestamp;
-        
-        log.debug('接收系统主题事件', { 
-          newTheme, 
-          timestamp, 
-          currentSystemTheme: systemTheme 
-        });
-        
-        setSystemTheme(currentTheme => {
-          if (currentTheme !== newTheme) {
-            log.debug('更新systemTheme状态', { from: currentTheme, to: newTheme });
-            return newTheme;
-          }
-          return currentTheme;
-        });
-      };
-
+    if (typeof window !== 'undefined') {
       window.addEventListener('system-theme-change', handleCustomThemeEvent as EventListener);
       
       return () => {
         window.removeEventListener('system-theme-change', handleCustomThemeEvent as EventListener);
       };
-    } else {
-      log.warn('降级：无法监听系统主题变化');
     }
   }, []); // 只在组件挂载时执行一次
 
