@@ -335,8 +335,8 @@ function App() {
       return;
     }
 
-    // 检查是否有启用的AI配置
-    if (!active || !active.apiKey) {
+    // ✅ 统一检查：是否有启用的AI配置
+    if (!active) {
       // 静默打开设置，避免阻塞弹窗
       setSettingsVisible(true);
       return;
@@ -432,7 +432,8 @@ function App() {
     entriesToTranslate: POEntry[],
     sourceType: 'all' | 'selected' = 'all'
   ) => {
-    if (!active || !active.apiKey) {
+    // ✅ 统一检查：是否有启用的AI配置
+    if (!active) {
       message.warning('请先设置并启用AI配置');
       setSettingsVisible(true);
       return false;
@@ -607,8 +608,8 @@ function App() {
 
   // Phase 7: 精翻选中的条目（Contextual Refine）
   const handleContextualRefine = async (indices: number[]) => {
-    // 检查是否有启用的AI配置
-    if (!active || !active.apiKey) {
+    // ✅ 统一检查：是否有启用的AI配置
+    if (!active) {
       message.warning('请先在设置中配置并启用 AI 服务！');
       setSettingsVisible(true);
       return;
@@ -729,8 +730,7 @@ function App() {
             onTranslateAll={translateAll}
             onSettings={handleSettings}
             onDevTools={handleDevTools}
-            apiKey={active?.apiKey || ''}
-            onApiKeyChange={() => {}} // API Key 现在由配置管理，不再支持直接修改
+            // ⛔ 移除: apiKey 和 onApiKeyChange (MenuBar内部使用useAppData获取)
             isTranslating={isTranslating}
             hasEntries={entries.length > 0}
             isDarkMode={isDark}
@@ -866,7 +866,7 @@ function App() {
                   entry={currentEntry}
                   onEntryUpdate={updateEntry}
                   aiTranslation={currentIndex >= 0 ? aiTranslations.get(currentIndex) : undefined}
-                  apiKey={active?.apiKey || ''}
+                  // ⛔ 移除: apiKey (EditorPane内部使用useAppData获取)
                 />
               </ErrorBoundary>
             </div>
@@ -898,7 +898,7 @@ function App() {
                   stats={translationStats}
                   isTranslating={isTranslating}
                   onResetStats={handleResetStats}
-                  apiKey={active?.apiKey || ''}
+                  // ⛔ 移除: apiKey (内部组件使用useAppData获取)
                 />
               </ErrorBoundary>
             </Sider>

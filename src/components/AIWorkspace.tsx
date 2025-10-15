@@ -17,13 +17,13 @@ interface AIWorkspaceProps {
   stats: TranslationStats | null; // ❌ 已废弃，改用 sessionStats
   isTranslating: boolean;
   onResetStats?: () => void;
-  apiKey?: string; // 用于生成风格总结
+  // ⛔ 移除: apiKey (TermLibraryManager内部使用useAppData获取)
 }
 
 export const AIWorkspace: React.FC<AIWorkspaceProps> = ({
   isTranslating,
   onResetStats,
-  apiKey,
+  // ⛔ 移除: apiKey 参数
 }) => {
   const [memoryManagerVisible, setMemoryManagerVisible] = useState(false);
   const [termLibraryVisible, setTermLibraryVisible] = useState(false);
@@ -542,7 +542,7 @@ export const AIWorkspace: React.FC<AIWorkspaceProps> = ({
           setTermLibraryVisible(false);
           mutateTermLibrary(); // 关闭后重新加载术语库
         }}
-        apiKey={apiKey || ''}
+        // ⛔ 移除: apiKey (TermLibraryManager内部使用useAppData获取)
       />
     </>
   );

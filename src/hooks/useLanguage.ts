@@ -1,6 +1,6 @@
 import useSWR from 'swr';
 import type { TauriKey } from '../services/swr';
-import type { LanguageInfo } from '../services/api';
+import type { LanguageInfo } from '../types/generated/LanguageInfo';
 
 const SUPPORTED_LANGS_KEY: TauriKey = ['get_supported_langs'];
 

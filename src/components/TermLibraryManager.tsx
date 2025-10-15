@@ -10,6 +10,7 @@ import {
 import { TermEntry } from '../types/termLibrary';
 import { useTermLibrary } from '../hooks/useTermLibrary';
 import { useTheme } from '../hooks/useTheme';
+import { useAppData } from '../providers/AppDataProvider';
 import { createModuleLogger } from '../utils/logger';
 import { termLibraryCommands } from '../services/commands'; // ✅ 迁移到统一命令层
 
@@ -19,7 +20,7 @@ const log = createModuleLogger('TermLibraryManager');
 interface TermLibraryManagerProps {
   visible: boolean;
   onClose: () => void;
-  apiKey: string;
+  // ⛔ 移除: apiKey (使用 useAppData 统一获取)
 }
 
 interface EditingTerm {
@@ -30,8 +31,10 @@ interface EditingTerm {
 export const TermLibraryManager: React.FC<TermLibraryManagerProps> = ({
   visible,
   onClose,
-  apiKey,
+  // ⛔ 移除: apiKey 参数
 }) => {
+  // ✅ 使用统一数据提供者获取AI配置
+  const { activeAIConfig } = useAppData();
   const { termLibrary: library, refresh, mutate } = useTermLibrary({ enabled: visible });
   const [loading, setLoading] = useState(false);
   const [editingKey, setEditingKey] = useState<string>('');
@@ -98,15 +101,16 @@ export const TermLibraryManager: React.FC<TermLibraryManagerProps> = ({
 
   // 生成风格总结
   const handleGenerateStyleSummary = async () => {
-    if (!apiKey) {
-      message.error('请先设置API密钥');
+    // ✅ 统一检查：是否有启用的AI配置
+    if (!activeAIConfig?.apiKey) {
+      message.error('请先设置并启用 AI 配置');
       return;
     }
 
     log.info('开始生成风格总结', { termCount: library?.metadata.total_terms || 0 });
     setLoading(true);
     try {
-      const summary = await termLibraryCommands.generateStyleSummary(apiKey);
+      const summary = await termLibraryCommands.generateStyleSummary(activeAIConfig.apiKey);
       const summaryText = typeof summary === 'string' ? summary : String(summary);
       log.info('风格总结生成成功', { summary: summaryText.substring(0, 50) + '...' });
       message.success('风格总结已生成');

@@ -10,6 +10,7 @@ import { ErrorBoundary } from './ErrorBoundary';
 import { createModuleLogger } from '../utils/logger';
 import { eventDispatcher } from '../services/eventDispatcher';
 import { termLibraryCommands } from '../services/commands';
+import { useAppData } from '../providers/AppDataProvider';
 
 const { TextArea } = Input;
 const log = createModuleLogger('EditorPane');
@@ -18,15 +19,18 @@ interface EditorPaneProps {
   entry: POEntry | null;
   onEntryUpdate: (index: number, updates: Partial<POEntry>) => void;
   aiTranslation?: string; // AI原译文，用于术语检测
-  apiKey: string; // 用于生成风格总结
+  // ⛔ 移除: apiKey (使用 useAppData 统一获取)
 }
 
 export const EditorPane: React.FC<EditorPaneProps> = ({
   entry,
   onEntryUpdate,
   aiTranslation,
-  apiKey,
+  // ⛔ 移除: apiKey 参数
 }) => {
+  // ✅ 使用统一数据提供者获取AI配置
+  const { activeAIConfig } = useAppData();
+  
   const [translation, setTranslation] = useState('');
   const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
   const [termModalVisible, setTermModalVisible] = useState(false);
@@ -386,9 +390,9 @@ export const EditorPane: React.FC<EditorPaneProps> = ({
                   const shouldUpdate = await termLibraryCommands.shouldUpdateStyleSummary();
                   log.debug('检查是否需要更新风格总结', { shouldUpdate });
 
-                  if (shouldUpdate && apiKey) {
+                  if (shouldUpdate && activeAIConfig?.apiKey) {
                     message.info('正在生成风格总结...', 1);
-                    await termLibraryCommands.generateStyleSummary(apiKey);
+                    await termLibraryCommands.generateStyleSummary(activeAIConfig.apiKey);
                     message.success('术语已添加，风格总结已更新');
                   } else {
                     message.success('术语已添加到术语库');
