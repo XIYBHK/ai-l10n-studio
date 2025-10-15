@@ -398,3 +398,134 @@ do_async_work().await; // 编译错误：Send bound not satisfied
    - `ConfigDraft::global()` 全局唯一实例
    - 首次调用时从磁盘加载
    - 后续调用返回缓存实例
+
+---
+
+## 🆕 系统主题检测契约 (2025-10-15)
+
+### 原生主题检测API
+
+**命令**: `get_native_system_theme`
+
+```rust
+// Rust 后端
+#[tauri::command]
+pub fn get_native_system_theme() -> Result<String, String>
+```
+
+```typescript
+// TypeScript 前端
+systemCommands.getNativeSystemTheme(): Promise<string>
+```
+
+**返回值**：
+- `"dark"` - 系统使用深色主题
+- `"light"` - 系统使用浅色主题
+- 错误时抛出异常
+
+### 跨平台实现契约
+
+**Windows 实现**：
+```rust
+// 查询注册表
+reg query "HKCU\Software\Microsoft\Windows\CurrentVersion\Themes\Personalize" /v "AppsUseLightTheme"
+// 返回值：0 = 深色，1 = 浅色
+```
+
+**macOS 实现**：
+```rust
+// 查询系统默认设置
+defaults read -g AppleInterfaceStyle
+// 返回值：存在且包含"Dark" = 深色，否则 = 浅色
+```
+
+**Linux 实现**：
+```rust
+// 查询 GNOME 主题设置
+gsettings get org.gnome.desktop.interface gtk-theme
+// 返回值：包含"dark" = 深色，否则 = 浅色
+```
+
+### 混合检测策略数据流
+
+```typescript
+interface ThemeDetectionResult {
+  // 检测方法
+  detectionMethod: 'native-api' | 'fallback-media-query' | 'media-query-only';
+  
+  // 检测结果
+  nativeApiResult?: string;        // 原生API结果
+  nativeApiAvailable: boolean;     // 原生API是否可用
+  mediaQueryResult: 'dark' | 'light';  // 媒体查询结果
+  
+  // 最终决定
+  newSystemTheme: 'dark' | 'light';
+  
+  // 调试信息
+  mediaQueryMatches: boolean;      // matchMedia 原始结果
+  directCheck: boolean;           // 直接检查结果
+  lightCheck: boolean;            // 浅色主题检查
+  computedColorScheme?: string;   // CSS computedStyle
+  
+  // 元数据
+  timestamp: string;
+  source: string;
+  forceUpdate: boolean;
+}
+```
+
+### 数据一致性保证
+
+**检测优先级**：
+1. 原生API结果（最高优先级）
+2. 媒体查询备用（当原生API失败时）
+3. 默认值 `light`（所有方法都失败时）
+
+**不一致处理**：
+```typescript
+// 当两种方法结果不同时的处理
+if (nativeResult && mediaQueryResult && nativeResult !== mediaQueryResult) {
+  log.warn('⚠️ 系统主题检测结果不一致！', {
+    nativeApi: nativeResult,
+    mediaQuery: mediaQueryResult,
+    using: newSystemTheme, // 使用原生API结果
+    userNote: '这解释了为什么webview检测不准确'
+  });
+}
+```
+
+### 全局状态管理契约
+
+**单一数据源**：
+```typescript
+// useAppStore.ts
+interface AppState {
+  systemTheme: 'light' | 'dark'; // 🏗️ 系统主题状态（运行时检测，不持久化）
+  setSystemTheme: (systemTheme: 'light' | 'dark') => void;
+}
+```
+
+**状态更新流程**：
+```
+原生API检测 → SystemThemeManager → useAppStore.setSystemTheme → 全局状态更新 → useTheme消费
+```
+
+**防重复更新**：
+```typescript
+setSystemTheme: (systemTheme) => {
+  const currentSystemTheme = get().systemTheme;
+  if (currentSystemTheme === systemTheme) {
+    // 跳过相同值的更新
+    return;
+  }
+  set({ systemTheme });
+},
+```
+
+### 技术约束
+
+1. **不持久化**：`systemTheme` 是运行时状态，每次启动都重新检测
+2. **全局单例**：`SystemThemeManager` 确保整个应用只有一个监听器
+3. **原生优先**：始终优先使用原生API结果，媒体查询仅作备用
+4. **错误容忍**：任何检测方法失败都不应导致应用崩溃
+5. **调试友好**：提供详细的检测过程日志，便于问题诊断

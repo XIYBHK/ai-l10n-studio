@@ -36,7 +36,7 @@ const result = await translatorCommands.translateBatch(entries, targetLang);
 - `dialogCommands` - 系统对话框
 - `i18nCommands` - 国际化（语言检测/系统语言）
 - `logCommands` - 日志管理
-- `systemCommands` - 系统信息
+- `systemCommands` - 系统信息 + 原生主题检测
 
 ---
 
@@ -75,6 +75,7 @@ const result = await translatorCommands.translateBatch(entries, targetLang);
 - `statsCommands` - 统计聚合（Token/去重/性能指标）
 - `i18nCommands` - 语言检测（10 语言，自动识别）
 - `logCommands` - 结构化日志（开发/生产模式）
+- `systemCommands` - 系统信息 + **原生主题检测**（解决Tauri webview限制）
 
 ### 统一数据提供者 (2025-10)
 
@@ -298,6 +299,82 @@ const costDisplay = cost < 0.01 ? `${(cost * 100).toFixed(2)}¢` : `$${cost.toFi
 
 - 代码质量改进: `docs/CHANGELOG.md` (2025-10-13 质量提升)
 - 完整参考: `CLAUDE.md` §Architecture Overview
+
+---
+
+### 🆕 系统主题检测 (2025-10-15)
+
+**位置**: `systemCommands.getNativeSystemTheme`
+
+**技术突破**：解决Tauri webview环境中 `window.matchMedia` 无法准确检测系统主题的问题
+
+#### 混合检测策略
+
+```typescript
+// 前端使用示例
+import { systemCommands } from '@/services/commands';
+
+// 检测系统主题
+const systemTheme = await systemCommands.getNativeSystemTheme();
+console.log('系统主题:', systemTheme); // 'dark' | 'light'
+```
+
+**后端实现**：
+
+- **Windows**: 直接查询注册表 `HKCU\Software\Microsoft\Windows\CurrentVersion\Themes\Personalize\AppsUseLightTheme`
+- **macOS**: 使用 `defaults read -g AppleInterfaceStyle`
+- **Linux**: 查询 GNOME `gsettings org.gnome.desktop.interface gtk-theme`
+
+**优势对比**：
+
+| 检测方式 | 准确性 | 性能 | 跨平台 | 依赖 |
+|---------|-------|------|-------|------|
+| `window.matchMedia` | ❌ 不准确（webview限制） | ✅ 快 | ✅ 是 | 无 |
+| 原生API查询 | ✅ 100%准确 | ✅ 快 | ✅ 是 | OS命令 |
+
+#### 集成到主题系统
+
+```typescript
+// useTheme.ts 中的混合检测
+const handleSystemThemeChange = async () => {
+  let newSystemTheme: AppliedTheme = 'light';
+  let detectionMethod = 'unknown';
+  
+  // 🔧 方法1：尝试使用原生API（优先级最高）
+  try {
+    const nativeTheme = await systemCommands.getNativeSystemTheme();
+    if (nativeTheme === 'dark' || nativeTheme === 'light') {
+      newSystemTheme = nativeTheme as AppliedTheme;
+      detectionMethod = 'native-api';
+    }
+  } catch (error) {
+    // 原生API失败，继续使用媒体查询
+    detectionMethod = 'fallback-media-query';
+  }
+  
+  // 🔧 方法2：备用媒体查询检测
+  if (detectionMethod === 'fallback-media-query') {
+    const mediaQueryMatches = mediaQuery.matches;
+    newSystemTheme = mediaQueryMatches ? 'dark' : 'light';
+  }
+  
+  // 🚨 检测不一致警告
+  if (nativeResult && mediaQueryResult && nativeResult !== mediaQueryResult) {
+    log.warn('⚠️  系统主题检测结果不一致！', {
+      nativeApi: nativeResult,
+      mediaQuery: mediaQueryResult,
+      using: newSystemTheme,
+    });
+  }
+};
+```
+
+**技术价值**：
+
+- ✅ **解决webview限制**：直接从OS获取真实主题设置
+- ✅ **提供备用方案**：原生API失败时gracefully降级到媒体查询
+- ✅ **调试友好**：详细日志对比不同检测方法的结果
+- ✅ **为社区贡献**：为其他Tauri项目提供参考实现
 
 ---
 
