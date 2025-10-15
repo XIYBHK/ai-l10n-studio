@@ -44,19 +44,18 @@ const result = await translatorCommands.translateBatch(entries, targetLang);
 
 **位置**: `src/services/api.ts`
 
-**迁移状态** (2025-10-13完成):
+**✅ 迁移完成状态** (2025-10-15):
 
 已删除模块:
-
 - `termLibraryApi`, `translationMemoryApi`, `logApi`, `promptLogApi`
 - `aiConfigApi`, `systemPromptApi`, `aiModelApi`
-- `poFileApi`, `dialogApi`, `translatorApi`, `languageApi`
+- `poFileApi`, `dialogApi`, `translatorApi`, `languageApi` 
+- `configApi`, `fileFormatApi`, `systemApi` - **已完全移除**
 
-保留模块（尚未迁移）:
-
-- `configApi`, `fileFormatApi`, `systemApi`
-
-所有前端组件已迁移到命令层，旧 API 实现已完全移除。
+**🎯 迁移成果**:
+- ✅ 所有前端组件已迁移到统一命令层
+- ✅ 所有旧 API 实现已完全移除
+- ✅ 无遗留代码，无技术债务
 
 ---
 
@@ -165,11 +164,11 @@ useTauriEventBridgeEnhanced([
 - `useChannelTranslation` - Channel API 批量翻译（实时进度，高性能）
 - `useDefaultTauriEventBridge` - 增强事件监听（集成在 AppDataProvider）
 
-**特殊场景**:
+**其他Hooks**:
 
-- `useConfig` - 已被 `useAppData` 部分替代，仍可用于特殊场景
 - `useLanguage` - 语言状态与检测
-- `useTermLibrary` / `useTranslationMemory` - 已被 `useAppData` 替代
+- ~~`useConfig`~~ - **已完全替代** → 使用 `useAppData`
+- ~~`useTermLibrary` / `useTranslationMemory`~~ - **已完全替代** → 使用 `useAppData`
 
 ### 类型安全事件系统
 
@@ -201,10 +200,10 @@ eventDispatcher.getEventHistory();
 自动缓存、后台重验证、乐观更新，现已通过 `AppDataProvider` 统一管理：
 
 ```typescript
-// 推荐：使用 AppDataProvider
+// 推荐：使用 AppDataProvider（统一数据管理）
 const { config, refreshAll } = useAppData();
 
-// 旧方式（仍可用于特殊场景）
+// 直接使用 SWR（特殊场景：需要细粒度控制）
 const { data, error, isLoading } = useSWR('config', configCommands.get);
 ```
 

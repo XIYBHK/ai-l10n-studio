@@ -293,9 +293,9 @@ pub struct AIConfig {
 
 ```
 用户操作 (UI Component)
-   ↓ 触发 API 调用
-API 层 (api.ts)
-   ↓ 类型检查的 invoke 调用
+   ↓ 触发命令调用
+统一命令层 (commands.ts)
+   ↓ 类型安全的 invoke 调用
 Tauri IPC (Serde 序列化)
    ↓ JSON 传输
 Rust Commands
@@ -304,7 +304,7 @@ Rust Services (业务逻辑)
    ↓ 返回 Rust Struct
 Serde 序列化 → JSON
    ↓ IPC 传输
-API 层自动反序列化
+命令层自动反序列化
    ↓ 类型安全的 TypeScript 对象
 组件使用 (全类型推断)
 ```
