@@ -73,16 +73,7 @@ function App() {
 
   const { themeConfig, algorithm, toggleTheme, isDark, colors, appliedTheme, themeMode } = useTheme();
   
-  // 🔍 临时调试：App.tsx 接收到的主题值
-  useEffect(() => {
-    log.debug('🎨 App.tsx 接收主题状态', { 
-      themeMode,
-      appliedTheme, 
-      isDark,
-      dataTheme: isDark ? 'dark' : 'light',
-      timestamp: new Date().toLocaleTimeString()
-    });
-  }, [themeMode, appliedTheme, isDark]);
+  // 主题状态管理已稳定，移除调试日志
 
   // 使用 ref 防止重复检查AI配置
   const hasCheckedAIConfig = useRef(false);

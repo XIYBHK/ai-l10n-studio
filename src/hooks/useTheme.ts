@@ -65,24 +65,37 @@ export function initializeGlobalSystemThemeManager(setSystemTheme: (theme: 'ligh
     
     // 🏗️ 全局系统主题变化处理器（直接更新全局状态）
     const handleSystemThemeChange = (forceUpdate = false) => {
-      const newSystemTheme = mediaQuery.matches ? 'dark' : 'light';
+      const mediaQueryMatches = mediaQuery.matches;
+      const newSystemTheme = mediaQueryMatches ? 'dark' : 'light';
       
       if (lastSystemTheme !== newSystemTheme || forceUpdate) {
         const log = createModuleLogger('SystemThemeManager');
+        
+        // 🔍 详细调试：显示所有检测信息
+        const debugInfo = {
+          mediaQueryMatches,
+          mediaQueryMedia: mediaQuery.media,
+          newSystemTheme,
+          from: lastSystemTheme,
+          to: newSystemTheme,
+          forceUpdate,
+          timestamp: new Date().toLocaleTimeString(),
+          // 🔍 额外检测：直接查询当前媒体查询状态
+          directCheck: window.matchMedia('(prefers-color-scheme: dark)').matches,
+          // 🔍 检查是否有其他媒体查询干扰
+          lightCheck: window.matchMedia('(prefers-color-scheme: light)').matches,
+          // 🔍 检查CSS计算样式（备用检测方法）
+          computedColorScheme: getComputedStyle(document.documentElement).colorScheme,
+          // 🔍 用户实际预期（请在控制台确认）
+          userNote: '请确认您的系统主题设置：Windows设置→个性化→颜色→选择模式',
+        };
+        
         if (forceUpdate) {
-          log.debug('🚀 初始化系统主题', { 
-            systemIsDark: mediaQuery.matches,
-            initialTheme: newSystemTheme,
-            timestamp: new Date().toLocaleTimeString()
-          });
+          log.debug('🚀 初始化系统主题（详细调试）', debugInfo);
         } else {
-          log.debug('全局系统主题变化', { 
-            systemIsDark: mediaQuery.matches,
-            from: lastSystemTheme,
-            to: newSystemTheme,
-            timestamp: new Date().toLocaleTimeString()
-          });
+          log.debug('全局系统主题变化（详细调试）', debugInfo);
         }
+        
         lastSystemTheme = newSystemTheme;
 
         // 🏗️ 直接更新全局状态（不再发送事件，避免多实例重复处理）
