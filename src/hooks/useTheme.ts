@@ -153,19 +153,7 @@ export const useTheme = () => {
 
   // 🏗️ 直接计算实际主题（无状态延迟，参考 clash-verge-rev）
   const appliedTheme = useMemo((): AppliedTheme => {
-    const result = themeMode === 'system' ? systemTheme : (themeMode as AppliedTheme);
-    
-    // 🔍 临时调试：确认appliedTheme计算是否正确
-    if (themeMode === 'system') {
-      log.debug('🎯 跟随系统模式 appliedTheme 计算', { 
-        themeMode, 
-        systemTheme, 
-        appliedTheme: result,
-        timestamp: new Date().toLocaleTimeString()
-      });
-    }
-    
-    return result;
+    return themeMode === 'system' ? systemTheme : (themeMode as AppliedTheme);
   }, [themeMode, systemTheme]);
 
   // 🏗️ 组件初始化：确保全局管理器已初始化（参考 clash-verge-rev）
@@ -180,12 +168,6 @@ export const useTheme = () => {
   // 2. 同步 Tauri 窗口主题（用于原生标题栏）
   useEffect(() => {
     const appWindow = getCurrentWindow();
-
-    log.debug('🪟 设置 Tauri 窗口主题', { 
-      appliedTheme,
-      timestamp: new Date().toLocaleTimeString()
-    });
-
     appWindow.setTheme(appliedTheme).catch((err) => {
       log.error('❌ 设置 Tauri 窗口主题失败', err);
     });

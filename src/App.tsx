@@ -71,7 +71,18 @@ function App() {
   const [sourceLanguage, setSourceLanguage] = useState<string>('');
   const [targetLanguage, setTargetLanguage] = useState<string>('zh-CN'); // 默认目标语言：简体中文
 
-  const { themeConfig, algorithm, toggleTheme, isDark, colors } = useTheme();
+  const { themeConfig, algorithm, toggleTheme, isDark, colors, appliedTheme, themeMode } = useTheme();
+  
+  // 🔍 临时调试：App.tsx 接收到的主题值
+  useEffect(() => {
+    log.debug('🎨 App.tsx 接收主题状态', { 
+      themeMode,
+      appliedTheme, 
+      isDark,
+      dataTheme: isDark ? 'dark' : 'light',
+      timestamp: new Date().toLocaleTimeString()
+    });
+  }, [themeMode, appliedTheme, isDark]);
 
   // 使用 ref 防止重复检查AI配置
   const hasCheckedAIConfig = useRef(false);
