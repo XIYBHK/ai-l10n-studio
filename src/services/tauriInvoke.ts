@@ -10,6 +10,55 @@ import { createModuleLogger } from '../utils/logger';
 
 const log = createModuleLogger('TauriInvoke');
 
+/**
+ * 🔒 敏感信息掩码工具
+ * 
+ * 防止API密钥、密码等敏感信息出现在日志中
+ */
+function maskSensitiveData(data: any): any {
+  if (!data || typeof data !== 'object') {
+    return data;
+  }
+
+  if (Array.isArray(data)) {
+    return data.map(item => maskSensitiveData(item));
+  }
+
+  const sensitiveKeys = [
+    'api_key', 'apikey', 'password', 'token', 'secret', 'key',
+    'authorization', 'bearer', 'credentials', 'auth'
+  ];
+
+  const masked = { ...data };
+  
+  for (const key in masked) {
+    const lowerKey = key.toLowerCase();
+    
+    // 检查是否为敏感字段
+    if (sensitiveKeys.some(sensitiveKey => lowerKey.includes(sensitiveKey))) {
+      const value = masked[key];
+      if (typeof value === 'string' && value.length > 0) {
+        // 掩码策略：sk-***...***末尾3位
+        if (value.startsWith('sk-')) {
+          const end = value.length >= 8 ? value.slice(-4) : '';
+          masked[key] = `sk-***...***${end}`;
+        } else if (value.length <= 8) {
+          masked[key] = '***';
+        } else {
+          const start = value.substring(0, 3);
+          const end = value.substring(value.length - 3);
+          masked[key] = `${start}***...***${end}`;
+        }
+      }
+    } else if (typeof masked[key] === 'object') {
+      // 递归处理嵌套对象
+      masked[key] = maskSensitiveData(masked[key]);
+    }
+  }
+
+  return masked;
+}
+
 interface InvokeOptions {
   /** 是否自动转换参数为 snake_case（默认true） */
   autoConvertParams?: boolean;
@@ -43,27 +92,28 @@ export async function invoke<T>(
     
     if (!silent && JSON.stringify(args) !== JSON.stringify(processedArgs)) {
       log.debug(`🔄 参数转换: ${command}`, { 
-        original: args, 
-        converted: processedArgs 
+        original: maskSensitiveData(args), 
+        converted: maskSensitiveData(processedArgs) 
       });
     }
   }
 
   if (!silent) {
-    log.debug(`📤 Tauri调用: ${command}`, processedArgs);
+    log.debug(`📤 Tauri调用: ${command}`, maskSensitiveData(processedArgs));
   }
 
   try {
     const result = await tauriInvoke<T>(command, processedArgs as Record<string, any>);
     
     if (!silent) {
-      log.debug(`📥 Tauri响应: ${command}`, result);
+      // 🔒 安全：掩码敏感信息后再记录日志
+      log.debug(`📥 Tauri响应: ${command}`, maskSensitiveData(result));
     }
     
     return result;
   } catch (error) {
     log.error(`❌ Tauri调用失败: ${command}`, { 
-      args: processedArgs, 
+      args: maskSensitiveData(processedArgs), 
       error 
     });
     throw error;

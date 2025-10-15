@@ -35,7 +35,7 @@ describe('useTheme', () => {
     Object.defineProperty(window, 'matchMedia', {
       writable: true,
       value: vi.fn().mockImplementation(query => {
-        const isDarkMode = query === '(prefers-color-scheme: dark)';
+        // const isDarkMode = query === '(prefers-color-scheme: dark)';
         return {
           matches: false, // 默认系统为浅色主题
           media: query,

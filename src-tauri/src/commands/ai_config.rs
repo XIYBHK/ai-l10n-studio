@@ -35,10 +35,19 @@ pub async fn get_active_ai_config() -> Result<Option<AIConfig>, String> {
 #[tauri::command]
 pub async fn add_ai_config(config: AIConfig) -> Result<(), String> {
     crate::app_log!("🔄 [AI配置] 添加新配置，提供商: {:?}", config.provider);
-    crate::app_log!("📋 [AI配置] 配置详情: URL={}, Model={}, API Key={}...", 
+    // 🔒 安全：掩码API密钥显示
+    let masked_api_key = if config.api_key.starts_with("sk-") && config.api_key.len() > 8 {
+        format!("sk-***...***{}", &config.api_key[config.api_key.len()-4..])
+    } else if config.api_key.len() > 8 {
+        format!("{}***...***{}", &config.api_key[..3], &config.api_key[config.api_key.len()-3..])
+    } else {
+        "***".to_string()
+    };
+    
+    crate::app_log!("📋 [AI配置] 配置详情: URL={}, Model={}, API Key={}", 
         config.base_url.as_deref().unwrap_or("默认"),
         config.model.as_deref().unwrap_or("默认"),
-        config.api_key.chars().take(8).collect::<String>()
+        masked_api_key
     );
     
     let draft = ConfigDraft::global().await;

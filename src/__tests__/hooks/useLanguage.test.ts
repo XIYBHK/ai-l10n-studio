@@ -1,4 +1,4 @@
-import { renderHook, act } from '@testing-library/react';
+import { /* renderHook, */ act } from '@testing-library/react';
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import i18n from '@/i18n/config';
 
