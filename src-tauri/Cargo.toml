@@ -39,7 +39,7 @@ lazy_static = "1.4"
 tracing = "0.1"
 tracing-subscriber = { version = "0.3", features = ["env-filter", "fmt", "time"] }
 # Phase 5: 语言检测
-whatlang = "0.16"
+whatlang = "0.18"
 # Phase 6: 系统语言检测
 sys-locale = "0.3"
 # Phase 9: 工程化增强
