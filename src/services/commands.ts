@@ -234,31 +234,31 @@ export const aiConfigCommands = {
  * AI 模型命令
  */
 export const aiModelCommands = {
-  async getProviderModels(provider: string) {
+  async getProviderModels(providerId: string) {
     return invoke<ModelInfo[]>(
       COMMANDS.AI_MODEL_GET_PROVIDER_MODELS,
-      { provider },
+      { providerId }, // ✅ Tauri 会转换为 provider_id
       {
         errorMessage: '获取模型列表失败',
       }
     );
   },
 
-  async getModelInfo(provider: string, modelId: string) {
+  async getModelInfo(providerId: string, modelId: string) {
     return invoke<ModelInfo | null>(
       COMMANDS.AI_MODEL_GET_INFO,
-      { provider, modelId },
+      { providerId, modelId }, // ✅ Tauri 会转换为 provider_id, model_id
       {
         errorMessage: '获取模型信息失败',
       }
     );
   },
 
-  async estimateCost(provider: string, modelId: string, totalChars: number, cacheHitRate?: number) {
+  async estimateCost(providerId: string, modelId: string, totalChars: number, cacheHitRate?: number) {
     return invoke<number>(
       COMMANDS.AI_MODEL_ESTIMATE_COST,
       {
-        provider,
+        providerId, // ✅ Tauri 会转换为 provider_id
         modelId,
         totalChars,
         cacheHitRate: cacheHitRate ?? null,
@@ -270,7 +270,7 @@ export const aiModelCommands = {
   },
 
   async calculatePreciseCost(
-    provider: string,
+    providerId: string,
     modelId: string,
     inputTokens: number,
     outputTokens: number,
@@ -280,7 +280,7 @@ export const aiModelCommands = {
     return invoke<number>(
       COMMANDS.AI_MODEL_CALCULATE_COST,
       {
-        provider,
+        providerId, // ✅ Tauri 会转换为 provider_id
         modelId,
         inputTokens,
         outputTokens,

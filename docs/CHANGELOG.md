@@ -1,5 +1,45 @@
 # 更新日志
 
+## 2025-10-21 - 修复 AI 模型命令参数名不匹配
+
+### 🐛 关键修复
+
+修复了 `get_provider_models` 等模型命令失败的问题（参数名不匹配导致 Tauri 命令无法调用）。
+
+**问题根源**：
+- 前端传递参数：`{ provider }` 
+- 后端期望参数：`provider_id`
+- Tauri 自动转换：`provider` → `provider`（不匹配后端的 `provider_id`）
+- ✅ 正确转换：`providerId` → `provider_id`
+
+**修复内容** (`src/services/commands.ts`):
+
+```typescript
+// ❌ 之前：参数名错误
+async getProviderModels(provider: string) {
+  return invoke(COMMANDS.AI_MODEL_GET_PROVIDER_MODELS, { provider }, ...);
+}
+
+// ✅ 现在：参数名正确（Tauri 会自动转换为 provider_id）
+async getProviderModels(providerId: string) {
+  return invoke(COMMANDS.AI_MODEL_GET_PROVIDER_MODELS, { providerId }, ...);
+}
+```
+
+**修改的命令**：
+1. `aiModelCommands.getProviderModels()`: `provider` → `providerId`
+2. `aiModelCommands.getModelInfo()`: `provider` → `providerId`
+3. `aiModelCommands.estimateCost()`: `provider` → `providerId`
+4. `aiModelCommands.calculatePreciseCost()`: `provider` → `providerId`
+
+**影响范围**：
+- ✅ 设置界面可正常加载模型列表
+- ✅ 模型信息显示正常
+- ✅ 成本估算功能恢复
+- ✅ AI 配置流程完全恢复
+
+---
+
 ## 2025-10-21 - 修复供应商注册重复错误
 
 ### 🐛 修复问题
