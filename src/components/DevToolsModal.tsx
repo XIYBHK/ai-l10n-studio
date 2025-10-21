@@ -63,6 +63,11 @@ export const DevToolsModal: React.FC<DevToolsModalProps> = ({ visible, onClose }
   const [testRunning, setTestRunning] = useState(false);
   const [testSummary, setTestSummary] = useState<{ passed: number; failed: number } | null>(null);
 
+  // 📜 日志自动滚动 refs
+  const backendLogRef = useRef<any>(null);
+  const promptLogRef = useRef<any>(null);
+  const frontendLogRef = useRef<any>(null);
+
   // 🧪 运行动态供应商测试
   const handleRunTests = async () => {
     setTestRunning(true);
@@ -141,6 +146,28 @@ export const DevToolsModal: React.FC<DevToolsModalProps> = ({ visible, onClose }
       stopPromptLogMonitoring();
     };
   }, [visible]);
+
+  // 📜 自动滚动到底部（显示最新日志）
+  useEffect(() => {
+    if (backendLogRef.current?.resizableTextArea?.textArea) {
+      const textarea = backendLogRef.current.resizableTextArea.textArea;
+      textarea.scrollTop = textarea.scrollHeight;
+    }
+  }, [backendLogText]);
+
+  useEffect(() => {
+    if (promptLogRef.current?.resizableTextArea?.textArea) {
+      const textarea = promptLogRef.current.resizableTextArea.textArea;
+      textarea.scrollTop = textarea.scrollHeight;
+    }
+  }, [promptLogs]);
+
+  useEffect(() => {
+    if (frontendLogRef.current?.resizableTextArea?.textArea) {
+      const textarea = frontendLogRef.current.resizableTextArea.textArea;
+      textarea.scrollTop = textarea.scrollHeight;
+    }
+  }, [frontendLogText]);
 
   // SWR 已处理日志加载与轮询
 
@@ -293,6 +320,7 @@ export const DevToolsModal: React.FC<DevToolsModalProps> = ({ visible, onClose }
                 </Space>
 
                 <TextArea
+                  ref={backendLogRef}
                   value={backendLogText}
                   readOnly
                   rows={20}
@@ -368,6 +396,7 @@ export const DevToolsModal: React.FC<DevToolsModalProps> = ({ visible, onClose }
                 </div>
 
                 <TextArea
+                  ref={frontendLogRef}
                   value={frontendLogText}
                   readOnly
                   rows={20}
@@ -455,6 +484,7 @@ export const DevToolsModal: React.FC<DevToolsModalProps> = ({ visible, onClose }
                 </div>
 
                 <TextArea
+                  ref={promptLogRef}
                   value={promptLogText}
                   readOnly
                   rows={20}
