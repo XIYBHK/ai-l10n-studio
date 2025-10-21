@@ -29,7 +29,6 @@ import {
 } from '../services/logService';
 
 const { TextArea } = Input;
-const log = createModuleLogger('DevToolsModal');
 
 interface DevToolsModalProps {
   visible: boolean;
@@ -409,13 +408,6 @@ export const DevToolsModal: React.FC<DevToolsModalProps> = ({ visible, onClose }
                   <Space>
                     <Button icon={<ClearOutlined />} onClick={handleClearPromptLogs}>
                       清空
-                    </Button>
-                    <Button
-                      icon={<ReloadOutlined />}
-                      onClick={refreshPromptLogs}
-                      loading={promptLoading}
-                    >
-                      刷新
                     </Button>
                     <span style={{ fontSize: '12px', color: '#999' }}>
                       {backendEnabled ? '(每2秒更新)' : '(已暂停)'}
