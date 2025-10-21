@@ -70,7 +70,7 @@ export const DevToolsModal: React.FC<DevToolsModalProps> = ({ visible, onClose }
     setTestSummary(null);
 
     try {
-      log.info('🚀 开始运行动态供应商测试套件...');
+      console.log('🚀 开始运行动态供应商测试套件...');
       const result = await runDynamicProviderTests();
 
       setTestResults(result.results);

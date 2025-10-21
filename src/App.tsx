@@ -34,6 +34,9 @@ const { Sider } = Layout;
 const log = createModuleLogger('App');
 
 function App() {
+  // ✅ 使用 App 提供的 message hook（避免静态方法警告）
+  const { message: msg } = AntApp.useApp();
+
   // 使用新的分离式 store
   const {
     entries,
@@ -104,7 +107,7 @@ function App() {
         colno: event.colno,
         error: event.error,
       });
-      message.error(`应用错误: ${event.message}`, 5);
+      msg.error(`应用错误: ${event.message}`, 5);
       event.preventDefault(); // 阻止默认的错误处理，避免黑屏
     };
 
@@ -113,7 +116,7 @@ function App() {
         reason: event.reason,
         promise: event.promise,
       });
-      message.error(`异步操作失败: ${event.reason}`, 5);
+      msg.error(`异步操作失败: ${event.reason}`, 5);
       event.preventDefault(); // 阻止默认的错误处理
     };
 
@@ -154,7 +157,7 @@ function App() {
         if (configSyncRef.current) {
           await configSyncRef.current.syncFromBackend();
           setConfigSyncIssues([]);
-          message.success('配置已自动同步');
+          msg.success('配置已自动同步');
         }
       } catch (e) {
         log.logError(e, '自动同步配置失败');
@@ -360,13 +363,13 @@ function App() {
   // 保存到原文件
   const saveFile = async () => {
     if (!currentFilePath) {
-      message.warning('没有打开的文件，请使用"另存为"');
+      msg.warning('没有打开的文件，请使用"另存为"');
       return;
     }
 
     try {
       await poFileCommands.save(currentFilePath, entries);
-      message.success('保存成功！');
+      msg.success('保存成功！');
 
       // 触发文件保存事件
       await eventDispatcher.emit('file:saved', {
@@ -376,7 +379,7 @@ function App() {
       log.info('文件保存成功', { filePath: currentFilePath });
     } catch (error) {
       log.logError(error, '保存文件失败');
-      message.error(`保存失败：${error instanceof Error ? error.message : '未知错误'}`);
+      msg.error(`保存失败：${error instanceof Error ? error.message : '未知错误'}`);
 
       await eventDispatcher.emit('file:error', {
         path: currentFilePath,
@@ -393,7 +396,7 @@ function App() {
       if (filePath) {
         await poFileCommands.save(filePath, entries);
         setCurrentFilePath(filePath);
-        message.success('保存成功！');
+        msg.success('保存成功！');
 
         // 触发文件保存事件
         await eventDispatcher.emit('file:saved', {
@@ -404,7 +407,7 @@ function App() {
       }
     } catch (error) {
       log.logError(error, '另存为失败');
-      message.error(`保存失败：${error instanceof Error ? error.message : '未知错误'}`);
+      msg.error(`保存失败：${error instanceof Error ? error.message : '未知错误'}`);
 
       await eventDispatcher.emit('file:error', {
         path: undefined,
@@ -433,7 +436,7 @@ function App() {
   ) => {
     // ✅ 统一检查：是否有启用的AI配置
     if (!active) {
-      message.warning('请先设置并启用AI配置');
+      msg.warning('请先设置并启用AI配置');
       setSettingsVisible(true);
       return false;
     }
@@ -568,7 +571,7 @@ function App() {
       // 直接显示错误信息（后端已经处理成友好提示）
       const errorMessage = error instanceof Error ? error.message : String(error);
 
-      message.error({
+      msg.error({
         content: errorMessage,
         duration: 8,
       });
@@ -590,14 +593,14 @@ function App() {
   const handleTranslateSelected = async (indices: number[]) => {
     // 检查是否有启用的AI配置
     if (!active) {
-      message.warning('请先在设置中配置并启用 AI 服务！');
+      msg.warning('请先在设置中配置并启用 AI 服务！');
       setSettingsVisible(true);
       return;
     }
 
     const selectedEntries = indices.map((i) => entries[i]).filter((e) => e && e.msgid && !e.msgstr);
     if (selectedEntries.length === 0) {
-      message.info('选中的条目都已翻译');
+      msg.info('选中的条目都已翻译');
       return;
     }
 
@@ -609,7 +612,7 @@ function App() {
   const handleContextualRefine = async (indices: number[]) => {
     // ✅ 统一检查：是否有启用的AI配置
     if (!active) {
-      message.warning('请先在设置中配置并启用 AI 服务！');
+      msg.warning('请先在设置中配置并启用 AI 服务！');
       setSettingsVisible(true);
       return;
     }
@@ -620,7 +623,7 @@ function App() {
       .filter(({ entry }) => entry && entry.msgid && entry.needsReview);
 
     if (selectedEntries.length === 0) {
-      message.info('选中的条目中没有待确认的项');
+      msg.info('选中的条目中没有待确认的项');
       return;
     }
 
@@ -663,7 +666,7 @@ function App() {
       // 直接显示错误信息（后端已经处理成友好提示）
       const errorMessage = error instanceof Error ? error.message : String(error);
 
-      message.error({
+      msg.error({
         content: errorMessage,
         duration: 8,
       });
@@ -765,7 +768,7 @@ function App() {
                     if (configSyncRef.current) {
                       await configSyncRef.current.syncFromBackend();
                       setConfigSyncIssues([]);
-                      message.success('配置已重新同步');
+                      msg.success('配置已重新同步');
                     }
                   }}
                 >
