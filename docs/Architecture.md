@@ -212,12 +212,19 @@ const { progress, stats } = useChannelTranslation(onProgress);
 ```
 PO 文件 → nom 解析器 → 去重队列
    ↓
-TM 查询（83+ 内置 + 用户自定义）
+TM 查询（记忆库文件：首次83+内置短语 + 用户学习词条）
    ↓
 AI 翻译（ModelInfo + CostCalculator 精确计费）
    ↓
 TM 更新 + 事件发布 → SWR 失效 → UI 更新
 ```
+
+**🆕 翻译记忆库逻辑** (2025-10-21):
+
+- **首次使用**: 自动加载83+条内置短语到记忆库文件
+- **后续使用**: 只查询记忆库文件，不再自动回退到内置短语
+- **用户控制**: 删除的词条不会被自动恢复，保持用户完全控制权
+- **手动加载**: 用户可主动合并内置词库到当前记忆库
 
 #### 9️⃣ **🆕 后端配置管理（Draft 模式）** - 2025-10
 
@@ -294,17 +301,16 @@ draft.apply()?; // 保存到磁盘 + 发送事件
 // 全局单例管理器（防止重复初始化）
 export function initializeGlobalSystemThemeManager(setSystemTheme) {
   if (systemThemeListenerInitialized) return;
-  
+
   const handleSystemThemeChange = async (forceUpdate = false) => {
     // 混合检测策略
-    const { nativeResult, mediaQueryResult, finalTheme } = 
-      await detectSystemTheme();
-    
+    const { nativeResult, mediaQueryResult, finalTheme } = await detectSystemTheme();
+
     // 不一致警告
     if (nativeResult !== mediaQueryResult) {
       log.warn('系统主题检测不一致', { nativeResult, mediaQueryResult });
     }
-    
+
     // 更新全局状态（单一数据源）
     setSystemTheme(finalTheme);
   };

@@ -19,6 +19,7 @@
 **发送方**: Rust Backend (`ConfigDraft::apply()`)
 
 **Payload**:
+
 ```typescript
 interface ConfigUpdatedPayload {
   config: AppConfig; // 完整的更新后配置
@@ -26,6 +27,7 @@ interface ConfigUpdatedPayload {
 ```
 
 **前端处理**:
+
 ```typescript
 // AppDataProvider 自动监听
 useTauriEventBridgeEnhanced([
@@ -37,6 +39,7 @@ mutate('app-config');
 ```
 
 **用途**:
+
 - AI配置添加/更新/删除后刷新界面
 - 系统提示词修改后同步
 - 日志配置变更后通知
@@ -48,6 +51,7 @@ mutate('app-config');
 **触发时机**: 添加新AI配置后（可选，当前通过 `config:updated` 实现）
 
 **Payload**:
+
 ```typescript
 interface AIConfigAddedPayload {
   config: AIConfig; // 新添加的配置
@@ -63,6 +67,7 @@ interface AIConfigAddedPayload {
 **触发时机**: 切换活动AI配置后
 
 **Payload**:
+
 ```typescript
 interface AIConfigActivatedPayload {
   configId: string; // 新激活的配置ID
@@ -82,6 +87,7 @@ interface AIConfigActivatedPayload {
 **发送方**: Frontend (`useAppStore`)
 
 **Payload**:
+
 ```typescript
 interface ThemeChangedPayload {
   theme: 'light' | 'dark'; // 实际生效的主题
@@ -90,6 +96,7 @@ interface ThemeChangedPayload {
 ```
 
 **前端处理**:
+
 ```typescript
 // Zustand store 自动持久化
 useAppStore.getState().setTheme(newTheme);
@@ -99,6 +106,7 @@ document.documentElement.setAttribute('data-theme', theme);
 ```
 
 **用途**:
+
 - 通知所有组件更新主题相关样式
 - 触发主题切换动画（如果有）
 
@@ -113,6 +121,7 @@ document.documentElement.setAttribute('data-theme', theme);
 **发送方**: Frontend (`i18n.changeLanguage()`)
 
 **Payload**:
+
 ```typescript
 interface LanguageChangedPayload {
   language: 'zh-CN' | 'en-US'; // 新语言代码
@@ -121,6 +130,7 @@ interface LanguageChangedPayload {
 ```
 
 **前端处理**:
+
 ```typescript
 // i18next 自动刷新所有 t() 调用
 await i18n.changeLanguage(lng);
@@ -133,6 +143,7 @@ eventDispatcher.emit('language:changed', { language: lng });
 ```
 
 **用途**:
+
 - 通知组件重新渲染界面文本
 - 触发动态内容的重新加载
 
@@ -147,6 +158,7 @@ eventDispatcher.emit('language:changed', { language: lng });
 **发送方**: Rust Backend (`open_log_directory` 成功后)
 
 **Payload**:
+
 ```typescript
 interface LogDirectoryOpenedPayload {
   path: string; // 日志目录路径
@@ -154,6 +166,7 @@ interface LogDirectoryOpenedPayload {
 ```
 
 **前端处理**:
+
 ```typescript
 eventDispatcher.on('log-directory:opened', (data) => {
   message.success(`已打开日志目录: ${data.path}`);
@@ -161,6 +174,7 @@ eventDispatcher.on('log-directory:opened', (data) => {
 ```
 
 **用途**:
+
 - 用户反馈
 - 调试和日志记录
 
@@ -181,7 +195,7 @@ ConfigDraft::global().await
   ↓
 { let mut cfg = draft.draft(); cfg.ai_configs.push(config); }
   ↓
-draft.apply()? 
+draft.apply()?
   ↓ 保存到磁盘
   ↓ 发送事件
 emit('config:updated', updated_config)
@@ -337,11 +351,13 @@ if (import.meta.env.DEV) {
 ## 事件命名约定
 
 ### 格式
+
 ```
 {domain}:{action}
 ```
 
 ### 示例
+
 - `config:updated` - 配置已更新
 - `config:saved` - 配置已保存到磁盘
 - `ai-config:added` - AI配置已添加
@@ -350,6 +366,7 @@ if (import.meta.env.DEV) {
 - `log-directory:opened` - 日志目录已打开
 
 ### 动作类型
+
 - `*:updated` - 数据已更新（通用）
 - `*:added` - 新增条目
 - `*:removed` - 删除条目
@@ -374,11 +391,13 @@ if (import.meta.env.DEV) {
 每个事件应有以下测试：
 
 ### 单元测试
+
 - ✅ 事件触发时机正确
 - ✅ Payload 结构正确
 - ✅ 订阅者能正确接收
 
 ### 集成测试
+
 - ✅ 完整的用户操作 → 事件触发 → UI更新流程
 - ✅ 并发事件处理
 - ✅ 事件节流/防抖效果
@@ -389,16 +408,15 @@ if (import.meta.env.DEV) {
 
 ### 事件节流配置
 
-| 事件类型 | 节流间隔 | 理由 |
-|---------|---------|------|
-| `config:updated` | 500ms | 配置更新通常由用户操作触发，不需要实时响应 |
-| `theme:changed` | 100ms | 主题切换需要快速反馈 |
-| `language:changed` | 无节流 | 语言切换是低频操作 |
-| `log-directory:opened` | 无节流 | 低频操作 |
+| 事件类型               | 节流间隔 | 理由                                       |
+| ---------------------- | -------- | ------------------------------------------ |
+| `config:updated`       | 500ms    | 配置更新通常由用户操作触发，不需要实时响应 |
+| `theme:changed`        | 100ms    | 主题切换需要快速反馈                       |
+| `language:changed`     | 无节流   | 语言切换是低频操作                         |
+| `log-directory:opened` | 无节流   | 低频操作                                   |
 
 ### 内存管理
 
 - ✅ 使用 `WeakMap` 存储事件监听器（自动垃圾回收）
 - ✅ 组件卸载时自动清理监听器
 - ✅ 事件历史记录限制为最近100条
-

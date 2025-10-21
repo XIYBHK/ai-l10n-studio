@@ -1,10 +1,10 @@
 # GitHub Actions 工作流说明
 
-本项目包含五个 GitHub Actions 工作流，用于自动化构建、测试、安全扫描和发布流程。
+本项目包含五个 GitHub Actions 工作流，用于自动化构建、代码检查、安全扫描和发布流程。
 
 ## 📋 工作流列表
 
-### 1. Check - 代码检查 (check.yml)
+### 1. Check - 代码检查和构建 (check.yml)
 
 **触发条件：**
 
@@ -14,10 +14,8 @@
 **执行内容：**
 
 - ✅ 代码格式检查 (Prettier + rustfmt)
-- ✅ 前端测试 (Vitest)
 - ✅ 前端构建 (TypeScript + Vite)
 - ✅ Rust 静态分析 (clippy with Cargo.toml lints)
-- ✅ Rust 单元测试
 
 ### 2. Build - 多平台构建 (build.yml)
 

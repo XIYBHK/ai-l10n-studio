@@ -71,12 +71,11 @@ function App() {
   const [targetLanguage, setTargetLanguage] = useState<string>('zh-CN'); // 默认目标语言：简体中文
 
   const { themeConfig, algorithm, toggleTheme, isDark, colors } = useTheme();
-  
+
   // 主题状态管理已稳定，移除调试日志
 
   // 使用 ref 防止重复检查AI配置
   const hasCheckedAIConfig = useRef(false);
-
 
   // 🔧 启动时重置状态
   useEffect(() => {
@@ -633,8 +632,8 @@ function App() {
         msgid: entry.msgid,
         msgctxt: entry.msgctxt || undefined,
         comment: entry.comments.join('\n') || undefined,
-        previous_entry: index > 0 ? entries[index - 1]?.msgstr : undefined,
-        next_entry: index < entries.length - 1 ? entries[index + 1]?.msgstr : undefined,
+        previousEntry: index > 0 ? entries[index - 1]?.msgstr : undefined, // 🔧 改为 camelCase
+        nextEntry: index < entries.length - 1 ? entries[index + 1]?.msgstr : undefined, // 🔧 改为 camelCase
       }));
 
       log.info('[精翻] 开始精翻', {
@@ -712,7 +711,6 @@ function App() {
       document.body.style.userSelect = '';
     };
   }, [isResizing]);
-
 
   return (
     <ConfigProvider

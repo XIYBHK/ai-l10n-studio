@@ -28,7 +28,7 @@ interface AppState {
   // 主题和语言（持久化）
   theme: ThemeMode;
   language: Language;
-  
+
   // 🏗️ 系统主题状态（全局管理，参考 clash-verge-rev）
   systemTheme: 'light' | 'dark';
 
@@ -51,7 +51,7 @@ interface AppState {
   // 主题和语言
   setTheme: (theme: ThemeMode) => void;
   setLanguage: (language: Language) => void;
-  
+
   // 🏗️ 系统主题管理（全局单例）
   setSystemTheme: (systemTheme: 'light' | 'dark') => void;
 
@@ -76,10 +76,12 @@ export const useAppStore = create<AppState>()((set, get) => ({
   config: null,
   theme: 'system', // Phase 9: 默认跟随系统
   language: 'zh-CN',
-  
+
   // 🏗️ 系统主题状态（运行时检测，不持久化）
-  systemTheme: (typeof window !== 'undefined' && window.matchMedia 
-    ? (window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light')
+  systemTheme: (typeof window !== 'undefined' && window.matchMedia
+    ? window.matchMedia('(prefers-color-scheme: dark)').matches
+      ? 'dark'
+      : 'light'
     : 'light') as 'light' | 'dark',
   cumulativeStats: {
     total: 0,
@@ -146,14 +148,14 @@ export const useAppStore = create<AppState>()((set, get) => ({
     // 🔄 防止重复设置相同主题（减少无意义的状态更新和日志）
     const currentTheme = get().theme;
     if (currentTheme === theme) {
-      log.debug('跳过重复主题设置', { 
-        theme, 
-        reason: '主题相同', 
-        timestamp: new Date().toLocaleTimeString() 
+      log.debug('跳过重复主题设置', {
+        theme,
+        reason: '主题相同',
+        timestamp: new Date().toLocaleTimeString(),
       });
       return;
     }
-    
+
     set({ theme });
     // 异步保存到 TauriStore
     tauriStore.setTheme(theme).catch((err) => log.error('保存主题失败', err));
@@ -164,7 +166,7 @@ export const useAppStore = create<AppState>()((set, get) => ({
     if (current === language) {
       return;
     }
-    
+
     set({ language });
     // 异步保存到 TauriStore
     tauriStore
@@ -179,7 +181,7 @@ export const useAppStore = create<AppState>()((set, get) => ({
       log.debug('跳过重复系统主题设置', { systemTheme, reason: '系统主题相同' });
       return;
     }
-    
+
     log.debug('更新全局系统主题', { from: current, to: systemTheme });
     set({ systemTheme });
     // 🔄 系统主题不需要持久化到TauriStore，每次启动时重新检测

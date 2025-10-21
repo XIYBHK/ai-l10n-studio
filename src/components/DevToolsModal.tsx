@@ -43,7 +43,7 @@ export const DevToolsModal: React.FC<DevToolsModalProps> = ({ visible, onClose }
     enabled: visible,
     refreshInterval: 2000,
   });
-  
+
   // 🔄 前端日志
   const {
     logs: frontendLogs,
@@ -274,8 +274,8 @@ export const DevToolsModal: React.FC<DevToolsModalProps> = ({ visible, onClose }
             children: (
               <div>
                 <Space style={{ marginBottom: 12 }}>
-                  <Button 
-                    icon={<ReloadOutlined />} 
+                  <Button
+                    icon={<ReloadOutlined />}
                     onClick={refreshFrontendLogs}
                     loading={frontendLoading}
                   >
@@ -284,11 +284,7 @@ export const DevToolsModal: React.FC<DevToolsModalProps> = ({ visible, onClose }
                   <Button icon={<SaveOutlined />} onClick={handleSaveFrontendLogs} type="primary">
                     手动保存
                   </Button>
-                  <Button
-                    icon={<ClearOutlined />}
-                    onClick={handleClearFrontendLogs}
-                    danger
-                  >
+                  <Button icon={<ClearOutlined />} onClick={handleClearFrontendLogs} danger>
                     清空
                   </Button>
                 </Space>
@@ -333,7 +329,9 @@ export const DevToolsModal: React.FC<DevToolsModalProps> = ({ visible, onClose }
                     justifyContent: 'space-between',
                   }}
                 >
-                  <span>日志行数: {frontendLogs.split('\n').filter((l) => l.trim()).length}</span>
+                  <span>
+                    日志行数: {frontendLogs.split('\n').filter((l: string) => l.trim()).length}
+                  </span>
                   <span>字符数: {frontendLogs.length}</span>
                   <span>最后更新: {new Date().toLocaleTimeString()}</span>
                 </div>

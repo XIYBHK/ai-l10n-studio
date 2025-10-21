@@ -12,17 +12,17 @@
 
 **字段定义**:
 
-| 字段名 | 类型 | 必需 | 描述 | 验证规则 |
-|--------|------|------|------|---------|
-| `id` | String | ✅ | 配置唯一标识符 | UUID v4格式 |
-| `name` | String | ✅ | 配置显示名称 | 1-50字符 |
-| `provider` | ProviderType | ✅ | AI提供商类型 | 枚举值 |
-| `api_key` | String | ✅ | API密钥 | 非空字符串，最少8字符 |
-| `model` | String | ✅ | 模型名称 | 依赖provider的可用模型列表 |
-| `base_url` | String | ❌ | 自定义API端点 | 有效URL格式（可选） |
-| `is_active` | Boolean | ✅ | 是否为当前活动配置 | 默认false |
-| `created_at` | Timestamp | ✅ | 创建时间 | ISO 8601格式 |
-| `updated_at` | Timestamp | ✅ | 最后更新时间 | ISO 8601格式 |
+| 字段名       | 类型         | 必需 | 描述               | 验证规则                   |
+| ------------ | ------------ | ---- | ------------------ | -------------------------- |
+| `id`         | String       | ✅   | 配置唯一标识符     | UUID v4格式                |
+| `name`       | String       | ✅   | 配置显示名称       | 1-50字符                   |
+| `provider`   | ProviderType | ✅   | AI提供商类型       | 枚举值                     |
+| `api_key`    | String       | ✅   | API密钥            | 非空字符串，最少8字符      |
+| `model`      | String       | ✅   | 模型名称           | 依赖provider的可用模型列表 |
+| `base_url`   | String       | ❌   | 自定义API端点      | 有效URL格式（可选）        |
+| `is_active`  | Boolean      | ✅   | 是否为当前活动配置 | 默认false                  |
+| `created_at` | Timestamp    | ✅   | 创建时间           | ISO 8601格式               |
+| `updated_at` | Timestamp    | ✅   | 最后更新时间       | ISO 8601格式               |
 
 **状态转换**:
 
@@ -34,12 +34,14 @@
 ```
 
 **验证规则**:
+
 - `api_key` 不能为空字符串
 - `api_key` 不能仅包含空格
 - 同一时间只能有一个配置处于 `is_active = true` 状态
 - `provider` + `model` 组合必须有效
 
 **错误场景**:
+
 - 缺少 `api_key` → 错误："API密钥不能为空"
 - 无效的 `provider` → 错误："不支持的AI提供商：{provider}"
 - 无效的 `model` → 错误："模型 {model} 不适用于 {provider}"
@@ -52,16 +54,16 @@ AI服务提供商的枚举类型。
 
 **枚举值**:
 
-| 值 | 显示名称 | 支持的模型示例 |
-|----|----------|---------------|
-| `Moonshot` | Moonshot AI | `moonshot-v1-8k`, `moonshot-v1-32k` |
-| `OpenAI` | OpenAI | `gpt-3.5-turbo`, `gpt-4` |
-| `iFlytek` | 讯飞星火 | `spark-v3.0` |
-| `Baidu` | 百度文心 | `ernie-bot-4` |
-| `Alibaba` | 阿里通义 | `qwen-turbo` |
-| `Zhipu` | 智谱AI | `glm-4` |
-| `Claude` | Anthropic Claude | `claude-3-opus` |
-| `Gemini` | Google Gemini | `gemini-pro` |
+| 值         | 显示名称         | 支持的模型示例                      |
+| ---------- | ---------------- | ----------------------------------- |
+| `Moonshot` | Moonshot AI      | `moonshot-v1-8k`, `moonshot-v1-32k` |
+| `OpenAI`   | OpenAI           | `gpt-3.5-turbo`, `gpt-4`            |
+| `iFlytek`  | 讯飞星火         | `spark-v3.0`                        |
+| `Baidu`    | 百度文心         | `ernie-bot-4`                       |
+| `Alibaba`  | 阿里通义         | `qwen-turbo`                        |
+| `Zhipu`    | 智谱AI           | `glm-4`                             |
+| `Claude`   | Anthropic Claude | `claude-3-opus`                     |
+| `Gemini`   | Google Gemini    | `gemini-pro`                        |
 
 ---
 
@@ -71,13 +73,14 @@ AI服务提供商的枚举类型。
 
 **字段定义**:
 
-| 字段名 | 类型 | 必需 | 描述 | 验证规则 |
-|--------|------|------|------|---------|
-| `content` | String | ✅ | 提示词内容 | 0-10000字符 |
-| `updated_at` | Timestamp | ✅ | 最后更新时间 | ISO 8601格式 |
-| `is_default` | Boolean | ✅ | 是否使用默认提示词 | - |
+| 字段名       | 类型      | 必需 | 描述               | 验证规则     |
+| ------------ | --------- | ---- | ------------------ | ------------ |
+| `content`    | String    | ✅   | 提示词内容         | 0-10000字符  |
+| `updated_at` | Timestamp | ✅   | 最后更新时间       | ISO 8601格式 |
+| `is_default` | Boolean   | ✅   | 是否使用默认提示词 | -            |
 
 **默认值**:
+
 ```
 你是一名专业的翻译专家，请将以下文本翻译成{目标语言}。
 要求：
@@ -88,12 +91,14 @@ AI服务提供商的枚举类型。
 ```
 
 **验证规则**:
+
 - 允许空字符串（使用默认提示词）
 - 最大长度10000字符
 - 支持多行文本
 - 支持特殊字符和Emoji
 
 **错误场景**:
+
 - 超过10000字符 → 错误："提示词长度超过限制（10000字符）"
 
 ---
@@ -104,20 +109,21 @@ AI服务提供商的枚举类型。
 
 **字段定义**:
 
-| 字段名 | 类型 | 必需 | 描述 | 可选值 |
-|--------|------|------|------|--------|
-| `theme_mode` | ThemeMode | ✅ | 主题模式 | `light`, `dark`, `system` |
-| `actual_theme` | ActualTheme | ✅ | 实际生效的主题 | `light`, `dark` |
+| 字段名         | 类型        | 必需 | 描述           | 可选值                    |
+| -------------- | ----------- | ---- | -------------- | ------------------------- |
+| `theme_mode`   | ThemeMode   | ✅   | 主题模式       | `light`, `dark`, `system` |
+| `actual_theme` | ActualTheme | ✅   | 实际生效的主题 | `light`, `dark`           |
 
 **ThemeMode 枚举**:
 
-| 值 | 描述 | 行为 |
-|----|------|------|
-| `light` | 亮色 | 强制使用亮色主题 |
-| `dark` | 暗色 | 强制使用暗色主题 |
+| 值       | 描述     | 行为                     |
+| -------- | -------- | ------------------------ |
+| `light`  | 亮色     | 强制使用亮色主题         |
+| `dark`   | 暗色     | 强制使用暗色主题         |
 | `system` | 跟随系统 | 根据操作系统设置自动切换 |
 
 **状态计算逻辑**:
+
 ```
 if theme_mode == "system":
     actual_theme = detect_system_theme()  # 'light' or 'dark'
@@ -126,6 +132,7 @@ else:
 ```
 
 **持久化**:
+
 - 存储在 Tauri Store 中
 - Key: `settings.theme`
 - 启动时自动加载
@@ -138,23 +145,25 @@ else:
 
 **字段定义**:
 
-| 字段名 | 类型 | 必需 | 描述 | 可选值 |
-|--------|------|------|------|--------|
-| `language` | LanguageCode | ✅ | 界面语言代码 | `zh-CN`, `en-US` |
+| 字段名     | 类型         | 必需 | 描述         | 可选值           |
+| ---------- | ------------ | ---- | ------------ | ---------------- |
+| `language` | LanguageCode | ✅   | 界面语言代码 | `zh-CN`, `en-US` |
 
 **LanguageCode 枚举**:
 
-| 值 | 语言 | 翻译文件 |
-|----|------|---------|
+| 值      | 语言     | 翻译文件                      |
+| ------- | -------- | ----------------------------- |
 | `zh-CN` | 简体中文 | `src/i18n/locales/zh-CN.json` |
-| `en-US` | English | `src/i18n/locales/en-US.json` |
+| `en-US` | English  | `src/i18n/locales/en-US.json` |
 
 **持久化**:
+
 - 存储在 Tauri Store 中
 - Key: `settings.language`
 - 启动时自动加载并应用
 
 **回退机制**:
+
 - 如果翻译缺失，回退到 `zh-CN`（默认语言）
 - 记录警告日志但不阻塞应用
 
@@ -166,13 +175,14 @@ else:
 
 **字段定义**:
 
-| 字段名 | 类型 | 必需 | 描述 |
-|--------|------|------|------|
-| `code` | String | ✅ | 语言代码（ISO 639-1） |
-| `name` | String | ✅ | 语言显示名称 |
-| `confidence` | Float | ✅ | 检测置信度（0.0-1.0） |
+| 字段名       | 类型   | 必需 | 描述                  |
+| ------------ | ------ | ---- | --------------------- |
+| `code`       | String | ✅   | 语言代码（ISO 639-1） |
+| `name`       | String | ✅   | 语言显示名称          |
+| `confidence` | Float  | ✅   | 检测置信度（0.0-1.0） |
 
 **示例**:
+
 ```json
 {
   "code": "en",
@@ -182,6 +192,7 @@ else:
 ```
 
 **关系**:
+
 - 用于确定默认目标语言
 - 调用 `get_default_target_lang(source_lang_code)` 获取推荐的目标语言
 
@@ -193,18 +204,20 @@ else:
 
 **字段定义**:
 
-| 字段名 | 类型 | 必需 | 描述 |
-|--------|------|------|------|
-| `log_level` | LogLevel | ✅ | 日志级别 |
-| `log_directory` | PathBuf | ✅ | 日志文件目录 |
-| `max_file_size` | u64 | ✅ | 单个日志文件最大大小（字节） |
-| `max_files` | u32 | ✅ | 保留的日志文件数量 |
-| `retention_days` | u32 | ✅ | 日志文件保留天数 |
+| 字段名           | 类型     | 必需 | 描述                         |
+| ---------------- | -------- | ---- | ---------------------------- |
+| `log_level`      | LogLevel | ✅   | 日志级别                     |
+| `log_directory`  | PathBuf  | ✅   | 日志文件目录                 |
+| `max_file_size`  | u64      | ✅   | 单个日志文件最大大小（字节） |
+| `max_files`      | u32      | ✅   | 保留的日志文件数量           |
+| `retention_days` | u32      | ✅   | 日志文件保留天数             |
 
 **LogLevel 枚举**:
+
 - `trace`, `debug`, `info`, `warn`, `error`
 
 **默认值**:
+
 - `log_level`: `info`
 - `log_directory`: `{app_data}/logs/`
 - `max_file_size`: 128KB (131072 bytes)
@@ -268,6 +281,7 @@ RuntimeState (运行时状态 - 不持久化)
 本次修复不涉及数据结构变更，无需迁移脚本。
 
 **向后兼容性**:
+
 - ✅ 所有修复保持现有数据结构
 - ✅ 新增字段（如有）使用可选类型或默认值
 - ✅ 不删除或重命名现有字段
@@ -277,6 +291,7 @@ RuntimeState (运行时状态 - 不持久化)
 ## 测试数据示例
 
 ### 有效的AI配置
+
 ```json
 {
   "id": "550e8400-e29b-41d4-a716-446655440000",
@@ -292,6 +307,7 @@ RuntimeState (运行时状态 - 不持久化)
 ```
 
 ### 无效的AI配置（缺少api_key）
+
 ```json
 {
   "id": "550e8400-e29b-41d4-a716-446655440000",
@@ -301,5 +317,5 @@ RuntimeState (运行时状态 - 不持久化)
   // ❌ 缺少 api_key
 }
 ```
-**预期错误**: "API密钥不能为空"
 
+**预期错误**: "API密钥不能为空"

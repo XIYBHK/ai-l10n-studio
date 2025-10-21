@@ -8,11 +8,13 @@
 **Organization**: 任务按用户故事组织，每个故事独立可测试
 
 ## Format: `[ID] [P?] [Story] Description`
+
 - **[P]**: 可并行执行（不同文件，无依赖）
 - **[Story]**: 所属用户故事（US1, US2, US3, US4, US5, US6）
 - 包含准确的文件路径
 
 ## Path Conventions
+
 - Frontend: `src/` at repository root
 - Backend: `src-tauri/src/` at repository root
 - Tests: `src/__tests__/` for frontend, inline for backend
@@ -87,7 +89,7 @@
       id: nanoid(),
       name: configName,
       provider: selectedProvider,
-      api_key: apiKey,  // ✅ 显式包含，蛇形命名
+      api_key: apiKey, // ✅ 显式包含，蛇形命名
       model: selectedModel,
       base_url: baseUrl || undefined,
       is_active: false,
@@ -183,7 +185,7 @@
   - 当前：
     ```typescript
     async getDefaultTargetLanguage(sourceLangCode: string) {
-      return invoke(COMMANDS.LANGUAGE_GET_DEFAULT_TARGET, 
+      return invoke(COMMANDS.LANGUAGE_GET_DEFAULT_TARGET,
         { sourceLangCode }, // ❌ 驼峰
       );
     }
@@ -191,7 +193,7 @@
   - 修复：
     ```typescript
     async getDefaultTargetLanguage(sourceLangCode: string) {
-      return invoke(COMMANDS.LANGUAGE_GET_DEFAULT_TARGET, 
+      return invoke(COMMANDS.LANGUAGE_GET_DEFAULT_TARGET,
         { source_lang_code: sourceLangCode }, // ✅ 蛇形
       );
     }
@@ -243,10 +245,11 @@
   - 删除：组件内部的 React state（如果有）
   - 修复：直接从 `useAppStore` 读取和更新
   - 代码示例：
+
     ```typescript
     const theme = useAppStore((state) => state.theme);
     const setTheme = useAppStore((state) => state.setTheme);
-    
+
     const handleToggle = () => {
       const newTheme = theme === 'light' ? 'dark' : 'light';
       setTheme(newTheme); // ✅ 直接更新，无中间状态
@@ -276,6 +279,7 @@
 **Goal**: 修复"跟随系统"不生效和语言切换无效的问题
 
 **Independent Test**:
+
 - 跟随系统：选择"跟随系统" → 切换OS主题 → 验证应用跟随
 - 语言切换：选择英语 → 验证界面文本立即变为英文
 
@@ -306,20 +310,21 @@
   - 位置：`src/hooks/useTheme.ts`
   - 功能：监听 `window.matchMedia('(prefers-color-scheme: dark)')`
   - 代码示例：
+
     ```typescript
     useEffect(() => {
       if (theme !== 'system') return;
-      
+
       const mediaQuery = window.matchMedia('(prefers-color-scheme: dark)');
-      
+
       const updateTheme = (e: MediaQueryListEvent | MediaQueryList) => {
         const systemTheme = e.matches ? 'dark' : 'light';
         document.documentElement.setAttribute('data-theme', systemTheme);
       };
-      
+
       updateTheme(mediaQuery); // 初始化
       mediaQuery.addEventListener('change', updateTheme); // 监听变化
-      
+
       return () => mediaQuery.removeEventListener('change', updateTheme);
     }, [theme]);
     ```
@@ -335,17 +340,18 @@
   - 位置：`src/components/SettingsModal.tsx`
   - 当前问题：调用 `i18n.changeLanguage()` 后组件未刷新
   - 修复：
+
     ```typescript
     const handleLanguageChange = async (lng: string) => {
       // 1. 更新 i18next
       await i18n.changeLanguage(lng);
-      
+
       // 2. 持久化
       await useSettingsStore.getState().setLanguage(lng);
-      
+
       // 3. 触发全局刷新（如需要）
       mutate('app-language'); // SWR刷新
-      
+
       // 4. 显示反馈
       message.success(t('settings.languageChanged'));
     };
@@ -391,39 +397,40 @@
   - 位置：`src-tauri/src/commands/system.rs` (新建文件)
   - 功能：跨平台打开文件管理器
   - 代码示例：
+
     ```rust
     use tauri_plugin_shell::ShellExt;
-    
+
     #[tauri::command]
     pub async fn open_log_directory(app: tauri::AppHandle) -> Result<(), String> {
         let log_dir = crate::utils::paths::app_log_dir()
             .map_err(|e| format!("获取日志目录失败: {}", e))?;
-        
+
         if !log_dir.exists() {
             return Err("日志目录不存在".to_string());
         }
-        
+
         #[cfg(target_os = "windows")]
         app.shell()
             .command("explorer")
             .args([log_dir.to_string_lossy().to_string()])
             .spawn()
             .map_err(|e| format!("无法打开文件管理器: {}", e))?;
-        
+
         #[cfg(target_os = "macos")]
         app.shell()
             .command("open")
             .args([log_dir.to_string_lossy().to_string()])
             .spawn()
             .map_err(|e| format!("无法打开文件管理器: {}", e))?;
-        
+
         #[cfg(target_os = "linux")]
         app.shell()
             .command("xdg-open")
             .args([log_dir.to_string_lossy().to_string()])
             .spawn()
             .map_err(|e| format!("无法打开文件管理器: {}", e))?;
-        
+
         Ok(())
     }
     ```
@@ -468,23 +475,21 @@
 - [ ] T044 [US6] 在 SettingsModal 添加"打开日志目录"按钮
   - 位置：`src/components/SettingsModal.tsx` 的日志设置标签页
   - UI布局：
+
     ```tsx
     import { FolderOpenOutlined } from '@ant-design/icons';
     import { systemCommands } from '@/services/commands';
-    
+
     // 在日志设置部分
     <Space direction="vertical" size="small" style={{ width: '100%' }}>
       <Text>日志级别：{config?.log_level || 'info'}</Text>
       <Text>保留天数：{config?.log_retention_days || 30}天</Text>
-      
-      <Button 
-        icon={<FolderOpenOutlined />} 
-        onClick={handleOpenLogDir}
-      >
+
+      <Button icon={<FolderOpenOutlined />} onClick={handleOpenLogDir}>
         打开日志目录
       </Button>
-    </Space>
-    
+    </Space>;
+
     const handleOpenLogDir = async () => {
       try {
         await systemCommands.openLogDirectory();
@@ -531,30 +536,36 @@
   - 位置：`docs/CHANGELOG.md`
   - 添加：新的版本条目（2025-10-14）
   - 内容：
+
     ```markdown
     ## 2025-10-14 - 修复7个关键UI和功能问题
-    
+
     ### Bug修复
-    
+
     #### P1 阻塞性问题
+
     - **AI配置保存失败**: 修正前端参数序列化，确保api_key字段正确传递
     - **系统提示词保存失败**: 使用正确的命令名update_system_prompt
     - **语言检测失败**: 修正参数命名转换（驼峰→蛇形）
-    
+
     #### P2 用户体验问题
+
     - **主题切换响应**: 修复单一状态源，点击一次立即生效
     - **跟随系统主题**: 实现matchMedia监听，实时跟随OS主题
     - **语言切换**: 添加强制刷新，界面文本立即更新
-    
+
     #### P3 改进项
+
     - **日志管理**: 新增"打开日志目录"按钮，优化布局
-    
+
     ### 技术改进
+
     - 统一参数命名转换逻辑（commands.ts层处理）
     - 新增systemCommands模块（跨平台系统操作）
     - 完善错误提示（具体原因而非通用错误）
-    
+
     ### 测试覆盖
+
     - 新增12个单元测试
     - 新增6个集成测试
     - 测试覆盖率保持 > 80%
@@ -621,26 +632,31 @@ Phase 9 (Polish) ← 所有故事完成后
 ### Task-Level Dependencies
 
 **Phase 2 (Foundational)**:
+
 - T005, T006, T007 可并行
 - T007 依赖 T005, T006 完成（需要测试辅助）
 
 **Phase 3 (US1)**:
+
 - T008, T009 可并行（不同测试文件）
 - T010, T011, T012 顺序执行（可能同一文件）
 - T013 独立（后端验证）
 
 **Phase 6 (US4)**:
+
 - T024, T025 可并行（不同测试）
 - T026 → T027 → T028 顺序（分析→修复→验证）
 - T029 独立
 
 **Phase 8 (US6)**:
+
 - T038, T039 可并行（不同测试）
 - T040 → T041 → T042 顺序（后端命令创建）
 - T043 并行于T040-T042（前端命令定义）
 - T044, T045 顺序（UI实现和优化）
 
 **Phase 9 (Polish)**:
+
 - T046-T048 可并行（不同工具）
 - T049-T053 顺序（手动测试→文档→PR）
 
@@ -649,6 +665,7 @@ Phase 9 (Polish) ← 所有故事完成后
 ## Parallel Execution Examples
 
 ### Phase 3 (US1) - 并行测试编写
+
 ```bash
 Developer A: T008 (ai-config-validation.test.ts)
 Developer B: T009 (ai-config-save.test.tsx)
@@ -656,6 +673,7 @@ Developer B: T009 (ai-config-save.test.tsx)
 ```
 
 ### Phase 8 (US6) - 前后端并行
+
 ```bash
 Developer A: T040-T042 (后端命令实现)
 Developer B: T043 (前端命令定义)
@@ -663,6 +681,7 @@ Developer B: T043 (前端命令定义)
 ```
 
 ### Multi-Story Parallel (多人团队)
+
 ```bash
 Team Member 1: Phase 3 (US1 - AI配置)
 Team Member 2: Phase 4 (US2 - 系统提示词)
@@ -692,19 +711,15 @@ Team Member 3: Phase 5 (US3 - 语言检测)
 
 1. **Week 1**: Phase 1-2 (Setup + Foundation)
    - 准备工作，100%完成
-   
 2. **Week 1-2**: Phase 3-5 (US1-US3, 所有P1)
    - 3个阻塞性问题
    - 每个修复后立即测试
    - 可考虑每个US一个小版本发布
-   
 3. **Week 2**: Phase 6-7 (US4-US5, P2)
    - 用户体验改进
    - 不阻塞核心功能
-   
 4. **Week 2-3**: Phase 8 (US6, P3)
    - 锦上添花的改进
-   
 5. **Week 3**: Phase 9 (Polish)
    - 最终打磨和发布
 
@@ -734,15 +749,15 @@ Team Member 3: Phase 5 (US3 - 语言检测)
 
 ## Test Coverage Summary
 
-| Story | Unit Tests | Integration Tests | Total |
-|-------|-----------|-------------------|-------|
-| US1 (AI配置) | 1 | 1 | 2 |
-| US2 (系统提示词) | 1 | 1 | 2 |
-| US3 (语言检测) | 1 | 1 | 2 |
-| US4 (主题切换) | 1 | 1 | 2 |
-| US5 (外观设置) | 2 | 1 | 3 |
-| US6 (日志管理) | 1 | 1 | 2 |
-| **Total** | **7** | **6** | **13** |
+| Story            | Unit Tests | Integration Tests | Total  |
+| ---------------- | ---------- | ----------------- | ------ |
+| US1 (AI配置)     | 1          | 1                 | 2      |
+| US2 (系统提示词) | 1          | 1                 | 2      |
+| US3 (语言检测)   | 1          | 1                 | 2      |
+| US4 (主题切换)   | 1          | 1                 | 2      |
+| US5 (外观设置)   | 2          | 1                 | 3      |
+| US6 (日志管理)   | 1          | 1                 | 2      |
+| **Total**        | **7**      | **6**             | **13** |
 
 **回归测试**: 3个（批量翻译、术语库、配置持久化）  
 **总测试数**: 16个新测试 + 现有73个 = 89个测试
@@ -767,7 +782,6 @@ Team Member 3: Phase 5 (US3 - 语言检测)
 
 1. **T021 (参数命名修复)**: 影响关键功能
    - 缓解：先写测试，逐个验证
-   
 2. **T040-T042 (新命令实现)**: 跨平台兼容性
    - 缓解：参考 tauri_plugin_shell 文档，在3个OS测试
 
@@ -779,4 +793,3 @@ Team Member 3: Phase 5 (US3 - 语言检测)
 - US1-US3修复：已明确根因，方案简单
 - US4修复：状态管理优化，风险低
 - US6：纯新增功能，不影响现有流程
-

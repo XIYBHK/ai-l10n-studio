@@ -189,43 +189,43 @@ class FrontendLogger {
     if (this.logs.length > this.maxLogs) {
       this.logs.shift();
     }
-    
+
     // 🔄 自动保存机制：日志数量达到阈值时自动保存
     if (this.logs.length % this.MAX_LOGS_BEFORE_SAVE === 0) {
       this.scheduleAutoSave();
     }
   }
-  
+
   private scheduleAutoSave() {
     // 避免重复调度
     if (this.autoSaveTimer) {
       clearTimeout(this.autoSaveTimer);
     }
-    
+
     // 延迟保存，避免频繁IO
     this.autoSaveTimer = setTimeout(() => {
-      this.saveLogs().catch(error => {
+      this.saveLogs().catch((error) => {
         this.originalConsole.error('自动保存前端日志失败:', error);
       });
     }, 2000); // 2秒延迟
   }
-  
+
   startAutoSave() {
     // 启动定时自动保存
     if (this.autoSaveTimer) {
       clearInterval(this.autoSaveTimer);
     }
-    
+
     // 每5分钟自动保存一次
     this.autoSaveTimer = setInterval(() => {
       if (this.logs.length > 0) {
-        this.saveLogs().catch(error => {
+        this.saveLogs().catch((error) => {
           this.originalConsole.error('定时保存前端日志失败:', error);
         });
       }
     }, this.AUTO_SAVE_INTERVAL);
   }
-  
+
   stopAutoSave() {
     if (this.autoSaveTimer) {
       clearInterval(this.autoSaveTimer);
@@ -236,7 +236,7 @@ class FrontendLogger {
   private async cleanOldLogFiles(maxFiles: number = 5, logDirPath?: string | null) {
     try {
       let entries;
-      
+
       // 🔄 根据目录类型选择不同的读取方式
       if (logDirPath) {
         // 使用统一日志目录（绝对路径）
@@ -294,7 +294,7 @@ class FrontendLogger {
       // 🔄 获取后端日志目录路径，实现前后端日志统一存放
       let logDirPath: string | null = null;
       let useUnifiedDir = false;
-      
+
       try {
         logDirPath = await systemCommands.getLogDirectoryPath();
         useUnifiedDir = true;

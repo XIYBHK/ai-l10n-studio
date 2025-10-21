@@ -19,26 +19,28 @@ let globalSetSystemTheme: ((theme: 'light' | 'dark') => void) | null = null;
  * 🏗️ 全局系统主题管理器初始化（参考 clash-verge-rev）
  * 在应用启动时调用，确保全局状态正确初始化
  */
-export function initializeGlobalSystemThemeManager(setSystemTheme: (theme: 'light' | 'dark') => void) {
+export function initializeGlobalSystemThemeManager(
+  setSystemTheme: (theme: 'light' | 'dark') => void
+) {
   // 🏗️ 使用项目标准的防重复初始化模式
   if (systemThemeListenerInitialized) {
     return;
   }
-  
+
   systemThemeListenerInitialized = true;
   globalSetSystemTheme = setSystemTheme; // 缓存函数引用
-  
+
   if (typeof window !== 'undefined' && window.matchMedia) {
     const mediaQuery = window.matchMedia('(prefers-color-scheme: dark)');
     let lastSystemTheme: AppliedTheme = mediaQuery.matches ? 'dark' : 'light';
-    
+
     // 🏗️ 全局系统主题变化处理器（优先使用原生API，备用媒体查询）
     const handleSystemThemeChange = async (forceUpdate = false, source = 'mediaQuery') => {
       let newSystemTheme: AppliedTheme = 'light';
       let detectionMethod = 'unknown';
       let nativeResult: string | null = null;
       let mediaQueryResult: AppliedTheme | null = null;
-      
+
       // 🔧 方法1：尝试使用原生API（优先级最高）
       try {
         const nativeTheme = await systemCommands.getNativeSystemTheme();
@@ -51,7 +53,7 @@ export function initializeGlobalSystemThemeManager(setSystemTheme: (theme: 'ligh
         // 原生API失败，继续使用媒体查询
         detectionMethod = 'fallback-media-query';
       }
-      
+
       // 🔧 方法2：备用媒体查询检测
       if (detectionMethod === 'fallback-media-query' || detectionMethod === 'unknown') {
         const mediaQueryMatches = mediaQuery.matches;
@@ -59,12 +61,13 @@ export function initializeGlobalSystemThemeManager(setSystemTheme: (theme: 'ligh
         if (detectionMethod === 'fallback-media-query') {
           newSystemTheme = mediaQueryResult;
         }
-        detectionMethod = detectionMethod === 'unknown' ? 'media-query-only' : 'fallback-media-query';
+        detectionMethod =
+          detectionMethod === 'unknown' ? 'media-query-only' : 'fallback-media-query';
       }
-      
+
       if (lastSystemTheme !== newSystemTheme || forceUpdate) {
         const log = createModuleLogger('SystemThemeManager');
-        
+
         // 🔍 详细调试：显示所有检测信息
         const debugInfo = {
           // 🏆 检测结果
@@ -72,18 +75,18 @@ export function initializeGlobalSystemThemeManager(setSystemTheme: (theme: 'ligh
           newSystemTheme,
           from: lastSystemTheme,
           to: newSystemTheme,
-          
+
           // 🔧 原生API结果
           nativeApiResult: nativeResult,
           nativeApiAvailable: nativeResult !== null,
-          
+
           // 🔧 媒体查询结果（对比用）
           mediaQueryMatches: mediaQuery.matches,
           mediaQueryResult,
           mediaQueryMedia: mediaQuery.media,
           directCheck: window.matchMedia('(prefers-color-scheme: dark)').matches,
           lightCheck: window.matchMedia('(prefers-color-scheme: light)').matches,
-          
+
           // 🔧 环境信息
           source,
           forceUpdate,
@@ -91,23 +94,23 @@ export function initializeGlobalSystemThemeManager(setSystemTheme: (theme: 'ligh
           computedColorScheme: getComputedStyle(document.documentElement).colorScheme,
           userNote: '原生API vs 媒体查询：检查结果是否一致',
         };
-        
+
         if (forceUpdate) {
           log.debug('🚀 初始化系统主题（原生API优先）', debugInfo);
         } else {
           log.debug('全局系统主题变化（原生API优先）', debugInfo);
         }
-        
+
         // 🚨 检测不一致警告
         if (nativeResult && mediaQueryResult && nativeResult !== mediaQueryResult) {
           log.warn('⚠️  系统主题检测结果不一致！', {
             nativeApi: nativeResult,
             mediaQuery: mediaQueryResult,
             using: newSystemTheme,
-            userNote: '这解释了为什么webview检测不准确'
+            userNote: '这解释了为什么webview检测不准确',
           });
         }
-        
+
         lastSystemTheme = newSystemTheme;
 
         // 🏗️ 直接更新全局状态（不再发送事件，避免多实例重复处理）
@@ -119,7 +122,7 @@ export function initializeGlobalSystemThemeManager(setSystemTheme: (theme: 'ligh
 
     // 🚀 立即执行一次，强制同步初始状态
     handleSystemThemeChange(true, 'initialization');
-    
+
     const changeListener = () => handleSystemThemeChange(false, 'media-query-event');
     mediaQuery.addEventListener('change', changeListener);
     systemThemeCleanup = () => {
@@ -171,7 +174,7 @@ const log = createModuleLogger('useTheme');
 export const useTheme = () => {
   const themeMode = useAppStore((state: any) => state.theme);
   const setThemeMode = useAppStore((state: any) => state.setTheme);
-  
+
   // 🏗️ 使用全局systemTheme状态（参考 clash-verge-rev）
   const systemTheme = useAppStore((state: any) => state.systemTheme);
   const setSystemTheme = useAppStore((state: any) => state.setSystemTheme);
@@ -185,7 +188,7 @@ export const useTheme = () => {
   useEffect(() => {
     // 🏗️ 确保全局管理器已初始化，传递setSystemTheme函数
     initializeGlobalSystemThemeManager(setSystemTheme);
-    
+
     // 🏗️ 不再需要监听事件，直接从全局状态读取
     // 全局管理器会直接更新 useAppStore.systemTheme
   }, [setSystemTheme]); // 依赖setSystemTheme函数
@@ -217,7 +220,6 @@ export const useTheme = () => {
     // 这样确保每次点击都有明确的视觉反馈
     const nextMode: ThemeMode = appliedTheme === 'light' ? 'dark' : 'light';
 
-    
     setThemeMode(nextMode);
   };
 
@@ -227,7 +229,6 @@ export const useTheme = () => {
       return;
     }
 
-    
     setThemeMode(mode);
   };
 

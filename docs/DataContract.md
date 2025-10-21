@@ -28,6 +28,31 @@
 - `POEntry` - PO 文件条目（msgid/msgstr/注释/位置）
 - `TranslationPair` - 翻译对（源文本 → 目标文本 + 元数据）
 - `TermEntry` - 术语库条目（术语 + 翻译 + 标签 + 风格）
+- `TranslationMemory` - 翻译记忆库（memory + stats + last_updated）
+
+**翻译记忆库** (2025-10-21 优化):
+
+```typescript
+interface TranslationMemory {
+  memory: Record<string, string>; // 源文本 → 目标翻译
+  stats: MemoryStats; // 记忆库统计
+  last_updated: string; // 最后更新时间
+}
+
+interface MemoryStats {
+  total_entries: number; // 总词条数
+  hits: number; // 命中次数
+  misses: number; // 未命中次数
+}
+```
+
+**核心逻辑**:
+
+- **首次使用**: 自动从 `get_builtin_memory()` 加载83+条内置短语
+- **后续使用**: 只查询 `memory` 字段，不再自动回退到内置短语
+- **查询行为**: `get_translation()` 仅查询 `self.memory`，保持用户完全控制
+- **保存格式**: JSON文件只保存 `learned` 部分（用户添加的词条），不包含内置短语
+- **合并逻辑**: `merge_builtin_phrases()` 合并时不覆盖已有词条
 
 **统计与报告**:
 
@@ -419,6 +444,7 @@ systemCommands.getNativeSystemTheme(): Promise<string>
 ```
 
 **返回值**：
+
 - `"dark"` - 系统使用深色主题
 - `"light"` - 系统使用浅色主题
 - 错误时抛出异常
@@ -426,6 +452,7 @@ systemCommands.getNativeSystemTheme(): Promise<string>
 ### 跨平台实现契约
 
 **Windows 实现**：
+
 ```rust
 // 查询注册表
 reg query "HKCU\Software\Microsoft\Windows\CurrentVersion\Themes\Personalize" /v "AppsUseLightTheme"
@@ -433,6 +460,7 @@ reg query "HKCU\Software\Microsoft\Windows\CurrentVersion\Themes\Personalize" /v
 ```
 
 **macOS 实现**：
+
 ```rust
 // 查询系统默认设置
 defaults read -g AppleInterfaceStyle
@@ -440,6 +468,7 @@ defaults read -g AppleInterfaceStyle
 ```
 
 **Linux 实现**：
+
 ```rust
 // 查询 GNOME 主题设置
 gsettings get org.gnome.desktop.interface gtk-theme
@@ -452,21 +481,21 @@ gsettings get org.gnome.desktop.interface gtk-theme
 interface ThemeDetectionResult {
   // 检测方法
   detectionMethod: 'native-api' | 'fallback-media-query' | 'media-query-only';
-  
+
   // 检测结果
-  nativeApiResult?: string;        // 原生API结果
-  nativeApiAvailable: boolean;     // 原生API是否可用
-  mediaQueryResult: 'dark' | 'light';  // 媒体查询结果
-  
+  nativeApiResult?: string; // 原生API结果
+  nativeApiAvailable: boolean; // 原生API是否可用
+  mediaQueryResult: 'dark' | 'light'; // 媒体查询结果
+
   // 最终决定
   newSystemTheme: 'dark' | 'light';
-  
+
   // 调试信息
-  mediaQueryMatches: boolean;      // matchMedia 原始结果
-  directCheck: boolean;           // 直接检查结果
-  lightCheck: boolean;            // 浅色主题检查
-  computedColorScheme?: string;   // CSS computedStyle
-  
+  mediaQueryMatches: boolean; // matchMedia 原始结果
+  directCheck: boolean; // 直接检查结果
+  lightCheck: boolean; // 浅色主题检查
+  computedColorScheme?: string; // CSS computedStyle
+
   // 元数据
   timestamp: string;
   source: string;
@@ -477,11 +506,13 @@ interface ThemeDetectionResult {
 ### 数据一致性保证
 
 **检测优先级**：
+
 1. 原生API结果（最高优先级）
 2. 媒体查询备用（当原生API失败时）
 3. 默认值 `light`（所有方法都失败时）
 
 **不一致处理**：
+
 ```typescript
 // 当两种方法结果不同时的处理
 if (nativeResult && mediaQueryResult && nativeResult !== mediaQueryResult) {
@@ -489,7 +520,7 @@ if (nativeResult && mediaQueryResult && nativeResult !== mediaQueryResult) {
     nativeApi: nativeResult,
     mediaQuery: mediaQueryResult,
     using: newSystemTheme, // 使用原生API结果
-    userNote: '这解释了为什么webview检测不准确'
+    userNote: '这解释了为什么webview检测不准确',
   });
 }
 ```
@@ -497,6 +528,7 @@ if (nativeResult && mediaQueryResult && nativeResult !== mediaQueryResult) {
 ### 全局状态管理契约
 
 **单一数据源**：
+
 ```typescript
 // useAppStore.ts
 interface AppState {
@@ -506,11 +538,13 @@ interface AppState {
 ```
 
 **状态更新流程**：
+
 ```
 原生API检测 → SystemThemeManager → useAppStore.setSystemTheme → 全局状态更新 → useTheme消费
 ```
 
 **防重复更新**：
+
 ```typescript
 setSystemTheme: (systemTheme) => {
   const currentSystemTheme = get().systemTheme;

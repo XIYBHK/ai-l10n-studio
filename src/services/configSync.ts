@@ -33,7 +33,7 @@ class ConfigSyncManager {
   private validationInterval: number | null = null;
   private unsubscribeConfigChanges: (() => void) | null = null;
   private readonly VALIDATION_INTERVAL_MS = 5000; // 5秒验证一次
-  
+
   // 🚨 添加验证锁，防止重复验证
   private isValidating = false;
 
@@ -82,7 +82,7 @@ class ConfigSyncManager {
    */
   async validate(options: { silent?: boolean } = {}): Promise<ConfigValidationResult> {
     const { silent = false } = options;
-    
+
     // 🚨 防止重复验证
     if (this.isValidating) {
       if (!silent) {
@@ -101,7 +101,6 @@ class ConfigSyncManager {
       // 🔇 静默模式：将 get_config_version 调用设为静默
       const backendVersion = await invoke<ConfigVersion>('get_config_version', undefined, {
         silent,
-        autoConvertParams: false, // 不需要参数转换
       });
 
       if (!this.currentVersion) {

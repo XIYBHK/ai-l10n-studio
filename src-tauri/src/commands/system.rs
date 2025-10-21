@@ -110,13 +110,11 @@ mod tests {
 /// 获取日志目录路径
 #[tauri::command]
 pub fn get_log_directory_path() -> Result<String, String> {
-    let log_dir = paths::app_logs_dir()
-        .map_err(|e| format!("获取日志目录路径失败: {}", e))?;
-    
+    let log_dir = paths::app_logs_dir().map_err(|e| format!("获取日志目录路径失败: {}", e))?;
+
     // 确保目录存在
-    paths::ensure_dir(&log_dir)
-        .map_err(|e| format!("创建日志目录失败: {}", e))?;
-    
+    paths::ensure_dir(&log_dir).map_err(|e| format!("创建日志目录失败: {}", e))?;
+
     Ok(log_dir.to_string_lossy().to_string())
 }
 
@@ -126,14 +124,12 @@ pub fn open_log_directory() -> Result<(), String> {
     app_log!("[系统] 打开日志目录...");
 
     // 获取日志目录路径
-    let log_dir = paths::app_logs_dir()
-        .map_err(|e| format!("获取日志目录路径失败: {}", e))?;
+    let log_dir = paths::app_logs_dir().map_err(|e| format!("获取日志目录路径失败: {}", e))?;
 
     app_log!("[系统] 日志目录路径: {:?}", log_dir);
 
     // 确保目录存在
-    paths::ensure_dir(&log_dir)
-        .map_err(|e| format!("创建日志目录失败: {}", e))?;
+    paths::ensure_dir(&log_dir).map_err(|e| format!("创建日志目录失败: {}", e))?;
 
     // 根据操作系统打开文件管理器
     #[cfg(target_os = "windows")]
@@ -178,18 +174,23 @@ pub fn get_native_system_theme() -> Result<String, String> {
     {
         // 使用 Windows Registry 检测系统主题
         use std::process::Command;
-        
+
         // 查询注册表中的系统主题设置
         // AppsUseLightTheme = 0 表示深色模式，1 表示浅色模式
         let output = Command::new("reg")
-            .args(&["query", "HKCU\\Software\\Microsoft\\Windows\\CurrentVersion\\Themes\\Personalize", "/v", "AppsUseLightTheme"])
+            .args(&[
+                "query",
+                "HKCU\\Software\\Microsoft\\Windows\\CurrentVersion\\Themes\\Personalize",
+                "/v",
+                "AppsUseLightTheme",
+            ])
             .output();
-            
+
         match output {
             Ok(result) => {
                 let stdout = String::from_utf8_lossy(&result.stdout);
                 app_log!("[系统主题] 注册表查询结果: {}", stdout);
-                
+
                 // 解析输出，查找 AppsUseLightTheme 的值
                 if stdout.contains("AppsUseLightTheme") {
                     if stdout.contains("0x0") || stdout.contains("REG_DWORD    0") {
@@ -200,10 +201,10 @@ pub fn get_native_system_theme() -> Result<String, String> {
                         return Ok("light".to_string());
                     }
                 }
-                
+
                 app_log!("[系统主题] ⚠️  无法解析注册表输出，使用默认浅色");
                 Ok("light".to_string())
-            },
+            }
             Err(e) => {
                 app_log!("[系统主题] ❌ 注册表查询失败: {}", e);
                 Err(format!("Windows注册表查询失败: {}", e))
@@ -215,16 +216,18 @@ pub fn get_native_system_theme() -> Result<String, String> {
     #[cfg(target_os = "macos")]
     {
         use std::process::Command;
-        
+
         let output = Command::new("defaults")
             .args(&["read", "-g", "AppleInterfaceStyle"])
             .output();
-            
+
         match output {
             Ok(result) => {
-                let stdout = String::from_utf8_lossy(&result.stdout).trim().to_lowercase();
+                let stdout = String::from_utf8_lossy(&result.stdout)
+                    .trim()
+                    .to_lowercase();
                 app_log!("[系统主题] macOS系统主题: {}", stdout);
-                
+
                 if stdout.contains("dark") {
                     app_log!("[系统主题] ✅ macOS原生检测: 深色模式");
                     Ok("dark".to_string())
@@ -232,7 +235,7 @@ pub fn get_native_system_theme() -> Result<String, String> {
                     app_log!("[系统主题] ✅ macOS原生检测: 浅色模式");
                     Ok("light".to_string())
                 }
-            },
+            }
             Err(_) => {
                 // 如果命令失败（通常表示使用浅色模式）
                 app_log!("[系统主题] ✅ macOS原生检测: 浅色模式（默认）");
@@ -245,17 +248,19 @@ pub fn get_native_system_theme() -> Result<String, String> {
     #[cfg(target_os = "linux")]
     {
         use std::process::Command;
-        
+
         // 尝试检测 GNOME 主题
         let output = Command::new("gsettings")
             .args(&["get", "org.gnome.desktop.interface", "gtk-theme"])
             .output();
-            
+
         match output {
             Ok(result) => {
-                let stdout = String::from_utf8_lossy(&result.stdout).trim().to_lowercase();
+                let stdout = String::from_utf8_lossy(&result.stdout)
+                    .trim()
+                    .to_lowercase();
                 app_log!("[系统主题] Linux系统主题: {}", stdout);
-                
+
                 if stdout.contains("dark") || stdout.contains("adwaita-dark") {
                     app_log!("[系统主题] ✅ Linux原生检测: 深色模式");
                     Ok("dark".to_string())
@@ -263,7 +268,7 @@ pub fn get_native_system_theme() -> Result<String, String> {
                     app_log!("[系统主题] ✅ Linux原生检测: 浅色模式");
                     Ok("light".to_string())
                 }
-            },
+            }
             Err(e) => {
                 app_log!("[系统主题] ❌ Linux主题检测失败: {}", e);
                 Err(format!("Linux主题检测失败: {}", e))

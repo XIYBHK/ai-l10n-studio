@@ -5,7 +5,7 @@
 **Status**: Draft  
 **Input**: User description: "BUG修复 手动测试结果：7个关键用户界面和功能问题"
 
-## User Scenarios & Testing *(mandatory)*
+## User Scenarios & Testing _(mandatory)_
 
 ### User Story 1 - AI配置保存失败修复 (Priority: P1)
 
@@ -77,7 +77,8 @@
 
 **Why this priority**: 这些是重要的本地化和个性化功能，影响用户舒适度和国际化用户体验，但不阻塞核心翻译功能。
 
-**Independent Test**: 
+**Independent Test**:
+
 - 跟随系统：选择"跟随系统"选项 → 切换操作系统主题 → 验证应用主题自动跟随变化
 - 语言切换：选择英语语言 → 点击保存 → 验证界面文本切换为英文
 
@@ -117,7 +118,7 @@
 - **跟随系统时OS不支持**: 在不支持系统主题检测的旧版操作系统上，"跟随系统"选项应禁用或显示说明
 - **日志目录权限问题**: 用户没有读取日志目录的权限时，"打开日志目录"功能应给出明确提示
 
-## Requirements *(mandatory)*
+## Requirements _(mandatory)_
 
 ### Functional Requirements
 
@@ -140,7 +141,7 @@
 - **语言偏好 (Language Preference)**: 用户选择的界面语言（中文/英文等），影响所有UI文本显示
 - **日志配置 (Log Configuration)**: 日志级别、日志目录路径、轮转策略等设置
 
-## Success Criteria *(mandatory)*
+## Success Criteria _(mandatory)_
 
 ### Measurable Outcomes
 

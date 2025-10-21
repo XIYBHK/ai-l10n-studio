@@ -6,7 +6,7 @@
 import { message } from 'antd';
 import { createModuleLogger } from '../utils/logger';
 import { apiClient } from './apiClient';
-import { convertKeysToSnakeCase } from '../utils/paramConverter';
+import { maskSensitiveData } from './tauriInvoke';
 
 const log = createModuleLogger('API');
 
@@ -21,7 +21,11 @@ interface ApiOptions {
   retry?: number; // 重试次数
   retryDelay?: number; // 重试延迟（毫秒）
   dedup?: boolean; // 请求去重
-  autoConvertParams?: boolean; // 是否自动转换参数为 snake_case（默认true）
+  /**
+   * 是否自动转换参数（默认false，遵循架构约定）
+   * @see tauriInvoke.ts - 架构设计说明
+   */
+  autoConvertParams?: boolean;
 }
 
 /**
@@ -40,35 +44,24 @@ export async function invoke<T>(
     retry,
     retryDelay,
     dedup,
-    autoConvertParams = true, // 默认启用自动参数转换
+    autoConvertParams, // 🎯 不设默认值，让 apiClient → tauriInvoke 处理（默认 false）
   } = options;
 
   try {
-    // 🔄 自动参数转换：camelCase → snake_case
-    let processedArgs = args;
-    if (autoConvertParams && args) {
-      processedArgs = convertKeysToSnakeCase(args as Record<string, any>);
-      
-      if (!silent && JSON.stringify(args) !== JSON.stringify(processedArgs)) {
-        log.debug(`🔄 参数转换: ${command}`, { 
-          original: args, 
-          converted: processedArgs 
-        });
-      }
-    }
-
     if (!silent) {
-      log.debug(`📤 API调用: ${command}`, processedArgs);
+      // 🔒 安全：掩码敏感信息后再记录日志
+      log.debug(`📤 API调用: ${command}`, maskSensitiveData(args));
     }
 
-    // 使用增强的 API 客户端
-    const result = await apiClient.invoke<T>(command, processedArgs as Record<string, any>, {
+    // 使用增强的 API 客户端（参数转换由 tauriInvoke 统一处理）
+    const result = await apiClient.invoke<T>(command, args as Record<string, any>, {
       timeout,
       retry,
       retryDelay,
       silent,
       errorMessage,
       dedup,
+      autoConvertParams, // 🎯 透传给 apiClient → tauriInvoke
     });
 
     if (!silent) {

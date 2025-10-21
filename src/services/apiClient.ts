@@ -20,6 +20,11 @@ interface InvokeOptions {
   silent?: boolean; // 静默模式（不显示错误提示）
   errorMessage?: string; // 自定义错误消息
   dedup?: boolean; // 是否去重（相同参数的并发请求）
+  /**
+   * 是否自动转换参数（默认false，遵循架构约定）
+   * @see tauriInvoke.ts - 架构设计说明
+   */
+  autoConvertParams?: boolean;
 }
 
 interface PendingRequest {
@@ -47,6 +52,7 @@ class APIClient {
       silent = false,
       errorMessage,
       dedup = false,
+      autoConvertParams, // 🎯 不设默认值，让 tauriInvoke 处理（默认 false）
     } = options;
 
     // 请求去重
@@ -74,7 +80,8 @@ class APIClient {
       retry,
       retryDelay,
       silent,
-      errorMessage
+      errorMessage,
+      autoConvertParams // 传递参数转换选项
     );
 
     // 存储待处理的请求
@@ -108,13 +115,21 @@ class APIClient {
     maxRetries: number,
     retryDelay: number,
     silent: boolean,
-    errorMessage?: string
+    errorMessage?: string,
+    autoConvertParams?: boolean // 🎯 让 tauriInvoke 处理默认值
   ): Promise<T> {
     let lastError: Error | null = null;
 
     for (let attempt = 0; attempt <= maxRetries; attempt++) {
       try {
-        const result = await this.executeWithTimeout<T>(command, params, controller, timeout);
+        const result = await this.executeWithTimeout<T>(
+          command,
+          params,
+          timeout,
+          controller,
+          silent,
+          autoConvertParams
+        );
 
         if (attempt > 0) {
           log.info(`请求成功（重试 ${attempt} 次）: ${command}`);
@@ -161,8 +176,10 @@ class APIClient {
   private async executeWithTimeout<T>(
     command: string,
     params: Record<string, any>,
+    timeout: number,
     controller: AbortController,
-    timeout: number
+    silent: boolean,
+    autoConvertParams?: boolean // 🎯 让 tauriInvoke 处理默认值
   ): Promise<T> {
     return new Promise(async (resolve, reject) => {
       // 设置超时
@@ -172,10 +189,10 @@ class APIClient {
       }, timeout);
 
       try {
-        // 执行实际的调用（启用自动参数转换）
+        // 执行实际的调用（传递参数转换选项）
         const result = await invoke<T>(command, params, {
-          autoConvertParams: true, // 🔄 启用参数转换
-          silent: false, // 保留调试日志
+          autoConvertParams, // 🔧 使用传递的选项，而非硬编码
+          silent, // 使用传递的选项
         });
         clearTimeout(timeoutId);
         resolve(result);

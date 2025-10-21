@@ -35,7 +35,12 @@ import {
   BgColorsOutlined,
   FolderOpenOutlined,
 } from '@ant-design/icons';
-import { aiConfigCommands, systemPromptCommands, aiModelCommands, systemCommands } from '../services/commands'; // ✅ 迁移到统一命令层
+import {
+  aiConfigCommands,
+  systemPromptCommands,
+  aiModelCommands,
+  systemCommands,
+} from '../services/commands'; // ✅ 迁移到统一命令层
 import { AIConfig, ProviderType, PROVIDER_INFO_MAP } from '../types/aiProvider';
 import { createModuleLogger } from '../utils/logger';
 import { useAsync } from '../hooks/useAsync';
@@ -63,7 +68,7 @@ const PROVIDER_CONFIGS = Object.values(ProviderType).map((type) => ({
 export const SettingsModal: React.FC<SettingsModalProps> = ({ visible, onClose }) => {
   const [form] = Form.useForm();
   const { configs, active, mutateAll, mutateActive } = useAIConfigs();
-  
+
   // 🔄 统一状态管理：使用 useAppStore 而非本地状态
   const { language: currentLanguage, setLanguage } = useAppStore();
   const [activeIndex, setActiveIndex] = useState<number | null>(null);
@@ -76,7 +81,6 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({ visible, onClose }
   // 🔄 系统提示词表单状态：与SWR数据同步的本地编辑状态
   const [promptText, setPromptText] = useState<string>(''); // 表单输入的本地状态
   const [isPromptModified, setIsPromptModified] = useState(false);
-
 
   // Notification设置状态
   const [notificationEnabled, setNotificationEnabled] = useState(notificationManager.isEnabled());
@@ -247,15 +251,15 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({ visible, onClose }
   const handleSaveConfig = async () => {
     try {
       const values = await form.validateFields();
-      
+
       // 🚨 修复参数转换问题：区分新增和编辑模式的 apiKey 处理
       const config: AIConfig = {
         provider: values.provider,
         // 新增模式：apiKey 必填，不能为空
         // 编辑模式：apiKey 可以为空（表示保持原值不变）
-        apiKey: isAddingNew 
-          ? (values.apiKey?.trim() || '') // 新增时确保不为 undefined
-          : (values.apiKey || undefined), // 编辑时允许 undefined（保持原值）
+        apiKey: isAddingNew
+          ? values.apiKey?.trim() || '' // 新增时确保不为 undefined
+          : values.apiKey || undefined, // 编辑时允许 undefined（保持原值）
         baseUrl: values.baseUrl || undefined,
         model: values.model || undefined,
         proxy: values.proxy?.enabled
@@ -571,10 +575,10 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({ visible, onClose }
                     label="API 密钥"
                     name="apiKey"
                     rules={[
-                      { 
+                      {
                         required: isAddingNew, // 🚨 只有新增模式才必填
-                        message: '请输入 API 密钥' 
-                      }
+                        message: '请输入 API 密钥',
+                      },
                     ]}
                     extra={
                       editingIndex !== null
@@ -1041,11 +1045,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({ visible, onClose }
                     </Button>
                   </Col>
                   <Col span={12}>
-                    <Button 
-                      icon={<FolderOpenOutlined />} 
-                      onClick={handleOpenLogDirectory} 
-                      block
-                    >
+                    <Button icon={<FolderOpenOutlined />} onClick={handleOpenLogDirectory} block>
                       打开日志目录
                     </Button>
                   </Col>

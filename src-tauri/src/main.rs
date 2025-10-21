@@ -37,6 +37,7 @@ fn main() {
             translate_batch_with_channel, // Tauri 2.x: Channel API (统一翻译入口)
             get_translation_memory,
             get_builtin_phrases,
+            merge_builtin_phrases,
             save_translation_memory,
             open_file_dialog,
             save_file_dialog,

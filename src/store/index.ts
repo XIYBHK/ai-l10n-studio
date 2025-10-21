@@ -48,7 +48,7 @@ export async function initializeStores() {
  * 已优化的组件：
  * ✅ App.tsx - 使用 useAppStore
  * ✅ EntryList.tsx - 使用 useSessionStore
- * ✅ EditorPane.tsx - 使用 useSessionStore  
+ * ✅ EditorPane.tsx - 使用 useSessionStore
  * ✅ AIWorkspace.tsx - 使用 useSessionStore
  * ✅ useTheme.ts - 基于 useAppStore 的主题管理
  * ✅ SettingsModal.tsx - 使用统一命令层和 AppDataProvider

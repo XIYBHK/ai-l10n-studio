@@ -52,7 +52,7 @@ export const MenuBar: React.FC<MenuBarProps> = ({
   onTargetLanguageChange,
 }) => {
   const { colors } = useTheme();
-  
+
   // ✅ 使用统一数据提供者获取AI配置状态
   const { activeAIConfig } = useAppData();
 

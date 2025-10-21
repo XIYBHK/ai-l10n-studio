@@ -1,10 +1,182 @@
 # 更新日志
 
+## 2025-10-21 - 移除测试系统 + 修复AI配置编辑问题
+
+### Bug修复
+
+**AI配置编辑时字段显示为空**：
+
+- **问题1**：编辑已保存的AI配置时，API密钥和URL字段显示为空
+  - **原因**：后端序列化使用 snake_case（`api_key`），前端期望 camelCase（`apiKey`）
+  - **修复**：在后端添加 `#[serde(rename_all = "camelCase")]` 到 `AIConfig`、`ProxyConfig`、`AppConfig`、`ConfigVersionInfo`
+  - **文件**：`src-tauri/src/services/ai_translator.rs`, `config_manager.rs`
+
+- **问题2**：保存配置时报错 `missing field 'apiKey'`
+  - **原因**：`apiClient.ts` 的 `executeWithTimeout` 硬编码了 `autoConvertParams: true`，导致参数被重复转换
+  - **修复**：
+    - `apiClient.ts`：支持传递 `autoConvertParams` 选项，不再硬编码
+    - `api.ts`：转换参数后传递 `autoConvertParams: false` 给 `apiClient` 避免重复转换
+    - 调用链路：`commands.ts (false)` → `api.ts (转换)` → `apiClient (false)` → `tauriInvoke (false)`
+  - **文件**：`src/services/apiClient.ts`, `api.ts`
+
+- **影响**：所有AI配置的JSON序列化/反序列化现在使用统一的 camelCase 命名，参数转换逻辑更清晰
+
+- **问题3**：全面检查发现多个命令参数格式不一致
+  - **`TestConnectionRequest`**：后端使用 snake_case，前端禁用转换导致不匹配
+  - **`ContextualRefineRequest`**：后端使用 snake_case，前端使用 snake_case 但会被转换
+  - **修复**：
+    - 后端统一添加 `#[serde(rename_all = "camelCase")]` 到所有请求/响应结构体
+    - 前端类型定义改为 camelCase（`previousEntry`、`nextEntry`）
+    - 前端调用统一设置 `autoConvertParams: false`
+  - **文件**：
+    - `src-tauri/src/commands/ai_config.rs`（`TestConnectionRequest`、`TestConnectionResult`）
+    - `src-tauri/src/commands/translator.rs`（`ContextualRefineRequest`）
+    - `src/types/tauri.ts`
+    - `src/App.tsx`
+    - `src/services/commands.ts`
+
+- **问题4**：其他Tauri命令参数转换问题
+  - **受影响命令**：`parse_po_file`、`save_po_file`、`detect_file_format`、`get_file_metadata`、`get_default_target_lang`
+  - **原因**：Tauri 2.x 自动将 Rust 的 snake_case 参数转换为 camelCase 暴露给前端，但前端启用了自动转换导致不匹配
+  - **修复**：所有使用 `filePath`、`sourceLangCode` 等参数的命令添加 `autoConvertParams: false`
+  - **文件**：`src/services/commands.ts`（`poFileCommands`、`fileFormatCommands`、`i18nCommands`）
+
+- **问题5**：SWR 和 Channel API 调用参数转换问题
+  - **`tauriFetcher`** (SWR)：所有通过 SWR 的调用都被自动转换参数
+  - **`translate_batch_with_channel`**：`useChannelTranslation.ts` 中直接调用，参数被转换
+  - **修复**：
+    - `swr.ts`：`tauriFetcher` 添加 `autoConvertParams: false`
+    - `useChannelTranslation.ts`：调用 Channel API 时添加 `autoConvertParams: false`
+  - **文件**：`src/services/swr.ts`、`src/hooks/useChannelTranslation.ts`
+
+### 架构改进：系统性解决参数转换问题
+
+**问题模式**：反复手动添加 `autoConvertParams: false`（18处分散配置）
+
+**架构级解决**：
+
+1. **修改默认行为**（一处修改，全局生效）
+   - `src/services/tauriInvoke.ts`：默认值改为 `false`
+   - `src/services/apiClient.ts`：移除硬编码默认值
+   - **原因**：Tauri 2.x 已自动将 snake_case 转为 camelCase，无需再转换
+
+2. **清理冗余代码**（移除18处手动配置）
+   - `src/services/commands.ts` - 13处
+   - `src/services/api.ts` - 1处
+   - `src/hooks/useChannelTranslation.ts` - 1处
+   - `src/services/swr.ts` - 2处
+   - `src/services/configSync.ts` - 1处
+
+3. **建立架构约定**
+   - **前端**：统一使用 camelCase
+   - **后端**：通过 `#[serde(rename_all = "camelCase")]` 统一序列化
+   - **文档**：新增 `docs/ARCHITECTURE_DECISION_TAURI_PARAMS.md` 记录决策
+
+4. **成果**
+   - ✅ 减少代码行数：-18行冗余
+   - ✅ 统一架构规范：零配置，自动正确
+   - ✅ 提高可维护性：新增命令自动遵循约定
+   - ✅ 防止重复问题：文档化架构决策
+
+**参考**：`specs/001-bug-7/ARCHITECTURE-IMPROVEMENT-SUMMARY.md`
+
+### 补充修复：api.ts 遗漏的参数转换逻辑
+
+**问题**：首次测试发现 AI 配置测试和保存仍然失败，错误 `missing field 'apiKey'`
+
+**根因**：`api.ts` 第43行仍有 `autoConvertParams = true`，导致参数被重复转换
+
+**修复**：
+
+- 移除 `api.ts` 中的参数转换逻辑（第47-58行）
+- 移除 `convertKeysToSnakeCase` 导入
+- 默认值改为 `undefined`，让 `apiClient → tauriInvoke` 统一处理
+
+**文件**：`src/services/api.ts`
+
+## 2025-10-21 - 安全修复和翻译记忆库逻辑优化
+
+### 问题1：API密钥明文泄露
+
+**问题**：`api.ts` 在日志中输出参数时未脱敏，导致API密钥明文显示
+
+**修复**：
+
+- 在 `api.ts` 中导入 `maskSensitiveData`
+- 日志输出前先脱敏处理
+- 导出 `maskSensitiveData` 供其他模块使用
+
+**文件**：`src/services/api.ts`, `src/services/tauriInvoke.ts`
+
+### 问题2：翻译记忆库逻辑不符合预期
+
+**原设计**：
+
+- 首次使用：自动加载83+条内置短语到记忆库文件 ✓
+- 后续使用：完全以记忆库文件为准，用户删除的词条不再使用
+- 手动加载：用户点击"加载内置词库"，合并并保存到文件
+
+**问题**：
+
+1. `get_translation()` 查询时会自动查 builtin，导致用户删除的词条仍被使用
+2. 前端"加载内置词库"只合并显示，未保存到后端
+
+**修复**：
+
+- 移除 `translation_memory.rs` 中 `get_translation()` 的 builtin 回退查询（第163-168行）
+- 新增后端命令 `merge_builtin_phrases()`：合并内置词库到当前记忆库并保存
+- 前端调用新命令，实现真正的持久化加载
+
+**文件**：
+
+- `src-tauri/src/services/translation_memory.rs`
+- `src-tauri/src/commands/translator.rs`
+- `src-tauri/src/main.rs`
+- `src/services/commands.ts`
+- `src/components/MemoryManager.tsx`
+
+**逻辑**：
+
+- 翻译任务只使用记忆库文件中的词条
+- 用户删除的词条不会被自动恢复使用
+- 保持用户对记忆库的完全控制权
+
+### 清理内容
+
+**测试文件**：
+
+- 移除前端测试目录 `src/__tests__/`（10个测试文件）
+- 移除前端测试配置 `src/test/`
+- 移除后端测试目录 `src-tauri/tests/`（6个测试文件）
+- 删除 `vitest.config.ts` 配置文件
+
+**依赖清理**：
+
+- 移除测试相关的 npm 脚本（test, test:ui, test:run, test:ci, test:coverage, test:backend等）
+- 移除测试相关依赖：
+  - `@testing-library/jest-dom`
+  - `@testing-library/react`
+  - `@testing-library/user-event`
+  - `@vitest/coverage-v8`
+  - `@vitest/ui`
+  - `happy-dom`
+  - `jsdom`
+  - `vitest`
+
+**影响范围**：
+
+- 前端开发不再包含自动化测试
+- CI/CD 工作流需要移除测试步骤
+- 代码质量依赖代码审查和手动测试
+
+---
+
 ## 2025-10-15 - 代码清理和系统主题检测优化
 
 ### 🎯 **系统主题检测突破**
 
 **原生API检测实现**：
+
 - **问题**：Tauri webview环境中 `window.matchMedia('(prefers-color-scheme: dark)')` 无法准确反映Windows系统主题
 - **解决**：实现混合检测策略
   - **后端**：新增 `get_native_system_theme` 命令，直接查询Windows注册表、macOS defaults、Linux gsettings
@@ -15,12 +187,14 @@
 ### 🧹 **代码质量优化**
 
 **临时调试日志清理**：
+
 - 移除6个文件中的50行临时调试代码
 - 保留核心功能：原生API检测机制、不一致警告、错误处理日志
 - 修复所有linter警告（未使用的导入、变量、参数）
 - 简化函数签名，移除unused的source参数
 
 **受影响文件**：
+
 - `App.tsx` - 移除ConfigProvider主题配置调试日志
 - `useAppStore.ts` - 移除设置主题调试日志
 - `useTheme.ts` - 移除用户点击和直接设置主题调试日志
@@ -29,6 +203,7 @@
 - `ThemeModeSwitch.tsx` - 移除source参数传递
 
 **性能提升**：
+
 - 减少日志噪音，提高开发体验
 - 优化性能，减少不必要的日志记录
 - 保持代码整洁，移除调试遗留代码
@@ -37,6 +212,7 @@
 ### 📁 **目录结构整理**
 
 **清理成果**：
+
 - 检查项目目录，确认无临时文件需要清理
 - 所有文件结构正常，无垃圾文件残留
 - 保持项目目录的整洁性
@@ -44,6 +220,7 @@
 ### 💾 **提交记录**
 
 **Git提交**：`[001-bug-7 440c9cb] 🧹 清理临时调试日志和代码优化`
+
 - 6 files changed, 6 insertions(+), 50 deletions(-)
 - 详细的提交信息记录了所有清理内容和保留功能
 
@@ -54,42 +231,49 @@
 ### 🐛 核心Bug修复
 
 **US1 - AI配置保存失败**
+
 - **问题**：add_ai_config 缺少 api_key 字段，保存失败
 - **原因**：前端 aiConfig 对象未包含 apiKey 字段
 - **修复**：在 SettingsModal.tsx 中添加 apiKey 属性传递
 - **影响**：所有AI供应商配置现在可以正常保存
 
 **US2 - 主题切换需点击两次**
+
 - **问题**：主题切换按钮点击两次才生效
 - **原因**：useAppStore 中状态竞态条件，重复设置相同值
 - **修复**：setTheme/setLanguage 添加重复检查，loadPersistedState 避免循环调用
 - **影响**：主题切换立即响应，用户体验优化
 
 **US3 - 系统提示词保存失败**
+
 - **问题**：Command set_system_prompt not found
 - **原因**：前端调用 set_system_prompt，后端注册为 update_system_prompt
 - **修复**：统一命令名称为 update_system_prompt
 - **影响**：系统提示词配置功能正常工作
 
 **US4 - "跟随系统"主题无效**
+
 - **问题**：选择跟随系统主题时不会自动切换
 - **原因**：themeMode 变化时 appliedTheme 没有立即更新
 - **修复**：添加专门的 useEffect 监听 themeMode 变化，立即检测并应用系统主题
 - **影响**：跟随系统主题模式完全正常
 
 **US5 - 语言切换到英语无效**
+
 - **问题**：切换到英语后界面文字没有变化
 - **原因**：使用了原生 i18n.changeLanguage 而非自定义 changeLanguage 函数
 - **修复**：使用自定义 changeLanguage 确保资源正确加载和状态同步
 - **影响**：多语言切换功能完全正常
 
 **US6 - 缺少"打开日志目录"功能**
+
 - **功能**：在设置界面日志设置中添加"打开日志目录"按钮
 - **实现**：新增按钮调用 systemCommands.openLogDirectory
 - **界面**：重新设计日志设置布局，按钮并排显示
 - **影响**：用户可以直接访问日志文件进行问题诊断
 
 **US7 - 默认目标语言获取失败**
+
 - **问题**：加载PO文件后弹窗"获取默认目标语言失败"
 - **原因**：前端传递 sourceLanguageCode，后端期望 source_lang_code
 - **修复**：统一参数命名约定 (camelCase ↔ snake_case)
@@ -98,18 +282,21 @@
 ### 🧪 质量保证
 
 **测试覆盖**：85个测试全部通过 (100% pass rate)
+
 - 新增主题测试 (3个测试用例)
-- 新增语言切换测试 (6个测试用例)  
+- 新增语言切换测试 (6个测试用例)
 - 修复异步Hook测试稳定性
 - 所有现有测试保持兼容
 
 **架构一致性**：
+
 - 遵循四层架构设计原则
 - 使用统一命令层进行 IPC 通信
 - 保持 AppDataProvider 数据同步
 - 遵循 TDD 开发流程
 
 **性能优化**：
+
 - 避免不必要的状态更新和重渲染
 - 优化事件监听和资源加载
 - 保持测试执行速度 (~12秒)

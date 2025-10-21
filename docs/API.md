@@ -10,17 +10,25 @@
 - **统一错误处理**: 集中式 `invoke()` 包装器，自动日志和用户提示
 - **模块化组织**: 13 个命令模块（`configCommands`, `aiConfigCommands`, `translatorCommands` 等）
 - **易于维护**: 命令名称统一管理在 `COMMANDS` 常量中
+- **🆕 零配置参数转换**: 默认遵循 camelCase 约定，无需手动配置（详见架构决策）
 
 **推荐用法**：
 
 ```typescript
 import { configCommands, aiConfigCommands, translatorCommands } from '@/services/commands';
 
-// ✅ 使用命令层（推荐）
+// ✅ 使用命令层（推荐）- 自动遵循 camelCase 约定
 const config = await configCommands.get();
-await aiConfigCommands.add(newConfig);
+await aiConfigCommands.add(newConfig); // newConfig 使用 camelCase 字段
 const result = await translatorCommands.translateBatch(entries, targetLang);
 ```
+
+**🎯 架构约定**（2025-10）：
+
+- 所有参数使用 **camelCase** 格式（如 `apiKey`, `baseUrl`）
+- `tauriInvoke` 默认不转换参数（`autoConvertParams = false`）
+- Tauri 2.x 自动处理 camelCase，无需手动配置
+- 详见：`docs/ARCHITECTURE_DECISION_TAURI_PARAMS.md`
 
 **命令模块索引**：
 
@@ -47,12 +55,14 @@ const result = await translatorCommands.translateBatch(entries, targetLang);
 **✅ 迁移完成状态** (2025-10-15):
 
 已删除模块:
+
 - `termLibraryApi`, `translationMemoryApi`, `logApi`, `promptLogApi`
 - `aiConfigApi`, `systemPromptApi`, `aiModelApi`
-- `poFileApi`, `dialogApi`, `translatorApi`, `languageApi` 
+- `poFileApi`, `dialogApi`, `translatorApi`, `languageApi`
 - `configApi`, `fileFormatApi`, `systemApi` - **已完全移除**
 
 **🎯 迁移成果**:
+
 - ✅ 所有前端组件已迁移到统一命令层
 - ✅ 所有旧 API 实现已完全移除
 - ✅ 无遗留代码，无技术债务
@@ -68,7 +78,7 @@ const result = await translatorCommands.translateBatch(entries, targetLang);
 - `poFileCommands` - 文件解析/保存（PO/JSON/XLIFF/YAML）
 - `translatorCommands` - AI 翻译（8 厂商，单条/批量/通道模式）
 - `aiModelCommands` - 多AI供应商（模型查询、精确成本计算、USD定价）
-- `translationMemoryCommands` - 翻译记忆库（83+ 内置短语，模式匹配）
+- `translationMemoryCommands` - 翻译记忆库（首次加载83+内置短语，后续完全以文件为准）
 - `termLibraryCommands` - 术语库管理（风格分析、批量导入）
 - `configCommands` - 配置管理（AI/代理/系统设置，实时校验）
 - `statsCommands` - 统计聚合（Token/去重/性能指标）
@@ -213,6 +223,47 @@ const { data, error, isLoading } = useSWR('config', configCommands.get);
 - 自动集成事件监听和缓存失效
 - 一键刷新所有数据（`refreshAll()`）
 
+### 翻译记忆库架构 (2025-10-21 优化)
+
+**命令模块**: `translationMemoryCommands`
+
+**核心逻辑**（用户完全控制）:
+
+- **首次使用**: 自动加载83+条内置短语到记忆库文件
+- **后续使用**: 完全以记忆库文件为准，不再自动回退查询内置短语
+- **用户删除**: 用户删除的词条不会被自动恢复使用
+- **手动加载**: 用户可主动合并内置词库，新增词条会保存到文件
+
+**API 方法**:
+
+```typescript
+// 获取当前翻译记忆库
+translationMemoryCommands.get(): Promise<TranslationMemory>
+
+// 获取内置短语列表（仅供查看）
+translationMemoryCommands.getBuiltinPhrases(): Promise<{ memory: Record<string, string> }>
+
+// 🆕 合并内置短语到当前记忆库并保存
+translationMemoryCommands.mergeBuiltinPhrases(): Promise<number>  // 返回新增词条数
+
+// 保存翻译记忆库
+translationMemoryCommands.save(memory: any): Promise<void>
+```
+
+**设计原则**:
+
+- ✅ **用户控制权**: 记忆库完全由用户管理，不会自动添加或恢复词条
+- ✅ **首次友好**: 首次使用自动加载内置短语，无需手动操作
+- ✅ **持久化**: 所有修改（包括手动加载）都会保存到文件
+- ✅ **无侵入性**: 内置短语优先级低，不覆盖用户已有翻译
+
+**使用场景**:
+
+1. **首次启动**: 自动加载83+条游戏本地化常用短语
+2. **删除词条**: 用户删除某个内置短语后，翻译任务不再使用它
+3. **重新加载**: 用户点击"加载内置词库"按钮，合并到当前记忆库并保存
+4. **导入导出**: 完整记忆库可导出为JSON，支持跨设备迁移
+
 ### 多AI供应商架构
 
 **命令模块**: `aiModelCommands`
@@ -326,10 +377,10 @@ console.log('系统主题:', systemTheme); // 'dark' | 'light'
 
 **优势对比**：
 
-| 检测方式 | 准确性 | 性能 | 跨平台 | 依赖 |
-|---------|-------|------|-------|------|
-| `window.matchMedia` | ❌ 不准确（webview限制） | ✅ 快 | ✅ 是 | 无 |
-| 原生API查询 | ✅ 100%准确 | ✅ 快 | ✅ 是 | OS命令 |
+| 检测方式            | 准确性                   | 性能  | 跨平台 | 依赖   |
+| ------------------- | ------------------------ | ----- | ------ | ------ |
+| `window.matchMedia` | ❌ 不准确（webview限制） | ✅ 快 | ✅ 是  | 无     |
+| 原生API查询         | ✅ 100%准确              | ✅ 快 | ✅ 是  | OS命令 |
 
 #### 集成到主题系统
 
@@ -338,7 +389,7 @@ console.log('系统主题:', systemTheme); // 'dark' | 'light'
 const handleSystemThemeChange = async () => {
   let newSystemTheme: AppliedTheme = 'light';
   let detectionMethod = 'unknown';
-  
+
   // 🔧 方法1：尝试使用原生API（优先级最高）
   try {
     const nativeTheme = await systemCommands.getNativeSystemTheme();
@@ -350,13 +401,13 @@ const handleSystemThemeChange = async () => {
     // 原生API失败，继续使用媒体查询
     detectionMethod = 'fallback-media-query';
   }
-  
+
   // 🔧 方法2：备用媒体查询检测
   if (detectionMethod === 'fallback-media-query') {
     const mediaQueryMatches = mediaQuery.matches;
     newSystemTheme = mediaQueryMatches ? 'dark' : 'light';
   }
-  
+
   // 🚨 检测不一致警告
   if (nativeResult && mediaQueryResult && nativeResult !== mediaQueryResult) {
     log.warn('⚠️  系统主题检测结果不一致！', {

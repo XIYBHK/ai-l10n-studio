@@ -284,7 +284,7 @@ export const CommonEventConfigs = {
 
 /**
  * 🏗️ 全局事件桥接初始化器（使用项目标准的防重复框架模式）
- * 
+ *
  * 参考 StatsManagerV2 的设计模式
  */
 export function initializeGlobalTauriEventBridge() {

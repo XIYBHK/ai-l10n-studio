@@ -30,7 +30,7 @@ export const EditorPane: React.FC<EditorPaneProps> = ({
 }) => {
   // ✅ 使用统一数据提供者获取AI配置
   const { activeAIConfig } = useAppData();
-  
+
   const [translation, setTranslation] = useState('');
   const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
   const [termModalVisible, setTermModalVisible] = useState(false);
@@ -54,7 +54,6 @@ export const EditorPane: React.FC<EditorPaneProps> = ({
       });
     }
   }, [entry]); // 只在 entry 变化时重置，不依赖 aiTranslation
-
 
   const handleTranslationChange = (value: string) => {
     setTranslation(value);
