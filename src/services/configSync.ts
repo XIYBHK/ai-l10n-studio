@@ -8,7 +8,7 @@
  * 4. 定期验证前后端配置一致性
  */
 
-import { invoke } from '@tauri-apps/api/core';
+import { invoke } from './tauriInvoke';
 import { eventDispatcher } from './eventDispatcher';
 import { createModuleLogger } from '../utils/logger';
 
@@ -33,6 +33,9 @@ class ConfigSyncManager {
   private validationInterval: number | null = null;
   private unsubscribeConfigChanges: (() => void) | null = null;
   private readonly VALIDATION_INTERVAL_MS = 5000; // 5秒验证一次
+
+  // 🚨 添加验证锁，防止重复验证
+  private isValidating = false;
 
   /**
    * 初始化配置同步
@@ -77,11 +80,28 @@ class ConfigSyncManager {
   /**
    * 验证前后端配置一致性
    */
-  async validate(): Promise<ConfigValidationResult> {
+  async validate(options: { silent?: boolean } = {}): Promise<ConfigValidationResult> {
+    const { silent = false } = options;
+
+    // 🚨 防止重复验证
+    if (this.isValidating) {
+      if (!silent) {
+        log.debug('验证正在进行中，跳过本次验证');
+      }
+      return {
+        isValid: true,
+        issues: ['验证进行中'],
+      };
+    }
+
+    this.isValidating = true;
     const issues: string[] = [];
 
     try {
-      const backendVersion = await invoke<ConfigVersion>('get_config_version');
+      // 🔇 静默模式：将 get_config_version 调用设为静默
+      const backendVersion = await invoke<ConfigVersion>('get_config_version', undefined, {
+        silent,
+      });
 
       if (!this.currentVersion) {
         issues.push('前端配置未初始化');
@@ -116,8 +136,11 @@ class ConfigSyncManager {
       const isValid = issues.length === 0;
 
       if (!isValid) {
-        log.warn('⚠️ 配置验证失败', { issues });
-        // 自动同步
+        // 🔇 静默模式：只有在非静默模式下才记录配置不一致警告
+        if (!silent) {
+          log.warn('⚠️ 配置验证失败', { issues });
+        }
+        // 自动同步（始终执行，不管是否静默）
         this.currentVersion = backendVersion;
         eventDispatcher.emit('config:out-of-sync', { issues, backendVersion });
       }
@@ -134,6 +157,9 @@ class ConfigSyncManager {
         isValid: false,
         issues,
       };
+    } finally {
+      // 🚨 确保验证锁被释放
+      this.isValidating = false;
     }
   }
 
@@ -146,10 +172,11 @@ class ConfigSyncManager {
     }
 
     this.validationInterval = window.setInterval(async () => {
-      await this.validate();
+      // 🔇 定期验证采用静默模式，减少日志噪音
+      await this.validate({ silent: true });
     }, this.VALIDATION_INTERVAL_MS);
 
-    log.debug('⏰ 配置验证定时器已启动', {
+    log.info('⏰ 配置验证定时器已启动（静默模式）', {
       intervalMs: this.VALIDATION_INTERVAL_MS,
     });
   }
@@ -161,7 +188,7 @@ class ConfigSyncManager {
     if (this.validationInterval) {
       window.clearInterval(this.validationInterval);
       this.validationInterval = null;
-      log.debug('⏰ 配置验证定时器已停止');
+      log.info('⏰ 配置验证定时器已停止');
     }
   }
 

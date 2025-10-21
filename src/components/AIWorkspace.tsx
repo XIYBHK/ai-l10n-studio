@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Card, Tag, Divider, Button, Popconfirm, Collapse } from 'antd';
+import { Card, Tag, Divider, Button, Popconfirm } from 'antd';
 import { RobotOutlined, SettingOutlined, ReloadOutlined, BookOutlined } from '@ant-design/icons';
 import { TranslationStats } from '../types/tauri';
 import { MemoryManager } from './MemoryManager';
@@ -9,7 +9,13 @@ import { useStatsStore, useSessionStore } from '../store';
 import { createModuleLogger } from '../utils/logger';
 import { eventDispatcher } from '../services/eventDispatcher';
 import { useTermLibrary } from '../hooks/useTermLibrary';
-import { formatCost, formatTokens, formatPercentage } from '../utils/formatters';
+import { formatTokens, formatPercentage, formatCostByLocale } from '../utils/formatters';
+import { useAppStore } from '../store/useAppStore';
+import { useAppData } from '../providers/AppDataProvider';
+import { useEffect as useEffectHook } from 'react';
+import { aiModelCommands } from '../services/commands';
+import type { ModelInfo } from '../types/generated/ModelInfo';
+// providerMapping 已移除，直接使用 config.providerId
 
 const log = createModuleLogger('AIWorkspace');
 
@@ -17,17 +23,17 @@ interface AIWorkspaceProps {
   stats: TranslationStats | null; // ❌ 已废弃，改用 sessionStats
   isTranslating: boolean;
   onResetStats?: () => void;
-  apiKey?: string; // 用于生成风格总结
+  // ⛔ 移除: apiKey (TermLibraryManager内部使用useAppData获取)
 }
 
 export const AIWorkspace: React.FC<AIWorkspaceProps> = ({
   isTranslating,
   onResetStats,
-  apiKey,
+  // ⛔ 移除: apiKey 参数
 }) => {
   const [memoryManagerVisible, setMemoryManagerVisible] = useState(false);
   const [termLibraryVisible, setTermLibraryVisible] = useState(false);
-  const [shouldLoadTerms, setShouldLoadTerms] = useState(false); // 控制是否加载术语库
+  const [shouldLoadTerms, setShouldLoadTerms] = useState(true); // 🔧 改为默认加载，检查是否有术语
   const { termLibrary, mutate: mutateTermLibrary } = useTermLibrary({ enabled: shouldLoadTerms });
   const { colors } = useTheme();
 
@@ -37,6 +43,38 @@ export const AIWorkspace: React.FC<AIWorkspaceProps> = ({
   // 3. cumulativeStats: 累计统计（跨文件跨会话）
   const { cumulativeStats, resetCumulativeStats } = useStatsStore();
   const { sessionStats } = useSessionStore();
+
+  // 获取语言设置，用于货币显示
+  const { language } = useAppStore();
+
+  // 🆕 获取当前 AI 配置和模型信息
+  const { activeAIConfig } = useAppData();
+  const [modelInfo, setModelInfo] = useState<ModelInfo | null>(null);
+
+  // 🆕 加载模型信息（用于检查缓存支持）
+  useEffectHook(() => {
+    if (activeAIConfig && activeAIConfig.providerId && activeAIConfig.model) {
+      aiModelCommands
+        .getModelInfo(activeAIConfig.providerId, activeAIConfig.model)
+        .then((info) => {
+          setModelInfo(info);
+          if (info?.supports_cache) {
+            log.debug('当前模型支持缓存', {
+              model: info.name,
+              cache_savings: info.cache_reads_price
+                ? `${(((info.input_price - info.cache_reads_price) / info.input_price) * 100).toFixed(0)}%`
+                : 'N/A',
+            });
+          }
+        })
+        .catch((err) => {
+          log.error('获取模型信息失败:', err);
+          setModelInfo(null);
+        });
+    } else {
+      setModelInfo(null);
+    }
+  }, [activeAIConfig?.providerId, activeAIConfig?.model]);
 
   // 监听术语更新事件（说明有术语了，开始加载）
   useEffect(() => {
@@ -88,6 +126,7 @@ export const AIWorkspace: React.FC<AIWorkspaceProps> = ({
     const tmHits = sessionStats.tm_hits ?? 0;
     const deduplicated = sessionStats.deduplicated ?? 0;
     const aiTranslated = sessionStats.ai_translated ?? 0;
+    const tmLearned = sessionStats.tm_learned ?? 0;
 
     // 🔧 修复：实际处理的总条目数 = tm_hits + deduplicated + ai_translated
     // 而不是使用 sessionStats.total（文件总条目数）
@@ -110,7 +149,7 @@ export const AIWorkspace: React.FC<AIWorkspaceProps> = ({
         <div
           style={{
             display: 'grid',
-            gridTemplateColumns: 'repeat(3, 1fr)',
+            gridTemplateColumns: 'repeat(2, 1fr)',
             gap: '8px',
             marginBottom: 12,
             fontSize: '11px',
@@ -153,6 +192,19 @@ export const AIWorkspace: React.FC<AIWorkspaceProps> = ({
             <div style={{ color: colors.textTertiary, marginBottom: '4px' }}>AI调用</div>
             <div style={{ fontSize: '16px', fontWeight: 600, color: colors.textPrimary }}>
               {actualTotal > 0 ? formatPercentage(aiTranslated, actualTotal) : '0.0%'}
+            </div>
+          </div>
+          <div
+            style={{
+              textAlign: 'center',
+              padding: '8px',
+              background: colors.bgTertiary,
+              borderRadius: '4px',
+            }}
+          >
+            <div style={{ color: colors.textTertiary, marginBottom: '4px' }}>记忆库新增</div>
+            <div style={{ fontSize: '16px', fontWeight: 600, color: colors.statusTranslated }}>
+              {tmLearned}
             </div>
           </div>
         </div>
@@ -202,7 +254,7 @@ export const AIWorkspace: React.FC<AIWorkspaceProps> = ({
           </div>
         </div>
 
-        {/* 精确成本（使用 ModelInfo 定价） */}
+        {/* 精确成本（使用 ModelInfo 定价，支持多语言货币） */}
         <div
           style={{
             padding: '8px',
@@ -214,7 +266,7 @@ export const AIWorkspace: React.FC<AIWorkspaceProps> = ({
             fontSize: '12px',
           }}
         >
-          <span style={{ color: colors.textSecondary }}>💰 实际成本</span>
+          <span style={{ color: colors.textSecondary }}>💰 预估成本</span>
           <span
             style={{
               fontWeight: 600,
@@ -223,9 +275,32 @@ export const AIWorkspace: React.FC<AIWorkspaceProps> = ({
               fontFamily: 'monospace',
             }}
           >
-            {formatCost(cost)}
+            {formatCostByLocale(cost, language)}
           </span>
         </div>
+
+        {/* 🆕 缓存支持提示 */}
+        {modelInfo?.supports_cache && modelInfo.cache_reads_price && (
+          <div
+            style={{
+              marginTop: 8,
+              padding: '8px 10px',
+              background: colors.bgTertiary,
+              border: `1px solid ${colors.borderPrimary}`,
+              borderRadius: '4px',
+              fontSize: '11px',
+              color: colors.textSecondary,
+              lineHeight: '1.5',
+            }}
+          >
+            ℹ️ 当前模型支持缓存功能，重复请求可节省约{' '}
+            {(
+              ((modelInfo.input_price - modelInfo.cache_reads_price) / modelInfo.input_price) *
+              100
+            ).toFixed(0)}
+            % 输入成本
+          </div>
+        )}
 
         {/* 效率提示 */}
         {tmHits + deduplicated > 0 && (
@@ -267,6 +342,7 @@ export const AIWorkspace: React.FC<AIWorkspaceProps> = ({
     // 安全访问 token_stats
     const cost = cumulativeStats.token_stats?.cost ?? 0;
     const totalTokens = cumulativeStats.token_stats?.total_tokens ?? 0;
+    const cumulativeTmLearned = cumulativeStats.tm_learned ?? 0;
 
     return (
       <div>
@@ -299,7 +375,7 @@ export const AIWorkspace: React.FC<AIWorkspaceProps> = ({
           </Popconfirm>
         </div>
 
-        {/* 精简数据展示 - 调整排版：总计翻译-AI调用 / 记忆命中-去重命中 */}
+        {/* 精简数据展示 - 调整排版：总计翻译-AI调用-记忆命中-去重命中-记忆库新增 */}
         <div
           style={{
             display: 'grid',
@@ -342,6 +418,7 @@ export const AIWorkspace: React.FC<AIWorkspaceProps> = ({
             gridTemplateColumns: 'repeat(2, 1fr)',
             gap: '8px',
             fontSize: '11px',
+            marginBottom: 8,
           }}
         >
           <div
@@ -371,8 +448,30 @@ export const AIWorkspace: React.FC<AIWorkspaceProps> = ({
             </div>
           </div>
         </div>
+        <div
+          style={{
+            display: 'grid',
+            gridTemplateColumns: '1fr',
+            gap: '8px',
+            fontSize: '11px',
+          }}
+        >
+          <div
+            style={{
+              textAlign: 'center',
+              padding: '6px',
+              background: colors.bgTertiary,
+              borderRadius: '4px',
+            }}
+          >
+            <div style={{ color: colors.textTertiary }}>记忆库新增</div>
+            <div style={{ fontSize: '16px', fontWeight: 600, color: colors.statusTranslated }}>
+              {cumulativeTmLearned}
+            </div>
+          </div>
+        </div>
 
-        {/* Token和费用 */}
+        {/* Token和费用（支持多语言货币） */}
         <div
           style={{
             marginTop: 8,
@@ -389,7 +488,7 @@ export const AIWorkspace: React.FC<AIWorkspaceProps> = ({
           <span
             style={{ fontWeight: 600, color: colors.statusTranslated, fontFamily: 'monospace' }}
           >
-            {formatCost(cost)}
+            {formatCostByLocale(cost, language)}
           </span>
         </div>
       </div>
@@ -436,97 +535,67 @@ export const AIWorkspace: React.FC<AIWorkspaceProps> = ({
 
         {/* ❌ 已移除"本次翻译"详细统计，统一使用"本次会话统计"展示 */}
 
-        {/* 风格总结展示 */}
-        {termLibrary && termLibrary.style_summary && (
-          <>
-            <Collapse
-              ghost
-              size="small"
-              style={{ marginBottom: 12 }}
-              items={[
-                {
-                  key: 'style',
-                  label: (
-                    <span style={{ fontSize: '12px', fontWeight: 600 }}>
-                      <BookOutlined /> 学习到的翻译风格 ({termLibrary.style_summary.based_on_terms}
-                      条术语)
-                    </span>
-                  ),
-                  extra: (
-                    <Button
-                      type="link"
-                      size="small"
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        setShouldLoadTerms(true);
-                        setTermLibraryVisible(true);
-                      }}
-                      style={{ fontSize: '11px', padding: 0 }}
-                    >
-                      管理
-                    </Button>
-                  ),
-                  children: (
-                    <div>
-                      <div
-                        style={{
-                          padding: '8px 12px',
-                          background: colors.bgTertiary,
-                          borderRadius: '4px',
-                          fontSize: '12px',
-                          lineHeight: '1.6',
-                          color: colors.textSecondary,
-                        }}
-                      >
-                        {termLibrary.style_summary.prompt}
-                        <div
-                          style={{
-                            marginTop: 8,
-                            fontSize: '11px',
-                            color: colors.textTertiary,
-                          }}
-                        >
-                          版本 v{termLibrary.style_summary.version} · 最后更新:{' '}
-                          {new Date(termLibrary.style_summary.generated_at).toLocaleString('zh-CN')}
-                        </div>
-                      </div>
-                    </div>
-                  ),
-                },
-              ]}
-            />
-            <Divider style={{ margin: '12px 0' }} />
-          </>
-        )}
-
-        {/* 如果有术语但没有风格总结，也显示管理入口 */}
-        {termLibrary && !termLibrary.style_summary && termLibrary.metadata.total_terms > 0 && (
+        {/* 🆕 术语库常驻展示 - 不为空时始终显示 */}
+        {termLibrary && termLibrary.metadata.total_terms > 0 && (
           <>
             <div
               style={{
-                padding: '8px 12px',
-                background: colors.bgTertiary,
-                borderRadius: '4px',
                 marginBottom: 12,
-                display: 'flex',
-                justifyContent: 'space-between',
-                alignItems: 'center',
               }}
             >
-              <span style={{ fontSize: '12px', color: colors.textSecondary }}>
-                <BookOutlined /> 术语库 ({termLibrary.metadata.total_terms}条)
-              </span>
-              <Button
-                type="link"
-                size="small"
-                onClick={() => {
-                  setShouldLoadTerms(true);
-                  setTermLibraryVisible(true);
+              {/* 术语库标题和管理按钮 */}
+              <div
+                style={{
+                  display: 'flex',
+                  justifyContent: 'space-between',
+                  alignItems: 'center',
+                  marginBottom: 8,
                 }}
-                style={{ fontSize: '11px' }}
               >
-                管理
-              </Button>
+                <span style={{ fontSize: '12px', color: colors.textSecondary, fontWeight: 600 }}>
+                  <BookOutlined /> 术语库 ({termLibrary.metadata.total_terms}条)
+                </span>
+                <Button
+                  type="link"
+                  size="small"
+                  onClick={() => {
+                    setShouldLoadTerms(true);
+                    setTermLibraryVisible(true);
+                  }}
+                  style={{ fontSize: '11px', height: '22px' }}
+                >
+                  管理
+                </Button>
+              </div>
+
+              {/* 风格总结展示 */}
+              {termLibrary.style_summary && (
+                <div
+                  style={{
+                    padding: '8px 12px',
+                    background: colors.bgTertiary,
+                    borderRadius: '4px',
+                    fontSize: '12px',
+                    lineHeight: '1.6',
+                    color: colors.textSecondary,
+                  }}
+                >
+                  <div style={{ fontWeight: 600, marginBottom: 4, color: colors.textPrimary }}>
+                    翻译风格提示 ({termLibrary.style_summary.based_on_terms}条术语)
+                  </div>
+                  <div>{termLibrary.style_summary.prompt}</div>
+                  <div
+                    style={{
+                      marginTop: 8,
+                      fontSize: '11px',
+                      color: colors.textTertiary,
+                    }}
+                  >
+                    v{termLibrary.style_summary.version} ·{' '}
+                    {new Date(termLibrary.style_summary.generated_at).toLocaleString('zh-CN')}
+                  </div>
+                </div>
+              )}
             </div>
             <Divider style={{ margin: '12px 0' }} />
           </>
@@ -542,7 +611,7 @@ export const AIWorkspace: React.FC<AIWorkspaceProps> = ({
           setTermLibraryVisible(false);
           mutateTermLibrary(); // 关闭后重新加载术语库
         }}
-        apiKey={apiKey || ''}
+        // ⛔ 移除: apiKey (TermLibraryManager内部使用useAppData获取)
       />
     </>
   );

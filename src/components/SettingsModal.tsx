@@ -1,4 +1,5 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
+import { useAppStore } from '../store/useAppStore';
 import {
   Modal,
   Form,
@@ -32,15 +33,22 @@ import {
   BellOutlined,
   InfoCircleOutlined,
   BgColorsOutlined,
+  FolderOpenOutlined,
 } from '@ant-design/icons';
-import { aiConfigCommands, systemPromptCommands, aiModelCommands } from '../services/commands'; // ✅ 迁移到统一命令层
-import { AIConfig, ProviderType, PROVIDER_INFO_MAP } from '../types/aiProvider';
+import {
+  aiConfigCommands,
+  systemPromptCommands,
+  aiModelCommands,
+  aiProviderCommands,
+  systemCommands,
+} from '../services/commands'; // ✅ 迁移到统一命令层
+import { AIConfig } from '../types/aiProvider';
 import { createModuleLogger } from '../utils/logger';
 import { useAsync } from '../hooks/useAsync';
 import { useAIConfigs, useSystemPrompt } from '../hooks/useConfig';
-import i18n from '../i18n/config'; // Phase 6
 import { notificationManager } from '../utils/notificationManager'; // Tauri 2.x: Notification
 import type { ModelInfo } from '../types/generated/ModelInfo';
+import type { ProviderInfo } from '../types/generated/ProviderInfo';
 import { ThemeModeSwitch } from './ThemeModeSwitch'; // Phase 9
 import { configCommands } from '../services/commands';
 
@@ -51,17 +59,28 @@ interface SettingsModalProps {
   onClose: () => void;
 }
 
-// 供应商配置（从 aiProvider.ts 统一获取）
-const PROVIDER_CONFIGS = Object.values(ProviderType).map((type) => ({
-  value: type,
-  label: PROVIDER_INFO_MAP[type].displayName,
-  defaultUrl: PROVIDER_INFO_MAP[type].defaultUrl,
-  defaultModel: PROVIDER_INFO_MAP[type].defaultModel,
-}));
+// 🆕 Phase 2：供应商配置类型
+type ProviderConfig = {
+  value: string;
+  label: string;
+  defaultUrl?: string;
+  defaultModel?: string;
+};
+
+// 🆕 Phase 2：动态供应商配置映射函数
+const mapProviderInfoToConfig = (provider: ProviderInfo): ProviderConfig => ({
+  value: provider.id,
+  label: provider.display_name,
+  defaultUrl: provider.default_url,
+  defaultModel: provider.default_model,
+});
 
 export const SettingsModal: React.FC<SettingsModalProps> = ({ visible, onClose }) => {
   const [form] = Form.useForm();
   const { configs, active, mutateAll, mutateActive } = useAIConfigs();
+
+  // 🔄 统一状态管理：使用 useAppStore 而非本地状态
+  const { language: currentLanguage, setLanguage } = useAppStore();
   const [activeIndex, setActiveIndex] = useState<number | null>(null);
   const [editingIndex, setEditingIndex] = useState<number | null>(null);
   const [isAddingNew, setIsAddingNew] = useState(false);
@@ -69,24 +88,13 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({ visible, onClose }
   const [currentModelInfo, setCurrentModelInfo] = useState<ModelInfo | null>(null);
   const [availableModels, setAvailableModels] = useState<ModelInfo[]>([]);
 
-  // Phase 3: 系统提示词状态
-  const [systemPrompt, setSystemPrompt] = useState<string>('');
+  // 🆕 Phase 2：动态供应商状态
+  const [dynamicProviders, setDynamicProviders] = useState<ProviderInfo[]>([]);
+  const [providersLoading, setProvidersLoading] = useState(false);
+
+  // 🔄 系统提示词表单状态：与SWR数据同步的本地编辑状态
+  const [promptText, setPromptText] = useState<string>(''); // 表单输入的本地状态
   const [isPromptModified, setIsPromptModified] = useState(false);
-
-  // Phase 9: 语言设置状态（监听 i18n 变化）
-  const [currentLanguage, setCurrentLanguage] = useState<string>(i18n.language);
-
-  // 监听 i18n 语言变化，自动更新 Select 组件
-  useEffect(() => {
-    const handleLanguageChanged = () => {
-      setCurrentLanguage(i18n.language);
-    };
-
-    i18n.on('languageChanged', handleLanguageChanged);
-    return () => {
-      i18n.off('languageChanged', handleLanguageChanged);
-    };
-  }, []);
 
   // Notification设置状态
   const [notificationEnabled, setNotificationEnabled] = useState(notificationManager.isEnabled());
@@ -122,6 +130,32 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({ visible, onClose }
     }
   }, [visible]);
 
+  // 🆕 Phase 2：加载动态供应商列表
+  useEffect(() => {
+    if (visible) {
+      setProvidersLoading(true);
+      aiProviderCommands
+        .getAll()
+        .then((providers) => {
+          log.debug('加载动态供应商成功:', providers);
+          setDynamicProviders(providers);
+        })
+        .catch((err) => {
+          log.error('加载动态供应商失败，使用静态配置后备:', err);
+          // 发生错误时不设置 dynamicProviders，会自动使用静态后备
+        })
+        .finally(() => {
+          setProvidersLoading(false);
+        });
+    }
+  }, [visible]);
+
+  // 🆕 Phase 2：计算最终的供应商配置（仅使用动态供应商）
+  const providerConfigs: ProviderConfig[] = useMemo(() => {
+    // 使用动态获取的供应商列表
+    return dynamicProviders.map(mapProviderInfoToConfig);
+  }, [dynamicProviders]);
+
   // 异步操作hooks
   const { prompt, mutate: mutatePrompt } = useSystemPrompt();
   const { execute: savePrompt, loading: savingPrompt } = useAsync(systemPromptCommands.set);
@@ -129,13 +163,13 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({ visible, onClose }
 
   useEffect(() => {
     if (visible) {
-      // SWR 自动加载
-      setSystemPrompt(prompt || '');
+      // 🔄 同步SWR数据到本地表单状态
+      setPromptText(prompt || '');
       setIsPromptModified(false);
       // 计算当前 activeIndex
       if (active) {
         const idx = configs.findIndex(
-          (c) => c.provider === active.provider && c.apiKey === active.apiKey
+          (c) => c.providerId === active.providerId && c.apiKey === active.apiKey
         );
         setActiveIndex(idx >= 0 ? idx : null);
       } else {
@@ -146,8 +180,8 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({ visible, onClose }
 
   // 加载由 SWR 负责
 
-  const handleProviderChange = async (provider: ProviderType) => {
-    const providerConfig = PROVIDER_CONFIGS.find((p) => p.value === provider);
+  const handleProviderChange = async (providerId: string) => {
+    const providerConfig = providerConfigs.find((p) => p.value === providerId);
     if (providerConfig) {
       form.setFieldsValue({
         baseUrl: providerConfig.defaultUrl,
@@ -157,9 +191,9 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({ visible, onClose }
 
     // 加载该供应商的可用模型列表
     try {
-      const models = await aiModelCommands.getProviderModels(provider);
+      const models = await aiModelCommands.getProviderModels(providerId);
       setAvailableModels(models);
-      log.info('已加载模型列表', { provider, count: models.length });
+      log.info('已加载模型列表', { providerId, count: models.length });
 
       // 如果有推荐模型，自动选择
       const recommendedModel = models.find((m) => m.recommended);
@@ -178,7 +212,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({ visible, onClose }
     setEditingIndex(null);
     form.resetFields();
     form.setFieldsValue({
-      provider: ProviderType.Moonshot,
+      providerId: 'moonshot',
       baseUrl: 'https://api.moonshot.cn/v1',
       model: 'moonshot-v1-auto',
       proxy: {
@@ -190,7 +224,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({ visible, onClose }
 
     // 自动加载 Moonshot 的模型列表
     try {
-      const models = await aiModelCommands.getProviderModels(ProviderType.Moonshot);
+      const models = await aiModelCommands.getProviderModels('moonshot');
       setAvailableModels(models);
 
       // 查找推荐模型
@@ -212,7 +246,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({ visible, onClose }
     // 安全日志：不输出敏感信息
     log.info('编辑配置', {
       index,
-      provider: config.provider,
+      providerId: config.providerId,
       hasApiKey: !!config.apiKey,
       apiKeyLength: config.apiKey?.length || 0,
       baseUrl: config.baseUrl,
@@ -221,7 +255,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({ visible, onClose }
 
     // 加载该供应商的模型列表
     try {
-      const models = await aiModelCommands.getProviderModels(config.provider);
+      const models = await aiModelCommands.getProviderModels(config.providerId);
       setAvailableModels(models);
 
       // 如果有当前模型，加载其信息
@@ -237,7 +271,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({ visible, onClose }
     // 直接使用用户保存的值，不填充默认值
     // 留空的字段在后端会自动使用默认值
     form.setFieldsValue({
-      provider: config.provider,
+      providerId: config.providerId,
       apiKey: config.apiKey || '', // 确保显示实际值
       baseUrl: config.baseUrl || '', // 用户保存的值，空就是空
       model: config.model || '', // 用户保存的值，空就是空
@@ -257,10 +291,15 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({ visible, onClose }
   const handleSaveConfig = async () => {
     try {
       const values = await form.validateFields();
+
+      // 🚨 修复参数转换问题：区分新增和编辑模式的 apiKey 处理
       const config: AIConfig = {
-        provider: values.provider,
-        // 留空表示不变，避免把密钥覆盖为空字符串
-        apiKey: values.apiKey || undefined,
+        providerId: values.providerId,
+        // 新增模式：apiKey 必填，不能为空
+        // 编辑模式：apiKey 可以为空（表示保持原值不变）
+        apiKey: isAddingNew
+          ? values.apiKey?.trim() || '' // 新增时确保不为 undefined
+          : values.apiKey || undefined, // 编辑时允许 undefined（保持原值）
         baseUrl: values.baseUrl || undefined,
         model: values.model || undefined,
         proxy: values.proxy?.enabled
@@ -271,6 +310,12 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({ visible, onClose }
             }
           : undefined,
       };
+
+      // 🚨 新增模式下额外验证 apiKey
+      if (isAddingNew && !config.apiKey) {
+        message.error('API 密钥不能为空');
+        return;
+      }
 
       if (isAddingNew) {
         await aiConfigCommands.add(config);
@@ -298,7 +343,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({ visible, onClose }
       setIsAddingNew(false);
       setEditingIndex(null);
       form.resetFields();
-      log.info('配置保存成功', { provider: config.provider });
+      log.info('配置保存成功', { providerId: config.providerId });
     } catch (error) {
       const errorMsg = error instanceof Error ? error.message : String(error);
       log.error('保存配置失败', { error: errorMsg });
@@ -359,7 +404,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({ visible, onClose }
           : undefined;
 
       const result = await aiConfigCommands.testConnection(
-        values.provider,
+        values.providerId,
         values.apiKey,
         values.baseUrl || undefined,
         values.model || undefined, // ✅ 传递 model
@@ -381,15 +426,15 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({ visible, onClose }
     }
   };
 
-  // Phase 3: 系统提示词处理函数
+  // 🔄 系统提示词处理函数：使用统一的表单状态
   const handlePromptChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
-    setSystemPrompt(e.target.value);
+    setPromptText(e.target.value);
     setIsPromptModified(true);
   };
 
   const handleSavePrompt = async () => {
     try {
-      await savePrompt(systemPrompt);
+      await savePrompt(promptText);
       setIsPromptModified(false);
       message.success('系统提示词已保存');
       log.info('系统提示词已保存');
@@ -403,7 +448,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({ visible, onClose }
     try {
       await resetPrompt();
       await mutatePrompt();
-      setSystemPrompt(prompt || '');
+      setPromptText(prompt || '');
       message.success('系统提示词已重置为默认值');
       log.info('系统提示词已重置');
     } catch (error) {
@@ -411,16 +456,15 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({ visible, onClose }
     }
   };
 
-  // Phase 9: 语言切换处理（无刷新，响应式更新）
+  // 🔄 语言切换处理：使用统一状态管理，无需动态导入
   const handleLanguageChange = async (language: string) => {
     try {
-      // 1. 切换 i18n 语言（响应式，无需刷新）
-      await i18n.changeLanguage(language);
-      setCurrentLanguage(language);
+      // 1. 切换 i18n 语言（使用自定义函数，确保资源正确加载）
+      const { changeLanguage } = await import('../i18n/config');
+      await changeLanguage(language);
 
-      // 2. 保存到 TauriStore（通过 useAppStore）
-      const { useAppStore } = await import('../store/useAppStore');
-      useAppStore.getState().setLanguage(language as any);
+      // 2. 保存到 useAppStore（直接调用，无需动态导入）
+      setLanguage(language as 'zh-CN' | 'en-US');
 
       message.success(`语言已切换为 ${language === 'zh-CN' ? '简体中文' : 'English'}`);
       log.info('应用语言已切换', { language });
@@ -447,14 +491,26 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({ visible, onClose }
     }
   };
 
+  // 打开日志目录
+  const handleOpenLogDirectory = async () => {
+    try {
+      await systemCommands.openLogDirectory();
+      message.success('已打开日志目录');
+      log.info('打开日志目录成功');
+    } catch (error) {
+      log.logError(error, '打开日志目录失败');
+      message.error('打开日志目录失败');
+    }
+  };
+
   const handleCancel = () => {
     setIsAddingNew(false);
     setEditingIndex(null);
     form.resetFields();
   };
 
-  const getProviderLabel = (provider: ProviderType) => {
-    return PROVIDER_CONFIGS.find((p) => p.value === provider)?.label || provider;
+  const getProviderLabel = (providerId: string) => {
+    return providerConfigs.find((p) => p.value === providerId)?.label || providerId;
   };
 
   // 定义Tab项
@@ -518,7 +574,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({ visible, onClose }
                     ]}
                   >
                     <List.Item.Meta
-                      title={<span>{getProviderLabel(config.provider)}</span>}
+                      title={<span>{getProviderLabel(config.providerId)}</span>}
                       description={
                         <div style={{ fontSize: '12px', color: '#666' }}>
                           <div>模型: {config.model || '(未设置)'}</div>
@@ -543,11 +599,11 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({ visible, onClose }
                 <Form form={form} layout="vertical" size="small">
                   <Form.Item
                     label="服务提供商"
-                    name="provider"
+                    name="providerId"
                     rules={[{ required: true, message: '请选择服务提供商' }]}
                   >
-                    <Select onChange={handleProviderChange}>
-                      {PROVIDER_CONFIGS.map((p) => (
+                    <Select onChange={handleProviderChange} loading={providersLoading}>
+                      {providerConfigs.map((p) => (
                         <Select.Option key={p.value} value={p.value}>
                           {p.label}
                         </Select.Option>
@@ -558,11 +614,16 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({ visible, onClose }
                   <Form.Item
                     label="API 密钥"
                     name="apiKey"
-                    rules={[{ required: true, message: '请输入 API 密钥' }]}
+                    rules={[
+                      {
+                        required: isAddingNew, // 🚨 只有新增模式才必填
+                        message: '请输入 API 密钥',
+                      },
+                    ]}
                     extra={
                       editingIndex !== null
                         ? '已保存的密钥会以掩码形式显示，留空则保持原值不变'
-                        : null
+                        : '请输入您的 API 密钥'
                     }
                   >
                     <Input.Password
@@ -604,7 +665,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({ visible, onClose }
                           setCurrentModelInfo(null);
                         }
                       }}
-                      dropdownRender={(menu) => (
+                      popupRender={(menu) => (
                         <>
                           {menu}
                           {availableModels.length === 0 && (
@@ -778,7 +839,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({ visible, onClose }
         <div>
           <Card size="small" title="系统提示词编辑器" style={{ marginBottom: 16 }}>
             <Input.TextArea
-              value={systemPrompt}
+              value={promptText}
               onChange={handlePromptChange}
               placeholder="输入自定义系统提示词..."
               autoSize={{ minRows: 12, maxRows: 20 }}
@@ -1017,9 +1078,18 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({ visible, onClose }
                   icon={<InfoCircleOutlined />}
                 />
 
-                <Button type="primary" onClick={handleSaveLogConfig} block>
-                  保存日志配置
-                </Button>
+                <Row gutter={12}>
+                  <Col span={12}>
+                    <Button type="primary" onClick={handleSaveLogConfig} block>
+                      保存日志配置
+                    </Button>
+                  </Col>
+                  <Col span={12}>
+                    <Button icon={<FolderOpenOutlined />} onClick={handleOpenLogDirectory} block>
+                      打开日志目录
+                    </Button>
+                  </Col>
+                </Row>
               </Space>
             </Form>
           </Card>

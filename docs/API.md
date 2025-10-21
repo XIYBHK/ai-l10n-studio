@@ -10,23 +10,32 @@
 - **统一错误处理**: 集中式 `invoke()` 包装器，自动日志和用户提示
 - **模块化组织**: 13 个命令模块（`configCommands`, `aiConfigCommands`, `translatorCommands` 等）
 - **易于维护**: 命令名称统一管理在 `COMMANDS` 常量中
+- **🆕 零配置参数转换**: 默认遵循 camelCase 约定，无需手动配置（详见架构决策）
 
 **推荐用法**：
 
 ```typescript
 import { configCommands, aiConfigCommands, translatorCommands } from '@/services/commands';
 
-// ✅ 使用命令层（推荐）
+// ✅ 使用命令层（推荐）- 自动遵循 camelCase 约定
 const config = await configCommands.get();
-await aiConfigCommands.add(newConfig);
+await aiConfigCommands.add(newConfig); // newConfig 使用 camelCase 字段
 const result = await translatorCommands.translateBatch(entries, targetLang);
 ```
+
+**🎯 架构约定**（2025-10）：
+
+- 所有参数使用 **camelCase** 格式（如 `apiKey`, `baseUrl`）
+- `tauriInvoke` 默认不转换参数（`autoConvertParams = false`）
+- Tauri 2.x 自动处理 camelCase，无需手动配置
+- 详见：`docs/ARCHITECTURE_DECISION_TAURI_PARAMS.md`
 
 **命令模块索引**：
 
 - `configCommands` - 应用配置管理
-- `aiConfigCommands` - AI 配置 CRUD + 连接测试
+- `aiConfigCommands` - AI 配置 CRUD + 连接测试 **[已统一类型]**
 - `aiModelCommands` - 模型信息查询 + 成本计算
+- `aiProviderCommands` - **[新增]** 动态供应商系统
 - `systemPromptCommands` - 系统提示词管理
 - `termLibraryCommands` - 术语库操作
 - `translationMemoryCommands` - 翻译记忆库
@@ -36,7 +45,7 @@ const result = await translatorCommands.translateBatch(entries, targetLang);
 - `dialogCommands` - 系统对话框
 - `i18nCommands` - 国际化（语言检测/系统语言）
 - `logCommands` - 日志管理
-- `systemCommands` - 系统信息
+- `systemCommands` - 系统信息 + 原生主题检测
 
 ---
 
@@ -44,19 +53,20 @@ const result = await translatorCommands.translateBatch(entries, targetLang);
 
 **位置**: `src/services/api.ts`
 
-**迁移状态** (2025-10-13完成):
+**✅ 迁移完成状态** (2025-10-15):
 
 已删除模块:
 
 - `termLibraryApi`, `translationMemoryApi`, `logApi`, `promptLogApi`
 - `aiConfigApi`, `systemPromptApi`, `aiModelApi`
 - `poFileApi`, `dialogApi`, `translatorApi`, `languageApi`
+- `configApi`, `fileFormatApi`, `systemApi` - **已完全移除**
 
-保留模块（尚未迁移）:
+**🎯 迁移成果**:
 
-- `configApi`, `fileFormatApi`, `systemApi`
-
-所有前端组件已迁移到命令层，旧 API 实现已完全移除。
+- ✅ 所有前端组件已迁移到统一命令层
+- ✅ 所有旧 API 实现已完全移除
+- ✅ 无遗留代码，无技术债务
 
 ---
 
@@ -69,12 +79,13 @@ const result = await translatorCommands.translateBatch(entries, targetLang);
 - `poFileCommands` - 文件解析/保存（PO/JSON/XLIFF/YAML）
 - `translatorCommands` - AI 翻译（8 厂商，单条/批量/通道模式）
 - `aiModelCommands` - 多AI供应商（模型查询、精确成本计算、USD定价）
-- `translationMemoryCommands` - 翻译记忆库（83+ 内置短语，模式匹配）
+- `translationMemoryCommands` - 翻译记忆库（首次加载83+内置短语，后续完全以文件为准）
 - `termLibraryCommands` - 术语库管理（风格分析、批量导入）
 - `configCommands` - 配置管理（AI/代理/系统设置，实时校验）
 - `statsCommands` - 统计聚合（Token/去重/性能指标）
 - `i18nCommands` - 语言检测（10 语言，自动识别）
 - `logCommands` - 结构化日志（开发/生产模式）
+- `systemCommands` - 系统信息 + **原生主题检测**（解决Tauri webview限制）
 
 ### 统一数据提供者 (2025-10)
 
@@ -164,11 +175,11 @@ useTauriEventBridgeEnhanced([
 - `useChannelTranslation` - Channel API 批量翻译（实时进度，高性能）
 - `useDefaultTauriEventBridge` - 增强事件监听（集成在 AppDataProvider）
 
-**特殊场景**:
+**其他Hooks**:
 
-- `useConfig` - 已被 `useAppData` 部分替代，仍可用于特殊场景
 - `useLanguage` - 语言状态与检测
-- `useTermLibrary` / `useTranslationMemory` - 已被 `useAppData` 替代
+- ~~`useConfig`~~ - **已完全替代** → 使用 `useAppData`
+- ~~`useTermLibrary` / `useTranslationMemory`~~ - **已完全替代** → 使用 `useAppData`
 
 ### 类型安全事件系统
 
@@ -200,10 +211,10 @@ eventDispatcher.getEventHistory();
 自动缓存、后台重验证、乐观更新，现已通过 `AppDataProvider` 统一管理：
 
 ```typescript
-// 推荐：使用 AppDataProvider
+// 推荐：使用 AppDataProvider（统一数据管理）
 const { config, refreshAll } = useAppData();
 
-// 旧方式（仍可用于特殊场景）
+// 直接使用 SWR（特殊场景：需要细粒度控制）
 const { data, error, isLoading } = useSWR('config', configCommands.get);
 ```
 
@@ -212,6 +223,47 @@ const { data, error, isLoading } = useSWR('config', configCommands.get);
 - 统一的数据访问接口
 - 自动集成事件监听和缓存失效
 - 一键刷新所有数据（`refreshAll()`）
+
+### 翻译记忆库架构 (2025-10-21 优化)
+
+**命令模块**: `translationMemoryCommands`
+
+**核心逻辑**（用户完全控制）:
+
+- **首次使用**: 自动加载83+条内置短语到记忆库文件
+- **后续使用**: 完全以记忆库文件为准，不再自动回退查询内置短语
+- **用户删除**: 用户删除的词条不会被自动恢复使用
+- **手动加载**: 用户可主动合并内置词库，新增词条会保存到文件
+
+**API 方法**:
+
+```typescript
+// 获取当前翻译记忆库
+translationMemoryCommands.get(): Promise<TranslationMemory>
+
+// 获取内置短语列表（仅供查看）
+translationMemoryCommands.getBuiltinPhrases(): Promise<{ memory: Record<string, string> }>
+
+// 🆕 合并内置短语到当前记忆库并保存
+translationMemoryCommands.mergeBuiltinPhrases(): Promise<number>  // 返回新增词条数
+
+// 保存翻译记忆库
+translationMemoryCommands.save(memory: any): Promise<void>
+```
+
+**设计原则**:
+
+- ✅ **用户控制权**: 记忆库完全由用户管理，不会自动添加或恢复词条
+- ✅ **首次友好**: 首次使用自动加载内置短语，无需手动操作
+- ✅ **持久化**: 所有修改（包括手动加载）都会保存到文件
+- ✅ **无侵入性**: 内置短语优先级低，不覆盖用户已有翻译
+
+**使用场景**:
+
+1. **首次启动**: 自动加载83+条游戏本地化常用短语
+2. **删除词条**: 用户删除某个内置短语后，翻译任务不再使用它
+3. **重新加载**: 用户点击"加载内置词库"按钮，合并到当前记忆库并保存
+4. **导入导出**: 完整记忆库可导出为JSON，支持跨设备迁移
 
 ### 多AI供应商架构
 
@@ -269,12 +321,15 @@ BatchStatsEvent { token_stats: { cost } } → Channel 发送
 AIWorkspace 统计面板 → 显示 `$0.0023`（小额4位）或 `$12.35`（大额2位）
 ```
 
-**供应商配置整合** (`src/types/aiProvider.ts`):
+**🆕 前后端类型统一** (2025-10-21):
 
-- 统一配置源 - `PROVIDER_INFO_MAP` 包含所有8个供应商的默认配置
-- 自动生成 - SettingsModal 从 `PROVIDER_INFO_MAP` 动态生成供应商列表
-- 类型安全 - `ProviderType` 枚举确保类型一致性
-- 模型预设 - 每个供应商都有 `defaultModel`，可被预设模型列表覆盖
+参考 clash-verge-rev 最佳实践，实现零转换成本的类型系统：
+
+- **统一 AIConfig**: 前后端使用相同结构，通过 serde camelCase 自动转换
+- **providerId 字符串**: 废弃 `ProviderType` 枚举，使用 `providerId: string`
+- **动态供应商系统**: 通过 `aiProviderCommands.getAll()` 获取所有可用供应商
+- **ts-rs 类型生成**: `ProxyConfig` 等类型自动从 Rust 生成到 TypeScript
+- **零转换成本**: 删除所有手动转换函数，直接传递类型
 
 **统一格式化工具** (`src/utils/formatters.ts`):
 
@@ -298,6 +353,242 @@ const costDisplay = cost < 0.01 ? `${(cost * 100).toFixed(2)}¢` : `$${cost.toFi
 
 - 代码质量改进: `docs/CHANGELOG.md` (2025-10-13 质量提升)
 - 完整参考: `CLAUDE.md` §Architecture Overview
+
+---
+
+### 🆕 AI 配置与供应商管理 (2025-10-21)
+
+#### aiConfigCommands - 统一类型的 AI 配置管理
+
+**核心特性**：零转换成本，前后端类型完全一致
+
+```typescript
+import { aiConfigCommands } from '@/services/commands';
+import type { AIConfig } from '@/types/aiProvider';
+
+// ✅ 直接使用统一的 AIConfig 类型
+const newConfig: AIConfig = {
+  providerId: 'moonshot', // 字符串 ID，非枚举
+  apiKey: 'sk-xxx',
+  baseUrl: 'https://api.moonshot.cn/v1', // 可选
+  model: 'kimi-latest', // 可选
+  proxy: {
+    // 可选
+    enabled: true,
+    host: '127.0.0.1',
+    port: 7890,
+  },
+};
+
+// ✅ 零转换：直接传递类型
+await aiConfigCommands.add(newConfig);
+
+// ✅ 获取所有配置（返回统一类型）
+const configs = await aiConfigCommands.getAll(); // AIConfig[]
+
+// ✅ 测试连接（使用 providerId 字符串）
+const result = await aiConfigCommands.testConnection(
+  'moonshot', // providerId: string
+  'sk-xxx',
+  'https://api.moonshot.cn/v1',
+  'kimi-latest'
+);
+```
+
+**API 方法**:
+
+- `getAll()` - 获取所有 AI 配置（返回 `AIConfig[]`）
+- `getActive()` - 获取当前启用配置（返回 `AIConfig | null`）
+- `add(config: AIConfig)` - 添加新配置（零转换）
+- `update(id: string, config: AIConfig)` - 更新配置（零转换）
+- `delete(id: string)` - 删除配置
+- `setActive(id: string)` - 设置启用配置
+- `testConnection(providerId, apiKey, ...)` - 测试连接
+
+**类型定义** (`src/types/aiProvider.ts`):
+
+```typescript
+export interface AIConfig {
+  providerId: string; // 🔧 统一使用字符串 ID
+  apiKey: string;
+  baseUrl?: string;
+  model?: string;
+  proxy?: ProxyConfig; // 🔧 ts-rs 自动生成
+}
+
+// ProxyConfig 从 Rust 自动生成
+export type { ProxyConfig } from './generated/ProxyConfig';
+```
+
+#### aiProviderCommands - 动态供应商系统
+
+**核心特性**：插件化供应商，运行时动态加载
+
+```typescript
+import { aiProviderCommands } from '@/services/commands';
+
+// 获取所有可用供应商
+const providers = await aiProviderCommands.getAll();
+// 返回: ProviderInfo[]
+// [
+//   { id: 'moonshot', display_name: 'Moonshot AI', ... },
+//   { id: 'openai', display_name: 'OpenAI', ... },
+//   { id: 'deepseek', display_name: 'DeepSeek AI', ... },
+//   ...
+// ]
+
+// 获取特定供应商
+const provider = await aiProviderCommands.getProvider('moonshot');
+
+// 根据模型查找供应商
+const provider = await aiProviderCommands.findProviderForModel('kimi-latest');
+
+// 获取所有模型（跨供应商）
+const allModels = await aiProviderCommands.getAllModels();
+```
+
+**ProviderInfo 类型** (ts-rs 自动生成):
+
+```typescript
+// src/types/generated/ProviderInfo.ts
+export interface ProviderInfo {
+  id: string; // 供应商 ID
+  display_name: string; // 显示名称
+  default_url: string; // 默认 API URL
+  default_model: string; // 默认模型
+}
+```
+
+**使用示例**（SettingsModal）:
+
+```typescript
+// 动态加载供应商列表
+const [providers, setProviders] = useState<ProviderInfo[]>([]);
+
+useEffect(() => {
+  aiProviderCommands.getAll().then(setProviders);
+}, []);
+
+// 在表单中使用
+<Select>
+  {providers.map((p) => (
+    <Select.Option key={p.id} value={p.id}>
+      {p.display_name}
+    </Select.Option>
+  ))}
+</Select>
+```
+
+**工具函数** (`src/utils/providerUtils.ts`):
+
+```typescript
+import { getProviderDisplayName } from '@/utils/providerUtils';
+
+// 从供应商列表中获取显示名称
+const displayName = getProviderDisplayName('moonshot', providers);
+// 返回: "Moonshot AI"
+```
+
+#### 迁移对比
+
+**之前（需要手动转换）**:
+
+```typescript
+// ❌ 旧方式：需要转换函数
+const backendConfig = convertToBackendConfig(frontendConfig);
+await invoke('add_ai_config', { config: backendConfig });
+```
+
+**现在（零转换）**:
+
+```typescript
+// ✅ 新方式：直接传递
+await aiConfigCommands.add(config);
+```
+
+**架构优势**:
+
+1. **零转换成本**: 前后端类型完全一致，通过 serde camelCase 自动转换
+2. **类型安全**: TypeScript 编译时检查，Rust 运行时验证
+3. **插件化扩展**: 新增供应商无需修改类型定义
+4. **代码简化**: 删除约 200 行转换和映射代码
+5. **可维护性**: 单一事实来源（Rust 类型定义）
+
+---
+
+### 🆕 系统主题检测 (2025-10-15)
+
+**位置**: `systemCommands.getNativeSystemTheme`
+
+**技术突破**：解决Tauri webview环境中 `window.matchMedia` 无法准确检测系统主题的问题
+
+#### 混合检测策略
+
+```typescript
+// 前端使用示例
+import { systemCommands } from '@/services/commands';
+
+// 检测系统主题
+const systemTheme = await systemCommands.getNativeSystemTheme();
+console.log('系统主题:', systemTheme); // 'dark' | 'light'
+```
+
+**后端实现**：
+
+- **Windows**: 直接查询注册表 `HKCU\Software\Microsoft\Windows\CurrentVersion\Themes\Personalize\AppsUseLightTheme`
+- **macOS**: 使用 `defaults read -g AppleInterfaceStyle`
+- **Linux**: 查询 GNOME `gsettings org.gnome.desktop.interface gtk-theme`
+
+**优势对比**：
+
+| 检测方式            | 准确性                   | 性能  | 跨平台 | 依赖   |
+| ------------------- | ------------------------ | ----- | ------ | ------ |
+| `window.matchMedia` | ❌ 不准确（webview限制） | ✅ 快 | ✅ 是  | 无     |
+| 原生API查询         | ✅ 100%准确              | ✅ 快 | ✅ 是  | OS命令 |
+
+#### 集成到主题系统
+
+```typescript
+// useTheme.ts 中的混合检测
+const handleSystemThemeChange = async () => {
+  let newSystemTheme: AppliedTheme = 'light';
+  let detectionMethod = 'unknown';
+
+  // 🔧 方法1：尝试使用原生API（优先级最高）
+  try {
+    const nativeTheme = await systemCommands.getNativeSystemTheme();
+    if (nativeTheme === 'dark' || nativeTheme === 'light') {
+      newSystemTheme = nativeTheme as AppliedTheme;
+      detectionMethod = 'native-api';
+    }
+  } catch (error) {
+    // 原生API失败，继续使用媒体查询
+    detectionMethod = 'fallback-media-query';
+  }
+
+  // 🔧 方法2：备用媒体查询检测
+  if (detectionMethod === 'fallback-media-query') {
+    const mediaQueryMatches = mediaQuery.matches;
+    newSystemTheme = mediaQueryMatches ? 'dark' : 'light';
+  }
+
+  // 🚨 检测不一致警告
+  if (nativeResult && mediaQueryResult && nativeResult !== mediaQueryResult) {
+    log.warn('⚠️  系统主题检测结果不一致！', {
+      nativeApi: nativeResult,
+      mediaQuery: mediaQueryResult,
+      using: newSystemTheme,
+    });
+  }
+};
+```
+
+**技术价值**：
+
+- ✅ **解决webview限制**：直接从OS获取真实主题设置
+- ✅ **提供备用方案**：原生API失败时gracefully降级到媒体查询
+- ✅ **调试友好**：详细日志对比不同检测方法的结果
+- ✅ **为社区贡献**：为其他Tauri项目提供参考实现
 
 ---
 

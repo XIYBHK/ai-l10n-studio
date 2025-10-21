@@ -1,0 +1,61 @@
+# Moonshot AI (Kimi) 供应商插件配置
+# 基于现有 Moonshot 模型配置生成
+
+[plugin]
+name = "Moonshot AI (Kimi)"
+id = "moonshot"
+version = "1.5.0"
+api_version = "1.0"
+description = "Moonshot AI Kimi 智能助手，超长上下文，支持视觉理解和上下文缓存"
+author = "AI L10n Studio"
+homepage = "https://platform.moonshot.cn"
+license = "MIT"
+
+[provider]
+display_name = "Moonshot AI"
+default_url = "https://api.moonshot.cn/v1"
+default_model = "kimi-latest"
+supports_cache = true   # 支持 Context Caching，节省约90%成本
+supports_images = true  # 部分模型支持视觉理解
+
+# 额外配置选项
+[provider.extra_config]
+max_retries = 3
+timeout_seconds = 90
+# Moonshot 特有配置
+context_caching = true
+auto_model_selection = true
+vision_support = true
+
+[models]
+# 推荐的默认模型
+recommended_model = "kimi-latest"
+
+# 禁用的模型（如果有的话）
+disabled_models = []
+
+# 模型配置覆盖
+[models.overrides."kimi-latest"]
+name = "Kimi Latest (推荐)"
+description = "最新模型，自动缓存，支持视觉理解，智能选择最优计费模型"
+recommended = true
+
+[models.overrides."moonshot-v1-auto"]
+name = "Kimi (自动选择)"
+description = "智能选择最优模型，128K上下文，支持上下文缓存"
+recommended = true
+
+[models.overrides."moonshot-v1-8k"]
+name = "Kimi (8K上下文)"
+description = "8K上下文窗口，适合短文本翻译"
+recommended = false
+
+[models.overrides."moonshot-v1-32k"]
+name = "Kimi (32K上下文)"
+description = "32K上下文窗口，适合中等长度文档"
+recommended = false
+
+[models.overrides."moonshot-v1-128k"]
+name = "Kimi (128K上下文)"
+description = "128K超长上下文窗口，适合长文档处理"
+recommended = false

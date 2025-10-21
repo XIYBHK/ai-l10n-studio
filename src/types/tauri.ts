@@ -62,6 +62,6 @@ export interface ContextualRefineRequest {
   msgid: string;
   msgctxt?: string;
   comment?: string;
-  previous_entry?: string;
-  next_entry?: string;
+  previousEntry?: string; // 🔧 改为 camelCase
+  nextEntry?: string; // 🔧 改为 camelCase
 }

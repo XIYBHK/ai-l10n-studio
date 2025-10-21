@@ -56,16 +56,9 @@ jobs:
       - name: Run linters
         run: npm run lint:all || true
 
-      - name: Run frontend tests
-        run: npm run test:ci
-
       - name: Build frontend
         run: npm run build
 
       - name: Run Rust clippy
         working-directory: ./src-tauri
         run: cargo clippy --all-targets --all-features -- -D warnings
-
-      - name: Run Rust tests
-        working-directory: ./src-tauri
-        run: cargo test

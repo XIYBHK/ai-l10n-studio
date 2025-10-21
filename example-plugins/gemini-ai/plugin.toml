@@ -1,0 +1,47 @@
+# Google Gemini 供应商插件配置
+# 展示多模态 AI 模型的插件化实现
+
+[plugin]
+name = "Google Gemini"
+id = "gemini"
+version = "2.1.0"
+api_version = "1.0"
+description = "Google Gemini 多模态 AI 模型，支持文本、图像和代码理解"
+author = "AI L10n Studio"
+homepage = "https://ai.google.dev"
+license = "MIT"
+
+[provider]
+display_name = "Google Gemini"
+default_url = "https://generativelanguage.googleapis.com/v1beta"
+default_model = "gemini-1.5-flash"
+supports_cache = true  # Gemini 支持上下文缓存
+supports_images = true
+
+# 额外配置选项
+[provider.extra_config]
+max_retries = 3
+timeout_seconds = 60
+generation_config = { "temperature" = 0.7, "top_k" = 40, "top_p" = 0.95 }
+safety_settings = [
+    { "category" = "HARM_CATEGORY_HARASSMENT", "threshold" = "BLOCK_MEDIUM_AND_ABOVE" },
+    { "category" = "HARM_CATEGORY_HATE_SPEECH", "threshold" = "BLOCK_MEDIUM_AND_ABOVE" }
+]
+
+[models]
+# 推荐的默认模型（快速且经济）
+recommended_model = "gemini-1.5-flash"
+
+# 禁用的实验性模型
+disabled_models = ["gemini-experimental"]
+
+# 模型配置覆盖
+[models.overrides."gemini-1.5-pro"]
+name = "Gemini 1.5 Pro (最强)"
+description = "Google 最先进的多模态模型，适合复杂推理任务"
+recommended = false
+
+[models.overrides."gemini-1.5-flash"]
+name = "Gemini 1.5 Flash (推荐)"
+description = "快速高效的多模态模型，平衡性能与成本"
+recommended = true

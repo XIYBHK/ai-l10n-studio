@@ -11,8 +11,8 @@ pub fn log(message: String) {
     let timestamp = Local::now().format("%H:%M:%S");
     let log_entry = format!("[{}] {}", timestamp, message);
 
-    // 打印到控制台（保持原有行为）
-    println!("{}", message);
+    // 🔇 移除重复的控制台输出，避免与标准日志系统重复
+    // println!("{}", message);
 
     // 保存到缓冲区
     if let Ok(mut buffer) = LOG_BUFFER.lock() {
@@ -41,9 +41,12 @@ pub fn clear_logs() {
 }
 
 /// 宏：简化日志调用
+/// 🔄 修改为使用标准日志系统，确保日志写入文件
 #[macro_export]
 macro_rules! app_log {
     ($($arg:tt)*) => {
+        log::info!(target: "app", "{}", format!($($arg)*));
+        // 🔄 同时保存到内存缓冲区以保持兼容性
         $crate::utils::logger::log(format!($($arg)*))
     };
 }

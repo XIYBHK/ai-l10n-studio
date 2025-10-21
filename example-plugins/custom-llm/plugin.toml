@@ -1,0 +1,64 @@
+# 自定义 LLM 供应商插件配置
+# 展示如何创建完全自定义的 AI 供应商插件
+
+[plugin]
+name = "Custom LLM Provider"
+id = "custom_llm"
+version = "0.1.0"
+api_version = "1.0"
+description = "自定义本地或私有 LLM 服务供应商，支持 OpenAI 兼容 API"
+author = "Your Organization"
+homepage = "https://your-organization.com"
+license = "Apache-2.0"
+
+[provider]
+display_name = "Custom LLM"
+default_url = "http://localhost:11434/v1"  # 例如：Ollama 本地服务
+default_model = "llama3.2"
+supports_cache = false
+supports_images = false
+
+# 自定义配置选项
+[provider.extra_config]
+# API 认证设置
+auth_type = "bearer"  # 可选：bearer, basic, api_key
+api_key_header = "Authorization"
+
+# 连接设置
+max_retries = 5
+timeout_seconds = 120
+connect_timeout = 30
+
+# 模型参数
+default_temperature = 0.7
+default_max_tokens = 2048
+default_top_p = 0.9
+
+# 自定义提示词格式
+prompt_format = "llama"  # 可选：llama, chatml, alpaca, custom
+system_prompt_prefix = "<|system|>\n"
+user_prompt_prefix = "<|user|>\n"
+assistant_prompt_prefix = "<|assistant|>\n"
+
+[models]
+# 推荐模型
+recommended_model = "llama3.2"
+
+# 可以通过配置禁用某些模型
+disabled_models = ["old-model-v1"]
+
+# 模型特定配置
+[models.overrides."llama3.2"]
+name = "Llama 3.2 (本地)"
+description = "在本地运行的 Llama 3.2 模型，保护数据隐私"
+recommended = true
+
+[models.overrides."codellama"]
+name = "Code Llama (代码专用)"
+description = "专门针对代码理解和生成优化的模型"
+recommended = false
+
+[models.overrides."mixtral-8x7b"]
+name = "Mixtral 8x7B (高性能)"
+description = "混合专家模型，在复杂任务上表现出色"
+recommended = false

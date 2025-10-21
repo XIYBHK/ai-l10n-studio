@@ -428,7 +428,7 @@ export const EntryList: React.FC<EntryListProps> = ({
                       }}
                     >
                       {entry.translationSource === 'tm'
-                        ? '💾 TM'
+                        ? '💾 记忆'
                         : entry.translationSource === 'dedup'
                           ? '🔗 去重'
                           : '🤖 AI'}

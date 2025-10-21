@@ -19,7 +19,7 @@
 
 import { useState, useCallback, useRef } from 'react';
 import { Channel } from '@tauri-apps/api/core';
-import { invoke } from '@tauri-apps/api/core';
+import { invoke } from '../services/tauriInvoke';
 import { createModuleLogger } from '../utils/logger';
 import { eventDispatcher } from '../services/eventDispatcher';
 
@@ -173,12 +173,16 @@ export const useChannelTranslation = () => {
         };
 
         // 调用后端 Channel API
-        const result = await invoke<BatchResult>('translate_batch_with_channel', {
-          texts,
-          targetLanguage,
-          progressChannel,
-          statsChannel,
-        });
+        const result = await invoke<BatchResult>(
+          'translate_batch_with_channel',
+          {
+            texts,
+            targetLanguage,
+            progressChannel,
+            statsChannel,
+          },
+          {}
+        );
 
         log.info('✅ 批量翻译完成', {
           translated: Object.keys(result.translations).length,

@@ -6,6 +6,7 @@
 import { message } from 'antd';
 import { createModuleLogger } from '../utils/logger';
 import { apiClient } from './apiClient';
+import { maskSensitiveData } from './tauriInvoke';
 
 const log = createModuleLogger('API');
 
@@ -20,6 +21,11 @@ interface ApiOptions {
   retry?: number; // 重试次数
   retryDelay?: number; // 重试延迟（毫秒）
   dedup?: boolean; // 请求去重
+  /**
+   * 是否自动转换参数（默认false，遵循架构约定）
+   * @see tauriInvoke.ts - 架构设计说明
+   */
+  autoConvertParams?: boolean;
 }
 
 /**
@@ -33,19 +39,21 @@ export async function invoke<T>(
   const {
     showErrorMessage = true,
     errorMessage,
-    silent = false,
+    silent = true, // ✅ 默认静默，减少控制台日志污染（参考 clash-verge-rev）
     timeout,
     retry,
     retryDelay,
     dedup,
+    autoConvertParams, // 🎯 不设默认值，让 apiClient → tauriInvoke 处理（默认 false）
   } = options;
 
   try {
-    if (!silent) {
-      log.debug(`📤 API调用: ${command}`, args);
-    }
+    // ❌ 移除 API 层日志，避免重复（TauriInvoke 层会记录）
+    // if (!silent) {
+    //   log.debug(`📤 API调用: ${command}`, maskSensitiveData(args));
+    // }
 
-    // 使用增强的 API 客户端
+    // 使用增强的 API 客户端（参数转换由 tauriInvoke 统一处理）
     const result = await apiClient.invoke<T>(command, args as Record<string, any>, {
       timeout,
       retry,
@@ -53,21 +61,23 @@ export async function invoke<T>(
       silent,
       errorMessage,
       dedup,
+      autoConvertParams, // 🎯 透传给 apiClient → tauriInvoke
     });
 
-    if (!silent) {
-      // 对于大型数组响应，只打印摘要信息
-      if (Array.isArray(result) && result.length > 10) {
-        log.debug(`📥 API响应: ${command}`, {
-          type: 'Array',
-          length: result.length,
-          first: result[0],
-          last: result[result.length - 1],
-        });
-      } else {
-        log.debug(`📥 API响应: ${command}`, result);
-      }
-    }
+    // ❌ 移除 API 层日志，避免重复（TauriInvoke 层会记录）
+    // if (!silent) {
+    //   // 对于大型数组响应，只打印摘要信息
+    //   if (Array.isArray(result) && result.length > 10) {
+    //     log.debug(`📥 API响应: ${command}`, {
+    //       type: 'Array',
+    //       length: result.length,
+    //       first: result[0],
+    //       last: result[result.length - 1],
+    //     });
+    //   } else {
+    //     log.debug(`📥 API响应: ${command}`, result);
+    //   }
+    // }
 
     return result;
   } catch (error) {
@@ -88,105 +98,7 @@ export async function invoke<T>(
 export { apiClient };
 
 // ============================================================
-// ⚠️ 已迁移到 commands.ts (Phase 1.4 完成)
+// ✅ 所有API已完全迁移到统一命令层 (commands.ts)
 // ============================================================
-// poFileApi → poFileCommands
-// dialogApi → dialogCommands
-// translatorApi → translatorCommands
-// languageApi → i18nCommands
+// 统一使用 xxxCommands 模块，不再使用直接API调用
 // ============================================================
-
-/**
- * 配置 API
- */
-export const configApi = {
-  async get() {
-    return invoke('get_app_config', undefined, {
-      errorMessage: '加载配置失败',
-    });
-  },
-
-  async update(config: unknown) {
-    return invoke(
-      'update_app_config',
-      { config },
-      {
-        errorMessage: '更新配置失败',
-      }
-    );
-  },
-
-  async validate(config: unknown) {
-    return invoke(
-      'validate_config',
-      { config },
-      {
-        errorMessage: '配置验证失败',
-      }
-    );
-  },
-};
-
-// ========== Phase 1: 文件格式 API（预留）==========
-
-import type { FileFormat, FileMetadata } from '../types/fileFormat';
-
-/**
- * 文件格式 API（Phase 4 完整实现）
- */
-export const fileFormatApi = {
-  /**
-   * 检测文件格式
-   */
-  async detectFormat(filePath: string) {
-    return invoke<FileFormat>(
-      'detect_file_format',
-      { filePath },
-      {
-        errorMessage: '检测文件格式失败',
-        silent: true,
-      }
-    );
-  },
-
-  /**
-   * 获取文件元数据
-   */
-  async getFileMetadata(filePath: string) {
-    return invoke<FileMetadata>(
-      'get_file_metadata',
-      { filePath },
-      {
-        errorMessage: '获取文件元数据失败',
-        silent: true,
-      }
-    );
-  },
-};
-
-// ========== Phase 5: 语言检测管理 ==========
-
-export interface LanguageInfo {
-  code: string;
-  display_name: string; // Rust后端使用蛇形命名
-  english_name: string; // Rust后端使用蛇形命名
-}
-
-// ========== Phase 6: 系统语言检测 API ==========
-
-export const systemApi = {
-  /**
-   * 获取系统语言
-   * 返回 BCP 47 语言标签（如 "zh-CN", "en-US"）
-   */
-  async getSystemLanguage() {
-    return invoke<string>(
-      'get_system_language',
-      {},
-      {
-        errorMessage: '获取系统语言失败',
-        silent: true,
-      }
-    );
-  },
-};

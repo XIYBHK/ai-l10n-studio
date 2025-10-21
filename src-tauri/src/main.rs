@@ -37,6 +37,7 @@ fn main() {
             translate_batch_with_channel, // Tauri 2.x: Channel API (统一翻译入口)
             get_translation_memory,
             get_builtin_phrases,
+            merge_builtin_phrases,
             save_translation_memory,
             open_file_dialog,
             save_file_dialog,
@@ -47,6 +48,7 @@ fn main() {
             validate_config,
             get_app_logs,
             clear_app_logs,
+            get_frontend_logs, // 🔄 前端日志查看命令
             // 术语库相关
             get_term_library,
             add_term_to_library,
@@ -74,6 +76,10 @@ fn main() {
             get_supported_langs,
             // 系统语言检测 (Phase 6)
             get_system_language,
+            // 系统相关命令
+            get_log_directory_path,
+            open_log_directory,
+            get_native_system_theme,
             // Phase 9: 后端国际化增强
             utils::i18n::get_system_locale,
             utils::i18n::get_available_languages,
@@ -88,7 +94,10 @@ fn main() {
             get_model_info,
             estimate_translation_cost,
             calculate_precise_cost,
-            get_all_providers
+            // 🆕 动态 AI 供应商 API (Phase 1 重构)
+            get_all_providers,
+            get_all_models,
+            find_provider_for_model
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

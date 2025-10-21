@@ -11,9 +11,10 @@
 
 import { invoke } from './api';
 import type { POEntry, TranslationStats, ContextualRefineRequest } from '../types/tauri';
-import type { AIConfig, ProviderType } from '../types/aiProvider';
+import type { AIConfig } from '../types/aiProvider';
 import type { TermLibrary } from '../types/termLibrary';
 import type { ModelInfo } from '../types/generated/ModelInfo';
+import type { ProviderInfo } from '../types/generated/ProviderInfo';
 
 // ========================================
 // 命令常量定义（集中管理，避免硬编码）
@@ -31,7 +32,7 @@ export const COMMANDS = {
   AI_CONFIG_SET_ACTIVE: 'set_active_ai_config',
   AI_CONFIG_ADD: 'add_ai_config',
   AI_CONFIG_UPDATE: 'update_ai_config',
-  AI_CONFIG_DELETE: 'delete_ai_config',
+  AI_CONFIG_DELETE: 'remove_ai_config',
   AI_CONFIG_TEST_CONNECTION: 'test_ai_connection',
 
   // AI 模型相关
@@ -40,9 +41,14 @@ export const COMMANDS = {
   AI_MODEL_ESTIMATE_COST: 'estimate_translation_cost',
   AI_MODEL_CALCULATE_COST: 'calculate_precise_cost',
 
+  // 🆕 动态供应商相关 (Phase 2)
+  AI_PROVIDER_GET_ALL: 'get_all_providers',
+  AI_PROVIDER_GET_ALL_MODELS: 'get_all_models',
+  AI_PROVIDER_FIND_BY_MODEL: 'find_provider_for_model',
+
   // 系统提示词相关
   SYSTEM_PROMPT_GET: 'get_system_prompt',
-  SYSTEM_PROMPT_SET: 'set_system_prompt',
+  SYSTEM_PROMPT_SET: 'update_system_prompt', // 修正：与后端命令名一致
   SYSTEM_PROMPT_RESET: 'reset_system_prompt',
 
   // 术语库相关
@@ -55,6 +61,7 @@ export const COMMANDS = {
   // 翻译记忆库相关
   TM_GET: 'get_translation_memory',
   TM_GET_BUILTIN: 'get_builtin_phrases',
+  TM_MERGE_BUILTIN: 'merge_builtin_phrases',
   TM_SAVE: 'save_translation_memory',
 
   // PO 文件相关
@@ -77,6 +84,7 @@ export const COMMANDS = {
   // 日志相关
   LOG_GET: 'get_app_logs',
   LOG_CLEAR: 'clear_app_logs',
+  LOG_FRONTEND_GET: 'get_frontend_logs', // 🔄 前端日志获取
   PROMPT_LOG_GET: 'get_prompt_logs',
   PROMPT_LOG_CLEAR: 'clear_prompt_logs',
 
@@ -85,6 +93,11 @@ export const COMMANDS = {
   I18N_GET_SYSTEM_LOCALE: 'get_system_locale',
   LANGUAGE_DETECT: 'detect_text_language',
   LANGUAGE_GET_DEFAULT_TARGET: 'get_default_target_lang',
+
+  // 系统相关
+  SYSTEM_GET_LOG_DIRECTORY: 'get_log_directory_path',
+  SYSTEM_OPEN_LOG_DIRECTORY: 'open_log_directory',
+  SYSTEM_GET_NATIVE_THEME: 'get_native_system_theme',
 } as const;
 
 // ========================================
@@ -123,25 +136,32 @@ export const configCommands = {
 };
 
 /**
- * AI配置命令
+ * AI配置命令（零转换，直接与后端通信）
+ * 参考 clash-verge-rev 最佳实践
  */
 export const aiConfigCommands = {
-  async getAll() {
+  async getAll(): Promise<AIConfig[]> {
     return invoke<AIConfig[]>(COMMANDS.AI_CONFIG_GET_ALL, undefined, {
       errorMessage: '获取AI配置列表失败',
     });
   },
 
-  async getActive() {
+  async getActive(): Promise<AIConfig | null> {
     return invoke<AIConfig | null>(COMMANDS.AI_CONFIG_GET_ACTIVE, undefined, {
       errorMessage: '获取当前AI配置失败',
     });
   },
 
-  async setActive(id: string) {
+  async setActive(indexStr: string) {
+    // 🔄 后端期望 index: usize，前端传递字符串形式的索引
+    const index = parseInt(indexStr, 10);
+    if (isNaN(index) || index < 0) {
+      throw new Error(`无效的配置索引: ${indexStr}`);
+    }
+
     return invoke<void>(
       COMMANDS.AI_CONFIG_SET_ACTIVE,
-      { id },
+      { index }, // 传递数字索引，系统会保持原样（不转换）
       {
         errorMessage: '设置活动AI配置失败',
       }
@@ -168,10 +188,16 @@ export const aiConfigCommands = {
     );
   },
 
-  async delete(id: string) {
+  async delete(indexStr: string) {
+    // 🔄 后端期望 index: usize，前端传递字符串形式的索引
+    const index = parseInt(indexStr, 10);
+    if (isNaN(index) || index < 0) {
+      throw new Error(`无效的配置索引: ${indexStr}`);
+    }
+
     return invoke<void>(
       COMMANDS.AI_CONFIG_DELETE,
-      { id },
+      { index }, // 传递数字索引，系统会保持原样（不转换）
       {
         errorMessage: '删除AI配置失败',
       }
@@ -179,16 +205,16 @@ export const aiConfigCommands = {
   },
 
   async testConnection(
-    provider: ProviderType,
+    providerId: string,
     apiKey: string,
     baseUrl?: string,
     model?: string,
     proxy?: any
   ) {
     const request = {
-      provider,
-      api_key: apiKey,
-      base_url: baseUrl || null,
+      providerId,
+      apiKey,
+      baseUrl: baseUrl || null,
       model: model || null,
       proxy: proxy || null,
     };
@@ -208,31 +234,31 @@ export const aiConfigCommands = {
  * AI 模型命令
  */
 export const aiModelCommands = {
-  async getProviderModels(provider: string) {
+  async getProviderModels(providerId: string) {
     return invoke<ModelInfo[]>(
       COMMANDS.AI_MODEL_GET_PROVIDER_MODELS,
-      { provider },
+      { providerId }, // ✅ Tauri 会转换为 provider_id
       {
         errorMessage: '获取模型列表失败',
       }
     );
   },
 
-  async getModelInfo(provider: string, modelId: string) {
+  async getModelInfo(providerId: string, modelId: string) {
     return invoke<ModelInfo | null>(
       COMMANDS.AI_MODEL_GET_INFO,
-      { provider, modelId },
+      { providerId, modelId }, // ✅ Tauri 会转换为 provider_id, model_id
       {
         errorMessage: '获取模型信息失败',
       }
     );
   },
 
-  async estimateCost(provider: string, modelId: string, totalChars: number, cacheHitRate?: number) {
+  async estimateCost(providerId: string, modelId: string, totalChars: number, cacheHitRate?: number) {
     return invoke<number>(
       COMMANDS.AI_MODEL_ESTIMATE_COST,
       {
-        provider,
+        providerId, // ✅ Tauri 会转换为 provider_id
         modelId,
         totalChars,
         cacheHitRate: cacheHitRate ?? null,
@@ -244,7 +270,7 @@ export const aiModelCommands = {
   },
 
   async calculatePreciseCost(
-    provider: string,
+    providerId: string,
     modelId: string,
     inputTokens: number,
     outputTokens: number,
@@ -254,7 +280,7 @@ export const aiModelCommands = {
     return invoke<number>(
       COMMANDS.AI_MODEL_CALCULATE_COST,
       {
-        provider,
+        providerId, // ✅ Tauri 会转换为 provider_id
         modelId,
         inputTokens,
         outputTokens,
@@ -263,6 +289,42 @@ export const aiModelCommands = {
       },
       {
         errorMessage: '计算成本失败',
+      }
+    );
+  },
+};
+
+/**
+ * 🆕 动态 AI 供应商命令 (Phase 2)
+ */
+export const aiProviderCommands = {
+  /**
+   * 获取所有已注册的AI供应商
+   */
+  async getAll() {
+    return invoke<ProviderInfo[]>(COMMANDS.AI_PROVIDER_GET_ALL, undefined, {
+      errorMessage: '获取供应商列表失败',
+    });
+  },
+
+  /**
+   * 获取所有可用的模型（来自所有供应商）
+   */
+  async getAllModels() {
+    return invoke<ModelInfo[]>(COMMANDS.AI_PROVIDER_GET_ALL_MODELS, undefined, {
+      errorMessage: '获取所有模型列表失败',
+    });
+  },
+
+  /**
+   * 根据模型ID查找对应的供应商信息
+   */
+  async findProviderForModel(modelId: string) {
+    return invoke<ProviderInfo | null>(
+      COMMANDS.AI_PROVIDER_FIND_BY_MODEL,
+      { modelId },
+      {
+        errorMessage: '查找模型供应商失败',
       }
     );
   },
@@ -326,10 +388,10 @@ export const termLibraryCommands = {
     );
   },
 
-  async generateStyleSummary(apiKey: string) {
+  async generateStyleSummary() {
     return invoke<string>(
       COMMANDS.TERM_LIBRARY_GENERATE_STYLE,
-      { apiKey },
+      undefined,
       {
         errorMessage: '生成风格总结失败',
       }
@@ -357,6 +419,12 @@ export const translationMemoryCommands = {
     });
   },
 
+  async mergeBuiltinPhrases() {
+    return invoke<number>(COMMANDS.TM_MERGE_BUILTIN, undefined, {
+      errorMessage: '合并内置词库失败',
+    });
+  },
+
   async save(memory: any) {
     return invoke<void>(
       COMMANDS.TM_SAVE,
@@ -375,7 +443,7 @@ export const poFileCommands = {
   async parse(filePath: string) {
     return invoke<POEntry[]>(
       COMMANDS.PO_PARSE,
-      { filePath },
+      { filePath }, // 保持 camelCase
       {
         errorMessage: '解析 PO 文件失败',
       }
@@ -488,21 +556,30 @@ export const dialogCommands = {
 };
 
 /**
- * 日志命令
+ * 日志命令（支持前后端日志分离）
  */
 export const logCommands = {
+  // 后端应用日志
   async get() {
-    return invoke<string>(COMMANDS.LOG_GET, undefined, {
-      errorMessage: '获取日志失败',
+    return invoke<string[]>(COMMANDS.LOG_GET, undefined, {
+      errorMessage: '获取后端日志失败',
     });
   },
 
   async clear() {
     return invoke<void>(COMMANDS.LOG_CLEAR, undefined, {
-      errorMessage: '清空日志失败',
+      errorMessage: '清空后端日志失败',
     });
   },
 
+  // 🔄 前端日志（从保存的文件读取）
+  async getFrontend() {
+    return invoke<string[]>(COMMANDS.LOG_FRONTEND_GET, undefined, {
+      errorMessage: '获取前端日志失败',
+    });
+  },
+
+  // 提示词日志
   async getPromptLogs() {
     return invoke<string>(COMMANDS.PROMPT_LOG_GET, undefined, {
       errorMessage: '获取提示词日志失败',
@@ -542,13 +619,47 @@ export const i18nCommands = {
     );
   },
 
-  async getDefaultTargetLanguage(sourceLanguageCode: string) {
+  async getDefaultTargetLanguage(sourceLangCode: string) {
     return invoke<{ code: string; display_name: string }>(
       COMMANDS.LANGUAGE_GET_DEFAULT_TARGET,
-      { sourceLanguageCode },
+      { sourceLangCode }, // 保持 camelCase
       {
         errorMessage: '获取默认目标语言失败',
       }
     );
+  },
+};
+
+/**
+ * 系统命令
+ */
+export const systemCommands = {
+  /**
+   * 获取日志目录路径
+   */
+  async getLogDirectoryPath() {
+    return invoke<string>(COMMANDS.SYSTEM_GET_LOG_DIRECTORY, undefined, {
+      errorMessage: '获取日志目录路径失败',
+    });
+  },
+
+  /**
+   * 打开日志目录
+   * 在文件管理器中打开应用日志目录
+   */
+  async openLogDirectory() {
+    return invoke<void>(COMMANDS.SYSTEM_OPEN_LOG_DIRECTORY, undefined, {
+      errorMessage: '打开日志目录失败',
+    });
+  },
+
+  /**
+   * 获取系统主题（原生API）
+   * 直接从操作系统获取主题设置，避免webview环境的检测问题
+   */
+  async getNativeSystemTheme() {
+    return invoke<string>(COMMANDS.SYSTEM_GET_NATIVE_THEME, undefined, {
+      errorMessage: '获取系统主题失败',
+    });
   },
 };

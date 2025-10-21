@@ -57,6 +57,7 @@ pub struct TranslationPair {
 
 // Phase 7: Contextual Refine 请求结构体
 #[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")] // 🔧 序列化时使用 camelCase 命名，与前端保持一致
 #[cfg_attr(feature = "ts-rs", derive(TS))]
 #[cfg_attr(feature = "ts-rs", ts(export, export_to = "../src/types/generated/"))]
 pub struct ContextualRefineRequest {
@@ -197,6 +198,43 @@ pub fn get_builtin_phrases() -> Result<serde_json::Value, String> {
     }))
 }
 
+/// 合并内置词库到当前翻译记忆库并保存
+#[tauri::command]
+pub fn merge_builtin_phrases() -> Result<usize, String> {
+    use crate::services::translation_memory::{get_builtin_memory, TranslationMemory};
+    use crate::utils::paths::get_translation_memory_path;
+
+    let memory_path = get_translation_memory_path();
+    
+    // 加载当前记忆库
+    let mut tm = TranslationMemory::new_from_file(&memory_path)
+        .map_err(|e| format!("加载记忆库失败: {}", e))?;
+    
+    // 获取内置词库
+    let builtin = get_builtin_memory();
+    let builtin_count = builtin.len();
+    
+    // 合并：内置词库优先级低，不覆盖用户已有的翻译
+    let mut added_count = 0;
+    for (source, target) in builtin {
+        if !tm.memory.contains_key(&source) {
+            tm.memory.insert(source, target);
+            added_count += 1;
+        }
+    }
+    
+    // 更新统计
+    tm.stats.total_entries = tm.memory.len();
+    
+    // 保存到文件
+    tm.save_to_file(&memory_path)
+        .map_err(|e| format!("保存记忆库失败: {}", e))?;
+    
+    crate::app_log!("[TM] 合并内置词库: {} 条内置短语，新增 {} 条", builtin_count, added_count);
+    
+    Ok(added_count)
+}
+
 #[tauri::command]
 pub fn save_translation_memory(memory: TranslationMemory) -> Result<(), String> {
     let memory_path = get_translation_memory_path().to_string_lossy().to_string();
@@ -332,16 +370,193 @@ pub fn validate_config(config: serde_json::Value) -> Result<bool, String> {
     Ok(true)
 }
 
-// 日志相关命令
+// 日志相关命令 - 读取实际日志文件而非内存缓冲区
 #[tauri::command]
 pub fn get_app_logs() -> Result<Vec<String>, String> {
-    Ok(crate::utils::logger::get_logs())
+    use std::fs;
+
+    // 优先读取实际的日志文件，而不是内存缓冲区
+    match crate::utils::paths::app_logs_dir() {
+        Ok(log_dir) => {
+            // 查找最新的应用日志文件（按修改时间排序）
+            if let Ok(entries) = fs::read_dir(&log_dir) {
+                let mut app_log_files: Vec<_> = entries
+                    .filter_map(|entry| entry.ok())
+                    .filter(|entry| {
+                        entry.file_name().to_string_lossy().starts_with("app")
+                            && entry.file_name().to_string_lossy().ends_with(".log")
+                    })
+                    .collect();
+
+                // 按修改时间排序，最新的在前
+                app_log_files.sort_by_key(|entry| {
+                    entry
+                        .metadata()
+                        .and_then(|m| m.modified())
+                        .unwrap_or(std::time::SystemTime::UNIX_EPOCH)
+                });
+                app_log_files.reverse();
+
+                // 只读取最新的日志文件（最清晰简洁）
+                if let Some(latest_log) = app_log_files.first() {
+                    if let Ok(content) = fs::read_to_string(latest_log.path()) {
+                        let lines: Vec<String> = content
+                            .lines()
+                            .filter(|line| !line.trim().is_empty()) // 过滤空行
+                            .map(|line| line.to_string())
+                            .collect();
+                        
+                        if !lines.is_empty() {
+                            return Ok(lines);
+                        }
+                    }
+                }
+            }
+
+            // 降级：如果没有找到日志文件，使用内存缓冲区
+            Ok(crate::utils::logger::get_logs())
+        }
+        Err(_) => {
+            // 降级：如果无法获取日志目录，使用内存缓冲区
+            Ok(crate::utils::logger::get_logs())
+        }
+    }
 }
 
 #[tauri::command]
 pub fn clear_app_logs() -> Result<(), String> {
+    use std::fs;
+
+    // 1. 清空内存缓冲区
     crate::utils::logger::clear_logs();
+
+    // 2. 清空日志文件（实现增量日志效果）
+    if let Ok(log_dir) = crate::utils::paths::app_logs_dir() {
+        if let Ok(entries) = fs::read_dir(&log_dir) {
+            for entry in entries.flatten() {
+                let path = entry.path();
+                if path.is_file() && path.extension().map_or(false, |ext| ext == "log") {
+                    // 清空文件内容而不是删除文件
+                    let _ = fs::write(&path, "");
+                }
+            }
+        }
+    }
+
     Ok(())
+}
+
+// 🔄 获取前端日志文件内容（优先从统一日志目录读取）
+#[tauri::command]
+pub fn get_frontend_logs() -> Result<Vec<String>, String> {
+    use std::fs;
+
+    crate::app_log!("🔄 [前端日志] 开始读取前端日志文件");
+
+    // 🔄 优先尝试从统一日志目录读取
+    let mut log_directories = Vec::new();
+
+    // 1. 统一日志目录（优先）
+    if let Ok(log_dir) = crate::utils::paths::app_logs_dir() {
+        log_directories.push((log_dir, "统一日志目录"));
+    }
+
+    // 2. AppData/data 目录（回退）
+    if let Ok(data_dir) = crate::utils::paths::app_data_dir() {
+        log_directories.push((data_dir, "AppData数据目录"));
+    }
+
+    let mut all_lines = Vec::new();
+    let mut found_files = 0;
+
+    // 尝试从各个目录读取前端日志
+    for (dir_path, dir_name) in log_directories {
+        if !dir_path.exists() {
+            crate::app_log!("📂 [前端日志] {} 不存在: {:?}", dir_name, dir_path);
+            continue;
+        }
+
+        crate::app_log!("📂 [前端日志] 检查 {}: {:?}", dir_name, dir_path);
+
+        // 查找前端日志文件
+        match fs::read_dir(&dir_path) {
+            Ok(entries) => {
+                let mut frontend_log_files: Vec<_> = entries
+                    .filter_map(|entry| entry.ok())
+                    .filter(|entry| {
+                        let file_name = entry.file_name();
+                        let name = file_name.to_string_lossy();
+                        name.starts_with("frontend-") && name.ends_with(".log")
+                    })
+                    .collect();
+
+                if frontend_log_files.is_empty() {
+                    crate::app_log!("📭 [前端日志] {} 中没有前端日志文件", dir_name);
+                    continue;
+                }
+
+                // 按修改时间排序，最新的在前
+                frontend_log_files.sort_by_key(|entry| {
+                    entry
+                        .metadata()
+                        .and_then(|m| m.modified())
+                        .unwrap_or(std::time::SystemTime::UNIX_EPOCH)
+                });
+                frontend_log_files.reverse();
+
+                crate::app_log!(
+                    "📄 [前端日志] {} 找到 {} 个前端日志文件",
+                    dir_name,
+                    frontend_log_files.len()
+                );
+
+                // 读取最多3个最新的前端日志文件
+                for (i, entry) in frontend_log_files.iter().take(3).enumerate() {
+                    if found_files > 0 || i > 0 {
+                        all_lines.push(format!(
+                            "========== {} ==========",
+                            entry.file_name().to_string_lossy()
+                        ));
+                    }
+
+                    if let Ok(content) = fs::read_to_string(entry.path()) {
+                        let lines: Vec<String> =
+                            content.lines().map(|line| line.to_string()).collect();
+                        let lines_count = lines.len(); // 🔧 在移动前保存长度
+                        all_lines.extend(lines);
+                        found_files += 1;
+
+                        crate::app_log!(
+                            "✅ [前端日志] 读取文件: {} ({} 行)",
+                            entry.file_name().to_string_lossy(),
+                            lines_count
+                        );
+                    }
+                }
+
+                // 如果找到了文件，就不再继续查找其他目录
+                if found_files > 0 {
+                    break;
+                }
+            }
+            Err(e) => {
+                crate::app_log!("❌ [前端日志] 无法读取 {}: {}", dir_name, e);
+                continue;
+            }
+        }
+    }
+
+    if found_files == 0 {
+        crate::app_log!("📭 [前端日志] 所有目录都没有找到前端日志文件");
+        return Ok(vec!["前端日志文件不存在，可能还没有保存过日志".to_string()]);
+    }
+
+    crate::app_log!(
+        "✅ [前端日志] 读取完成，共 {} 个文件，{} 行",
+        found_files,
+        all_lines.len()
+    );
+    Ok(all_lines)
 }
 
 // ==================== 术语库相关命令 ====================
@@ -398,7 +613,7 @@ pub fn remove_term_from_library(source: String) -> Result<(), String> {
 
 /// 生成风格总结（调用AI）
 #[tauri::command]
-pub async fn generate_style_summary(api_key: String) -> Result<String, String> {
+pub async fn generate_style_summary() -> Result<String, String> {
     let path = get_term_library_path();
     let mut library = TermLibrary::load_from_file(&path).map_err(|e| e.to_string())?;
 
@@ -409,36 +624,87 @@ pub async fn generate_style_summary(api_key: String) -> Result<String, String> {
 
     crate::app_log!("[风格总结] 开始生成，基于 {} 条术语", library.terms.len());
 
+    // 获取当前活动的 AI 配置（克隆后释放锁，避免跨越 .await）
+    let active_config = {
+        let draft = ConfigDraft::global().await;
+        let config_guard = draft.data();
+        config_guard
+            .get_active_ai_config()
+            .cloned() // 克隆配置
+            .ok_or_else(|| "未找到活动的AI配置".to_string())?
+    }; // config_guard 在此释放
+    
+    crate::app_log!(
+        "[风格总结] 使用AI配置: 供应商={}, 模型={}",
+        active_config.provider_id,
+        active_config.model.as_deref().unwrap_or("auto")
+    );
+
     // 构建分析提示
     let analysis_prompt = library.build_analysis_prompt();
     crate::app_log!(
         "[风格总结] 提示词已构建，长度: {} 字符",
         analysis_prompt.len()
     );
-    crate::app_log!("[风格总结] 完整提示词内容:\n{}", analysis_prompt);
 
-    // 调用AI生成总结（风格总结不使用自定义提示词和目标语言，需要精确控制）
-    let mut translator =
-        AITranslator::new(api_key, None, false, None, None).map_err(|e| e.to_string())?;
+    // 调用AI生成总结（使用自定义提示词方法，避免批量翻译格式）
+    let mut translator = AITranslator::new_with_config(
+        active_config, // 已克隆，可直接使用
+        false, // 不使用TM
+        None,  // 不使用系统提示词（风格分析有自己的系统角色）
+        None,  // 不指定目标语言
+    ).map_err(|e| e.to_string())?;
+    
+    // 记录提示词到提示词日志
+    let metadata = serde_json::json!({
+        "type": "风格分析",
+        "term_count": library.terms.len(),
+        "provider": "current_active",
+    });
+    crate::services::log_prompt("风格分析", analysis_prompt.clone(), Some(metadata));
+    
     let summary = translator
-        .translate_batch(vec![analysis_prompt], None)
+        .translate_with_custom_user_prompt(analysis_prompt.clone())
         .await
         .map_err(|e| {
             crate::app_log!("[风格总结] AI调用失败: {}", e);
             e.to_string()
-        })?
-        .into_iter()
-        .next()
-        .ok_or_else(|| {
-            crate::app_log!("[风格总结] AI返回为空");
-            "生成风格总结失败".to_string()
         })?;
 
-    crate::app_log!("[风格总结] AI生成成功，总结长度: {} 字符", summary.len());
-    crate::app_log!("[风格总结] AI返回的完整内容:\n{}", summary);
+    // 更新提示词日志的响应
+    let logs = crate::services::get_prompt_logs();
+    if let Some(last_idx) = logs.len().checked_sub(1) {
+        crate::services::update_prompt_response(last_idx, summary.clone());
+    }
 
-    // 更新术语库
-    library.update_style_summary(summary.clone());
+    crate::app_log!("[风格总结] AI生成成功，总结长度: {} 字符", summary.len());
+    
+    // 清理 AI 返回内容中的提示性文本
+    let cleaned_summary = summary
+        .lines()
+        .filter_map(|line| {
+            let trimmed = line.trim();
+            // 跳过包含提示性文本的行
+            if trimmed.starts_with("第1行") || trimmed.starts_with("第2行") {
+                // 提取冒号后的实际内容
+                if let Some(pos) = trimmed.find('：') {
+                    let content = trimmed[pos + '：'.len_utf8()..].trim();
+                    if !content.is_empty() {
+                        return Some(content.to_string());
+                    }
+                }
+                None
+            } else if !trimmed.is_empty() {
+                Some(trimmed.to_string())
+            } else {
+                None
+            }
+        })
+        .collect::<Vec<_>>()
+        .join("\n");
+
+    // 更新术语库（使用清理后的内容）
+    library.update_style_summary(cleaned_summary.clone());
     save_term_library(&library, &path)?;
 
     crate::app_log!(
@@ -450,7 +716,7 @@ pub async fn generate_style_summary(api_key: String) -> Result<String, String> {
             .unwrap_or(0)
     );
 
-    Ok(summary)
+    Ok(cleaned_summary)
 }
 
 // ========== Phase 7: Contextual Refine ==========

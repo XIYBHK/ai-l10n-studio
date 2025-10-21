@@ -13,7 +13,7 @@ pub async fn get_all_ai_configs() -> Result<Vec<AIConfig>, String> {
         tracing::info!(
             "配置 #{}: provider={:?}, has_api_key={}, base_url={:?}, model={:?}",
             i,
-            cfg.provider,
+            cfg.provider_id,
             !cfg.api_key.is_empty(),
             cfg.base_url,
             cfg.model
@@ -34,18 +34,51 @@ pub async fn get_active_ai_config() -> Result<Option<AIConfig>, String> {
 /// 添加新的 AI 配置
 #[tauri::command]
 pub async fn add_ai_config(config: AIConfig) -> Result<(), String> {
+    crate::app_log!("🔄 [AI配置] 添加新配置，提供商: {:?}", config.provider_id);
+    // 🔒 安全：掩码API密钥显示
+    let masked_api_key = if config.api_key.starts_with("sk-") && config.api_key.len() > 8 {
+        format!(
+            "sk-***...***{}",
+            &config.api_key[config.api_key.len() - 4..]
+        )
+    } else if config.api_key.len() > 8 {
+        format!(
+            "{}***...***{}",
+            &config.api_key[..3],
+            &config.api_key[config.api_key.len() - 3..]
+        )
+    } else {
+        "***".to_string()
+    };
+
+    crate::app_log!(
+        "📋 [AI配置] 配置详情: URL={}, Model={}, API Key={}",
+        config.base_url.as_deref().unwrap_or("默认"),
+        config.model.as_deref().unwrap_or("默认"),
+        masked_api_key
+    );
+
     let draft = ConfigDraft::global().await;
 
     // 在草稿上修改
     {
         let mut draft_config = draft.draft();
+        let current_count = draft_config.ai_configs.len();
+        crate::app_log!("📊 [AI配置] 添加前配置数量: {}", current_count);
+
         draft_config.add_ai_config(config);
+
+        let new_count = draft_config.ai_configs.len();
+        crate::app_log!("📊 [AI配置] 添加后配置数量: {}", new_count);
     }
 
     // 原子提交并保存
-    draft.apply().map_err(|e| e.to_string())?;
+    draft.apply().map_err(|e| {
+        crate::app_log!("❌ [AI配置] 保存配置失败: {}", e);
+        e.to_string()
+    })?;
 
-    crate::app_log!("✅ 新增 AI 配置成功");
+    crate::app_log!("✅ [AI配置] 新增配置成功");
     Ok(())
 }
 
@@ -92,26 +125,45 @@ pub async fn remove_ai_config(index: usize) -> Result<(), String> {
 /// 设置启用的 AI 配置
 #[tauri::command]
 pub async fn set_active_ai_config(index: usize) -> Result<(), String> {
+    crate::app_log!("🔄 [AI配置] 设置启用配置，索引: {}", index);
+
     let draft = ConfigDraft::global().await;
 
     // 在草稿上修改
     {
         let mut draft_config = draft.draft();
-        draft_config
-            .set_active_ai_config(index)
-            .map_err(|e| e.to_string())?;
+        let total_configs = draft_config.ai_configs.len();
+        crate::app_log!(
+            "📊 [AI配置] 当前配置总数: {}, 目标索引: {}",
+            total_configs,
+            index
+        );
+
+        if index >= total_configs {
+            crate::app_log!("❌ [AI配置] 索引超出范围: {} >= {}", index, total_configs);
+            return Err(format!("配置索引超出范围: {} >= {}", index, total_configs));
+        }
+
+        draft_config.set_active_ai_config(index).map_err(|e| {
+            crate::app_log!("❌ [AI配置] 设置启用配置失败: {}", e);
+            e.to_string()
+        })?;
     }
 
     // 原子提交并保存
-    draft.apply().map_err(|e| e.to_string())?;
+    draft.apply().map_err(|e| {
+        crate::app_log!("❌ [AI配置] 保存配置失败: {}", e);
+        e.to_string()
+    })?;
 
-    crate::app_log!("✅ 设置启用配置成功，索引: {}", index);
+    crate::app_log!("✅ [AI配置] 设置启用配置成功，索引: {}", index);
     Ok(())
 }
 
 #[derive(Debug, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")] // 🔧 序列化时使用 camelCase 命名，与前端保持一致
 pub struct TestConnectionRequest {
-    pub provider: crate::services::ProviderType,
+    pub provider_id: String, // 🔧 插件化：使用 provider_id 字符串
     pub api_key: String,
     pub base_url: Option<String>,
     pub model: Option<String>,
@@ -119,6 +171,7 @@ pub struct TestConnectionRequest {
 }
 
 #[derive(Debug, Serialize)]
+#[serde(rename_all = "camelCase")] // 🔧 序列化时使用 camelCase 命名，与前端保持一致
 pub struct TestConnectionResult {
     pub success: bool,
     pub message: String,
@@ -132,10 +185,10 @@ pub async fn test_ai_connection(
 ) -> Result<TestConnectionResult, String> {
     use std::time::Instant;
 
-    crate::app_log!("🔍 测试 AI 连接: {:?}", request.provider);
+    crate::app_log!("🔍 测试 AI 连接: {:?}", request.provider_id);
 
     let ai_config = AIConfig {
-        provider: request.provider,
+        provider_id: request.provider_id.clone(),
         api_key: request.api_key,
         base_url: request.base_url,
         model: request.model,
@@ -174,8 +227,18 @@ pub async fn test_ai_connection(
                     .unwrap_or_else(|_| "JSON序列化失败".to_string())
             );
 
+            // 获取供应商显示名称
+            let provider_display_name = {
+                use crate::services::ai::provider::with_global_registry;
+                with_global_registry(|registry| {
+                    registry.get_provider_info(&ai_config.provider_id)
+                        .map(|info| info.display_name)
+                        .unwrap_or_else(|| ai_config.provider_id.clone())
+                })
+            };
+
             let metadata = serde_json::json!({
-                "provider": ai_config.provider.display_name(),
+                "provider": provider_display_name,
                 "model": ai_config.model.clone(),
                 "test_type": "connection_test",
                 "test_text": test_text,
@@ -205,7 +268,7 @@ pub async fn test_ai_connection(
 
                     Ok(TestConnectionResult {
                         success: true,
-                        message: format!("连接成功 ({})", ai_config.provider.display_name()),
+                        message: format!("连接成功 ({})", provider_display_name),
                         response_time_ms: Some(elapsed),
                     })
                 }
@@ -237,35 +300,80 @@ pub async fn test_ai_connection(
 pub async fn get_system_prompt() -> Result<String, String> {
     use crate::services::ai_translator::DEFAULT_SYSTEM_PROMPT;
 
+    crate::app_log!("🔄 [系统提示词] 获取系统提示词");
+
     let draft = ConfigDraft::global().await;
     let config = draft.data();
 
     // 返回自定义提示词，如果没有则返回默认提示词
-    Ok(config
+    let prompt = config
         .system_prompt
         .clone()
-        .unwrap_or_else(|| DEFAULT_SYSTEM_PROMPT.to_string()))
+        .unwrap_or_else(|| DEFAULT_SYSTEM_PROMPT.to_string());
+
+    let is_custom = config.system_prompt.is_some();
+    let prompt_len = prompt.len();
+    crate::app_log!(
+        "📄 [系统提示词] 返回提示词: {} (长度: {} 字符)",
+        if is_custom { "自定义" } else { "默认" },
+        prompt_len
+    );
+
+    Ok(prompt)
 }
 
 /// 更新系统提示词
 #[tauri::command]
 pub async fn update_system_prompt(prompt: String) -> Result<(), String> {
+    let prompt_len = prompt.len();
+    let is_empty = prompt.trim().is_empty();
+    crate::app_log!(
+        "🔄 [系统提示词] 更新系统提示词: {} (长度: {} 字符)",
+        if is_empty {
+            "清空"
+        } else {
+            "设置自定义"
+        },
+        prompt_len
+    );
+
     let draft = ConfigDraft::global().await;
 
     // 在草稿上修改
     {
         let mut draft_config = draft.draft();
-        draft_config.system_prompt = if prompt.trim().is_empty() {
+        let old_prompt_exists = draft_config.system_prompt.is_some();
+
+        draft_config.system_prompt = if is_empty {
+            crate::app_log!("🗑️ [系统提示词] 清空自定义提示词，将使用默认提示词");
             None
         } else {
+            crate::app_log!("📝 [系统提示词] 设置自定义提示词 ({}字符)", prompt.len());
             Some(prompt)
         };
+
+        crate::app_log!(
+            "📊 [系统提示词] 状态变化: {} -> {}",
+            if old_prompt_exists {
+                "自定义"
+            } else {
+                "默认"
+            },
+            if draft_config.system_prompt.is_some() {
+                "自定义"
+            } else {
+                "默认"
+            }
+        );
     }
 
     // 原子提交并保存
-    draft.apply().map_err(|e| e.to_string())?;
+    draft.apply().map_err(|e| {
+        crate::app_log!("❌ [系统提示词] 保存失败: {}", e);
+        e.to_string()
+    })?;
 
-    crate::app_log!("✅ 系统提示词已更新");
+    crate::app_log!("✅ [系统提示词] 更新成功");
     Ok(())
 }
 

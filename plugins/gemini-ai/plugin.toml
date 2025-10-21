@@ -1,0 +1,110 @@
+# Google Gemini AI 供应商插件配置
+# 基于 Google AI Platform 的 Gemini 系列模型
+
+[plugin]
+name = "Google Gemini"
+id = "gemini"
+version = "2.5.0"
+api_version = "1.0"
+description = "Google Gemini 多模态大模型，超长上下文，复杂推理能力强，擅长编码任务和Web开发"
+author = "AI L10n Studio"
+homepage = "https://ai.google.dev"
+license = "MIT"
+
+[provider]
+display_name = "Gemini"
+default_url = "https://generativelanguage.googleapis.com/v1beta/models"
+default_model = "gemini-2.0-flash-exp"
+supports_cache = false
+supports_images = true
+
+# Gemini-2.0-Flash-Exp (最新实验版)
+[[provider.models]]
+id = "gemini-2.0-flash-exp"
+name = "Gemini-2.0-Flash-Exp"
+context_window = 2097152  # 2M tokens超长上下文
+max_output_tokens = 8192
+input_price = 0.075  # 基于Google AI定价结构估算
+output_price = 0.30
+cache_reads_price = 0.0
+cache_writes_price = 0.0
+recommended = true
+description = "Gemini-2.0 Flash实验版本，2M tokens超长上下文，最新多模态能力"
+
+# Gemini-1.5-Pro (稳定高质量)
+[[provider.models]]
+id = "gemini-1.5-pro-latest"
+name = "Gemini-1.5-Pro"
+context_window = 2097152  # 2M tokens
+max_output_tokens = 8192
+input_price = 1.25
+output_price = 5.00
+cache_reads_price = 0.0
+cache_writes_price = 0.0
+recommended = true
+description = "Gemini-1.5-Pro稳定版，2M tokens上下文，高质量推理与生成"
+
+# Gemini-1.5-Flash (高性价比)
+[[provider.models]]
+id = "gemini-1.5-flash-latest"
+name = "Gemini-1.5-Flash"
+context_window = 1048576  # 1M tokens
+max_output_tokens = 8192
+input_price = 0.075
+output_price = 0.30
+cache_reads_price = 0.0
+cache_writes_price = 0.0
+recommended = true
+description = "Gemini-1.5-Flash高速版，1M tokens上下文，极速响应，性价比优秀"
+
+# Gemini-1.5-Flash-8B (超轻量)
+[[provider.models]]
+id = "gemini-1.5-flash-8b-latest"
+name = "Gemini-1.5-Flash-8B"
+context_window = 1048576
+max_output_tokens = 8192
+input_price = 0.0375  # 比Flash更便宜
+output_price = 0.15
+cache_reads_price = 0.0
+cache_writes_price = 0.0
+recommended = false
+description = "Gemini-1.5-Flash 8B参数版本，1M tokens上下文，超高性价比"
+
+# Gemini-Pro (经典版)
+[[provider.models]]
+id = "gemini-pro"
+name = "Gemini-Pro"
+context_window = 32768
+max_output_tokens = 2048
+input_price = 0.50
+output_price = 1.50
+cache_reads_price = 0.0
+cache_writes_price = 0.0
+recommended = false
+description = "Gemini-Pro经典版本，32K上下文，稳定可靠"
+
+# Gemini-Pro-Vision (多模态)
+[[provider.models]]
+id = "gemini-pro-vision"
+name = "Gemini-Pro-Vision"
+context_window = 16384
+max_output_tokens = 2048
+input_price = 0.25
+output_price = 0.50
+cache_reads_price = 0.0
+cache_writes_price = 0.0
+recommended = false
+description = "Gemini-Pro视觉版本，16K上下文，专注图像理解和分析"
+
+# Gemini-Ultra (顶级版本，如果可用)
+[[provider.models]]
+id = "gemini-ultra"
+name = "Gemini-Ultra"
+context_window = 32768
+max_output_tokens = 2048
+input_price = 2.50
+output_price = 7.50
+cache_reads_price = 0.0
+cache_writes_price = 0.0
+recommended = false
+description = "Gemini-Ultra顶级版本，32K上下文，最强推理能力（预发布）"

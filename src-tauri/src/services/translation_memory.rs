@@ -154,20 +154,14 @@ impl TranslationMemory {
     }
 
     pub fn get_translation(&mut self, source: &str) -> Option<String> {
-        // 1. 先查learned memory
+        // 只查询当前记忆库（learned + 首次加载的builtin）
+        // 如果用户删除了某个词条，即使它在builtin中，也不再使用
         if let Some(translation) = self.memory.get(source) {
             self.stats.hits += 1;
             return Some(translation.clone());
         }
 
-        // 2. 未命中则查builtin（不占用运行时memory）
-        let builtin = get_builtin_memory();
-        if let Some(translation) = builtin.get(source) {
-            self.stats.hits += 1;
-            return Some(translation.clone());
-        }
-
-        // 3. 都未命中
+        // 未命中
         self.stats.misses += 1;
         None
     }

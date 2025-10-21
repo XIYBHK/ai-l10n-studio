@@ -4,7 +4,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project Overview
 
-This is a professional PO file translation tool built with Tauri (Rust + React). The application provides AI-powered translation with advanced features like multiple AI providers, contextual refine, multi-language support, and comprehensive test coverage.
+This is a professional PO file translation tool built with Tauri (Rust + React). The application provides AI-powered translation with advanced features like multiple AI providers, contextual refine, and multi-language support.
 
 **Architecture**: Frontend (React + TypeScript + Ant Design) + Backend (Rust + Tauri)
 **Primary Purpose**: Professional translation workflow for localization files with AI assistance
@@ -15,7 +15,6 @@ This is a professional PO file translation tool built with Tauri (Rust + React).
 
 - **Multi-AI Provider Support**: 8 AI services (Moonshot, OpenAI, iFlytek, Baidu, Alibaba, Zhipu, Claude, Gemini)
 - **Custom System Prompts**: User-customizable translation prompts
-- **Automated Testing**: 73 tests, 100% pass rate, 82.8% coverage
 - **Multi-Format Files**: PO, JSON, XLIFF, YAML detection & metadata
 - **Multi-Language Translation**: 10 languages with auto-detection
 - **Application Localization**: System language detection, i18n support
@@ -42,18 +41,9 @@ npm run build          # Build frontend only
 npm run tauri clean    # Clean Rust build cache
 ```
 
-### Testing & Code Quality
+### Code Quality
 
 ```bash
-# Testing
-npm run test           # Frontend tests with Vitest (watch mode)
-npm run test:ui        # Vitest UI mode
-npm run test:run       # Run tests once without watch
-npm run test:coverage  # Run tests with coverage report
-npm run test -- path/to/test.spec.ts  # Run specific test file
-cd src-tauri && cargo test && cd ..   # Backend tests
-
-# Code Quality
 npm run format         # Format frontend code with Prettier
 npm run format:check   # Check code format
 npm run fmt            # Format Rust code
@@ -382,13 +372,6 @@ await configCommands.update(updatedConfig);
 - LRU caching strategy for translation memory
 - Automatic memory optimization for large operations
 
-### Testing & Quality
-
-- 73 automated tests (46 backend + 27 frontend)
-- 100% test pass rate
-- 82.8% code coverage
-- Fast test execution (~14 seconds)
-
 ### Supported Languages (Phase 5)
 
 The application supports translation to/from 10 major languages with automatic detection:
@@ -420,7 +403,6 @@ The application supports translation to/from 10 major languages with automatic d
 - `package.json` - Frontend dependencies and scripts
 - `src-tauri/Cargo.toml` - Backend dependencies and build config
 - `vite.config.ts` - Vite build configuration
-- `vitest.config.ts` - Test configuration
 - `tsconfig.json` - TypeScript configuration
 
 ### Key Source Files (Updated 2025-10)

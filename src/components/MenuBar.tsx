@@ -12,7 +12,8 @@ import {
 } from '@ant-design/icons';
 import { useTheme } from '../hooks/useTheme';
 import { LanguageSelector } from './LanguageSelector';
-import type { LanguageInfo } from '../services/api'; // TODO: Phase 1.5 清理时，移动类型定义到 types/
+import type { LanguageInfo } from '../types/generated/LanguageInfo'; // ✅ 使用生成的类型
+import { useAppData } from '../providers/AppDataProvider';
 
 const { Text } = Typography;
 
@@ -23,8 +24,7 @@ interface MenuBarProps {
   onTranslateAll: () => void;
   onSettings: () => void;
   onDevTools?: () => void;
-  apiKey: string;
-  onApiKeyChange: (key: string) => void;
+  // ⛔ 移除: apiKey 和 onApiKeyChange (使用 useAppData 统一获取)
   isTranslating: boolean;
   hasEntries: boolean;
   isDarkMode?: boolean;
@@ -42,7 +42,7 @@ export const MenuBar: React.FC<MenuBarProps> = ({
   onTranslateAll,
   onSettings,
   onDevTools,
-  apiKey,
+  // ⛔ 移除: apiKey 参数
   isTranslating,
   hasEntries,
   isDarkMode = false,
@@ -52,6 +52,9 @@ export const MenuBar: React.FC<MenuBarProps> = ({
   onTargetLanguageChange,
 }) => {
   const { colors } = useTheme();
+
+  // ✅ 使用统一数据提供者获取AI配置状态
+  const { activeAIConfig } = useAppData();
 
   return (
     <div
@@ -101,7 +104,7 @@ export const MenuBar: React.FC<MenuBarProps> = ({
           icon={<TranslationOutlined />}
           onClick={onTranslateAll}
           loading={isTranslating}
-          disabled={!apiKey || !hasEntries}
+          disabled={!activeAIConfig || !hasEntries}
           size="middle"
         >
           {isTranslating ? '翻译中...' : '批量翻译'}
@@ -170,7 +173,7 @@ export const MenuBar: React.FC<MenuBarProps> = ({
         </Button>
       </Tooltip>
 
-      {!apiKey && (
+      {!activeAIConfig && (
         <div
           style={{
             padding: '4px 12px',
@@ -181,7 +184,7 @@ export const MenuBar: React.FC<MenuBarProps> = ({
             color: colors.statusNeedsReview,
           }}
         >
-          ⚠️ 请先在设置中配置 API 密钥
+          ⚠️ 请先在设置中配置 AI 服务
         </div>
       )}
     </div>

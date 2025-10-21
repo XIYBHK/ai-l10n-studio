@@ -1,24 +1,34 @@
-import React, { useState, useEffect, useRef } from 'react';
-import { Modal, Input, Button, Space, message, Tabs } from 'antd';
+import React, { useState, useRef, useEffect } from 'react';
+import { Modal, Input, Button, Space, Tabs, Alert, Divider, App } from 'antd';
 import {
   CopyOutlined,
   ReloadOutlined,
   ClearOutlined,
-  FileOutlined,
   BugOutlined,
   DownloadOutlined,
-  SaveOutlined,
   FileTextOutlined,
+  ExperimentOutlined,
+  PlayCircleOutlined,
+  PauseCircleOutlined,
 } from '@ant-design/icons';
-import { logCommands } from '../services/commands'; // ✅ 迁移到统一命令层 (promptLogApi 已通过 hooks 使用)
 import Draggable from 'react-draggable';
-import { FileDropTest } from './FileDropTest';
-import { createModuleLogger } from '../utils/logger';
-import { frontendLogger } from '../utils/frontendLogger';
-import { useBackendLogs, usePromptLogs } from '../hooks/useLogs';
+import { runDynamicProviderTests, TestResult } from '../utils/testDynamicProviders';
+
+// ✅ 新的日志服务（参考 clash-verge-rev）
+import {
+  useGlobalLogStore,
+  toggleBackendLogEnabled,
+  clearBackendLogs,
+  clearPromptLogs,
+  clearFrontendLogs,
+  startBackendLogMonitoring,
+  stopBackendLogMonitoring,
+  startPromptLogMonitoring,
+  stopPromptLogMonitoring,
+  toggleFrontendLogEnabled,
+} from '../services/logService';
 
 const { TextArea } = Input;
-const log = createModuleLogger('DevToolsModal');
 
 interface DevToolsModalProps {
   visible: boolean;
@@ -26,48 +36,138 @@ interface DevToolsModalProps {
 }
 
 export const DevToolsModal: React.FC<DevToolsModalProps> = ({ visible, onClose }) => {
-  const [frontendLogs, setFrontendLogs] = useState<string>('');
-  // 只有在窗口打开时才启用 SWR 和轮询
+  // ✅ 使用 App 提供的 message（避免静态方法警告）
+  const { message } = App.useApp();
+
+  // ✅ 使用全局日志 Store（参考 clash-verge-rev）
   const {
-    logs,
-    isLoading: loading,
-    refresh: refreshBackendLogs,
-  } = useBackendLogs({
-    enabled: visible,
-    refreshInterval: 2000,
-  });
-  const {
+    backendLogs,
+    backendEnabled,
+    frontendLogs,
+    frontendEnabled,
     promptLogs,
-    isLoading: promptLoading,
-    refresh: refreshPromptLogs,
-  } = usePromptLogs({
-    enabled: visible,
-    refreshInterval: 2000,
-  });
-  const backendLogText =
-    typeof logs === 'string' ? logs : logs ? JSON.stringify(logs, null, 2) : '';
-  const promptLogText =
-    typeof promptLogs === 'string'
-      ? promptLogs
-      : promptLogs
-        ? JSON.stringify(promptLogs, null, 2)
-        : '';
+  } = useGlobalLogStore();
+
+  // 格式化日志显示
+  const backendLogText = backendLogs.join('\n');
+  const frontendLogText = frontendLogs
+    .map((log) => `[${log.time}] [${log.type}] ${log.module ? `[${log.module}]` : ''} ${log.message}`)
+    .join('\n');
+  const promptLogText = promptLogs;
   const [bounds, setBounds] = useState({ left: 0, top: 0, bottom: 0, right: 0 });
   const [disabled, setDisabled] = useState(true);
   const draggleRef = useRef<HTMLDivElement>(null);
 
-  // 移除了手动刷新的 useEffect，因为 SWR 的 enabled 参数会在 visible=true 时自动请求
+  // 🧪 动态供应商测试状态
+  const [testResults, setTestResults] = useState<TestResult[]>([]);
+  const [testRunning, setTestRunning] = useState(false);
+  const [testSummary, setTestSummary] = useState<{ passed: number; failed: number } | null>(null);
 
-  // 加载前端日志（仅在打开时加载一次）
+  // 📜 日志自动滚动 refs
+  const backendLogRef = useRef<any>(null);
+  const promptLogRef = useRef<any>(null);
+  const frontendLogRef = useRef<any>(null);
+
+  // 🧪 运行动态供应商测试
+  const handleRunTests = async () => {
+    setTestRunning(true);
+    setTestResults([]);
+    setTestSummary(null);
+
+    try {
+      console.log('🚀 开始运行动态供应商测试套件...');
+      const result = await runDynamicProviderTests();
+
+      setTestResults(result.results);
+      setTestSummary({ passed: result.passed, failed: result.failed });
+
+      if (result.failed === 0) {
+        message.success(`🎉 所有测试通过！(${result.passed}/${result.passed + result.failed})`);
+      } else {
+        message.warning(`⚠️ 部分测试失败 (${result.passed}/${result.passed + result.failed})`);
+      }
+    } catch (error) {
+      log.error('测试套件运行失败:', error);
+      message.error('测试套件运行失败');
+    } finally {
+      setTestRunning(false);
+    }
+  };
+
+  // ⏸️ 暂停/继续日志收集（参考 clash-verge-rev）
+  const handleToggleBackendLog = () => {
+    toggleBackendLogEnabled();
+    message.info(backendEnabled ? '⏸️ 后端日志已暂停' : '▶️ 后端日志已继续');
+  };
+
+  const handleToggleFrontendLog = () => {
+    toggleFrontendLogEnabled();
+    message.info(frontendEnabled ? '⏸️ 前端日志已暂停' : '▶️ 前端日志已继续');
+  };
+
+  // 🧹 清空日志（参考 clash-verge-rev）
+  const handleClearBackendLogs = async () => {
+    try {
+      await clearBackendLogs();
+      message.success('🧹 后端日志已清空');
+    } catch (error) {
+      console.error('[DevToolsModal] 清空后端日志失败:', error);
+      message.error('清空失败');
+    }
+  };
+
+  const handleClearPromptLogs = async () => {
+    try {
+      await clearPromptLogs();
+      message.success('🧹 提示词日志已清空');
+    } catch (error) {
+      console.error('[DevToolsModal] 清空提示词日志失败:', error);
+      message.error('清空失败');
+    }
+  };
+
+  const handleClearFrontendLogs = () => {
+    clearFrontendLogs();
+    message.success('🧹 前端日志已清空');
+  };
+
+  // 🎯 模态框打开时启动日志监控（参考 clash）
   useEffect(() => {
     if (visible) {
-      setFrontendLogs(frontendLogger.getLogs());
+      startBackendLogMonitoring();
+      startPromptLogMonitoring();
+    } else {
+      stopBackendLogMonitoring();
+      stopPromptLogMonitoring();
     }
+
+    return () => {
+      stopBackendLogMonitoring();
+      stopPromptLogMonitoring();
+    };
   }, [visible]);
 
-  const refreshFrontendLogs = () => {
-    setFrontendLogs(frontendLogger.getLogs());
-  };
+  // 📜 自动滚动到底部（显示最新日志）
+  useEffect(() => {
+    if (backendLogRef.current?.resizableTextArea?.textArea) {
+      const textarea = backendLogRef.current.resizableTextArea.textArea;
+      textarea.scrollTop = textarea.scrollHeight;
+    }
+  }, [backendLogText]);
+
+  useEffect(() => {
+    if (promptLogRef.current?.resizableTextArea?.textArea) {
+      const textarea = promptLogRef.current.resizableTextArea.textArea;
+      textarea.scrollTop = textarea.scrollHeight;
+    }
+  }, [promptLogs]);
+
+  useEffect(() => {
+    if (frontendLogRef.current?.resizableTextArea?.textArea) {
+      const textarea = frontendLogRef.current.resizableTextArea.textArea;
+      textarea.scrollTop = textarea.scrollHeight;
+    }
+  }, [frontendLogText]);
 
   // SWR 已处理日志加载与轮询
 
@@ -82,55 +182,46 @@ export const DevToolsModal: React.FC<DevToolsModalProps> = ({ visible, onClose }
       });
   };
 
-  const handleExportLogs = () => {
+  const handleExportBackendLogs = () => {
     try {
       const timestamp = new Date().toISOString().replace(/[:.]/g, '-').slice(0, -5);
       const filename = `backend-logs-${timestamp}.txt`;
-
-      // 创建 Blob 对象
       const blob = new Blob([backendLogText], { type: 'text/plain;charset=utf-8' });
       const url = URL.createObjectURL(blob);
-
-      // 创建下载链接
       const link = document.createElement('a');
       link.href = url;
       link.download = filename;
       document.body.appendChild(link);
       link.click();
       document.body.removeChild(link);
-
-      // 清理
       URL.revokeObjectURL(url);
-
       message.success(`后端日志已导出: ${filename}`);
-      log.info('后端日志已导出', { filename });
     } catch (error) {
-      log.logError(error, '导出日志失败');
+      console.error('[DevToolsModal] 导出日志失败:', error);
       message.error('导出失败');
     }
   };
 
-  const handleSaveFrontendLogs = async () => {
+  const handleExportFrontendLogs = () => {
     try {
-      const filename = await frontendLogger.saveLogs();
-      message.success(`前端日志已保存到数据目录: ${filename}`);
-      log.info('前端日志已保存', { filename });
+      const timestamp = new Date().toISOString().replace(/[:.]/g, '-').slice(0, -5);
+      const filename = `frontend-logs-${timestamp}.txt`;
+      const blob = new Blob([frontendLogText], { type: 'text/plain;charset=utf-8' });
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = filename;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      URL.revokeObjectURL(url);
+      message.success(`前端日志已导出: ${filename}`);
     } catch (error) {
-      log.logError(error, '保存前端日志失败');
-      message.error('保存失败');
+      console.error('[DevToolsModal] 导出前端日志失败:', error);
+      message.error('导出失败');
     }
   };
 
-  const handleClear = async () => {
-    try {
-      await logCommands.clear();
-      await refreshBackendLogs();
-      message.success('日志已清空');
-      log.info('日志已清空');
-    } catch (error) {
-      log.logError(error, '清空日志失败');
-    }
-  };
 
   const onStart = (_event: any, uiData: any) => {
     const { clientWidth, clientHeight } = window.document.documentElement;
@@ -205,36 +296,35 @@ export const DevToolsModal: React.FC<DevToolsModalProps> = ({ visible, onClose }
                 <Space style={{ marginBottom: 12, width: '100%', justifyContent: 'space-between' }}>
                   <Space>
                     <Button
-                      icon={<ReloadOutlined />}
-                      onClick={refreshBackendLogs}
-                      loading={loading}
+                      icon={backendEnabled ? <PauseCircleOutlined /> : <PlayCircleOutlined />}
+                      onClick={handleToggleBackendLog}
+                      type={backendEnabled ? 'primary' : 'default'}
                     >
-                      刷新
+                      {backendEnabled ? '⏸️ 暂停' : '▶️ 继续'}
                     </Button>
-                    <span style={{ fontSize: '12px', color: '#999' }}>(自动刷新: 每2秒)</span>
-                  </Space>
-                  <Space>
-                    <Button icon={<DownloadOutlined />} onClick={handleExportLogs}>
-                      导出日志
-                    </Button>
-                    <Button icon={<ClearOutlined />} onClick={handleClear} danger>
+                    <Button icon={<ClearOutlined />} onClick={handleClearBackendLogs}>
                       清空
                     </Button>
+                    <span style={{ fontSize: '12px', color: '#999' }}>
+                      {backendEnabled ? '(每2秒更新)' : '(已暂停)'}
+                    </span>
+                  </Space>
+                  <Space>
+                    <Button icon={<DownloadOutlined />} onClick={handleExportBackendLogs}>
+                      导出
+                    </Button>
                     <Button icon={<CopyOutlined />} onClick={handleCopy} type="primary">
-                      复制日志
+                      复制
                     </Button>
                   </Space>
                 </Space>
 
                 <TextArea
+                  ref={backendLogRef}
                   value={backendLogText}
                   readOnly
                   rows={20}
-                  placeholder="等待日志输出...
-提示: 
-- 日志每2秒自动刷新
-- 执行翻译操作时会输出详细日志
-- 显示最近1000条日志记录"
+                  placeholder="暂无后端日志"
                   style={{
                     fontFamily: 'Consolas, Monaco, "Courier New", monospace',
                     fontSize: '12px',
@@ -269,23 +359,22 @@ export const DevToolsModal: React.FC<DevToolsModalProps> = ({ visible, onClose }
             children: (
               <div>
                 <Space style={{ marginBottom: 12 }}>
-                  <Button icon={<ReloadOutlined />} onClick={refreshFrontendLogs}>
-                    刷新
-                  </Button>
-                  <Button icon={<SaveOutlined />} onClick={handleSaveFrontendLogs} type="primary">
-                    保存到数据目录
-                  </Button>
                   <Button
-                    icon={<ClearOutlined />}
-                    onClick={() => {
-                      frontendLogger.clearLogs();
-                      setFrontendLogs('');
-                      message.success('前端日志已清空');
-                    }}
-                    danger
+                    icon={frontendEnabled ? <PauseCircleOutlined /> : <PlayCircleOutlined />}
+                    onClick={handleToggleFrontendLog}
+                    type={frontendEnabled ? 'primary' : 'default'}
                   >
+                    {frontendEnabled ? '⏸️ 暂停' : '▶️ 继续'}
+                  </Button>
+                  <Button icon={<ClearOutlined />} onClick={handleClearFrontendLogs}>
                     清空
                   </Button>
+                  <Button icon={<DownloadOutlined />} onClick={handleExportFrontendLogs}>
+                    导出
+                  </Button>
+                  <span style={{ fontSize: '12px', color: '#999' }}>
+                    {frontendEnabled ? '(实时收集)' : '(已暂停)'}
+                  </span>
                 </Space>
 
                 <div
@@ -299,16 +388,19 @@ export const DevToolsModal: React.FC<DevToolsModalProps> = ({ visible, onClose }
                     border: '1px solid #91d5ff',
                   }}
                 >
-                  💡 自动捕获：模块日志（[App]、[EditorPane] 等）+ 错误/警告，已过滤框架噪音
+                  💡 自动捕获：模块日志（INFO/WARN/ERROR 级别）
                   <br />
-                  📁 文件管理：内存最多 500 条，保存到文件时自动保留最近 5 个文件
+                  📁 内存管理：最多保留 1000 条日志
+                  <br />
+                  ⚙️ 简化设计：无文件保存，只保留内存日志，性能更好
                 </div>
 
                 <TextArea
-                  value={frontendLogs}
+                  ref={frontendLogRef}
+                  value={frontendLogText}
                   readOnly
                   rows={20}
-                  placeholder="等待前端日志输出..."
+                  placeholder="暂无前端日志\n\n提示：\n- 自动捕获 INFO/WARN/ERROR 级别日志\n- 最多保留 1000 条\n- 内存模式，性能更好"
                   style={{
                     fontFamily: 'Consolas, Monaco, "Courier New", monospace',
                     fontSize: '12px',
@@ -326,21 +418,14 @@ export const DevToolsModal: React.FC<DevToolsModalProps> = ({ visible, onClose }
                     justifyContent: 'space-between',
                   }}
                 >
-                  <span>日志行数: {frontendLogs.split('\n').filter((l) => l.trim()).length}</span>
-                  <span>字符数: {frontendLogs.length}</span>
+                  <span>
+                    日志行数: {frontendLogs.length}
+                  </span>
+                  <span>字符数: {frontendLogText.length}</span>
                   <span>最后更新: {new Date().toLocaleTimeString()}</span>
                 </div>
               </div>
             ),
-          },
-          {
-            key: 'filedrop',
-            label: (
-              <span>
-                <FileOutlined /> 文件拖放测试
-              </span>
-            ),
-            children: <FileDropTest />,
           },
           {
             key: 'prompt-logs',
@@ -353,32 +438,14 @@ export const DevToolsModal: React.FC<DevToolsModalProps> = ({ visible, onClose }
               <div>
                 <Space style={{ marginBottom: 12, width: '100%', justifyContent: 'space-between' }}>
                   <Space>
-                    <Button
-                      icon={<ReloadOutlined />}
-                      onClick={refreshPromptLogs}
-                      loading={promptLoading}
-                    >
-                      刷新
-                    </Button>
-                    <span style={{ fontSize: '12px', color: '#999' }}>(自动刷新: 每2秒)</span>
-                  </Space>
-                  <Space>
-                    <Button
-                      icon={<ClearOutlined />}
-                      onClick={async () => {
-                        try {
-                          await logCommands.clearPromptLogs();
-                          refreshPromptLogs();
-                          message.success('提示词日志已清空');
-                          log.info('提示词日志已清空');
-                        } catch (error) {
-                          log.logError(error, '清空提示词日志失败');
-                        }
-                      }}
-                      danger
-                    >
+                    <Button icon={<ClearOutlined />} onClick={handleClearPromptLogs}>
                       清空
                     </Button>
+                    <span style={{ fontSize: '12px', color: '#999' }}>
+                      {backendEnabled ? '(每2秒更新)' : '(已暂停)'}
+                    </span>
+                  </Space>
+                  <Space>
                     <Button
                       icon={<CopyOutlined />}
                       onClick={() => {
@@ -393,7 +460,7 @@ export const DevToolsModal: React.FC<DevToolsModalProps> = ({ visible, onClose }
                       }}
                       type="primary"
                     >
-                      复制日志
+                      复制
                     </Button>
                   </Space>
                 </Space>
@@ -417,6 +484,7 @@ export const DevToolsModal: React.FC<DevToolsModalProps> = ({ visible, onClose }
                 </div>
 
                 <TextArea
+                  ref={promptLogRef}
                   value={promptLogText}
                   readOnly
                   rows={20}
@@ -446,6 +514,121 @@ export const DevToolsModal: React.FC<DevToolsModalProps> = ({ visible, onClose }
                   <span>日志行数: {promptLogText.split('\n').filter((l) => l.trim()).length}</span>
                   <span>字符数: {promptLogText.length}</span>
                   <span>最后更新: {new Date().toLocaleTimeString()}</span>
+                </div>
+              </div>
+            ),
+          },
+          {
+            key: 'provider-tests',
+            label: (
+              <span>
+                <ExperimentOutlined /> 供应商测试
+              </span>
+            ),
+            children: (
+              <div>
+                <Alert
+                  message="🧪 动态供应商架构测试"
+                  description="测试 Phase 2 的动态供应商系统，验证前后端 API 是否正常工作"
+                  type="info"
+                  showIcon
+                  style={{ marginBottom: 16 }}
+                />
+
+                <Space style={{ marginBottom: 16 }}>
+                  <Button
+                    icon={<PlayCircleOutlined />}
+                    onClick={handleRunTests}
+                    loading={testRunning}
+                    type="primary"
+                  >
+                    运行完整测试套件
+                  </Button>
+                  <Button
+                    icon={<ClearOutlined />}
+                    onClick={() => {
+                      setTestResults([]);
+                      setTestSummary(null);
+                      message.success('测试结果已清空');
+                    }}
+                    disabled={testResults.length === 0}
+                  >
+                    清空结果
+                  </Button>
+                </Space>
+
+                {testSummary && (
+                  <Alert
+                    message={`测试完成: ${testSummary.passed} 通过, ${testSummary.failed} 失败`}
+                    type={testSummary.failed === 0 ? 'success' : 'warning'}
+                    showIcon
+                    style={{ marginBottom: 16 }}
+                  />
+                )}
+
+                {testResults.length > 0 && (
+                  <div style={{ marginBottom: 16 }}>
+                    <Divider orientation="left">详细测试结果</Divider>
+                    {testResults.map((result, index) => (
+                      <div key={index} style={{ marginBottom: 12 }}>
+                        <Alert
+                          message={`测试 ${index + 1}: ${result.success ? '✅ 通过' : '❌ 失败'}`}
+                          description={
+                            <div>
+                              <div style={{ marginBottom: 8 }}>{result.message}</div>
+                              {result.data && (
+                                <details>
+                                  <summary style={{ cursor: 'pointer', color: '#1890ff' }}>
+                                    查看数据详情
+                                  </summary>
+                                  <pre
+                                    style={{
+                                      marginTop: 8,
+                                      fontSize: '12px',
+                                      background: '#f5f5f5',
+                                      padding: '8px',
+                                      borderRadius: '4px',
+                                      maxHeight: '200px',
+                                      overflow: 'auto',
+                                    }}
+                                  >
+                                    {JSON.stringify(result.data, null, 2)}
+                                  </pre>
+                                </details>
+                              )}
+                            </div>
+                          }
+                          type={result.success ? 'success' : 'error'}
+                          showIcon
+                        />
+                      </div>
+                    ))}
+                  </div>
+                )}
+
+                <div
+                  style={{
+                    padding: '12px',
+                    background: '#f8f9fa',
+                    borderRadius: '6px',
+                    fontSize: '12px',
+                    color: '#666',
+                  }}
+                >
+                  <div>
+                    <strong>测试项目:</strong>
+                  </div>
+                  <ul style={{ margin: '8px 0', paddingLeft: '20px' }}>
+                    <li>获取所有已注册的 AI 供应商</li>
+                    <li>获取所有可用的模型</li>
+                    <li>根据模型 ID 查找对应供应商</li>
+                    <li>测试已知模型: deepseek-chat, kimi-latest</li>
+                    <li>测试不存在模型的处理</li>
+                  </ul>
+                  <div>
+                    <strong>意义:</strong>{' '}
+                    验证插件化架构是否正常工作，确保添加新供应商时前端能自动识别
+                  </div>
                 </div>
               </div>
             ),
