@@ -27,6 +27,9 @@ interface DevToolsModalProps {
 }
 
 export const DevToolsModal: React.FC<DevToolsModalProps> = ({ visible, onClose }) => {
+  // 🔄 实时日志模式：打开时自动清空，只显示新产生的日志
+  const [realtimeMode, setRealtimeMode] = useState(false);
+  
   // 只有在窗口打开时才启用 SWR 和轮询
   const {
     logs,
@@ -34,7 +37,7 @@ export const DevToolsModal: React.FC<DevToolsModalProps> = ({ visible, onClose }
     refresh: refreshBackendLogs,
   } = useBackendLogs({
     enabled: visible,
-    refreshInterval: 2000,
+    refreshInterval: realtimeMode ? 2000 : 0, // 实时模式才启用轮询
   });
   const {
     promptLogs,
@@ -42,7 +45,7 @@ export const DevToolsModal: React.FC<DevToolsModalProps> = ({ visible, onClose }
     refresh: refreshPromptLogs,
   } = usePromptLogs({
     enabled: visible,
-    refreshInterval: 2000,
+    refreshInterval: realtimeMode ? 2000 : 0, // 实时模式才启用轮询
   });
 
   // 🔄 前端日志
@@ -97,7 +100,26 @@ export const DevToolsModal: React.FC<DevToolsModalProps> = ({ visible, onClose }
     }
   };
 
-  // 移除了手动刷新的 useEffect，因为 SWR 的 enabled 参数会在 visible=true 时自动请求
+  // 🎯 实时日志模式：开启时自动清空历史日志
+  const handleToggleRealtimeMode = async () => {
+    if (!realtimeMode) {
+      // 开启实时模式：先清空所有日志
+      try {
+        await logCommands.clear(); // 清空后端日志
+        await logCommands.clearPromptLogs(); // 清空提示词日志
+        message.success('🔴 实时日志模式已开启，历史日志已清空');
+        log.info('实时日志模式已开启');
+      } catch (error) {
+        log.logError(error, '清空日志失败');
+        message.error('清空日志失败');
+        return;
+      }
+    } else {
+      message.info('⚪ 实时日志模式已关闭');
+      log.info('实时日志模式已关闭');
+    }
+    setRealtimeMode(!realtimeMode);
+  };
 
   // 🔄 前端日志操作函数（使用新的文件读取系统）
   const handleClearFrontendLogs = () => {
@@ -242,13 +264,24 @@ export const DevToolsModal: React.FC<DevToolsModalProps> = ({ visible, onClose }
                 <Space style={{ marginBottom: 12, width: '100%', justifyContent: 'space-between' }}>
                   <Space>
                     <Button
+                      icon={realtimeMode ? <BugOutlined /> : <BugOutlined />}
+                      onClick={handleToggleRealtimeMode}
+                      type={realtimeMode ? 'primary' : 'default'}
+                      danger={realtimeMode}
+                    >
+                      {realtimeMode ? '🔴 实时模式' : '⚪ 实时模式'}
+                    </Button>
+                    <Button
                       icon={<ReloadOutlined />}
                       onClick={refreshBackendLogs}
                       loading={loading}
+                      disabled={realtimeMode}
                     >
                       刷新
                     </Button>
-                    <span style={{ fontSize: '12px', color: '#999' }}>(自动刷新: 每2秒)</span>
+                    <span style={{ fontSize: '12px', color: '#999' }}>
+                      {realtimeMode ? '(实时: 每2秒)' : '(手动刷新)'}
+                    </span>
                   </Space>
                   <Space>
                     <Button icon={<DownloadOutlined />} onClick={handleExportLogs}>
@@ -267,11 +300,11 @@ export const DevToolsModal: React.FC<DevToolsModalProps> = ({ visible, onClose }
                   value={backendLogText}
                   readOnly
                   rows={20}
-                  placeholder="等待日志输出...
-提示: 
-- 日志每2秒自动刷新
-- 执行翻译操作时会输出详细日志
-- 显示最近1000条日志记录"
+                  placeholder={
+                    realtimeMode
+                      ? '🔴 实时日志模式已开启，等待新日志产生...\n\n提示：\n- 日志每2秒自动刷新\n- 只显示开启实时模式后的新日志\n- 适合调试和定位问题'
+                      : '⚪ 实时日志模式已关闭\n\n提示：\n- 点击"🔴 实时模式"按钮开启实时监控\n- 开启后会自动清空历史日志，只显示新产生的日志\n- 方便定位触发式操作的日志'
+                  }
                   style={{
                     fontFamily: 'Consolas, Monaco, "Courier New", monospace',
                     fontSize: '12px',
@@ -385,10 +418,13 @@ export const DevToolsModal: React.FC<DevToolsModalProps> = ({ visible, onClose }
                       icon={<ReloadOutlined />}
                       onClick={refreshPromptLogs}
                       loading={promptLoading}
+                      disabled={realtimeMode}
                     >
                       刷新
                     </Button>
-                    <span style={{ fontSize: '12px', color: '#999' }}>(自动刷新: 每2秒)</span>
+                    <span style={{ fontSize: '12px', color: '#999' }}>
+                      {realtimeMode ? '(实时: 每2秒)' : '(手动刷新)'}
+                    </span>
                   </Space>
                   <Space>
                     <Button
