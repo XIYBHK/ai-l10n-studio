@@ -260,3 +260,10 @@ export const toggleFrontendLogEnabled = () => {
   console.log(`[LogService] 前端日志已${!frontendEnabled ? '启用' : '禁用'}`);
 };
 
+/**
+ * 获取前端日志启用状态（用于 simpleFrontendLogger 条件拦截）
+ */
+export const isFrontendLogEnabled = () => {
+  return useGlobalLogStore.getState().frontendEnabled;
+};
+
