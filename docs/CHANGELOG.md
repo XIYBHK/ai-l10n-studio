@@ -1,5 +1,54 @@
 # 更新日志
 
+## 2025-10-21 - 修复实时日志模式 + 清理控制台污染
+
+### 🐛 修复 + 🧹 优化
+
+**修复问题**：
+1. ❌ 实时模式清空失败：`handleToggleRealtimeMode` 没有强制刷新显示
+2. ❌ 控制台日志污染：每个 API 调用输出双层 DEBUG 日志
+
+**解决方案**：
+
+**1. 修复实时模式清空** (`src/components/DevToolsModal.tsx`):
+```typescript
+// ❌ 之前：清空后没有刷新
+await logCommands.clear();
+await logCommands.clearPromptLogs();
+
+// ✅ 现在：强制刷新显示
+await logCommands.clear();
+await logCommands.clearPromptLogs();
+await refreshBackendLogs();  // 立即刷新
+await refreshPromptLogs();
+```
+
+**2. 清理控制台污染** (`src/services/api.ts`, `src/services/tauriInvoke.ts`):
+
+**参考 clash-verge-rev** 的最佳实践：
+- ✅ 日志应该在专门的日志页面，而不是控制台
+- ✅ 默认 `silent = true`，减少噪音
+- ✅ 只在错误时输出关键信息
+
+```typescript
+// ❌ 之前：每个 API 调用输出双层日志
+[DEBUG] [API] 📤 API调用: get_prompt_logs
+[DEBUG] [TauriInvoke] 📤 Tauri调用: get_prompt_logs  // 重复！
+[DEBUG] [API] 📥 API响应: get_prompt_logs
+[DEBUG] [TauriInvoke] 📥 Tauri响应: get_prompt_logs  // 重复！
+
+// ✅ 现在：默认静默，控制台干净
+// （只有错误时才输出）
+```
+
+**影响范围**：
+- ✅ 实时模式正常清空历史日志
+- ✅ 控制台不再被 DEBUG 日志污染
+- ✅ 开发体验大幅提升
+- ✅ 保留错误日志输出（不影响调试）
+
+---
+
 ## 2025-10-21 - 添加实时日志模式（触发式日志）
 
 ### 🎯 新功能

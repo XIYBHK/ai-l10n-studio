@@ -39,7 +39,7 @@ export async function invoke<T>(
   const {
     showErrorMessage = true,
     errorMessage,
-    silent = false,
+    silent = true, // ✅ 默认静默，减少控制台日志污染（参考 clash-verge-rev）
     timeout,
     retry,
     retryDelay,
@@ -48,10 +48,10 @@ export async function invoke<T>(
   } = options;
 
   try {
-    if (!silent) {
-      // 🔒 安全：掩码敏感信息后再记录日志
-      log.debug(`📤 API调用: ${command}`, maskSensitiveData(args));
-    }
+    // ❌ 移除 API 层日志，避免重复（TauriInvoke 层会记录）
+    // if (!silent) {
+    //   log.debug(`📤 API调用: ${command}`, maskSensitiveData(args));
+    // }
 
     // 使用增强的 API 客户端（参数转换由 tauriInvoke 统一处理）
     const result = await apiClient.invoke<T>(command, args as Record<string, any>, {
@@ -64,19 +64,20 @@ export async function invoke<T>(
       autoConvertParams, // 🎯 透传给 apiClient → tauriInvoke
     });
 
-    if (!silent) {
-      // 对于大型数组响应，只打印摘要信息
-      if (Array.isArray(result) && result.length > 10) {
-        log.debug(`📥 API响应: ${command}`, {
-          type: 'Array',
-          length: result.length,
-          first: result[0],
-          last: result[result.length - 1],
-        });
-      } else {
-        log.debug(`📥 API响应: ${command}`, result);
-      }
-    }
+    // ❌ 移除 API 层日志，避免重复（TauriInvoke 层会记录）
+    // if (!silent) {
+    //   // 对于大型数组响应，只打印摘要信息
+    //   if (Array.isArray(result) && result.length > 10) {
+    //     log.debug(`📥 API响应: ${command}`, {
+    //       type: 'Array',
+    //       length: result.length,
+    //       first: result[0],
+    //       last: result[result.length - 1],
+    //     });
+    //   } else {
+    //     log.debug(`📥 API响应: ${command}`, result);
+    //   }
+    // }
 
     return result;
   } catch (error) {

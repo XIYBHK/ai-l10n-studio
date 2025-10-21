@@ -107,16 +107,17 @@ export const DevToolsModal: React.FC<DevToolsModalProps> = ({ visible, onClose }
       try {
         await logCommands.clear(); // 清空后端日志
         await logCommands.clearPromptLogs(); // 清空提示词日志
+        // 强制刷新显示
+        await refreshBackendLogs();
+        await refreshPromptLogs();
         message.success('🔴 实时日志模式已开启，历史日志已清空');
-        log.info('实时日志模式已开启');
       } catch (error) {
-        log.logError(error, '清空日志失败');
+        console.error('[DevToolsModal] 清空日志失败:', error);
         message.error('清空日志失败');
         return;
       }
     } else {
       message.info('⚪ 实时日志模式已关闭');
-      log.info('实时日志模式已关闭');
     }
     setRealtimeMode(!realtimeMode);
   };

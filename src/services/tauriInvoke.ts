@@ -103,7 +103,7 @@ export async function invoke<T>(
 ): Promise<T> {
   const {
     autoConvertParams = false, // 🎯 架构决策：默认不转换，Tauri 2.x 已处理
-    silent = false,
+    silent = true, // ✅ 默认静默，减少控制台日志污染（参考 clash-verge-rev）
   } = options;
 
   let processedArgs = args;
@@ -120,17 +120,18 @@ export async function invoke<T>(
     }
   }
 
-  if (!silent) {
-    log.debug(`📤 Tauri调用: ${command}`, maskSensitiveData(processedArgs));
-  }
+  // ❌ 默认不输出调试日志，避免控制台污染
+  // if (!silent) {
+  //   log.debug(`📤 Tauri调用: ${command}`, maskSensitiveData(processedArgs));
+  // }
 
   try {
     const result = await tauriInvoke<T>(command, processedArgs as Record<string, any>);
 
-    if (!silent) {
-      // 🔒 安全：掩码敏感信息后再记录日志
-      log.debug(`📥 Tauri响应: ${command}`, maskSensitiveData(result));
-    }
+    // ❌ 默认不输出调试日志，避免控制台污染
+    // if (!silent) {
+    //   log.debug(`📥 Tauri响应: ${command}`, maskSensitiveData(result));
+    // }
 
     return result;
   } catch (error) {
