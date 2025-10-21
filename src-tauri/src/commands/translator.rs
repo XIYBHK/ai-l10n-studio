@@ -431,7 +431,24 @@ pub fn get_app_logs() -> Result<Vec<String>, String> {
 
 #[tauri::command]
 pub fn clear_app_logs() -> Result<(), String> {
+    use std::fs;
+
+    // 1. 清空内存缓冲区
     crate::utils::logger::clear_logs();
+
+    // 2. 清空日志文件（实现增量日志效果）
+    if let Ok(log_dir) = crate::utils::paths::app_log_dir() {
+        if let Ok(entries) = fs::read_dir(&log_dir) {
+            for entry in entries.flatten() {
+                let path = entry.path();
+                if path.is_file() && path.extension().map_or(false, |ext| ext == "log") {
+                    // 清空文件内容而不是删除文件
+                    let _ = fs::write(&path, "");
+                }
+            }
+        }
+    }
+
     Ok(())
 }
 

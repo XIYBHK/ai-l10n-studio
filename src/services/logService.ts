@@ -196,17 +196,19 @@ export const toggleBackendLogEnabled = () => {
 };
 
 /**
- * 清空后端日志（前端状态 + 后端文件）
+ * 清空后端日志（前端状态 + 后端文件，继续监控显示增量日志）
+ * 参考 clash-verge-rev：清空后继续监控，后续显示的是增量日志
  */
 export const clearBackendLogs = async () => {
   try {
-    // 1. 先清空前端显示（立即生效）
+    // 1. 清空前端显示（立即生效）
     useGlobalLogStore.getState().clearBackendLogs();
     
-    // 2. 再清空后端文件（后台操作）
+    // 2. 清空后端文件（后台操作）
     await logCommands.clear();
     
-    console.log('[LogService] 后端日志已清空');
+    // 3. 继续监控（不停止），后续显示的是清空后的增量日志
+    console.log('[LogService] 后端日志已清空（继续监控，显示增量日志）');
   } catch (error) {
     console.error('[LogService] 清空后端日志失败:', error);
     throw error;
