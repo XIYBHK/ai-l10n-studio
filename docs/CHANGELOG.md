@@ -1,5 +1,130 @@
 # 更新日志
 
+## 2025-10-21 - 修复配置持久化问题（critical）
+
+### 🐛 Bug 修复
+
+**问题**：
+- 每次重启应用后，AI 供应商配置会丢失，需要重新配置
+- 用户反馈："检查刚才的软件ai供应商配置逻辑 不要出现每次重启都需要重新配置的情况"
+
+**根本原因**：
+
+配置加载失败时的 fallback 逻辑错误：
+
+```rust
+// ❌ 错误的 fallback（第 40 行）
+Self::new(None).unwrap_or_else(|e| {
+    log::error!("初始化配置管理器失败: {}, 使用默认配置", e);
+    let temp_path = std::env::temp_dir().join("config.json"); // 🔴 使用临时路径！
+    Self {
+        config_path: Arc::new(temp_path),
+        config: Draft::from(Box::new(AppConfig::default())),
+    }
+})
+```
+
+**问题链**：
+1. 配置文件反序列化失败（例如：格式错误）
+2. `new()` 返回错误
+3. fallback 创建一个使用 **临时路径** 的配置实例
+4. 所有配置保存都写入 `C:\Users\xxx\AppData\Local\Temp\config.json`
+5. 下次启动时，仍然尝试从正常路径加载 → 失败 → 又回到临时路径
+6. **结果**：配置永远无法持久化
+
+**修复方案**：
+
+```diff
+// src-tauri/src/services/config_draft.rs
+
+  Self::new(None).unwrap_or_else(|e| {
+-     log::error!("初始化配置管理器失败: {}, 使用默认配置", e);
+-     let temp_path = std::env::temp_dir().join("config.json");
++     log::error!("⚠️ 初始化配置管理器失败: {}, 使用默认配置", e);
++     
++     // 🔧 修复：即使加载失败，也使用正常的配置路径
++     let config_path = paths::app_home_dir()
++         .map(|dir| dir.join("config.json"))
++         .unwrap_or_else(|_| {
++             let mut path = dirs::home_dir().unwrap_or_else(|| PathBuf::from("."));
++             path.push(".po-translator");
++             path.push("config.json");
++             path
++         });
++     
++     // 确保配置目录存在
++     if let Some(parent) = config_path.parent() {
++         let _ = fs::create_dir_all(parent);
++     }
++     
++     let instance = Self {
+          config_path: Arc::new(config_path),
+          config: Draft::from(Box::new(AppConfig::default())),
+-     }
++     };
++     
++     // 保存默认配置到正常路径
++     if let Err(e) = instance.save_to_disk() {
++         log::error!("❌ 保存默认配置失败: {}", e);
++     } else {
++         log::info!("✅ 默认配置已保存到磁盘");
++     }
++     
++     instance
+  })
+```
+
+**增强：配置文件备份机制**
+
+```rust
+// src-tauri/src/services/config_draft.rs - load_from_file()
+
+let config: AppConfig = serde_json::from_str(&content).map_err(|e| {
+    log::error!("❌ 配置文件格式错误: {}", e);
+    log::error!("📄 配置文件路径: {:?}", path_ref);
+    
+    // 🆕 备份损坏的配置文件
+    if let Some(parent) = path_ref.parent() {
+        let backup_path = parent.join(format!(
+            "config.backup.{}.json",
+            chrono::Local::now().format("%Y%m%d_%H%M%S")
+        ));
+        if let Err(backup_err) = fs::copy(path_ref, &backup_path) {
+            log::warn!("⚠️ 无法备份损坏的配置文件: {}", backup_err);
+        } else {
+            log::info!("💾 已备份损坏的配置文件到: {:?}", backup_path);
+        }
+    }
+    
+    anyhow!("配置文件解析失败: {}。已备份损坏的文件，将使用默认配置。", e)
+})?;
+```
+
+**修复效果**：
+
+✅ **之前**：
+- 配置保存到临时目录 → 重启后丢失 → 无限循环
+
+✅ **之后**：
+- 配置保存到正常路径 (`%APPDATA%/po-translator/config.json` 或 `~/.po-translator/config.json`)
+- 重启后能够正确读取
+- 配置加载失败时：
+  - 自动备份损坏的配置文件（带时间戳）
+  - 使用默认配置并保存到正常路径
+  - 用户重新配置后能够持久化
+
+**测试方法**：
+
+1. 添加 AI 配置
+2. 关闭应用
+3. 重新启动应用
+4. ✅ 配置应该仍然存在
+
+**影响文件**：
+- `src-tauri/src/services/config_draft.rs`（45 行修改）
+
+---
+
 ## 2025-10-21 - 清理旧日志系统（新旧共存问题）
 
 ### 🧹 清理

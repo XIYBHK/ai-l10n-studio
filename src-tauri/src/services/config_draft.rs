@@ -8,6 +8,7 @@
  * 4. 并发安全
  */
 use anyhow::{Result, anyhow};
+use chrono; // For backup timestamp
 use std::fs;
 use std::path::PathBuf;
 use std::sync::Arc;
@@ -35,13 +36,40 @@ impl ConfigDraft {
         GLOBAL_CONFIG
             .get_or_init(|| async {
                 Self::new(None).unwrap_or_else(|e| {
-                    log::error!("初始化配置管理器失败: {}, 使用默认配置", e);
-                    // 使用临时路径创建默认配置
-                    let temp_path = std::env::temp_dir().join("config.json");
-                    Self {
-                        config_path: Arc::new(temp_path),
-                        config: Draft::from(Box::new(AppConfig::default())),
+                    log::error!("⚠️ 初始化配置管理器失败: {}, 使用默认配置", e);
+                    
+                    // 🔧 修复：即使加载失败，也使用正常的配置路径（而不是临时路径）
+                    // 这样可以确保用户的新配置能够持久化
+                    let config_path = paths::app_home_dir()
+                        .map(|dir| dir.join("config.json"))
+                        .unwrap_or_else(|_| {
+                            let mut path = dirs::home_dir().unwrap_or_else(|| PathBuf::from("."));
+                            path.push(".po-translator");
+                            path.push("config.json");
+                            path
+                        });
+                    
+                    // 确保配置目录存在
+                    if let Some(parent) = config_path.parent() {
+                        let _ = fs::create_dir_all(parent);
                     }
+                    
+                    log::warn!("📂 使用配置路径: {:?}", config_path);
+                    log::warn!("🔄 已重置为默认配置，用户可重新配置AI供应商");
+                    
+                    let instance = Self {
+                        config_path: Arc::new(config_path),
+                        config: Draft::from(Box::new(AppConfig::default())),
+                    };
+                    
+                    // 尝试保存默认配置到正常路径
+                    if let Err(e) = instance.save_to_disk() {
+                        log::error!("❌ 保存默认配置失败: {}", e);
+                    } else {
+                        log::info!("✅ 默认配置已保存到磁盘");
+                    }
+                    
+                    instance
                 })
             })
             .await
@@ -84,9 +112,34 @@ impl ConfigDraft {
 
     /// 从文件加载配置
     fn load_from_file<P: AsRef<std::path::Path>>(path: P) -> Result<AppConfig> {
-        let content = fs::read_to_string(path).map_err(|e| anyhow!("无法读取配置文件: {}", e))?;
-        let config: AppConfig =
-            serde_json::from_str(&content).map_err(|e| anyhow!("无法解析配置文件: {}", e))?;
+        let path_ref = path.as_ref();
+        
+        // 读取配置文件内容
+        let content = fs::read_to_string(path_ref)
+            .map_err(|e| anyhow!("无法读取配置文件 {:?}: {}", path_ref, e))?;
+        
+        // 尝试反序列化配置
+        let config: AppConfig = serde_json::from_str(&content).map_err(|e| {
+            log::error!("❌ 配置文件格式错误: {}", e);
+            log::error!("📄 配置文件路径: {:?}", path_ref);
+            
+            // 备份损坏的配置文件
+            if let Some(parent) = path_ref.parent() {
+                let backup_path = parent.join(format!(
+                    "config.backup.{}.json",
+                    chrono::Local::now().format("%Y%m%d_%H%M%S")
+                ));
+                if let Err(backup_err) = fs::copy(path_ref, &backup_path) {
+                    log::warn!("⚠️ 无法备份损坏的配置文件: {}", backup_err);
+                } else {
+                    log::info!("💾 已备份损坏的配置文件到: {:?}", backup_path);
+                }
+            }
+            
+            anyhow!("配置文件解析失败: {}。已备份损坏的文件，将使用默认配置。", e)
+        })?;
+        
+        log::info!("✅ 配置文件加载成功: {:?}", path_ref);
         Ok(config)
     }
 
