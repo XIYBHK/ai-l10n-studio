@@ -624,12 +624,15 @@ pub async fn generate_style_summary() -> Result<String, String> {
 
     crate::app_log!("[风格总结] 开始生成，基于 {} 条术语", library.terms.len());
 
-    // 获取当前活动的 AI 配置
-    let draft = ConfigDraft::global().await;
-    let config_guard = draft.data();
-    let active_config = config_guard
-        .get_active_ai_config()
-        .ok_or_else(|| "未找到活动的AI配置".to_string())?;
+    // 获取当前活动的 AI 配置（克隆后释放锁，避免跨越 .await）
+    let active_config = {
+        let draft = ConfigDraft::global().await;
+        let config_guard = draft.data();
+        config_guard
+            .get_active_ai_config()
+            .cloned() // 克隆配置
+            .ok_or_else(|| "未找到活动的AI配置".to_string())?
+    }; // config_guard 在此释放
     
     crate::app_log!(
         "[风格总结] 使用AI配置: 供应商={}, 模型={}",
@@ -647,7 +650,7 @@ pub async fn generate_style_summary() -> Result<String, String> {
 
     // 调用AI生成总结（使用活动配置，不使用自定义提示词和目标语言）
     let mut translator = AITranslator::new_with_config(
-        active_config.clone(),
+        active_config, // 已克隆，可直接使用
         false, // 不使用TM
         None,  // 不使用自定义提示词
         None,  // 不指定目标语言
