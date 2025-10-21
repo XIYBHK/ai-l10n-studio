@@ -6,9 +6,10 @@
  * - 使用全局 Zustand store
  * - 简单的 console 拦截
  * - 最多保留 1000 条
+ * - 启用时才拦截，避免污染后端日志
  */
 
-import { appendFrontendLog, type LogItem, type LogLevel } from '../services/logService';
+import { appendFrontendLog, isFrontendLogEnabled, type LogItem, type LogLevel } from '../services/logService';
 
 class SimpleFrontendLogger {
   private originalConsole = {
@@ -77,33 +78,41 @@ class SimpleFrontendLogger {
     const self = this;
 
     console.log = function (...args: any[]) {
-      // 只记录包含关键词的日志
-      const message = args.join(' ');
-      if (message.includes('[INFO]') || message.includes('[WARN]') || message.includes('[ERROR]')) {
-        // 提取日志级别
-        if (message.includes('[INFO]')) {
-          self.addLog('INFO', args);
-        } else if (message.includes('[WARN]')) {
-          self.addLog('WARN', args);
-        } else if (message.includes('[ERROR]')) {
-          self.addLog('ERROR', args);
+      // ✅ 只在启用时记录，避免污染后端日志
+      if (isFrontendLogEnabled()) {
+        const message = args.join(' ');
+        if (message.includes('[INFO]') || message.includes('[WARN]') || message.includes('[ERROR]')) {
+          if (message.includes('[INFO]')) {
+            self.addLog('INFO', args);
+          } else if (message.includes('[WARN]')) {
+            self.addLog('WARN', args);
+          } else if (message.includes('[ERROR]')) {
+            self.addLog('ERROR', args);
+          }
         }
       }
+      // ✅ 始终输出到控制台（开发调试）
       self.originalConsole.log.apply(console, args);
     };
 
     console.info = function (...args: any[]) {
-      self.addLog('INFO', args);
+      if (isFrontendLogEnabled()) {
+        self.addLog('INFO', args);
+      }
       self.originalConsole.info.apply(console, args);
     };
 
     console.warn = function (...args: any[]) {
-      self.addLog('WARN', args);
+      if (isFrontendLogEnabled()) {
+        self.addLog('WARN', args);
+      }
       self.originalConsole.warn.apply(console, args);
     };
 
     console.error = function (...args: any[]) {
-      self.addLog('ERROR', args);
+      if (isFrontendLogEnabled()) {
+        self.addLog('ERROR', args);
+      }
       self.originalConsole.error.apply(console, args);
     };
   }
