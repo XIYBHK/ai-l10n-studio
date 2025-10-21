@@ -359,7 +359,7 @@ export const DevToolsModal: React.FC<DevToolsModalProps> = ({ visible, onClose }
                 >
                   💡 自动捕获：模块日志（INFO/WARN/ERROR 级别）
                   <br />
-                  📁 内存管理：最多保留 1000 条日志（参考 clash-verge-rev）
+                  📁 内存管理：最多保留 1000 条日志
                   <br />
                   ⚙️ 简化设计：无文件保存，只保留内存日志，性能更好
                 </div>
@@ -368,7 +368,7 @@ export const DevToolsModal: React.FC<DevToolsModalProps> = ({ visible, onClose }
                   value={frontendLogText}
                   readOnly
                   rows={20}
-                  placeholder="暂无前端日志\n\n提示：\n- 自动捕获 INFO/WARN/ERROR 级别日志\n- 最多保留 1000 条\n- 参考 clash-verge-rev 简化设计"
+                  placeholder="暂无前端日志\n\n提示：\n- 自动捕获 INFO/WARN/ERROR 级别日志\n- 最多保留 1000 条\n- 内存模式，性能更好"
                   style={{
                     fontFamily: 'Consolas, Monaco, "Courier New", monospace',
                     fontSize: '12px',

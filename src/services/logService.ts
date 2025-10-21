@@ -202,6 +202,7 @@ export const clearBackendLogs = async () => {
   try {
     await logCommands.clear(); // 清空后端日志文件
     useGlobalLogStore.getState().clearBackendLogs(); // 清空前端状态
+    await fetchBackendLogs(); // 立即刷新（确保同步）
     console.log('[LogService] 后端日志已清空');
   } catch (error) {
     console.error('[LogService] 清空后端日志失败:', error);
@@ -216,6 +217,7 @@ export const clearPromptLogs = async () => {
   try {
     await logCommands.clearPromptLogs();
     useGlobalLogStore.getState().clearPromptLogs();
+    await fetchPromptLogs(); // 立即刷新（确保同步）
     console.log('[LogService] 提示词日志已清空');
   } catch (error) {
     console.error('[LogService] 清空提示词日志失败:', error);
