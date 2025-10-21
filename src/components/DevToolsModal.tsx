@@ -1,4 +1,4 @@
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import { Modal, Input, Button, Space, message, Tabs, Alert, Divider } from 'antd';
 import {
   CopyOutlined,
@@ -6,18 +6,27 @@ import {
   ClearOutlined,
   BugOutlined,
   DownloadOutlined,
-  SaveOutlined,
   FileTextOutlined,
   ExperimentOutlined,
   PlayCircleOutlined,
   PauseCircleOutlined,
 } from '@ant-design/icons';
-import { logCommands } from '../services/commands'; // ✅ 迁移到统一命令层 (promptLogApi 已通过 hooks 使用)
 import Draggable from 'react-draggable';
-import { createModuleLogger } from '../utils/logger';
-import { frontendLogger } from '../utils/frontendLogger';
-import { useBackendLogs, useFrontendLogs, usePromptLogs } from '../hooks/useLogs';
 import { runDynamicProviderTests, TestResult } from '../utils/testDynamicProviders';
+
+// ✅ 新的日志服务（参考 clash-verge-rev）
+import {
+  useGlobalLogStore,
+  toggleBackendLogEnabled,
+  clearBackendLogs,
+  clearPromptLogs,
+  clearFrontendLogs,
+  startBackendLogMonitoring,
+  stopBackendLogMonitoring,
+  startPromptLogMonitoring,
+  stopPromptLogMonitoring,
+  toggleFrontendLogEnabled,
+} from '../services/logService';
 
 const { TextArea } = Input;
 const log = createModuleLogger('DevToolsModal');
@@ -28,44 +37,21 @@ interface DevToolsModalProps {
 }
 
 export const DevToolsModal: React.FC<DevToolsModalProps> = ({ visible, onClose }) => {
-  // ⏸️ 参考 clash-verge-rev: Pause/Resume 控制日志收集
-  const [logPaused, setLogPaused] = useState(false);
-  
-  // 只有在窗口打开且未暂停时才启用 SWR 和轮询
+  // ✅ 使用全局日志 Store（参考 clash-verge-rev）
   const {
-    logs,
-    isLoading: loading,
-    refresh: refreshBackendLogs,
-  } = useBackendLogs({
-    enabled: visible && !logPaused,
-    refreshInterval: 2000, // 固定2秒轮询
-  });
-  const {
+    backendLogs,
+    backendEnabled,
+    frontendLogs,
+    frontendEnabled,
     promptLogs,
-    isLoading: promptLoading,
-    refresh: refreshPromptLogs,
-  } = usePromptLogs({
-    enabled: visible && !logPaused,
-    refreshInterval: 2000, // 固定2秒轮询
-  });
+  } = useGlobalLogStore();
 
-  // 🔄 前端日志
-  const {
-    logs: frontendLogs,
-    isLoading: frontendLoading,
-    refresh: refreshFrontendLogs,
-  } = useFrontendLogs({
-    enabled: visible,
-    refreshInterval: 0, // 禁用自动轮询，改为手动刷新
-  });
-  const backendLogText =
-    typeof logs === 'string' ? logs : logs ? JSON.stringify(logs, null, 2) : '';
-  const promptLogText =
-    typeof promptLogs === 'string'
-      ? promptLogs
-      : promptLogs
-        ? JSON.stringify(promptLogs, null, 2)
-        : '';
+  // 格式化日志显示
+  const backendLogText = backendLogs.join('\n');
+  const frontendLogText = frontendLogs
+    .map((log) => `[${log.time}] [${log.type}] ${log.module ? `[${log.module}]` : ''} ${log.message}`)
+    .join('\n');
+  const promptLogText = promptLogs;
   const [bounds, setBounds] = useState({ left: 0, top: 0, bottom: 0, right: 0 });
   const [disabled, setDisabled] = useState(true);
   const draggleRef = useRef<HTMLDivElement>(null);
@@ -102,20 +88,20 @@ export const DevToolsModal: React.FC<DevToolsModalProps> = ({ visible, onClose }
   };
 
   // ⏸️ 暂停/继续日志收集（参考 clash-verge-rev）
-  const handleToggleLogPause = () => {
-    setLogPaused(!logPaused);
-    if (!logPaused) {
-      message.info('⏸️ 日志收集已暂停');
-    } else {
-      message.info('▶️ 日志收集已继续');
-    }
+  const handleToggleBackendLog = () => {
+    toggleBackendLogEnabled();
+    message.info(backendEnabled ? '⏸️ 后端日志已暂停' : '▶️ 后端日志已继续');
   };
 
-  // 🧹 清空日志（参考 clash-verge-rev: 强制刷新）
+  const handleToggleFrontendLog = () => {
+    toggleFrontendLogEnabled();
+    message.info(frontendEnabled ? '⏸️ 前端日志已暂停' : '▶️ 前端日志已继续');
+  };
+
+  // 🧹 清空日志（参考 clash-verge-rev）
   const handleClearBackendLogs = async () => {
     try {
-      await logCommands.clear(); // 后端清空
-      await refreshBackendLogs(); // 强制刷新
+      await clearBackendLogs();
       message.success('🧹 后端日志已清空');
     } catch (error) {
       console.error('[DevToolsModal] 清空后端日志失败:', error);
@@ -125,8 +111,7 @@ export const DevToolsModal: React.FC<DevToolsModalProps> = ({ visible, onClose }
 
   const handleClearPromptLogs = async () => {
     try {
-      await logCommands.clearPromptLogs(); // 后端清空
-      await refreshPromptLogs(); // 强制刷新
+      await clearPromptLogs();
       message.success('🧹 提示词日志已清空');
     } catch (error) {
       console.error('[DevToolsModal] 清空提示词日志失败:', error);
@@ -134,12 +119,26 @@ export const DevToolsModal: React.FC<DevToolsModalProps> = ({ visible, onClose }
     }
   };
 
-  // 🔄 前端日志操作函数
   const handleClearFrontendLogs = () => {
-    frontendLogger.clearLogs();
-    refreshFrontendLogs();
+    clearFrontendLogs();
     message.success('🧹 前端日志已清空');
   };
+
+  // 🎯 模态框打开时启动日志监控（参考 clash）
+  useEffect(() => {
+    if (visible) {
+      startBackendLogMonitoring();
+      startPromptLogMonitoring();
+    } else {
+      stopBackendLogMonitoring();
+      stopPromptLogMonitoring();
+    }
+
+    return () => {
+      stopBackendLogMonitoring();
+      stopPromptLogMonitoring();
+    };
+  }, [visible]);
 
   // SWR 已处理日志加载与轮询
 
@@ -154,42 +153,43 @@ export const DevToolsModal: React.FC<DevToolsModalProps> = ({ visible, onClose }
       });
   };
 
-  const handleExportLogs = () => {
+  const handleExportBackendLogs = () => {
     try {
       const timestamp = new Date().toISOString().replace(/[:.]/g, '-').slice(0, -5);
       const filename = `backend-logs-${timestamp}.txt`;
-
-      // 创建 Blob 对象
       const blob = new Blob([backendLogText], { type: 'text/plain;charset=utf-8' });
       const url = URL.createObjectURL(blob);
-
-      // 创建下载链接
       const link = document.createElement('a');
       link.href = url;
       link.download = filename;
       document.body.appendChild(link);
       link.click();
       document.body.removeChild(link);
-
-      // 清理
       URL.revokeObjectURL(url);
-
       message.success(`后端日志已导出: ${filename}`);
-      log.info('后端日志已导出', { filename });
     } catch (error) {
-      log.logError(error, '导出日志失败');
+      console.error('[DevToolsModal] 导出日志失败:', error);
       message.error('导出失败');
     }
   };
 
-  const handleSaveFrontendLogs = async () => {
+  const handleExportFrontendLogs = () => {
     try {
-      const filename = await frontendLogger.saveLogs();
-      message.success(`前端日志已保存到数据目录: ${filename}`);
-      log.info('前端日志已保存', { filename });
+      const timestamp = new Date().toISOString().replace(/[:.]/g, '-').slice(0, -5);
+      const filename = `frontend-logs-${timestamp}.txt`;
+      const blob = new Blob([frontendLogText], { type: 'text/plain;charset=utf-8' });
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = filename;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      URL.revokeObjectURL(url);
+      message.success(`前端日志已导出: ${filename}`);
     } catch (error) {
-      log.logError(error, '保存前端日志失败');
-      message.error('保存失败');
+      console.error('[DevToolsModal] 导出前端日志失败:', error);
+      message.error('导出失败');
     }
   };
 
@@ -267,28 +267,21 @@ export const DevToolsModal: React.FC<DevToolsModalProps> = ({ visible, onClose }
                 <Space style={{ marginBottom: 12, width: '100%', justifyContent: 'space-between' }}>
                   <Space>
                     <Button
-                      icon={logPaused ? <PlayCircleOutlined /> : <PauseCircleOutlined />}
-                      onClick={handleToggleLogPause}
-                      type={logPaused ? 'default' : 'primary'}
+                      icon={backendEnabled ? <PauseCircleOutlined /> : <PlayCircleOutlined />}
+                      onClick={handleToggleBackendLog}
+                      type={backendEnabled ? 'primary' : 'default'}
                     >
-                      {logPaused ? '▶️ 继续' : '⏸️ 暂停'}
+                      {backendEnabled ? '⏸️ 暂停' : '▶️ 继续'}
                     </Button>
                     <Button icon={<ClearOutlined />} onClick={handleClearBackendLogs}>
                       清空
                     </Button>
-                    <Button
-                      icon={<ReloadOutlined />}
-                      onClick={refreshBackendLogs}
-                      loading={loading}
-                    >
-                      刷新
-                    </Button>
                     <span style={{ fontSize: '12px', color: '#999' }}>
-                      {logPaused ? '(已暂停)' : '(每2秒更新)'}
+                      {backendEnabled ? '(每2秒更新)' : '(已暂停)'}
                     </span>
                   </Space>
                   <Space>
-                    <Button icon={<DownloadOutlined />} onClick={handleExportLogs}>
+                    <Button icon={<DownloadOutlined />} onClick={handleExportBackendLogs}>
                       导出
                     </Button>
                     <Button icon={<CopyOutlined />} onClick={handleCopy} type="primary">
@@ -337,18 +330,21 @@ export const DevToolsModal: React.FC<DevToolsModalProps> = ({ visible, onClose }
               <div>
                 <Space style={{ marginBottom: 12 }}>
                   <Button
-                    icon={<ReloadOutlined />}
-                    onClick={refreshFrontendLogs}
-                    loading={frontendLoading}
+                    icon={frontendEnabled ? <PauseCircleOutlined /> : <PlayCircleOutlined />}
+                    onClick={handleToggleFrontendLog}
+                    type={frontendEnabled ? 'primary' : 'default'}
                   >
-                    刷新
+                    {frontendEnabled ? '⏸️ 暂停' : '▶️ 继续'}
                   </Button>
-                  <Button icon={<SaveOutlined />} onClick={handleSaveFrontendLogs} type="primary">
-                    手动保存
-                  </Button>
-                  <Button icon={<ClearOutlined />} onClick={handleClearFrontendLogs} danger>
+                  <Button icon={<ClearOutlined />} onClick={handleClearFrontendLogs}>
                     清空
                   </Button>
+                  <Button icon={<DownloadOutlined />} onClick={handleExportFrontendLogs}>
+                    导出
+                  </Button>
+                  <span style={{ fontSize: '12px', color: '#999' }}>
+                    {frontendEnabled ? '(实时收集)' : '(已暂停)'}
+                  </span>
                 </Space>
 
                 <div
@@ -362,18 +358,18 @@ export const DevToolsModal: React.FC<DevToolsModalProps> = ({ visible, onClose }
                     border: '1px solid #91d5ff',
                   }}
                 >
-                  💡 自动捕获：模块日志（[App]、[EditorPane] 等）+ 错误/警告，已过滤框架噪音
+                  💡 自动捕获：模块日志（INFO/WARN/ERROR 级别）
                   <br />
-                  📁 文件管理：内存最多 500 条，自动保存每 5 分钟或 100 条日志，保留最近 5 个文件
+                  📁 内存管理：最多保留 1000 条日志（参考 clash-verge-rev）
                   <br />
-                  🔄 显示保存到本地的前端日志文件内容（最新 3 个文件）
+                  ⚙️ 简化设计：无文件保存，只保留内存日志，性能更好
                 </div>
 
                 <TextArea
-                  value={frontendLogs}
+                  value={frontendLogText}
                   readOnly
                   rows={20}
-                  placeholder="等待前端日志输出...(从保存的日志文件读取)"
+                  placeholder="暂无前端日志\n\n提示：\n- 自动捕获 INFO/WARN/ERROR 级别日志\n- 最多保留 1000 条\n- 参考 clash-verge-rev 简化设计"
                   style={{
                     fontFamily: 'Consolas, Monaco, "Courier New", monospace',
                     fontSize: '12px',
@@ -392,9 +388,9 @@ export const DevToolsModal: React.FC<DevToolsModalProps> = ({ visible, onClose }
                   }}
                 >
                   <span>
-                    日志行数: {frontendLogs.split('\n').filter((l: string) => l.trim()).length}
+                    日志行数: {frontendLogs.length}
                   </span>
-                  <span>字符数: {frontendLogs.length}</span>
+                  <span>字符数: {frontendLogText.length}</span>
                   <span>最后更新: {new Date().toLocaleTimeString()}</span>
                 </div>
               </div>
@@ -422,7 +418,7 @@ export const DevToolsModal: React.FC<DevToolsModalProps> = ({ visible, onClose }
                       刷新
                     </Button>
                     <span style={{ fontSize: '12px', color: '#999' }}>
-                      {logPaused ? '(已暂停)' : '(每2秒更新)'}
+                      {backendEnabled ? '(每2秒更新)' : '(已暂停)'}
                     </span>
                   </Space>
                   <Space>

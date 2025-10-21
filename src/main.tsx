@@ -2,7 +2,7 @@ import React from 'react';
 import ReactDOM from 'react-dom/client';
 import App from './App.tsx';
 import './index.css';
-import './utils/frontendLogger'; // 初始化前端日志拦截器
+import './utils/simpleFrontendLogger'; // ✅ 简化的前端日志系统（参考 clash-verge-rev）
 import { initializeI18n } from './i18n/config'; // Phase 6: 异步 i18n 初始化
 import { initializeStores } from './store'; // Tauri 2.x: Store Plugin
 import { autoMigrate } from './utils/storeMigration'; // Tauri 2.x: 数据迁移
