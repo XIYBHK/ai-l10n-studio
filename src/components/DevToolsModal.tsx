@@ -10,6 +10,7 @@ import {
   FileTextOutlined,
   ExperimentOutlined,
   PlayCircleOutlined,
+  PauseCircleOutlined,
 } from '@ant-design/icons';
 import { logCommands } from '../services/commands'; // ✅ 迁移到统一命令层 (promptLogApi 已通过 hooks 使用)
 import Draggable from 'react-draggable';
@@ -27,25 +28,25 @@ interface DevToolsModalProps {
 }
 
 export const DevToolsModal: React.FC<DevToolsModalProps> = ({ visible, onClose }) => {
-  // 🔄 实时日志模式：打开时自动清空，只显示新产生的日志
-  const [realtimeMode, setRealtimeMode] = useState(false);
+  // ⏸️ 参考 clash-verge-rev: Pause/Resume 控制日志收集
+  const [logPaused, setLogPaused] = useState(false);
   
-  // 只有在窗口打开时才启用 SWR 和轮询
+  // 只有在窗口打开且未暂停时才启用 SWR 和轮询
   const {
     logs,
     isLoading: loading,
     refresh: refreshBackendLogs,
   } = useBackendLogs({
-    enabled: visible,
-    refreshInterval: realtimeMode ? 2000 : 0, // 实时模式才启用轮询
+    enabled: visible && !logPaused,
+    refreshInterval: 2000, // 固定2秒轮询
   });
   const {
     promptLogs,
     isLoading: promptLoading,
     refresh: refreshPromptLogs,
   } = usePromptLogs({
-    enabled: visible,
-    refreshInterval: realtimeMode ? 2000 : 0, // 实时模式才启用轮询
+    enabled: visible && !logPaused,
+    refreshInterval: 2000, // 固定2秒轮询
   });
 
   // 🔄 前端日志
@@ -55,7 +56,7 @@ export const DevToolsModal: React.FC<DevToolsModalProps> = ({ visible, onClose }
     refresh: refreshFrontendLogs,
   } = useFrontendLogs({
     enabled: visible,
-    refreshInterval: 0, // ❌ 禁用自动轮询，改为手动刷新（避免日志污染）
+    refreshInterval: 0, // 禁用自动轮询，改为手动刷新
   });
   const backendLogText =
     typeof logs === 'string' ? logs : logs ? JSON.stringify(logs, null, 2) : '';
@@ -100,33 +101,44 @@ export const DevToolsModal: React.FC<DevToolsModalProps> = ({ visible, onClose }
     }
   };
 
-  // 🎯 实时日志模式：开启时自动清空历史日志
-  const handleToggleRealtimeMode = async () => {
-    if (!realtimeMode) {
-      // 开启实时模式：先清空所有日志
-      try {
-        await logCommands.clear(); // 清空后端日志
-        await logCommands.clearPromptLogs(); // 清空提示词日志
-        // 强制刷新显示
-        await refreshBackendLogs();
-        await refreshPromptLogs();
-        message.success('🔴 实时日志模式已开启，历史日志已清空');
-      } catch (error) {
-        console.error('[DevToolsModal] 清空日志失败:', error);
-        message.error('清空日志失败');
-        return;
-      }
+  // ⏸️ 暂停/继续日志收集（参考 clash-verge-rev）
+  const handleToggleLogPause = () => {
+    setLogPaused(!logPaused);
+    if (!logPaused) {
+      message.info('⏸️ 日志收集已暂停');
     } else {
-      message.info('⚪ 实时日志模式已关闭');
+      message.info('▶️ 日志收集已继续');
     }
-    setRealtimeMode(!realtimeMode);
   };
 
-  // 🔄 前端日志操作函数（使用新的文件读取系统）
+  // 🧹 清空日志（参考 clash-verge-rev: 强制刷新）
+  const handleClearBackendLogs = async () => {
+    try {
+      await logCommands.clear(); // 后端清空
+      await refreshBackendLogs(); // 强制刷新
+      message.success('🧹 后端日志已清空');
+    } catch (error) {
+      console.error('[DevToolsModal] 清空后端日志失败:', error);
+      message.error('清空失败');
+    }
+  };
+
+  const handleClearPromptLogs = async () => {
+    try {
+      await logCommands.clearPromptLogs(); // 后端清空
+      await refreshPromptLogs(); // 强制刷新
+      message.success('🧹 提示词日志已清空');
+    } catch (error) {
+      console.error('[DevToolsModal] 清空提示词日志失败:', error);
+      message.error('清空失败');
+    }
+  };
+
+  // 🔄 前端日志操作函数
   const handleClearFrontendLogs = () => {
     frontendLogger.clearLogs();
-    refreshFrontendLogs(); // 刷新来显示空日志
-    message.success('前端日志已清空');
+    refreshFrontendLogs();
+    message.success('🧹 前端日志已清空');
   };
 
   // SWR 已处理日志加载与轮询
@@ -181,16 +193,6 @@ export const DevToolsModal: React.FC<DevToolsModalProps> = ({ visible, onClose }
     }
   };
 
-  const handleClear = async () => {
-    try {
-      await logCommands.clear();
-      await refreshBackendLogs();
-      message.success('日志已清空');
-      log.info('日志已清空');
-    } catch (error) {
-      log.logError(error, '清空日志失败');
-    }
-  };
 
   const onStart = (_event: any, uiData: any) => {
     const { clientWidth, clientHeight } = window.document.documentElement;
@@ -265,34 +267,32 @@ export const DevToolsModal: React.FC<DevToolsModalProps> = ({ visible, onClose }
                 <Space style={{ marginBottom: 12, width: '100%', justifyContent: 'space-between' }}>
                   <Space>
                     <Button
-                      icon={realtimeMode ? <BugOutlined /> : <BugOutlined />}
-                      onClick={handleToggleRealtimeMode}
-                      type={realtimeMode ? 'primary' : 'default'}
-                      danger={realtimeMode}
+                      icon={logPaused ? <PlayCircleOutlined /> : <PauseCircleOutlined />}
+                      onClick={handleToggleLogPause}
+                      type={logPaused ? 'default' : 'primary'}
                     >
-                      {realtimeMode ? '🔴 实时模式' : '⚪ 实时模式'}
+                      {logPaused ? '▶️ 继续' : '⏸️ 暂停'}
+                    </Button>
+                    <Button icon={<ClearOutlined />} onClick={handleClearBackendLogs}>
+                      清空
                     </Button>
                     <Button
                       icon={<ReloadOutlined />}
                       onClick={refreshBackendLogs}
                       loading={loading}
-                      disabled={realtimeMode}
                     >
                       刷新
                     </Button>
                     <span style={{ fontSize: '12px', color: '#999' }}>
-                      {realtimeMode ? '(实时: 每2秒)' : '(手动刷新)'}
+                      {logPaused ? '(已暂停)' : '(每2秒更新)'}
                     </span>
                   </Space>
                   <Space>
                     <Button icon={<DownloadOutlined />} onClick={handleExportLogs}>
-                      导出日志
-                    </Button>
-                    <Button icon={<ClearOutlined />} onClick={handleClear} danger>
-                      清空
+                      导出
                     </Button>
                     <Button icon={<CopyOutlined />} onClick={handleCopy} type="primary">
-                      复制日志
+                      复制
                     </Button>
                   </Space>
                 </Space>
@@ -301,11 +301,7 @@ export const DevToolsModal: React.FC<DevToolsModalProps> = ({ visible, onClose }
                   value={backendLogText}
                   readOnly
                   rows={20}
-                  placeholder={
-                    realtimeMode
-                      ? '🔴 实时日志模式已开启，等待新日志产生...\n\n提示：\n- 日志每2秒自动刷新\n- 只显示开启实时模式后的新日志\n- 适合调试和定位问题'
-                      : '⚪ 实时日志模式已关闭\n\n提示：\n- 点击"🔴 实时模式"按钮开启实时监控\n- 开启后会自动清空历史日志，只显示新产生的日志\n- 方便定位触发式操作的日志'
-                  }
+                  placeholder="暂无后端日志"
                   style={{
                     fontFamily: 'Consolas, Monaco, "Courier New", monospace',
                     fontSize: '12px',
@@ -415,35 +411,21 @@ export const DevToolsModal: React.FC<DevToolsModalProps> = ({ visible, onClose }
               <div>
                 <Space style={{ marginBottom: 12, width: '100%', justifyContent: 'space-between' }}>
                   <Space>
+                    <Button icon={<ClearOutlined />} onClick={handleClearPromptLogs}>
+                      清空
+                    </Button>
                     <Button
                       icon={<ReloadOutlined />}
                       onClick={refreshPromptLogs}
                       loading={promptLoading}
-                      disabled={realtimeMode}
                     >
                       刷新
                     </Button>
                     <span style={{ fontSize: '12px', color: '#999' }}>
-                      {realtimeMode ? '(实时: 每2秒)' : '(手动刷新)'}
+                      {logPaused ? '(已暂停)' : '(每2秒更新)'}
                     </span>
                   </Space>
                   <Space>
-                    <Button
-                      icon={<ClearOutlined />}
-                      onClick={async () => {
-                        try {
-                          await logCommands.clearPromptLogs();
-                          refreshPromptLogs();
-                          message.success('提示词日志已清空');
-                          log.info('提示词日志已清空');
-                        } catch (error) {
-                          log.logError(error, '清空提示词日志失败');
-                        }
-                      }}
-                      danger
-                    >
-                      清空
-                    </Button>
                     <Button
                       icon={<CopyOutlined />}
                       onClick={() => {
@@ -458,7 +440,7 @@ export const DevToolsModal: React.FC<DevToolsModalProps> = ({ visible, onClose }
                       }}
                       type="primary"
                     >
-                      复制日志
+                      复制
                     </Button>
                   </Space>
                 </Space>
