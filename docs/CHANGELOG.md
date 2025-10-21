@@ -1,5 +1,38 @@
 # 更新日志
 
+## 2025-10-21 - 修复供应商注册重复错误
+
+### 🐛 修复问题
+
+修复了应用启动时 `get_all_providers`、`get_all_models`、`find_provider_for_model` 命令失败的问题。
+
+**问题根源**：
+- 应用启动时已在 `init.rs:init_ai_providers()` 中注册所有供应商
+- 三个命令又尝试重复注册供应商
+- `ProviderRegistry::register()` 不支持重复注册，返回错误 `"Provider 'xxx' already registered"`
+
+**修复内容** (`src-tauri/src/commands/ai_model_commands.rs`):
+
+1. **移除冗余注册调用**：
+   - `get_all_providers()`: 删除 `register_all_providers()` 调用
+   - `get_all_models()`: 删除 `register_all_providers()` 调用
+   - `find_provider_for_model()`: 删除 `register_all_providers()` 调用
+
+2. **简化命令签名**：
+   - 将 `async fn` 改为普通 `fn`（无异步操作）
+   - 供应商已在应用启动时注册，命令只需直接访问全局注册表
+
+3. **更新测试代码**：
+   - 测试中使用 `let _ = register_all_providers()` 忽略重复注册错误
+   - 注释说明：生产环境在 `init.rs` 中自动注册
+
+**影响范围**：
+- ✅ 前端 `SettingsModal` 可正常加载动态供应商列表
+- ✅ AI 配置界面正常显示所有可用供应商
+- ✅ 模型选择功能恢复正常
+
+---
+
 ## 2025-10-21 - Phase 6: 前后端类型统一迁移完成
 
 ### 🎯 迁移目标

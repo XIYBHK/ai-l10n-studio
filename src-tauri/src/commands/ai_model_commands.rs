@@ -1,4 +1,4 @@
-use crate::services::ai::{CostBreakdown, CostCalculator, ModelInfo, ProviderInfo, register_all_providers};
+use crate::services::ai::{CostBreakdown, CostCalculator, ModelInfo, ProviderInfo};
 use crate::services::ai::provider::with_global_registry;
 
 /// 获取指定供应商的所有模型
@@ -138,10 +138,8 @@ pub fn calculate_precise_cost(
 /// // [{ id: "deepseek", display_name: "DeepSeek AI", ... }]
 /// ```
 #[tauri::command]
-pub async fn get_all_providers() -> Result<Vec<ProviderInfo>, String> {
-    // 确保供应商已注册
-    register_all_providers().map_err(|e| e.to_string())?;
-    
+pub fn get_all_providers() -> Result<Vec<ProviderInfo>, String> {
+    // 供应商已在应用启动时注册（init.rs:init_ai_providers）
     let providers = with_global_registry(|registry| {
         registry.get_all_providers()
     });
@@ -156,10 +154,8 @@ pub async fn get_all_providers() -> Result<Vec<ProviderInfo>, String> {
 /// const models = await invoke<ModelInfo[]>('get_all_models');
 /// ```
 #[tauri::command]
-pub async fn get_all_models() -> Result<Vec<ModelInfo>, String> {
-    // 确保供应商已注册
-    register_all_providers().map_err(|e| e.to_string())?;
-    
+pub fn get_all_models() -> Result<Vec<ModelInfo>, String> {
+    // 供应商已在应用启动时注册（init.rs:init_ai_providers）
     let models = with_global_registry(|registry| {
         registry.get_all_models()
     });
@@ -176,10 +172,8 @@ pub async fn get_all_models() -> Result<Vec<ModelInfo>, String> {
 /// });
 /// ```
 #[tauri::command]
-pub async fn find_provider_for_model(model_id: String) -> Result<Option<ProviderInfo>, String> {
-    // 确保供应商已注册
-    register_all_providers().map_err(|e| e.to_string())?;
-    
+pub fn find_provider_for_model(model_id: String) -> Result<Option<ProviderInfo>, String> {
+    // 供应商已在应用启动时注册（init.rs:init_ai_providers）
     let provider_info = with_global_registry(|registry| {
         registry.find_provider_for_model(&model_id)
             .map(|provider| provider.get_provider_info())
@@ -192,11 +186,12 @@ pub async fn find_provider_for_model(model_id: String) -> Result<Option<Provider
 #[allow(clippy::unwrap_used, clippy::expect_used)]
 mod tests {
     use super::*;
+    use crate::services::ai::providers::register_all_providers;
 
     #[tokio::test]
     async fn test_get_provider_models() {
-        // 确保供应商已注册
-        register_all_providers().unwrap();
+        // 测试环境：手动注册供应商（生产环境在 init.rs 中自动注册）
+        let _ = register_all_providers();
         
         let models = get_provider_models("openai".to_string());
         assert!(models.is_ok());
@@ -213,7 +208,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_get_model_info() {
-        register_all_providers().unwrap();
+        let _ = register_all_providers();
         
         let model = get_model_info("openai".to_string(), "gpt-4o-mini".to_string());
         assert!(model.is_ok());
@@ -227,7 +222,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_estimate_translation_cost() {
-        register_all_providers().unwrap();
+        let _ = register_all_providers();
         
         let cost = estimate_translation_cost(
             "openai".to_string(),
@@ -244,7 +239,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_calculate_precise_cost() {
-        register_all_providers().unwrap();
+        let _ = register_all_providers();
         
         let breakdown = calculate_precise_cost(
             "openai".to_string(),
@@ -267,7 +262,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_invalid_cache_hit_rate() {
-        register_all_providers().unwrap();
+        let _ = register_all_providers();
         
         let cost = estimate_translation_cost(
             "openai".to_string(),
@@ -282,7 +277,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_nonexistent_model() {
-        register_all_providers().unwrap();
+        let _ = register_all_providers();
         
         let model = get_model_info("openai".to_string(), "nonexistent-model".to_string());
         assert!(model.is_ok());
