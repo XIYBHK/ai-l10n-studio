@@ -634,7 +634,7 @@ pub async fn generate_style_summary() -> Result<String, String> {
     crate::app_log!(
         "[风格总结] 使用AI配置: 供应商={}, 模型={}",
         active_config.provider_id,
-        active_config.model
+        active_config.model.as_deref().unwrap_or("auto")
     );
 
     // 构建分析提示
