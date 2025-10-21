@@ -646,7 +646,6 @@ pub async fn generate_style_summary() -> Result<String, String> {
         "[风格总结] 提示词已构建，长度: {} 字符",
         analysis_prompt.len()
     );
-    crate::app_log!("[风格总结] 完整提示词内容:\n{}", analysis_prompt);
 
     // 调用AI生成总结（使用自定义提示词方法，避免批量翻译格式）
     let mut translator = AITranslator::new_with_config(
@@ -656,6 +655,14 @@ pub async fn generate_style_summary() -> Result<String, String> {
         None,  // 不指定目标语言
     ).map_err(|e| e.to_string())?;
     
+    // 记录提示词到提示词日志
+    let metadata = serde_json::json!({
+        "type": "风格分析",
+        "term_count": library.terms.len(),
+        "provider": "current_active",
+    });
+    crate::services::log_prompt("风格分析", analysis_prompt.clone(), Some(metadata));
+    
     let summary = translator
         .translate_with_custom_user_prompt(analysis_prompt.clone())
         .await
@@ -664,11 +671,40 @@ pub async fn generate_style_summary() -> Result<String, String> {
             e.to_string()
         })?;
 
-    crate::app_log!("[风格总结] AI生成成功，总结长度: {} 字符", summary.len());
-    crate::app_log!("[风格总结] AI返回的完整内容:\n{}", summary);
+    // 更新提示词日志的响应
+    let logs = crate::services::get_prompt_logs();
+    if let Some(last_idx) = logs.len().checked_sub(1) {
+        crate::services::update_prompt_response(last_idx, summary.clone());
+    }
 
-    // 更新术语库
-    library.update_style_summary(summary.clone());
+    crate::app_log!("[风格总结] AI生成成功，总结长度: {} 字符", summary.len());
+    
+    // 清理 AI 返回内容中的提示性文本
+    let cleaned_summary = summary
+        .lines()
+        .filter_map(|line| {
+            let trimmed = line.trim();
+            // 跳过包含提示性文本的行
+            if trimmed.starts_with("第1行") || trimmed.starts_with("第2行") {
+                // 提取冒号后的实际内容
+                if let Some(pos) = trimmed.find('：') {
+                    let content = trimmed[pos + '：'.len_utf8()..].trim();
+                    if !content.is_empty() {
+                        return Some(content.to_string());
+                    }
+                }
+                None
+            } else if !trimmed.is_empty() {
+                Some(trimmed.to_string())
+            } else {
+                None
+            }
+        })
+        .collect::<Vec<_>>()
+        .join("\n");
+
+    // 更新术语库（使用清理后的内容）
+    library.update_style_summary(cleaned_summary.clone());
     save_term_library(&library, &path)?;
 
     crate::app_log!(
@@ -680,7 +716,7 @@ pub async fn generate_style_summary() -> Result<String, String> {
             .unwrap_or(0)
     );
 
-    Ok(summary)
+    Ok(cleaned_summary)
 }
 
 // ========== Phase 7: Contextual Refine ==========
