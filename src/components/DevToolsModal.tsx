@@ -52,7 +52,7 @@ export const DevToolsModal: React.FC<DevToolsModalProps> = ({ visible, onClose }
     refresh: refreshFrontendLogs,
   } = useFrontendLogs({
     enabled: visible,
-    refreshInterval: 5000, // 前端日志刷新频率较低
+    refreshInterval: 0, // ❌ 禁用自动轮询，改为手动刷新（避免日志污染）
   });
   const backendLogText =
     typeof logs === 'string' ? logs : logs ? JSON.stringify(logs, null, 2) : '';

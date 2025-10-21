@@ -23,6 +23,7 @@ export function useBackendLogs(options?: UseLogsOptions) {
     {
       refreshInterval: enabled ? refreshInterval : 0,
       revalidateOnFocus: false,
+      dedupingInterval: 2000, // 2秒内的重复请求会被去重
     }
   );
   return {
@@ -37,14 +38,15 @@ export function useBackendLogs(options?: UseLogsOptions) {
 
 // 🔄 前端日志 Hook
 export function useFrontendLogs(options?: UseLogsOptions) {
-  const { enabled = true, refreshInterval = 10000 } = options || {}; // 前端日志刷新频率较低
+  const { enabled = true, refreshInterval = 0 } = options || {}; // ❌ 默认禁用轮询，避免日志污染
 
   const { data, error, isLoading, mutate } = useSWR(
     enabled ? FRONTEND_LOGS_KEY : null,
     () => logCommands.getFrontend() as Promise<string[]>,
     {
-      refreshInterval: enabled ? refreshInterval : 0,
+      refreshInterval: enabled && refreshInterval > 0 ? refreshInterval : 0, // 只有显式启用时才轮询
       revalidateOnFocus: false,
+      dedupingInterval: 5000, // 5秒内的重复请求会被去重
     }
   );
   return {
@@ -66,6 +68,7 @@ export function usePromptLogs(options?: UseLogsOptions) {
     {
       refreshInterval: enabled ? refreshInterval : 0,
       revalidateOnFocus: false,
+      dedupingInterval: 2000, // 2秒内的重复请求会被去重
     }
   );
   return {
