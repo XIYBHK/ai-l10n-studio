@@ -85,14 +85,49 @@ impl ConfigDraft {
     /// 从文件加载配置
     fn load_from_file<P: AsRef<std::path::Path>>(path: P) -> Result<AppConfig> {
         let content = fs::read_to_string(path).map_err(|e| anyhow!("无法读取配置文件: {}", e))?;
-        let mut config: AppConfig =
-            serde_json::from_str(&content).map_err(|e| anyhow!("无法解析配置文件: {}", e))?;
         
-        // 数据迁移：将旧的大写 provider 值转换为小写 provider_id
-        for ai_config in &mut config.ai_configs {
-            ai_config.provider_id = ai_config.provider_id.to_lowercase();
+        // 尝试加载新格式配置
+        match serde_json::from_str::<AppConfig>(&content) {
+            Ok(mut config) => {
+                // 标准化 provider_id（转小写）
+                for ai_config in &mut config.ai_configs {
+                    ai_config.provider_id = ai_config.provider_id.to_lowercase();
+                }
+                Ok(config)
+            }
+            Err(_) => {
+                // 尝试从旧格式迁移
+                log::warn!("检测到旧版配置格式，开始数据迁移...");
+                Self::migrate_from_legacy(&content)
+            }
+        }
+    }
+    
+    /// 从旧版配置迁移
+    fn migrate_from_legacy(content: &str) -> Result<AppConfig> {
+        use serde_json::Value;
+        
+        let mut json_value: Value = serde_json::from_str(content)
+            .map_err(|e| anyhow!("无法解析配置文件: {}", e))?;
+        
+        // 迁移 ai_configs 数组
+        if let Some(ai_configs) = json_value.get_mut("ai_configs").and_then(|v| v.as_array_mut()) {
+            for config in ai_configs.iter_mut() {
+                if let Some(obj) = config.as_object_mut() {
+                    // provider -> providerId (camelCase)
+                    if let Some(provider) = obj.remove("provider") {
+                        let provider_str = provider.as_str().unwrap_or("unknown");
+                        obj.insert("providerId".to_string(), serde_json::json!(provider_str.to_lowercase()));
+                    }
+                }
+            }
         }
         
+        // 重新反序列化
+        let config: AppConfig = serde_json::from_value(json_value)
+            .map_err(|e| anyhow!("迁移后的配置格式错误: {}", e))?;
+        
+        log::info!("配置迁移成功，已转换为新格式");
         Ok(config)
     }
 

@@ -45,12 +45,22 @@ pub struct ProxyConfig {
 #[cfg_attr(feature = "ts-rs", ts(export, export_to = "../src/types/generated/"))]
 pub struct AIConfig {
     /// 供应商ID（如 "openai", "deepseek", "moonshot"）
-    #[serde(alias = "provider")] // 兼容旧字段名 "provider"
     pub provider_id: String,
     pub api_key: String,
     pub base_url: Option<String>, // 可选的自定义URL
     pub model: Option<String>,    // 可选的自定义模型
     pub proxy: Option<ProxyConfig>,
+}
+
+/// 旧版 AI 配置（用于数据迁移）
+#[derive(Debug, Clone, Deserialize)]
+#[serde(rename_all = "camelCase")]
+struct LegacyAIConfigForMigration {
+    provider: String,  // 旧字段名
+    api_key: String,
+    base_url: Option<String>,
+    model: Option<String>,
+    proxy: Option<ProxyConfig>,
 }
 
 // LegacyAIConfig 已移除，请使用新的 AIConfig 结构体
