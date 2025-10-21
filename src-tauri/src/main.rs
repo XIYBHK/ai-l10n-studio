@@ -94,7 +94,10 @@ fn main() {
             get_model_info,
             estimate_translation_cost,
             calculate_precise_cost,
-            get_all_providers
+            // 🆕 动态 AI 供应商 API (Phase 1 重构)
+            get_all_providers,
+            get_all_models,
+            find_provider_for_model
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

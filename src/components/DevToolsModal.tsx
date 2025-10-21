@@ -1,21 +1,22 @@
 import React, { useState, useRef } from 'react';
-import { Modal, Input, Button, Space, message, Tabs } from 'antd';
+import { Modal, Input, Button, Space, message, Tabs, Alert, Divider } from 'antd';
 import {
   CopyOutlined,
   ReloadOutlined,
   ClearOutlined,
-  FileOutlined,
   BugOutlined,
   DownloadOutlined,
   SaveOutlined,
   FileTextOutlined,
+  ExperimentOutlined,
+  PlayCircleOutlined,
 } from '@ant-design/icons';
 import { logCommands } from '../services/commands'; // ✅ 迁移到统一命令层 (promptLogApi 已通过 hooks 使用)
 import Draggable from 'react-draggable';
-import { FileDropTest } from './FileDropTest';
 import { createModuleLogger } from '../utils/logger';
 import { frontendLogger } from '../utils/frontendLogger';
 import { useBackendLogs, useFrontendLogs, usePromptLogs } from '../hooks/useLogs';
+import { runDynamicProviderTests, TestResult } from '../utils/testDynamicProviders';
 
 const { TextArea } = Input;
 const log = createModuleLogger('DevToolsModal');
@@ -64,6 +65,37 @@ export const DevToolsModal: React.FC<DevToolsModalProps> = ({ visible, onClose }
   const [bounds, setBounds] = useState({ left: 0, top: 0, bottom: 0, right: 0 });
   const [disabled, setDisabled] = useState(true);
   const draggleRef = useRef<HTMLDivElement>(null);
+
+  // 🧪 动态供应商测试状态
+  const [testResults, setTestResults] = useState<TestResult[]>([]);
+  const [testRunning, setTestRunning] = useState(false);
+  const [testSummary, setTestSummary] = useState<{ passed: number; failed: number } | null>(null);
+
+  // 🧪 运行动态供应商测试
+  const handleRunTests = async () => {
+    setTestRunning(true);
+    setTestResults([]);
+    setTestSummary(null);
+
+    try {
+      log.info('🚀 开始运行动态供应商测试套件...');
+      const result = await runDynamicProviderTests();
+
+      setTestResults(result.results);
+      setTestSummary({ passed: result.passed, failed: result.failed });
+
+      if (result.failed === 0) {
+        message.success(`🎉 所有测试通过！(${result.passed}/${result.passed + result.failed})`);
+      } else {
+        message.warning(`⚠️ 部分测试失败 (${result.passed}/${result.passed + result.failed})`);
+      }
+    } catch (error) {
+      log.error('测试套件运行失败:', error);
+      message.error('测试套件运行失败');
+    } finally {
+      setTestRunning(false);
+    }
+  };
 
   // 移除了手动刷新的 useEffect，因为 SWR 的 enabled 参数会在 visible=true 时自动请求
 
@@ -339,15 +371,6 @@ export const DevToolsModal: React.FC<DevToolsModalProps> = ({ visible, onClose }
             ),
           },
           {
-            key: 'filedrop',
-            label: (
-              <span>
-                <FileOutlined /> 文件拖放测试
-              </span>
-            ),
-            children: <FileDropTest />,
-          },
-          {
             key: 'prompt-logs',
             label: (
               <span>
@@ -451,6 +474,121 @@ export const DevToolsModal: React.FC<DevToolsModalProps> = ({ visible, onClose }
                   <span>日志行数: {promptLogText.split('\n').filter((l) => l.trim()).length}</span>
                   <span>字符数: {promptLogText.length}</span>
                   <span>最后更新: {new Date().toLocaleTimeString()}</span>
+                </div>
+              </div>
+            ),
+          },
+          {
+            key: 'provider-tests',
+            label: (
+              <span>
+                <ExperimentOutlined /> 供应商测试
+              </span>
+            ),
+            children: (
+              <div>
+                <Alert
+                  message="🧪 动态供应商架构测试"
+                  description="测试 Phase 2 的动态供应商系统，验证前后端 API 是否正常工作"
+                  type="info"
+                  showIcon
+                  style={{ marginBottom: 16 }}
+                />
+
+                <Space style={{ marginBottom: 16 }}>
+                  <Button
+                    icon={<PlayCircleOutlined />}
+                    onClick={handleRunTests}
+                    loading={testRunning}
+                    type="primary"
+                  >
+                    运行完整测试套件
+                  </Button>
+                  <Button
+                    icon={<ClearOutlined />}
+                    onClick={() => {
+                      setTestResults([]);
+                      setTestSummary(null);
+                      message.success('测试结果已清空');
+                    }}
+                    disabled={testResults.length === 0}
+                  >
+                    清空结果
+                  </Button>
+                </Space>
+
+                {testSummary && (
+                  <Alert
+                    message={`测试完成: ${testSummary.passed} 通过, ${testSummary.failed} 失败`}
+                    type={testSummary.failed === 0 ? 'success' : 'warning'}
+                    showIcon
+                    style={{ marginBottom: 16 }}
+                  />
+                )}
+
+                {testResults.length > 0 && (
+                  <div style={{ marginBottom: 16 }}>
+                    <Divider orientation="left">详细测试结果</Divider>
+                    {testResults.map((result, index) => (
+                      <div key={index} style={{ marginBottom: 12 }}>
+                        <Alert
+                          message={`测试 ${index + 1}: ${result.success ? '✅ 通过' : '❌ 失败'}`}
+                          description={
+                            <div>
+                              <div style={{ marginBottom: 8 }}>{result.message}</div>
+                              {result.data && (
+                                <details>
+                                  <summary style={{ cursor: 'pointer', color: '#1890ff' }}>
+                                    查看数据详情
+                                  </summary>
+                                  <pre
+                                    style={{
+                                      marginTop: 8,
+                                      fontSize: '12px',
+                                      background: '#f5f5f5',
+                                      padding: '8px',
+                                      borderRadius: '4px',
+                                      maxHeight: '200px',
+                                      overflow: 'auto',
+                                    }}
+                                  >
+                                    {JSON.stringify(result.data, null, 2)}
+                                  </pre>
+                                </details>
+                              )}
+                            </div>
+                          }
+                          type={result.success ? 'success' : 'error'}
+                          showIcon
+                        />
+                      </div>
+                    ))}
+                  </div>
+                )}
+
+                <div
+                  style={{
+                    padding: '12px',
+                    background: '#f8f9fa',
+                    borderRadius: '6px',
+                    fontSize: '12px',
+                    color: '#666',
+                  }}
+                >
+                  <div>
+                    <strong>测试项目:</strong>
+                  </div>
+                  <ul style={{ margin: '8px 0', paddingLeft: '20px' }}>
+                    <li>获取所有已注册的 AI 供应商</li>
+                    <li>获取所有可用的模型</li>
+                    <li>根据模型 ID 查找对应供应商</li>
+                    <li>测试已知模型: deepseek-chat, kimi-latest</li>
+                    <li>测试不存在模型的处理</li>
+                  </ul>
+                  <div>
+                    <strong>意义:</strong>{' '}
+                    验证插件化架构是否正常工作，确保添加新供应商时前端能自动识别
+                  </div>
                 </div>
               </div>
             ),

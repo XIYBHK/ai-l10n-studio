@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { useAppStore } from '../store/useAppStore';
 import {
   Modal,
@@ -39,14 +39,16 @@ import {
   aiConfigCommands,
   systemPromptCommands,
   aiModelCommands,
+  aiProviderCommands,
   systemCommands,
 } from '../services/commands'; // ✅ 迁移到统一命令层
-import { AIConfig, ProviderType, PROVIDER_INFO_MAP } from '../types/aiProvider';
+import { AIConfig } from '../types/aiProvider';
 import { createModuleLogger } from '../utils/logger';
 import { useAsync } from '../hooks/useAsync';
 import { useAIConfigs, useSystemPrompt } from '../hooks/useConfig';
 import { notificationManager } from '../utils/notificationManager'; // Tauri 2.x: Notification
 import type { ModelInfo } from '../types/generated/ModelInfo';
+import type { ProviderInfo } from '../types/generated/ProviderInfo';
 import { ThemeModeSwitch } from './ThemeModeSwitch'; // Phase 9
 import { configCommands } from '../services/commands';
 
@@ -57,13 +59,21 @@ interface SettingsModalProps {
   onClose: () => void;
 }
 
-// 供应商配置（从 aiProvider.ts 统一获取）
-const PROVIDER_CONFIGS = Object.values(ProviderType).map((type) => ({
-  value: type,
-  label: PROVIDER_INFO_MAP[type].displayName,
-  defaultUrl: PROVIDER_INFO_MAP[type].defaultUrl,
-  defaultModel: PROVIDER_INFO_MAP[type].defaultModel,
-}));
+// 🆕 Phase 2：供应商配置类型
+type ProviderConfig = {
+  value: string;
+  label: string;
+  defaultUrl?: string;
+  defaultModel?: string;
+};
+
+// 🆕 Phase 2：动态供应商配置映射函数
+const mapProviderInfoToConfig = (provider: ProviderInfo): ProviderConfig => ({
+  value: provider.id,
+  label: provider.display_name,
+  defaultUrl: provider.default_url,
+  defaultModel: provider.default_model,
+});
 
 export const SettingsModal: React.FC<SettingsModalProps> = ({ visible, onClose }) => {
   const [form] = Form.useForm();
@@ -77,6 +87,10 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({ visible, onClose }
   const [testing, setTesting] = useState(false);
   const [currentModelInfo, setCurrentModelInfo] = useState<ModelInfo | null>(null);
   const [availableModels, setAvailableModels] = useState<ModelInfo[]>([]);
+
+  // 🆕 Phase 2：动态供应商状态
+  const [dynamicProviders, setDynamicProviders] = useState<ProviderInfo[]>([]);
+  const [providersLoading, setProvidersLoading] = useState(false);
 
   // 🔄 系统提示词表单状态：与SWR数据同步的本地编辑状态
   const [promptText, setPromptText] = useState<string>(''); // 表单输入的本地状态
@@ -116,6 +130,32 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({ visible, onClose }
     }
   }, [visible]);
 
+  // 🆕 Phase 2：加载动态供应商列表
+  useEffect(() => {
+    if (visible) {
+      setProvidersLoading(true);
+      aiProviderCommands
+        .getAll()
+        .then((providers) => {
+          log.debug('加载动态供应商成功:', providers);
+          setDynamicProviders(providers);
+        })
+        .catch((err) => {
+          log.error('加载动态供应商失败，使用静态配置后备:', err);
+          // 发生错误时不设置 dynamicProviders，会自动使用静态后备
+        })
+        .finally(() => {
+          setProvidersLoading(false);
+        });
+    }
+  }, [visible]);
+
+  // 🆕 Phase 2：计算最终的供应商配置（仅使用动态供应商）
+  const providerConfigs: ProviderConfig[] = useMemo(() => {
+    // 使用动态获取的供应商列表
+    return dynamicProviders.map(mapProviderInfoToConfig);
+  }, [dynamicProviders]);
+
   // 异步操作hooks
   const { prompt, mutate: mutatePrompt } = useSystemPrompt();
   const { execute: savePrompt, loading: savingPrompt } = useAsync(systemPromptCommands.set);
@@ -129,7 +169,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({ visible, onClose }
       // 计算当前 activeIndex
       if (active) {
         const idx = configs.findIndex(
-          (c) => c.provider === active.provider && c.apiKey === active.apiKey
+          (c) => c.providerId === active.providerId && c.apiKey === active.apiKey
         );
         setActiveIndex(idx >= 0 ? idx : null);
       } else {
@@ -140,8 +180,8 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({ visible, onClose }
 
   // 加载由 SWR 负责
 
-  const handleProviderChange = async (provider: ProviderType) => {
-    const providerConfig = PROVIDER_CONFIGS.find((p) => p.value === provider);
+  const handleProviderChange = async (providerId: string) => {
+    const providerConfig = providerConfigs.find((p) => p.value === providerId);
     if (providerConfig) {
       form.setFieldsValue({
         baseUrl: providerConfig.defaultUrl,
@@ -151,9 +191,9 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({ visible, onClose }
 
     // 加载该供应商的可用模型列表
     try {
-      const models = await aiModelCommands.getProviderModels(provider);
+      const models = await aiModelCommands.getProviderModels(providerId);
       setAvailableModels(models);
-      log.info('已加载模型列表', { provider, count: models.length });
+      log.info('已加载模型列表', { providerId, count: models.length });
 
       // 如果有推荐模型，自动选择
       const recommendedModel = models.find((m) => m.recommended);
@@ -172,7 +212,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({ visible, onClose }
     setEditingIndex(null);
     form.resetFields();
     form.setFieldsValue({
-      provider: ProviderType.Moonshot,
+      providerId: 'moonshot',
       baseUrl: 'https://api.moonshot.cn/v1',
       model: 'moonshot-v1-auto',
       proxy: {
@@ -184,7 +224,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({ visible, onClose }
 
     // 自动加载 Moonshot 的模型列表
     try {
-      const models = await aiModelCommands.getProviderModels(ProviderType.Moonshot);
+      const models = await aiModelCommands.getProviderModels('moonshot');
       setAvailableModels(models);
 
       // 查找推荐模型
@@ -206,7 +246,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({ visible, onClose }
     // 安全日志：不输出敏感信息
     log.info('编辑配置', {
       index,
-      provider: config.provider,
+      providerId: config.providerId,
       hasApiKey: !!config.apiKey,
       apiKeyLength: config.apiKey?.length || 0,
       baseUrl: config.baseUrl,
@@ -215,7 +255,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({ visible, onClose }
 
     // 加载该供应商的模型列表
     try {
-      const models = await aiModelCommands.getProviderModels(config.provider);
+      const models = await aiModelCommands.getProviderModels(config.providerId);
       setAvailableModels(models);
 
       // 如果有当前模型，加载其信息
@@ -231,7 +271,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({ visible, onClose }
     // 直接使用用户保存的值，不填充默认值
     // 留空的字段在后端会自动使用默认值
     form.setFieldsValue({
-      provider: config.provider,
+      providerId: config.providerId,
       apiKey: config.apiKey || '', // 确保显示实际值
       baseUrl: config.baseUrl || '', // 用户保存的值，空就是空
       model: config.model || '', // 用户保存的值，空就是空
@@ -254,7 +294,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({ visible, onClose }
 
       // 🚨 修复参数转换问题：区分新增和编辑模式的 apiKey 处理
       const config: AIConfig = {
-        provider: values.provider,
+        providerId: values.providerId,
         // 新增模式：apiKey 必填，不能为空
         // 编辑模式：apiKey 可以为空（表示保持原值不变）
         apiKey: isAddingNew
@@ -303,7 +343,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({ visible, onClose }
       setIsAddingNew(false);
       setEditingIndex(null);
       form.resetFields();
-      log.info('配置保存成功', { provider: config.provider });
+      log.info('配置保存成功', { providerId: config.providerId });
     } catch (error) {
       const errorMsg = error instanceof Error ? error.message : String(error);
       log.error('保存配置失败', { error: errorMsg });
@@ -364,7 +404,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({ visible, onClose }
           : undefined;
 
       const result = await aiConfigCommands.testConnection(
-        values.provider,
+        values.providerId,
         values.apiKey,
         values.baseUrl || undefined,
         values.model || undefined, // ✅ 传递 model
@@ -469,8 +509,8 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({ visible, onClose }
     form.resetFields();
   };
 
-  const getProviderLabel = (provider: ProviderType) => {
-    return PROVIDER_CONFIGS.find((p) => p.value === provider)?.label || provider;
+  const getProviderLabel = (providerId: string) => {
+    return providerConfigs.find((p) => p.value === providerId)?.label || providerId;
   };
 
   // 定义Tab项
@@ -534,7 +574,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({ visible, onClose }
                     ]}
                   >
                     <List.Item.Meta
-                      title={<span>{getProviderLabel(config.provider)}</span>}
+                      title={<span>{getProviderLabel(config.providerId)}</span>}
                       description={
                         <div style={{ fontSize: '12px', color: '#666' }}>
                           <div>模型: {config.model || '(未设置)'}</div>
@@ -559,11 +599,11 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({ visible, onClose }
                 <Form form={form} layout="vertical" size="small">
                   <Form.Item
                     label="服务提供商"
-                    name="provider"
+                    name="providerId"
                     rules={[{ required: true, message: '请选择服务提供商' }]}
                   >
-                    <Select onChange={handleProviderChange}>
-                      {PROVIDER_CONFIGS.map((p) => (
+                    <Select onChange={handleProviderChange} loading={providersLoading}>
+                      {providerConfigs.map((p) => (
                         <Select.Option key={p.value} value={p.value}>
                           {p.label}
                         </Select.Option>

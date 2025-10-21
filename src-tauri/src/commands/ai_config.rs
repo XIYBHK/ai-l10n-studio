@@ -13,7 +13,7 @@ pub async fn get_all_ai_configs() -> Result<Vec<AIConfig>, String> {
         tracing::info!(
             "配置 #{}: provider={:?}, has_api_key={}, base_url={:?}, model={:?}",
             i,
-            cfg.provider,
+            cfg.provider_id,
             !cfg.api_key.is_empty(),
             cfg.base_url,
             cfg.model
@@ -34,7 +34,7 @@ pub async fn get_active_ai_config() -> Result<Option<AIConfig>, String> {
 /// 添加新的 AI 配置
 #[tauri::command]
 pub async fn add_ai_config(config: AIConfig) -> Result<(), String> {
-    crate::app_log!("🔄 [AI配置] 添加新配置，提供商: {:?}", config.provider);
+    crate::app_log!("🔄 [AI配置] 添加新配置，提供商: {:?}", config.provider_id);
     // 🔒 安全：掩码API密钥显示
     let masked_api_key = if config.api_key.starts_with("sk-") && config.api_key.len() > 8 {
         format!(
@@ -163,7 +163,7 @@ pub async fn set_active_ai_config(index: usize) -> Result<(), String> {
 #[derive(Debug, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")] // 🔧 序列化时使用 camelCase 命名，与前端保持一致
 pub struct TestConnectionRequest {
-    pub provider: crate::services::ProviderType,
+    pub provider_id: String, // 🔧 插件化：使用 provider_id 字符串
     pub api_key: String,
     pub base_url: Option<String>,
     pub model: Option<String>,
@@ -185,10 +185,10 @@ pub async fn test_ai_connection(
 ) -> Result<TestConnectionResult, String> {
     use std::time::Instant;
 
-    crate::app_log!("🔍 测试 AI 连接: {:?}", request.provider);
+    crate::app_log!("🔍 测试 AI 连接: {:?}", request.provider_id);
 
     let ai_config = AIConfig {
-        provider: request.provider,
+        provider_id: request.provider_id.clone(),
         api_key: request.api_key,
         base_url: request.base_url,
         model: request.model,
@@ -227,8 +227,18 @@ pub async fn test_ai_connection(
                     .unwrap_or_else(|_| "JSON序列化失败".to_string())
             );
 
+            // 获取供应商显示名称
+            let provider_display_name = {
+                use crate::services::ai::provider::with_global_registry;
+                with_global_registry(|registry| {
+                    registry.get_provider_info(&ai_config.provider_id)
+                        .map(|info| info.display_name)
+                        .unwrap_or_else(|| ai_config.provider_id.clone())
+                })
+            };
+
             let metadata = serde_json::json!({
-                "provider": ai_config.provider.display_name(),
+                "provider": provider_display_name,
                 "model": ai_config.model.clone(),
                 "test_type": "connection_test",
                 "test_text": test_text,
@@ -258,7 +268,7 @@ pub async fn test_ai_connection(
 
                     Ok(TestConnectionResult {
                         success: true,
-                        message: format!("连接成功 ({})", ai_config.provider.display_name()),
+                        message: format!("连接成功 ({})", provider_display_name),
                         response_time_ms: Some(elapsed),
                     })
                 }

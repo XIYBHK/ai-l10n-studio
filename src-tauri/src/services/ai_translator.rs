@@ -23,84 +23,9 @@ pub const DEFAULT_SYSTEM_PROMPT: &str = r"专业游戏本地化翻译。
 
 // ========== Phase 1: AI 供应商配置系统 ==========
 
-/// AI 供应商类型
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
-#[cfg_attr(feature = "ts-rs", derive(TS))]
-#[cfg_attr(feature = "ts-rs", ts(export, export_to = "../src/types/generated/"))]
-pub enum ProviderType {
-    Moonshot,
-    OpenAI,
-    SparkDesk, // 讯飞星火
-    Wenxin,    // 百度文心一言
-    Qianwen,   // 阿里通义千问
-    GLM,       // 智谱AI
-    Claude,    // Anthropic
-    Gemini,    // Google
-}
-
-impl ProviderType {
-    /// 获取默认API地址
-    pub fn default_url(&self) -> &str {
-        match self {
-            Self::Moonshot => "https://api.moonshot.cn/v1",
-            Self::OpenAI => "https://api.openai.com/v1",
-            Self::SparkDesk => "https://spark-api.xf-yun.com/v1",
-            Self::Wenxin => "https://aip.baidubce.com/rpc/2.0/ai_custom/v1/wenxinworkshop",
-            Self::Qianwen => "https://dashscope.aliyuncs.com/api/v1",
-            Self::GLM => "https://open.bigmodel.cn/api/paas/v4",
-            Self::Claude => "https://api.anthropic.com/v1",
-            Self::Gemini => "https://generativelanguage.googleapis.com/v1",
-        }
-    }
-
-    /// 获取显示名称
-    pub fn display_name(&self) -> &str {
-        match self {
-            Self::Moonshot => "Moonshot AI",
-            Self::OpenAI => "OpenAI",
-            Self::SparkDesk => "讯飞星火",
-            Self::Wenxin => "百度文心一言",
-            Self::Qianwen => "阿里通义千问",
-            Self::GLM => "智谱AI (GLM)",
-            Self::Claude => "Claude (Anthropic)",
-            Self::Gemini => "Google Gemini",
-        }
-    }
-
-    /// 获取默认模型
-    pub fn default_model(&self) -> &str {
-        match self {
-            Self::Moonshot => "moonshot-v1-auto",
-            Self::OpenAI => "gpt-3.5-turbo",
-            Self::SparkDesk => "generalv3.5",
-            Self::Wenxin => "ernie-bot-turbo",
-            Self::Qianwen => "qwen-turbo",
-            Self::GLM => "glm-4",
-            Self::Claude => "claude-3-haiku-20240307",
-            Self::Gemini => "gemini-pro",
-        }
-    }
-
-    /// 获取该供应商的所有可用模型
-    pub fn get_models(&self) -> Vec<crate::services::ai::ModelInfo> {
-        use crate::services::ai::models;
-        match self {
-            Self::OpenAI => models::get_openai_models(),
-            Self::Moonshot => models::get_moonshot_models(),
-            Self::SparkDesk => models::get_deepseek_models(), // TODO: 创建独立的 SparkDesk 模型定义
-            Self::Wenxin => models::get_deepseek_models(),    // TODO: 创建独立的 Wenxin 模型定义
-            Self::Qianwen => models::get_deepseek_models(),   // TODO: 创建独立的 Qianwen 模型定义
-            Self::GLM => models::get_deepseek_models(),       // TODO: 创建独立的 GLM 模型定义
-            Self::Claude => models::get_deepseek_models(),    // TODO: 创建独立的 Claude 模型定义
-            Self::Gemini => models::get_deepseek_models(),    // TODO: 创建独立的 Gemini 模型定义
-        }
-    }
-
-    /// 根据模型ID获取模型信息
-    pub fn get_model_info(&self, model_id: &str) -> Option<crate::services::ai::ModelInfo> {
-        self.get_models().into_iter().find(|m| m.id == model_id)
-    }
-}
+// ========== 废弃代码已移除 ==========
+// 旧的 ProviderType 枚举及其实现已完全移除
+// 请使用插件化供应商系统：crate::services::ai::provider
 
 /// 代理配置
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -113,18 +38,21 @@ pub struct ProxyConfig {
     pub enabled: bool,
 }
 
-/// AI 配置（简化版）
+/// AI 配置（插件化版本）
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")] // 🔧 序列化时使用 camelCase 命名，与前端保持一致
 #[cfg_attr(feature = "ts-rs", derive(TS))]
 #[cfg_attr(feature = "ts-rs", ts(export, export_to = "../src/types/generated/"))]
 pub struct AIConfig {
-    pub provider: ProviderType,
+    /// 供应商ID（如 "openai", "deepseek", "moonshot"）
+    pub provider_id: String,
     pub api_key: String,
     pub base_url: Option<String>, // 可选的自定义URL
     pub model: Option<String>,    // 可选的自定义模型
     pub proxy: Option<ProxyConfig>,
 }
+
+// LegacyAIConfig 已移除，请使用新的 AIConfig 结构体
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[cfg_attr(feature = "ts-rs", derive(TS))]
@@ -173,7 +101,8 @@ pub struct AITranslator {
     api_key: String,
     base_url: String,
     model: String,
-    provider: ProviderType, // 🔧 添加：保存 provider 类型用于费用计算
+    provider_id: String, // 🔧 插件化：使用 provider_id 字符串
+    provider_info: Option<crate::services::ai::ProviderInfo>, // 🔧 缓存供应商信息
     system_prompt: String,
     conversation_history: Vec<ChatMessage>,
     #[allow(dead_code)]
@@ -250,7 +179,8 @@ impl AITranslator {
             api_key,
             base_url,
             model: "moonshot-v1-auto".to_string(),
-            provider: ProviderType::Moonshot, // 🔧 默认使用 Moonshot
+            provider_id: "moonshot".to_string(), // 🔧 插件化：默认使用 Moonshot
+            provider_info: None, // 延迟加载
             system_prompt,
             conversation_history: Vec::new(),
             max_history_tokens: 2000,
@@ -273,7 +203,7 @@ impl AITranslator {
         })
     }
 
-    /// 使用 AIConfig 创建（Phase 3: 支持自定义提示词，Phase 5: 支持目标语言）
+    /// 使用 AIConfig 创建（插件化版本）
     pub fn new_with_config(
         config: AIConfig,
         use_tm: bool,
@@ -283,15 +213,18 @@ impl AITranslator {
         // 构建HTTP客户端（支持代理）
         let client = Self::build_client_with_proxy(config.proxy.clone())?;
 
+        // 从插件系统获取供应商信息
+        let provider_info = Self::get_provider_info(&config.provider_id)?;
+        
         // 使用自定义URL或默认URL
         let base_url = config
             .base_url
-            .unwrap_or_else(|| config.provider.default_url().to_string());
+            .unwrap_or_else(|| provider_info.default_url.clone());
 
         // 使用自定义模型或默认模型
         let model = config
             .model
-            .unwrap_or_else(|| config.provider.default_model().to_string());
+            .unwrap_or_else(|| provider_info.default_model.clone());
 
         // 加载术语库并构建系统提示词
         let term_library_path = std::env::current_exe()
@@ -331,7 +264,7 @@ impl AITranslator {
 
         crate::app_log!(
             "[AI翻译器] 使用配置创建: 供应商={}, 模型={}, 代理={}",
-            config.provider.display_name(),
+            provider_info.display_name,
             model,
             if config.proxy.as_ref().map(|p| p.enabled).unwrap_or(false) {
                 "已启用"
@@ -345,7 +278,8 @@ impl AITranslator {
             api_key: config.api_key,
             base_url,
             model,
-            provider: config.provider, // 🔧 保存 provider
+            provider_id: config.provider_id.clone(),
+            provider_info: Some(provider_info), // 🔧 缓存 provider 信息
             system_prompt,
             conversation_history: Vec::new(),
             max_history_tokens: 2000,
@@ -366,6 +300,28 @@ impl AITranslator {
                 tm_learned: 0,
             },
         })
+    }
+
+    /// 从插件系统获取供应商信息
+    fn get_provider_info(provider_id: &str) -> Result<crate::services::ai::ProviderInfo> {
+        use crate::services::ai::provider::with_global_registry;
+        
+        with_global_registry(|registry| {
+            registry.get_provider_info(provider_id)
+                .ok_or_else(|| anyhow!("未找到供应商: {}", provider_id))
+        })
+    }
+    
+    /// 获取供应商显示名称（带缓存）
+    fn get_provider_display_name(&self) -> String {
+        if let Some(ref info) = self.provider_info {
+            info.display_name.clone()
+        } else {
+            // 尝试动态获取
+            Self::get_provider_info(&self.provider_id)
+                .map(|info| info.display_name)
+                .unwrap_or_else(|_| self.provider_id.clone())
+        }
     }
 
     /// 构建支持代理的HTTP客户端
@@ -590,7 +546,7 @@ impl AITranslator {
                         "sample_texts": sample_texts,
                         "model": self.model,
                         "temperature": 0.3,
-                        "provider": self.provider.display_name(),
+                        "provider": self.get_provider_display_name(),
                     });
                     crate::services::log_prompt("批量翻译", full_prompt, Some(metadata));
                 }
@@ -1006,10 +962,14 @@ impl AITranslator {
             // Fail Fast 架构设计：多AI供应商架构要求强制 ModelInfo 存在
             // 模型不存在 = 配置错误，应立即失败而非降级（见 docs/Architecture.md:195）
             #[allow(clippy::expect_used)]
-            let model_info = self
-                .provider
-                .get_model_info(&self.model)
-                .expect("模型信息必须存在，请检查 models/ 目录中的模型定义");
+            let model_info = {
+                use crate::services::ai::provider::with_global_registry;
+                with_global_registry(|registry| {
+                    registry.get_provider(&self.provider_id)
+                        .and_then(|provider| provider.get_model_info(&self.model))
+                        .expect("模型信息必须存在，请检查插件系统中的模型定义")
+                })
+            };
 
             use crate::services::ai::CostCalculator;
             let breakdown = CostCalculator::calculate_openai(

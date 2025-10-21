@@ -234,6 +234,7 @@ export const TermLibraryManager: React.FC<TermLibraryManagerProps> = ({
           icon={<ThunderboltOutlined />}
           onClick={handleGenerateStyleSummary}
           loading={loading}
+          disabled={!library || library.metadata.total_terms === 0}
         >
           生成风格总结
         </Button>,
@@ -242,6 +243,22 @@ export const TermLibraryManager: React.FC<TermLibraryManagerProps> = ({
         </Button>,
       ]}
     >
+      {/* 风格提示词说明 */}
+      <div
+        style={{
+          marginBottom: 16,
+          padding: '10px 12px',
+          background: colors.bgTertiary,
+          border: `1px solid ${colors.borderPrimary}`,
+          borderRadius: 4,
+        }}
+      >
+        <div style={{ fontSize: '12px', color: colors.textSecondary, lineHeight: '1.6' }}>
+          💡 <strong style={{ color: colors.textPrimary }}>风格提示词自动生成规则：</strong>
+          首次添加或每新增5条术语时自动生成，也可随时点击下方按钮手动生成
+        </div>
+      </div>
+
       {/* 风格总结展示 */}
       {library?.style_summary && (
         <div

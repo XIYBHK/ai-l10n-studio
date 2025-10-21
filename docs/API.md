@@ -33,8 +33,9 @@ const result = await translatorCommands.translateBatch(entries, targetLang);
 **命令模块索引**：
 
 - `configCommands` - 应用配置管理
-- `aiConfigCommands` - AI 配置 CRUD + 连接测试
+- `aiConfigCommands` - AI 配置 CRUD + 连接测试 **[已统一类型]**
 - `aiModelCommands` - 模型信息查询 + 成本计算
+- `aiProviderCommands` - **[新增]** 动态供应商系统
 - `systemPromptCommands` - 系统提示词管理
 - `termLibraryCommands` - 术语库操作
 - `translationMemoryCommands` - 翻译记忆库
@@ -320,12 +321,15 @@ BatchStatsEvent { token_stats: { cost } } → Channel 发送
 AIWorkspace 统计面板 → 显示 `$0.0023`（小额4位）或 `$12.35`（大额2位）
 ```
 
-**供应商配置整合** (`src/types/aiProvider.ts`):
+**🆕 前后端类型统一** (2025-10-21):
 
-- 统一配置源 - `PROVIDER_INFO_MAP` 包含所有8个供应商的默认配置
-- 自动生成 - SettingsModal 从 `PROVIDER_INFO_MAP` 动态生成供应商列表
-- 类型安全 - `ProviderType` 枚举确保类型一致性
-- 模型预设 - 每个供应商都有 `defaultModel`，可被预设模型列表覆盖
+参考 clash-verge-rev 最佳实践，实现零转换成本的类型系统：
+
+- **统一 AIConfig**: 前后端使用相同结构，通过 serde camelCase 自动转换
+- **providerId 字符串**: 废弃 `ProviderType` 枚举，使用 `providerId: string`
+- **动态供应商系统**: 通过 `aiProviderCommands.getAll()` 获取所有可用供应商
+- **ts-rs 类型生成**: `ProxyConfig` 等类型自动从 Rust 生成到 TypeScript
+- **零转换成本**: 删除所有手动转换函数，直接传递类型
 
 **统一格式化工具** (`src/utils/formatters.ts`):
 
@@ -349,6 +353,166 @@ const costDisplay = cost < 0.01 ? `${(cost * 100).toFixed(2)}¢` : `$${cost.toFi
 
 - 代码质量改进: `docs/CHANGELOG.md` (2025-10-13 质量提升)
 - 完整参考: `CLAUDE.md` §Architecture Overview
+
+---
+
+### 🆕 AI 配置与供应商管理 (2025-10-21)
+
+#### aiConfigCommands - 统一类型的 AI 配置管理
+
+**核心特性**：零转换成本，前后端类型完全一致
+
+```typescript
+import { aiConfigCommands } from '@/services/commands';
+import type { AIConfig } from '@/types/aiProvider';
+
+// ✅ 直接使用统一的 AIConfig 类型
+const newConfig: AIConfig = {
+  providerId: 'moonshot', // 字符串 ID，非枚举
+  apiKey: 'sk-xxx',
+  baseUrl: 'https://api.moonshot.cn/v1', // 可选
+  model: 'kimi-latest', // 可选
+  proxy: {
+    // 可选
+    enabled: true,
+    host: '127.0.0.1',
+    port: 7890,
+  },
+};
+
+// ✅ 零转换：直接传递类型
+await aiConfigCommands.add(newConfig);
+
+// ✅ 获取所有配置（返回统一类型）
+const configs = await aiConfigCommands.getAll(); // AIConfig[]
+
+// ✅ 测试连接（使用 providerId 字符串）
+const result = await aiConfigCommands.testConnection(
+  'moonshot', // providerId: string
+  'sk-xxx',
+  'https://api.moonshot.cn/v1',
+  'kimi-latest'
+);
+```
+
+**API 方法**:
+
+- `getAll()` - 获取所有 AI 配置（返回 `AIConfig[]`）
+- `getActive()` - 获取当前启用配置（返回 `AIConfig | null`）
+- `add(config: AIConfig)` - 添加新配置（零转换）
+- `update(id: string, config: AIConfig)` - 更新配置（零转换）
+- `delete(id: string)` - 删除配置
+- `setActive(id: string)` - 设置启用配置
+- `testConnection(providerId, apiKey, ...)` - 测试连接
+
+**类型定义** (`src/types/aiProvider.ts`):
+
+```typescript
+export interface AIConfig {
+  providerId: string; // 🔧 统一使用字符串 ID
+  apiKey: string;
+  baseUrl?: string;
+  model?: string;
+  proxy?: ProxyConfig; // 🔧 ts-rs 自动生成
+}
+
+// ProxyConfig 从 Rust 自动生成
+export type { ProxyConfig } from './generated/ProxyConfig';
+```
+
+#### aiProviderCommands - 动态供应商系统
+
+**核心特性**：插件化供应商，运行时动态加载
+
+```typescript
+import { aiProviderCommands } from '@/services/commands';
+
+// 获取所有可用供应商
+const providers = await aiProviderCommands.getAll();
+// 返回: ProviderInfo[]
+// [
+//   { id: 'moonshot', display_name: 'Moonshot AI', ... },
+//   { id: 'openai', display_name: 'OpenAI', ... },
+//   { id: 'deepseek', display_name: 'DeepSeek AI', ... },
+//   ...
+// ]
+
+// 获取特定供应商
+const provider = await aiProviderCommands.getProvider('moonshot');
+
+// 根据模型查找供应商
+const provider = await aiProviderCommands.findProviderForModel('kimi-latest');
+
+// 获取所有模型（跨供应商）
+const allModels = await aiProviderCommands.getAllModels();
+```
+
+**ProviderInfo 类型** (ts-rs 自动生成):
+
+```typescript
+// src/types/generated/ProviderInfo.ts
+export interface ProviderInfo {
+  id: string; // 供应商 ID
+  display_name: string; // 显示名称
+  default_url: string; // 默认 API URL
+  default_model: string; // 默认模型
+}
+```
+
+**使用示例**（SettingsModal）:
+
+```typescript
+// 动态加载供应商列表
+const [providers, setProviders] = useState<ProviderInfo[]>([]);
+
+useEffect(() => {
+  aiProviderCommands.getAll().then(setProviders);
+}, []);
+
+// 在表单中使用
+<Select>
+  {providers.map((p) => (
+    <Select.Option key={p.id} value={p.id}>
+      {p.display_name}
+    </Select.Option>
+  ))}
+</Select>
+```
+
+**工具函数** (`src/utils/providerUtils.ts`):
+
+```typescript
+import { getProviderDisplayName } from '@/utils/providerUtils';
+
+// 从供应商列表中获取显示名称
+const displayName = getProviderDisplayName('moonshot', providers);
+// 返回: "Moonshot AI"
+```
+
+#### 迁移对比
+
+**之前（需要手动转换）**:
+
+```typescript
+// ❌ 旧方式：需要转换函数
+const backendConfig = convertToBackendConfig(frontendConfig);
+await invoke('add_ai_config', { config: backendConfig });
+```
+
+**现在（零转换）**:
+
+```typescript
+// ✅ 新方式：直接传递
+await aiConfigCommands.add(config);
+```
+
+**架构优势**:
+
+1. **零转换成本**: 前后端类型完全一致，通过 serde camelCase 自动转换
+2. **类型安全**: TypeScript 编译时检查，Rust 运行时验证
+3. **插件化扩展**: 新增供应商无需修改类型定义
+4. **代码简化**: 删除约 200 行转换和映射代码
+5. **可维护性**: 单一事实来源（Rust 类型定义）
 
 ---
 

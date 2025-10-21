@@ -11,9 +11,10 @@
 
 import { invoke } from './api';
 import type { POEntry, TranslationStats, ContextualRefineRequest } from '../types/tauri';
-import type { AIConfig, ProviderType } from '../types/aiProvider';
+import type { AIConfig } from '../types/aiProvider';
 import type { TermLibrary } from '../types/termLibrary';
 import type { ModelInfo } from '../types/generated/ModelInfo';
+import type { ProviderInfo } from '../types/generated/ProviderInfo';
 
 // ========================================
 // 命令常量定义（集中管理，避免硬编码）
@@ -39,6 +40,11 @@ export const COMMANDS = {
   AI_MODEL_GET_INFO: 'get_model_info',
   AI_MODEL_ESTIMATE_COST: 'estimate_translation_cost',
   AI_MODEL_CALCULATE_COST: 'calculate_precise_cost',
+
+  // 🆕 动态供应商相关 (Phase 2)
+  AI_PROVIDER_GET_ALL: 'get_all_providers',
+  AI_PROVIDER_GET_ALL_MODELS: 'get_all_models',
+  AI_PROVIDER_FIND_BY_MODEL: 'find_provider_for_model',
 
   // 系统提示词相关
   SYSTEM_PROMPT_GET: 'get_system_prompt',
@@ -130,16 +136,17 @@ export const configCommands = {
 };
 
 /**
- * AI配置命令
+ * AI配置命令（零转换，直接与后端通信）
+ * 参考 clash-verge-rev 最佳实践
  */
 export const aiConfigCommands = {
-  async getAll() {
+  async getAll(): Promise<AIConfig[]> {
     return invoke<AIConfig[]>(COMMANDS.AI_CONFIG_GET_ALL, undefined, {
       errorMessage: '获取AI配置列表失败',
     });
   },
 
-  async getActive() {
+  async getActive(): Promise<AIConfig | null> {
     return invoke<AIConfig | null>(COMMANDS.AI_CONFIG_GET_ACTIVE, undefined, {
       errorMessage: '获取当前AI配置失败',
     });
@@ -162,10 +169,9 @@ export const aiConfigCommands = {
   },
 
   async add(config: AIConfig) {
-    // 🔧 保持 camelCase 格式，因为后端使用 #[serde(rename_all = "camelCase")]
     return invoke<string>(
       COMMANDS.AI_CONFIG_ADD,
-      { config }, // 保持 camelCase，不转换
+      { config },
       {
         errorMessage: '添加AI配置失败',
       }
@@ -173,10 +179,9 @@ export const aiConfigCommands = {
   },
 
   async update(id: string, config: AIConfig) {
-    // 🔧 保持 camelCase 格式，因为后端使用 #[serde(rename_all = "camelCase")]
     return invoke<void>(
       COMMANDS.AI_CONFIG_UPDATE,
-      { id, config }, // 保持 camelCase，不转换
+      { id, config },
       {
         errorMessage: '更新AI配置失败',
       }
@@ -200,16 +205,15 @@ export const aiConfigCommands = {
   },
 
   async testConnection(
-    provider: ProviderType,
+    providerId: string,
     apiKey: string,
     baseUrl?: string,
     model?: string,
     proxy?: any
   ) {
-    // 🔧 保持 camelCase 格式，因为后端使用 #[serde(rename_all = "camelCase")]
     const request = {
-      provider,
-      apiKey, // 保持 camelCase
+      providerId,
+      apiKey,
       baseUrl: baseUrl || null,
       model: model || null,
       proxy: proxy || null,
@@ -285,6 +289,42 @@ export const aiModelCommands = {
       },
       {
         errorMessage: '计算成本失败',
+      }
+    );
+  },
+};
+
+/**
+ * 🆕 动态 AI 供应商命令 (Phase 2)
+ */
+export const aiProviderCommands = {
+  /**
+   * 获取所有已注册的AI供应商
+   */
+  async getAll() {
+    return invoke<ProviderInfo[]>(COMMANDS.AI_PROVIDER_GET_ALL, undefined, {
+      errorMessage: '获取供应商列表失败',
+    });
+  },
+
+  /**
+   * 获取所有可用的模型（来自所有供应商）
+   */
+  async getAllModels() {
+    return invoke<ModelInfo[]>(COMMANDS.AI_PROVIDER_GET_ALL_MODELS, undefined, {
+      errorMessage: '获取所有模型列表失败',
+    });
+  },
+
+  /**
+   * 根据模型ID查找对应的供应商信息
+   */
+  async findProviderForModel(modelId: string) {
+    return invoke<ProviderInfo | null>(
+      COMMANDS.AI_PROVIDER_FIND_BY_MODEL,
+      { modelId },
+      {
+        errorMessage: '查找模型供应商失败',
       }
     );
   },

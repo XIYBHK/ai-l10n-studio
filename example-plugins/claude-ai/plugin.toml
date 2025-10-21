@@ -1,0 +1,43 @@
+# Claude AI 供应商插件配置
+# 这是 Phase 3 插件化架构的示例插件
+
+[plugin]
+name = "Claude AI"
+id = "claude"
+version = "1.2.0"
+api_version = "1.0"
+description = "Anthropic Claude AI 系列模型，专注于安全性和实用性"
+author = "AI L10n Studio"
+homepage = "https://www.anthropic.com"
+license = "MIT"
+
+[provider]
+display_name = "Anthropic Claude"
+default_url = "https://api.anthropic.com/v1"
+default_model = "claude-3-5-sonnet-20241022"
+supports_cache = false
+supports_images = true
+
+# 额外配置选项
+[provider.extra_config]
+max_retries = 3
+timeout_seconds = 30
+anthropic_version = "2023-06-01"
+
+[models]
+# 推荐的默认模型
+recommended_model = "claude-3-5-sonnet-20241022"
+
+# 禁用的模型（如果有的话）
+disabled_models = []
+
+# 模型配置覆盖
+[models.overrides."claude-3-5-sonnet-20241022"]
+name = "Claude 3.5 Sonnet (最新)"
+description = "最强大的 Claude 模型，适合复杂推理和长文本处理"
+recommended = true
+
+[models.overrides."claude-3-5-haiku-20241022"]
+name = "Claude 3.5 Haiku (快速)"
+description = "快速响应的 Claude 模型，适合简单任务"
+recommended = false

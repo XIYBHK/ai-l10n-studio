@@ -1,0 +1,51 @@
+# DeepSeek AI 供应商插件配置
+# 基于现有 DeepSeek 模型配置生成
+
+[plugin]
+name = "DeepSeek AI"
+id = "deepseek"
+version = "3.2.0"
+api_version = "1.0"
+description = "DeepSeek AI 智能助手，中文优化，性价比极高，支持硬盘缓存"
+author = "AI L10n Studio"
+homepage = "https://www.deepseek.com"
+license = "MIT"
+
+[provider]
+display_name = "DeepSeek AI"
+default_url = "https://api.deepseek.com/v1"
+default_model = "deepseek-chat"
+supports_cache = true   # 支持硬盘缓存，节省90%成本
+supports_images = false
+
+# 额外配置选项
+[provider.extra_config]
+max_retries = 3
+timeout_seconds = 120
+# DeepSeek 特有配置
+model_series = "v3.2-exp"
+optimization = "chinese"
+cache_type = "disk"  # 硬盘缓存
+
+[models]
+# 推荐的默认模型
+recommended_model = "deepseek-chat"
+
+# 禁用的模型（如果有的话）
+disabled_models = []
+
+# 模型配置覆盖
+[models.overrides."deepseek-chat"]
+name = "DeepSeek V3.2-Exp"
+description = "DeepSeek-V3.2-Exp，中文优化，支持硬盘缓存，性价比之王"
+recommended = true
+
+[models.overrides."deepseek-reasoner"]
+name = "DeepSeek Reasoner"
+description = "DeepSeek-V3.2-Exp 思考模式，深度推理，长输出"
+recommended = true
+
+[models.overrides."deepseek-coder"]
+name = "DeepSeek Coder (兼容)"
+description = "代码专用模型（兼容），推荐使用 deepseek-chat"
+recommended = false
