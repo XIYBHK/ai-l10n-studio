@@ -648,25 +648,20 @@ pub async fn generate_style_summary() -> Result<String, String> {
     );
     crate::app_log!("[风格总结] 完整提示词内容:\n{}", analysis_prompt);
 
-    // 调用AI生成总结（使用活动配置，不使用自定义提示词和目标语言）
+    // 调用AI生成总结（使用自定义提示词方法，避免批量翻译格式）
     let mut translator = AITranslator::new_with_config(
         active_config, // 已克隆，可直接使用
         false, // 不使用TM
-        None,  // 不使用自定义提示词
+        None,  // 不使用系统提示词（风格分析有自己的系统角色）
         None,  // 不指定目标语言
     ).map_err(|e| e.to_string())?;
+    
     let summary = translator
-        .translate_batch(vec![analysis_prompt], None)
+        .translate_with_custom_user_prompt(analysis_prompt.clone())
         .await
         .map_err(|e| {
             crate::app_log!("[风格总结] AI调用失败: {}", e);
             e.to_string()
-        })?
-        .into_iter()
-        .next()
-        .ok_or_else(|| {
-            crate::app_log!("[风格总结] AI返回为空");
-            "生成风格总结失败".to_string()
         })?;
 
     crate::app_log!("[风格总结] AI生成成功，总结长度: {} 字符", summary.len());

@@ -234,7 +234,7 @@ impl TermLibrary {
 
     /// 构建用于AI分析的提示词
     pub fn build_analysis_prompt(&self) -> String {
-        let mut prompt = String::from("分析用户的翻译风格偏好，生成风格指导（不超过150字）。\n\n");
+        let mut prompt = String::from("你是专业的翻译风格分析师。请分析用户的翻译风格偏好。\n\n");
 
         // 按频率排序，只取前30个高频术语
         let mut sorted_terms = self.terms.clone();
@@ -242,34 +242,32 @@ impl TermLibrary {
 
         prompt.push_str("【术语对照】\n");
         for (idx, term) in sorted_terms.iter().take(30).enumerate() {
-            let label = if sorted_terms.len() > 1 {
-                format!("{}. ", idx + 1)
-            } else {
-                String::new()
-            };
-
             prompt.push_str(&format!(
-                "{}原文: {}\n   AI译: {}\n   用户译: {}\n\n",
-                label, term.source, term.ai_translation, term.user_translation
+                "{}. 原文: {}\n   AI译: {}\n   用户译: {}\n\n",
+                idx + 1, term.source, term.ai_translation, term.user_translation
             ));
         }
 
         prompt.push_str("【分析任务】\n");
-        prompt.push_str("对比上述每组「AI译」和「用户译」，找出所有差异。\n\n");
-        prompt.push_str("【检查清单】（逐一检查）\n");
-        prompt.push_str("1. 词汇替换：是否有词被替换？（如：接近→邻近）\n");
-        prompt.push_str("2. 下划线：用户译中是否添加了下划线_？\n");
-        prompt.push_str("3. 空格：空格使用是否有变化？\n");
-        prompt.push_str("4. 其他符号：是否有其他标点或符号变化？\n\n");
-        prompt.push_str("【输出格式】（单行，只写发现的差异）\n");
-        prompt
-            .push_str("准确的技术翻译；词汇：[词汇偏好，无则不写]；符号：[符号偏好，无则不写]\n\n");
-        prompt.push_str("【示例1 - 只有词汇差异】\n");
-        prompt.push_str("准确的技术翻译；词汇偏好\"邻近\"（如：接近→邻近）\n\n");
-        prompt.push_str("【示例2 - 有下划线变化】\n");
-        prompt.push_str("准确的技术翻译；符号：空格改为下划线（如：资产编辑器→资产_编辑器）\n\n");
-        prompt.push_str("【示例3 - 词汇和符号都有】\n");
-        prompt.push_str("准确的技术翻译；词汇偏好\"移除\"（如：删除→移除）；符号：使用下划线连接");
+        prompt.push_str("对比上述每组「AI译」和「用户译」，找出用户的翻译偏好和风格特征。\n\n");
+        
+        prompt.push_str("【检查维度】\n");
+        prompt.push_str("1. 词汇偏好：用户是否偏好特定词汇？（如：保留英文原词、使用简洁表达等）\n");
+        prompt.push_str("2. 符号习惯：空格、下划线、标点等使用习惯\n");
+        prompt.push_str("3. 整体风格：直译/意译、正式/口语、简洁/详细等\n\n");
+        
+        prompt.push_str("【输出要求】\n");
+        prompt.push_str("严格按照以下格式输出两行：\n\n");
+        prompt.push_str("第1行 - 风格概括（10-15字，一句话形容）：\n");
+        prompt.push_str("例如：技术型翻译，保留英文术语\n");
+        prompt.push_str("例如：简洁直译，下划线连接\n");
+        prompt.push_str("例如：专业规范，符号统一\n\n");
+        prompt.push_str("第2行 - 详细指导（不超过150字）：\n");
+        prompt.push_str("例如：准确的技术翻译；词汇偏好\"debug\"（如：调试→debug）；符号：空格改为下划线（如：资产编辑器→资产_编辑器）\n\n");
+        prompt.push_str("【注意】\n");
+        prompt.push_str("- 必须严格输出两行，第一行风格概括，第二行详细指导\n");
+        prompt.push_str("- 不要添加额外说明或编号\n");
+        prompt.push_str("- 只写发现的实际差异，没有差异就不写");
 
         prompt
     }
