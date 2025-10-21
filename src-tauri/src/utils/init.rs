@@ -56,7 +56,33 @@ pub async fn init_app() -> Result<()> {
 /// 3. 加载所有插件供应商
 async fn init_ai_providers() -> Result<()> {
     // Step 1: 注册内置供应商（Phase 1-2 兼容）
+    logging!(
+        info,
+        LogType::Init,
+        "🔧 开始注册内置AI供应商..."
+    );
+    
     register_all_providers()?;
+    
+    // 验证注册结果
+    use crate::services::ai::provider::with_global_registry;
+    let registered_count = with_global_registry(|registry| {
+        let ids = registry.get_provider_ids();
+        logging!(
+            info,
+            LogType::Init,
+            "✅ 已注册供应商: {:?}",
+            ids
+        );
+        ids.len()
+    });
+    
+    logging!(
+        info,
+        LogType::Init,
+        "✅ 内置供应商注册完成，共 {} 个",
+        registered_count
+    );
     
     // Step 2: 初始化插件系统
     // 🔧 开发模式：使用项目根目录的 plugins 文件夹（从 src-tauri 向上一级）

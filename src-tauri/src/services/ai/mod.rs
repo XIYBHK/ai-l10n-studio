@@ -14,4 +14,6 @@ pub mod plugin_loader;
 pub use cost_calculator::{CostBreakdown, CostCalculator};
 pub use model_info::ModelInfo;
 pub use provider::ProviderInfo; // ✅ 只导出对外公开的类型
-pub use providers::register_all_providers;
+
+// ❌ 不再导出 register_all_providers（仅在 init.rs 中使用）
+// pub use providers::register_all_providers;

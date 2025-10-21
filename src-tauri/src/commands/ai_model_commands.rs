@@ -10,9 +10,22 @@ use crate::services::ai::provider::with_global_registry;
 #[tauri::command]
 pub fn get_provider_models(provider_id: String) -> Result<Vec<ModelInfo>, String> {
     with_global_registry(|registry| {
+        // 🔧 调试日志：记录当前请求和注册表状态
+        let all_ids = registry.get_provider_ids();
+        log::info!("🔍 请求供应商模型: provider_id={}", provider_id);
+        log::info!("🔍 当前注册的供应商: {:?}", all_ids);
+        
         registry.get_provider(&provider_id)
-            .map(|provider| provider.get_models())
-            .ok_or_else(|| format!("未找到供应商: {}", provider_id))
+            .map(|provider| {
+                let models = provider.get_models();
+                log::info!("✅ 找到供应商 '{}', 返回 {} 个模型", provider_id, models.len());
+                models
+            })
+            .ok_or_else(|| {
+                let error_msg = format!("未找到供应商: '{}' (可用: {:?})", provider_id, all_ids);
+                log::error!("❌ {}", error_msg);
+                error_msg
+            })
     })
 }
 
