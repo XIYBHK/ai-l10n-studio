@@ -52,19 +52,6 @@ pub struct AIConfig {
     pub proxy: Option<ProxyConfig>,
 }
 
-/// 旧版 AI 配置（用于数据迁移）
-#[derive(Debug, Clone, Deserialize)]
-#[serde(rename_all = "camelCase")]
-struct LegacyAIConfigForMigration {
-    provider: String,  // 旧字段名
-    api_key: String,
-    base_url: Option<String>,
-    model: Option<String>,
-    proxy: Option<ProxyConfig>,
-}
-
-// LegacyAIConfig 已移除，请使用新的 AIConfig 结构体
-
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[cfg_attr(feature = "ts-rs", derive(TS))]
 #[cfg_attr(feature = "ts-rs", ts(export, export_to = "../src/types/generated/"))]
