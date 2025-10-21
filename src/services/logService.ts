@@ -200,9 +200,12 @@ export const toggleBackendLogEnabled = () => {
  */
 export const clearBackendLogs = async () => {
   try {
-    await logCommands.clear(); // 清空后端日志文件
-    useGlobalLogStore.getState().clearBackendLogs(); // 清空前端状态
-    await fetchBackendLogs(); // 立即刷新（确保同步）
+    // 1. 先清空前端显示（立即生效）
+    useGlobalLogStore.getState().clearBackendLogs();
+    
+    // 2. 再清空后端文件（后台操作）
+    await logCommands.clear();
+    
     console.log('[LogService] 后端日志已清空');
   } catch (error) {
     console.error('[LogService] 清空后端日志失败:', error);
@@ -215,9 +218,12 @@ export const clearBackendLogs = async () => {
  */
 export const clearPromptLogs = async () => {
   try {
-    await logCommands.clearPromptLogs();
+    // 1. 先清空前端显示（立即生效）
     useGlobalLogStore.getState().clearPromptLogs();
-    await fetchPromptLogs(); // 立即刷新（确保同步）
+    
+    // 2. 再清空后端文件（后台操作）
+    await logCommands.clearPromptLogs();
+    
     console.log('[LogService] 提示词日志已清空');
   } catch (error) {
     console.error('[LogService] 清空提示词日志失败:', error);

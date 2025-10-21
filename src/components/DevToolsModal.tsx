@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { Modal, Input, Button, Space, message, Tabs, Alert, Divider } from 'antd';
+import { Modal, Input, Button, Space, Tabs, Alert, Divider, App } from 'antd';
 import {
   CopyOutlined,
   ReloadOutlined,
@@ -36,6 +36,9 @@ interface DevToolsModalProps {
 }
 
 export const DevToolsModal: React.FC<DevToolsModalProps> = ({ visible, onClose }) => {
+  // ✅ 使用 App 提供的 message（避免静态方法警告）
+  const { message } = App.useApp();
+
   // ✅ 使用全局日志 Store（参考 clash-verge-rev）
   const {
     backendLogs,
