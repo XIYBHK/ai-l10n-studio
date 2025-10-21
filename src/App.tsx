@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from 'react';
-import { Layout, ConfigProvider, message, Alert, Button, Space, App as AntApp } from 'antd';
+import { Layout, ConfigProvider, Alert, Button, Space, App as AntApp } from 'antd';
 import { listen } from '@tauri-apps/api/event';
 import { throttle } from 'lodash';
 import { MenuBar } from './components/MenuBar';

@@ -6,7 +6,6 @@
 import { message } from 'antd';
 import { createModuleLogger } from '../utils/logger';
 import { apiClient } from './apiClient';
-import { maskSensitiveData } from './tauriInvoke';
 
 const log = createModuleLogger('API');
 

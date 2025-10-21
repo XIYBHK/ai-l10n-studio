@@ -2,7 +2,6 @@ import React, { useState, useRef, useEffect } from 'react';
 import { Modal, Input, Button, Space, Tabs, Alert, Divider, App } from 'antd';
 import {
   CopyOutlined,
-  ReloadOutlined,
   ClearOutlined,
   BugOutlined,
   DownloadOutlined,
@@ -87,7 +86,7 @@ export const DevToolsModal: React.FC<DevToolsModalProps> = ({ visible, onClose }
         message.warning(`⚠️ 部分测试失败 (${result.passed}/${result.passed + result.failed})`);
       }
     } catch (error) {
-      log.error('测试套件运行失败:', error);
+      console.error('测试套件运行失败:', error);
       message.error('测试套件运行失败');
     } finally {
       setTestRunning(false);
