@@ -397,28 +397,19 @@ pub fn get_app_logs() -> Result<Vec<String>, String> {
                 });
                 app_log_files.reverse();
 
-                // 读取最多3个最新的日志文件
-                let mut all_lines = Vec::new();
-                for (i, entry) in app_log_files.iter().take(3).enumerate() {
-                    if i > 0 {
-                        all_lines.push(format!(
-                            "========== {} ==========",
-                            entry.file_name().to_string_lossy()
-                        ));
-                    }
-
-                    if let Ok(content) = fs::read_to_string(entry.path()) {
+                // 只读取最新的日志文件（最清晰简洁）
+                if let Some(latest_log) = app_log_files.first() {
+                    if let Ok(content) = fs::read_to_string(latest_log.path()) {
                         let lines: Vec<String> = content
                             .lines()
                             .filter(|line| !line.trim().is_empty()) // 过滤空行
                             .map(|line| line.to_string())
                             .collect();
-                        all_lines.extend(lines);
+                        
+                        if !lines.is_empty() {
+                            return Ok(lines);
+                        }
                     }
-                }
-
-                if !all_lines.is_empty() {
-                    return Ok(all_lines);
                 }
             }
 
