@@ -45,6 +45,7 @@ pub struct ProxyConfig {
 #[cfg_attr(feature = "ts-rs", ts(export, export_to = "../src/types/generated/"))]
 pub struct AIConfig {
     /// 供应商ID（如 "openai", "deepseek", "moonshot"）
+    #[serde(alias = "provider")] // 兼容旧字段名 "provider"
     pub provider_id: String,
     pub api_key: String,
     pub base_url: Option<String>, // 可选的自定义URL
