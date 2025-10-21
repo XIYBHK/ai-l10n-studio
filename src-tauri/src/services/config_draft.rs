@@ -85,8 +85,14 @@ impl ConfigDraft {
     /// 从文件加载配置
     fn load_from_file<P: AsRef<std::path::Path>>(path: P) -> Result<AppConfig> {
         let content = fs::read_to_string(path).map_err(|e| anyhow!("无法读取配置文件: {}", e))?;
-        let config: AppConfig =
+        let mut config: AppConfig =
             serde_json::from_str(&content).map_err(|e| anyhow!("无法解析配置文件: {}", e))?;
+        
+        // 数据迁移：将旧的大写 provider 值转换为小写 provider_id
+        for ai_config in &mut config.ai_configs {
+            ai_config.provider_id = ai_config.provider_id.to_lowercase();
+        }
+        
         Ok(config)
     }
 
