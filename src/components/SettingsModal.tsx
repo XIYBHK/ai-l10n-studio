@@ -665,7 +665,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({ visible, onClose }
                           setCurrentModelInfo(null);
                         }
                       }}
-                      dropdownRender={(menu) => (
+                      popupRender={(menu) => (
                         <>
                           {menu}
                           {availableModels.length === 0 && (
