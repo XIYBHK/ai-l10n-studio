@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from 'react';
-import { Layout, ConfigProvider, message, Alert, Button, Space } from 'antd';
+import { Layout, ConfigProvider, message, Alert, Button, Space, App as AntApp } from 'antd';
 import { listen } from '@tauri-apps/api/event';
 import { throttle } from 'lodash';
 import { MenuBar } from './components/MenuBar';
@@ -713,12 +713,13 @@ function App() {
   }, [isResizing]);
 
   return (
-    <ConfigProvider
-      theme={{
-        ...themeConfig,
-        algorithm,
-      }}
-    >
+    <AntApp>
+      <ConfigProvider
+        theme={{
+          ...themeConfig,
+          algorithm,
+        }}
+      >
       <div data-theme={isDark ? 'dark' : 'light'} style={{ height: '100vh', width: '100vw' }}>
         <Layout style={{ height: '100%', width: '100%' }}>
           <MenuBar
@@ -914,6 +915,7 @@ function App() {
         </Layout>
       </div>
     </ConfigProvider>
+    </AntApp>
   );
 }
 
