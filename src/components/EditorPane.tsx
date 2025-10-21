@@ -389,9 +389,9 @@ export const EditorPane: React.FC<EditorPaneProps> = ({
                   const shouldUpdate = await termLibraryCommands.shouldUpdateStyleSummary();
                   log.debug('检查是否需要更新风格总结', { shouldUpdate });
 
-                  if (shouldUpdate && activeAIConfig?.apiKey) {
+                  if (shouldUpdate && activeAIConfig) {
                     message.info('正在生成风格总结...', 1);
-                    await termLibraryCommands.generateStyleSummary(activeAIConfig.apiKey);
+                    await termLibraryCommands.generateStyleSummary();
                     message.success('术语已添加，风格总结已更新');
                   } else {
                     message.success('术语已添加到术语库');

@@ -102,7 +102,7 @@ export const TermLibraryManager: React.FC<TermLibraryManagerProps> = ({
   // 生成风格总结
   const handleGenerateStyleSummary = async () => {
     // ✅ 统一检查：是否有启用的AI配置
-    if (!activeAIConfig?.apiKey) {
+    if (!activeAIConfig) {
       message.error('请先设置并启用 AI 配置');
       return;
     }
@@ -110,7 +110,7 @@ export const TermLibraryManager: React.FC<TermLibraryManagerProps> = ({
     log.info('开始生成风格总结', { termCount: library?.metadata.total_terms || 0 });
     setLoading(true);
     try {
-      const summary = await termLibraryCommands.generateStyleSummary(activeAIConfig.apiKey);
+      const summary = await termLibraryCommands.generateStyleSummary();
       const summaryText = typeof summary === 'string' ? summary : String(summary);
       log.info('风格总结生成成功', { summary: summaryText.substring(0, 50) + '...' });
       message.success('风格总结已生成');

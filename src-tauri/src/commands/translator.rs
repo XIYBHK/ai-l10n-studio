@@ -613,7 +613,7 @@ pub fn remove_term_from_library(source: String) -> Result<(), String> {
 
 /// 生成风格总结（调用AI）
 #[tauri::command]
-pub async fn generate_style_summary(api_key: String) -> Result<String, String> {
+pub async fn generate_style_summary() -> Result<String, String> {
     let path = get_term_library_path();
     let mut library = TermLibrary::load_from_file(&path).map_err(|e| e.to_string())?;
 
@@ -624,6 +624,19 @@ pub async fn generate_style_summary(api_key: String) -> Result<String, String> {
 
     crate::app_log!("[风格总结] 开始生成，基于 {} 条术语", library.terms.len());
 
+    // 获取当前活动的 AI 配置
+    let draft = ConfigDraft::global().await;
+    let config_guard = draft.data();
+    let active_config = config_guard
+        .get_active_ai_config()
+        .ok_or_else(|| "未找到活动的AI配置".to_string())?;
+    
+    crate::app_log!(
+        "[风格总结] 使用AI配置: 供应商={}, 模型={}",
+        active_config.provider_id,
+        active_config.model
+    );
+
     // 构建分析提示
     let analysis_prompt = library.build_analysis_prompt();
     crate::app_log!(
@@ -632,9 +645,13 @@ pub async fn generate_style_summary(api_key: String) -> Result<String, String> {
     );
     crate::app_log!("[风格总结] 完整提示词内容:\n{}", analysis_prompt);
 
-    // 调用AI生成总结（风格总结不使用自定义提示词和目标语言，需要精确控制）
-    let mut translator =
-        AITranslator::new(api_key, None, false, None, None).map_err(|e| e.to_string())?;
+    // 调用AI生成总结（使用活动配置，不使用自定义提示词和目标语言）
+    let mut translator = AITranslator::new_with_config(
+        active_config.clone(),
+        false, // 不使用TM
+        None,  // 不使用自定义提示词
+        None,  // 不指定目标语言
+    ).map_err(|e| e.to_string())?;
     let summary = translator
         .translate_batch(vec![analysis_prompt], None)
         .await

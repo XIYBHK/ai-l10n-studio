@@ -388,10 +388,10 @@ export const termLibraryCommands = {
     );
   },
 
-  async generateStyleSummary(apiKey: string) {
+  async generateStyleSummary() {
     return invoke<string>(
       COMMANDS.TERM_LIBRARY_GENERATE_STYLE,
-      { apiKey },
+      undefined,
       {
         errorMessage: '生成风格总结失败',
       }
