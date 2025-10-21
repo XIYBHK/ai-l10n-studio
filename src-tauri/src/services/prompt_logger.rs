@@ -85,7 +85,7 @@ pub fn clear_prompt_logs() {
     }
 }
 
-/// 格式化提示词日志为可读文本
+/// 格式化提示词日志为可读文本（精简版）
 pub fn format_prompt_logs() -> String {
     let logs = get_prompt_logs();
     if logs.is_empty() {
@@ -93,42 +93,47 @@ pub fn format_prompt_logs() -> String {
     }
 
     let mut output = String::new();
-    output.push_str(&format!(
-        "========== 提示词日志 ({} 条) ==========\n\n",
-        logs.len()
-    ));
+    output.push_str(&format!("========== 提示词日志 (共 {} 条) ==========\n\n", logs.len()));
 
     for (idx, entry) in logs.iter().enumerate() {
-        output.push_str(&format!("┌─ 日志 #{} ─────────────────\n", idx + 1));
-        output.push_str(&format!(
-            "│ 时间: {}  类型: {}\n",
-            entry.timestamp, entry.log_type
-        ));
-
-        // 紧凑的元数据显示（单行）
+        output.push_str(&format!("========== #{} ==========\n", idx + 1));
+        
+        // 头部信息（一行显示）
+        let mut header_parts = vec![
+            format!("时间: {}", entry.timestamp),
+            format!("类型: {}", entry.log_type),
+        ];
+        
+        // 从元数据提取关键信息
         if let Some(ref metadata) = entry.metadata {
-            if let Ok(meta_str) = serde_json::to_string(metadata) {
-                // 只显示关键信息
-                output.push_str(&format!("│ 元数据: {}\n", meta_str));
+            if let Some(model) = metadata.get("model").and_then(|v| v.as_str()) {
+                header_parts.push(format!("模型: {}", model));
+            }
+            if let Some(provider) = metadata.get("provider").and_then(|v| v.as_str()) {
+                header_parts.push(format!("供应商: {}", provider));
+            }
+            if let Some(batch_idx) = metadata.get("batch_index").and_then(|v| v.as_u64()) {
+                if let Some(total) = metadata.get("total_batches").and_then(|v| v.as_u64()) {
+                    if let Some(size) = metadata.get("batch_size").and_then(|v| v.as_u64()) {
+                        header_parts.push(format!("批次: {}/{} ({} 条)", batch_idx, total, size));
+                    }
+                }
             }
         }
+        output.push_str(&format!("{}\n\n", header_parts.join(" | ")));
 
-        output.push_str(&format!("├─ 提示词 ─────────────────\n"));
-        // 缩进提示词内容
-        for line in entry.prompt.lines() {
-            output.push_str(&format!("│ {}\n", line));
-        }
+        // 完整提示词（真实发送给AI的内容）
+        output.push_str(&entry.prompt);
+        output.push_str("\n\n");
 
-        output.push_str(&format!("├─ AI 响应 ────────────────\n"));
+        // AI 响应
+        output.push_str("【AI 响应】\n");
         if let Some(ref response) = entry.response {
-            for line in response.lines() {
-                output.push_str(&format!("│ {}\n", line));
-            }
+            output.push_str(response);
         } else {
-            output.push_str("│ (暂无)\n");
+            output.push_str("(等待响应...)");
         }
-
-        output.push_str(&format!("└───────────────────────────\n\n"));
+        output.push_str("\n\n");
     }
 
     output
