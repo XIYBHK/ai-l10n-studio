@@ -408,8 +408,11 @@ pub fn get_app_logs() -> Result<Vec<String>, String> {
                     }
 
                     if let Ok(content) = fs::read_to_string(entry.path()) {
-                        let lines: Vec<String> =
-                            content.lines().map(|line| line.to_string()).collect();
+                        let lines: Vec<String> = content
+                            .lines()
+                            .filter(|line| !line.trim().is_empty()) // 过滤空行
+                            .map(|line| line.to_string())
+                            .collect();
                         all_lines.extend(lines);
                     }
                 }
