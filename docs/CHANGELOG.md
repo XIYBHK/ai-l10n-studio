@@ -1,5 +1,115 @@
 # 更新日志
 
+## 2025-10-21 - 日志系统架构重构（完全参考 clash-verge-rev）
+
+### ♻️ 重构 + ✨ 新特性
+
+**用户反馈**：日志文件的保存也需要参考 clash，全向 clash 看齐，该修改的就修改。
+
+**解决方案 - 完全重构，对齐 clash-verge-rev 架构**：
+
+#### 1️⃣ 创建全局日志服务（`src/services/logService.ts`）
+
+**参考 clash-verge-rev 的 `global-log-service.ts`**：
+
+| 特性 | ✅ 新实现 | 参考 clash |
+|-----|---------|----------|
+| 状态管理 | Zustand Store | ✅ 完全一致 |
+| 日志上限 | 1000 条 | ✅ 完全一致 |
+| 轮询间隔 | 固定 2 秒 | ✅ 完全一致（clash 是 1 秒） |
+| Pause/Resume | `backendEnabled` 控制 | ✅ 完全一致 |
+| Clear 逻辑 | 清空前端状态 + 后端文件 | ✅ 完全一致 |
+
+```typescript
+// 全局 Zustand Store
+export const useGlobalLogStore = create<GlobalLogStore>({
+  backendLogs: [],
+  backendEnabled: false,
+  frontendLogs: [],
+  frontendEnabled: false,
+  promptLogs: '',
+  // ... actions
+});
+
+// IPC 模式轮询（参考 clash）
+const backendPollingInterval = setInterval(fetchBackendLogs, 2000);
+```
+
+#### 2️⃣ 简化前端日志（`src/utils/simpleFrontendLogger.ts`）
+
+**移除复杂的文件保存逻辑**：
+
+| 对比项 | ❌ 旧实现 | ✅ 新实现 |
+|-------|---------|---------|
+| 日志存储 | 文件系统（自动保存） | 内存（Zustand） |
+| 日志上限 | 500 条 | 1000 条 |
+| 文件管理 | 轮转、清理 | 无（更简单） |
+| 过滤规则 | 45+ 行复杂规则 | 15 行简单规则 |
+| 自动保存 | 5 分钟或 100 条 | 无（按需导出） |
+
+```typescript
+// ❌ 旧：复杂的文件保存
+- private readonly AUTO_SAVE_INTERVAL = 5 * 60 * 1000;
+- private readonly MAX_LOGS_BEFORE_SAVE = 100;
+- async saveLogs() { ... 50+ 行代码 }
+
+// ✅ 新：只保留内存（参考 clash）
+appendFrontendLog(log); // 直接添加到 Zustand store
+```
+
+#### 3️⃣ 重构 DevToolsModal
+
+**使用新的全局日志 Store**：
+
+| 特性 | ❌ 旧实现 | ✅ 新实现 |
+|-----|---------|---------|
+| 数据源 | SWR 钩子（`useLogs`） | Zustand Store |
+| 控制按钮 | "实时模式" 切换 | "暂停/继续" 切换 |
+| 刷新按钮 | 手动刷新 | 自动轮询（无需手动） |
+| 保存按钮 | 保存到文件 | 导出到浏览器下载 |
+
+```typescript
+// ❌ 旧：SWR 钩子
+const { logs, refresh } = useBackendLogs({ refreshInterval: 2000 });
+
+// ✅ 新：Zustand Store（参考 clash）
+const { backendLogs, backendEnabled } = useGlobalLogStore();
+
+// 模态框打开时启动监控（参考 clash）
+useEffect(() => {
+  if (visible) {
+    startBackendLogMonitoring(); // 开始轮询
+  } else {
+    stopBackendLogMonitoring(); // 停止轮询
+  }
+}, [visible]);
+```
+
+**UI 变更**:
+- ✅ "⏸️ 暂停" / "▶️ 继续" 按钮（控制日志收集）
+- ✅ "清空"按钮（调用后端清空 + 刷新 store）
+- ❌ 移除"刷新"按钮（自动轮询，无需手动）
+- ❌ 移除"手动保存"按钮（改为"导出"）
+- ✅ "导出"按钮（浏览器下载）
+
+#### 4️⃣ 架构对比
+
+| 层级 | ❌ 旧架构 | ✅ 新架构（参考 clash） |
+|-----|---------|---------------------|
+| 状态管理 | SWR（分散） | Zustand（集中） |
+| 数据流 | Component → SWR → API | Component → Store → IPC |
+| 轮询控制 | SWR `enabled` | Store `enabled` + `setInterval` |
+| 文件保存 | 前端自动保存 | 后端管理（按需导出） |
+| 日志上限 | 500（前端） | 1000（参考 clash） |
+
+**影响**:
+- ✅ 代码更简洁（减少 300+ 行复杂逻辑）
+- ✅ 性能更好（无文件 I/O 开销）
+- ✅ 架构更清晰（与 clash 对齐）
+- ✅ 维护性更强（单一数据源）
+
+---
+
 ## 2025-10-21 - 简化日志系统（移除实时模式）
 
 ### ♻️ 重构
