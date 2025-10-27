@@ -35,7 +35,7 @@ encoding_rs = "0.8"
 dirs = "5.0"
 indexmap = { version = "2.0", features = ["serde"] }
 lazy_static = "1.4"
-toml = "0.8"  # Phase 3: 插件配置解析
+toml = "0.9"  # Phase 3: 插件配置解析
 # 日志系统
 tracing = "0.1"
 tracing-subscriber = { version = "0.3", features = ["env-filter", "fmt", "time"] }
