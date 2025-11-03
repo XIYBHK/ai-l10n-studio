@@ -1,19 +1,11 @@
 import React from 'react';
 import { Segmented } from 'antd';
 import { BulbOutlined, MoonOutlined, DesktopOutlined } from '@ant-design/icons';
-import { useTheme, ThemeMode } from '../hooks/useTheme';
+import { useTheme } from '../hooks/useTheme';
 import { useTranslation } from 'react-i18next';
 
-/**
- * Phase 9: 主题模式切换组件
- *
- * 特性：
- * - 三种模式：light/dark/system
- * - 图标 + 文字显示
- * - 响应式设计
- *
- * 参考：clash-verge-rev/components/setting/mods/theme-mode-switch.tsx
- */
+// 🚀 简化版主题切换组件 - 参考 cc-switch
+// 移除复杂逻辑，直接使用 useTheme
 
 interface ThemeModeSwitchProps {
   style?: React.CSSProperties;
@@ -32,7 +24,7 @@ export const ThemeModeSwitch: React.FC<ThemeModeSwitchProps> = ({ style, classNa
           <span>{t('theme.light') || '浅色'}</span>
         </div>
       ),
-      value: 'light' as ThemeMode,
+      value: 'light',
     },
     {
       label: (
@@ -41,7 +33,7 @@ export const ThemeModeSwitch: React.FC<ThemeModeSwitchProps> = ({ style, classNa
           <span>{t('theme.dark') || '深色'}</span>
         </div>
       ),
-      value: 'dark' as ThemeMode,
+      value: 'dark',
     },
     {
       label: (
@@ -50,7 +42,7 @@ export const ThemeModeSwitch: React.FC<ThemeModeSwitchProps> = ({ style, classNa
           <span>{t('theme.system') || '跟随系统'}</span>
         </div>
       ),
-      value: 'system' as ThemeMode,
+      value: 'system',
     },
   ];
 
@@ -60,7 +52,7 @@ export const ThemeModeSwitch: React.FC<ThemeModeSwitchProps> = ({ style, classNa
       className={className}
       options={options}
       value={themeMode}
-      onChange={(value) => setTheme(value as ThemeMode)}
+      onChange={(value) => setTheme(value as 'light' | 'dark' | 'system')}
     />
   );
 };

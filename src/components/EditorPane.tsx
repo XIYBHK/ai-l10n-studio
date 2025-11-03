@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, memo } from 'react';
 import { Input, Button, message } from 'antd';
 import { CopyOutlined, SaveOutlined } from '@ant-design/icons';
 import { POEntry } from '../types/tauri';
@@ -8,10 +8,10 @@ import { analyzeTranslationDifference } from '../utils/termAnalyzer';
 import { TermConfirmModal } from './TermConfirmModal';
 import { ErrorBoundary } from './ErrorBoundary';
 import { createModuleLogger } from '../utils/logger';
-import { eventDispatcher } from '../services/eventDispatcher';
 import { termLibraryCommands } from '../services/commands';
-import { useAppData } from '../providers/AppDataProvider';
+import { useAppData } from '../hooks/useConfig';
 
+// 💡 优化：使用 React.memo 避免不必要的重渲染
 const { TextArea } = Input;
 const log = createModuleLogger('EditorPane');
 
@@ -22,7 +22,7 @@ interface EditorPaneProps {
   // ⛔ 移除: apiKey (使用 useAppData 统一获取)
 }
 
-export const EditorPane: React.FC<EditorPaneProps> = ({
+const EditorPane: React.FC<EditorPaneProps> = memo(({
   entry,
   onEntryUpdate,
   aiTranslation,
@@ -81,9 +81,6 @@ export const EditorPane: React.FC<EditorPaneProps> = ({
       setHasUnsavedChanges(false);
       message.success('译文已保存');
       log.info('译文已保存', { index, translation });
-
-      // ✨ 修复：手动保存后，立即触发术语更新事件，以激活术语库相关逻辑
-      eventDispatcher.emit('term:updated', { source: 'manual_save' });
 
       // 保存后检测术语差异
       if (aiTranslation && translation && translation !== aiTranslation) {
@@ -397,11 +394,7 @@ export const EditorPane: React.FC<EditorPaneProps> = ({
                     message.success('术语已添加到术语库');
                   }
 
-                  // 发送术语更新事件，通知其他组件刷新
-                  await eventDispatcher.emit('term:updated', {
-                    source: detectedDifference.original,
-                  });
-                  log.debug('已发送术语更新事件');
+                  log.debug('术语已更新');
                 }
               } catch (error) {
                 log.logError(error, '添加术语失败');
@@ -423,4 +416,6 @@ export const EditorPane: React.FC<EditorPaneProps> = ({
       )}
     </div>
   );
-};
+});
+
+export default EditorPane;

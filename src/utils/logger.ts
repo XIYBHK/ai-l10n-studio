@@ -59,29 +59,29 @@ class Logger {
 
   debug(module: string, message: string, ...args: any[]) {
     if (this.config.level <= LogLevel.DEBUG) {
-      // 使用 setTimeout 0 延迟执行，避免浏览器添加时间戳
-      setTimeout(() => console.log(this.formatMessage('DEBUG', module, message), ...args), 0);
+      // 💡 优化：直接调用 console，避免 setTimeout(0) 的宏任务开销
+      console.log(this.formatMessage('DEBUG', module, message), ...args);
     }
   }
 
   info(module: string, message: string, ...args: any[]) {
     if (this.config.level <= LogLevel.INFO) {
-      // 使用 setTimeout 0 延迟执行，避免浏览器添加时间戳
-      setTimeout(() => console.log(this.formatMessage('INFO', module, message), ...args), 0);
+      // 💡 优化：直接调用 console，避免 setTimeout(0) 的宏任务开销
+      console.log(this.formatMessage('INFO', module, message), ...args);
     }
   }
 
   warn(module: string, message: string, ...args: any[]) {
     if (this.config.level <= LogLevel.WARN) {
-      // 使用 setTimeout 0 延迟执行，避免浏览器添加时间戳
-      setTimeout(() => console.warn(this.formatMessage('WARN', module, message), ...args), 0);
+      // 💡 优化：直接调用 console，避免 setTimeout(0) 的宏任务开销
+      console.warn(this.formatMessage('WARN', module, message), ...args);
     }
   }
 
   error(module: string, message: string, ...args: any[]) {
     if (this.config.level <= LogLevel.ERROR) {
-      // 使用 setTimeout 0 延迟执行，避免浏览器添加时间戳
-      setTimeout(() => console.error(this.formatMessage('ERROR', module, message), ...args), 0);
+      // 💡 优化：直接调用 console，避免 setTimeout(0) 的宏任务开销
+      console.error(this.formatMessage('ERROR', module, message), ...args);
     }
   }
 

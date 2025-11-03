@@ -21,7 +21,6 @@ import { useState, useCallback, useRef } from 'react';
 import { Channel } from '@tauri-apps/api/core';
 import { invoke } from '../services/tauriInvoke';
 import { createModuleLogger } from '../utils/logger';
-import { eventDispatcher } from '../services/eventDispatcher';
 
 const log = createModuleLogger('useChannelTranslation');
 
@@ -133,11 +132,6 @@ export const useChannelTranslation = () => {
           const normalized = { current: monotonicCurrent, total, percentage, text } as any;
           log.debug('📊 进度更新:', normalized);
           setProgress(normalized);
-          // 向全局事件总线广播，便于 DevTools/StatsManager 监听
-          eventDispatcher.emit('translation:progress', {
-            index: index ?? -1,
-            translation: text || '',
-          });
 
           if (callbacksRef.current.onProgress) {
             callbacksRef.current.onProgress(monotonicCurrent, total, percentage);
@@ -152,20 +146,6 @@ export const useChannelTranslation = () => {
         statsChannel.onmessage = (statsEvent) => {
           log.debug('📈 统计更新:', statsEvent);
           setStats(statsEvent);
-          // 🔧 广播批次统计事件到 statsManager（使用 translation-stats-update）
-          eventDispatcher.emit('translation-stats-update', {
-            total: 0, // 批次统计不设置 total，避免重复累加
-            tm_hits: statsEvent.tm_hits,
-            deduplicated: statsEvent.deduplicated,
-            ai_translated: statsEvent.ai_translated,
-            tm_learned: 0,
-            token_stats: {
-              input_tokens: statsEvent.token_stats.prompt_tokens,
-              output_tokens: statsEvent.token_stats.completion_tokens,
-              total_tokens: statsEvent.token_stats.total_tokens,
-              cost: statsEvent.token_stats.cost,
-            },
-          } as any);
 
           if (callbacksRef.current.onStats) {
             callbacksRef.current.onStats(statsEvent);
@@ -189,24 +169,6 @@ export const useChannelTranslation = () => {
           tm_hits: result.stats.tm_hits,
           ai_translated: result.stats.ai_translated,
           cost: result.stats.token_stats.cost,
-        });
-
-        // 🔧 发送任务完成统计事件（Channel API 后端无法发送事件）
-        eventDispatcher.emit('translation:after', {
-          success: true,
-          stats: {
-            total: result.stats.total || 0,
-            tm_hits: result.stats.tm_hits || 0,
-            deduplicated: result.stats.deduplicated || 0,
-            ai_translated: result.stats.ai_translated || 0,
-            tm_learned: result.stats.tm_learned || 0,
-            token_stats: {
-              input_tokens: result.stats.token_stats.prompt_tokens || 0,
-              output_tokens: result.stats.token_stats.completion_tokens || 0,
-              total_tokens: result.stats.token_stats.total_tokens || 0,
-              cost: result.stats.token_stats.cost || 0,
-            },
-          },
         });
 
         return result;

@@ -64,3 +64,23 @@ export function useSystemPrompt() {
   );
   return { prompt: data ?? '', error, isLoading: !!isLoading, mutate } as const;
 }
+
+// 统一的数据访问 hook（简化版）
+export function useAppData() {
+  const appConfig = useAppConfig();
+  const aiConfigs = useAIConfigs();
+  const systemPrompt = useSystemPrompt();
+
+  return {
+    config: appConfig.config,
+    aiConfigs: aiConfigs.configs,
+    activeAIConfig: aiConfigs.active,
+    systemPrompt: systemPrompt.prompt,
+    refreshAll: () => {
+      appConfig.mutate();
+      aiConfigs.mutateAll();
+      aiConfigs.mutateActive();
+      systemPrompt.mutate();
+    },
+  } as const;
+}

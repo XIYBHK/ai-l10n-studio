@@ -1,17 +1,12 @@
 {
   "permissions": {
     "allow": [
-      "Bash(grep:*)",
-      "Bash(python test:*)",
-      "Bash(awk:*)",
-      "Bash(cmd:*)",
-      "Bash(cat:*)",
-      "Bash(python:*)",
-      "Bash(git check-ignore po-translator-gui/node_modules/package.json)",
-      "Bash(git rm -rf --cached po-translator-gui/dist/ po-translator-gui/target/)",
-      "Bash(git add .gitlinguistics)",
-      "Bash(git commit -m \"$(cat <<''EOF''\nfix: 优化GitHub代码统计准确性\n\n- 添加.gitlinguistics配置文件\n- 优化语言检测和忽略生成文件\n- 解决node_modules被统计的问题\n\n🤖 Generated with [Claude Code](https://claude.com/claude-code)\n\nCo-Authored-By: Claude <noreply@anthropic.com>\nEOF\n)\")",
-      "Bash(git push origin feature/tauri-gui)"
+      "Bash(npm run build)",
+      "Bash(tee build_output.txt)",
+      "Bash(tee build_output_final.txt)",
+      "Bash(npx tsc --noEmit)",
+      "Bash(npx tsc)",
+      "Bash(npx vite build)"
     ],
     "deny": [],
     "ask": []

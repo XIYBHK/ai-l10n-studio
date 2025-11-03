@@ -13,7 +13,7 @@ import {
 import { useTheme } from '../hooks/useTheme';
 import { LanguageSelector } from './LanguageSelector';
 import type { LanguageInfo } from '../types/generated/LanguageInfo'; // ✅ 使用生成的类型
-import { useAppData } from '../providers/AppDataProvider';
+import { useAppData } from '../hooks/useConfig';
 
 const { Text } = Typography;
 

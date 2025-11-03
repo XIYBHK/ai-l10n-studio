@@ -119,10 +119,10 @@ export async function getInitialLanguage(): Promise<string> {
 
 /**
  * 切换语言
- * 动态加载语言文件并切换
+ * 预加载主要语言，避免动态导入延迟
  */
 export async function changeLanguage(language: string): Promise<void> {
-  // 检查是否已加载
+  // 💡 优化：预加载的语言直接切换，未预加载的懒加载
   if (!i18n.hasResourceBundle(language, 'translation')) {
     console.log('[i18n] Loading language resources:', language);
     const resources = await loadLanguage(language);
@@ -134,18 +134,51 @@ export async function changeLanguage(language: string): Promise<void> {
 }
 
 /**
+ * 预加载主要语言资源
+ * 应用启动时调用，避免切换时的动态导入
+ */
+async function preloadLanguageResources(): Promise<void> {
+  try {
+    // 💡 优化：预加载主要语言（zh-CN 和 en-US）
+    const primaryLanguages = ['zh-CN', 'en-US'];
+
+    console.log('[i18n] 🚀 开始预加载主要语言资源...');
+
+    for (const lang of primaryLanguages) {
+      try {
+        const resources = await loadLanguage(lang);
+        i18n.addResourceBundle(lang, 'translation', resources);
+        console.log(`[i18n] ✅ 已预加载: ${lang}`);
+      } catch (error) {
+        console.warn(`[i18n] ⚠️ 预加载失败: ${lang}`, error);
+      }
+    }
+  } catch (error) {
+    console.warn('[i18n] 预加载语言资源失败:', error);
+  }
+}
+
+/**
  * 初始化 i18n（异步版本）
- * 应用启动时调用，检测系统语言并加载
+ * 应用启动时调用，检测系统语言并预加载
  */
 export async function initializeI18n(): Promise<typeof i18n> {
+  // 1. 预加载主要语言资源
+  await preloadLanguageResources();
+
+  // 2. 获取初始语言
   const language = await getInitialLanguage();
 
-  // 加载初始语言资源
-  const resources = await loadLanguage(language);
+  // 3. 加载初始语言资源（如果未预加载）
+  if (!i18n.hasResourceBundle(language, 'translation')) {
+    console.log(`[i18n] 加载初始语言资源: ${language}`);
+    const resources = await loadLanguage(language);
+    i18n.addResourceBundle(language, 'translation', resources);
+  }
 
   await i18n.use(initReactI18next).init({
     resources: {
-      [language]: { translation: resources },
+      [language]: { translation: i18n.getResourceBundle(language, 'translation') },
     },
     lng: language,
     fallbackLng: DEFAULT_LANGUAGE,

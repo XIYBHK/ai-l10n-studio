@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, memo } from 'react';
 import { Card, Tag, Divider, Button, Popconfirm } from 'antd';
 import { RobotOutlined, SettingOutlined, ReloadOutlined, BookOutlined } from '@ant-design/icons';
 import { TranslationStats } from '../types/tauri';
@@ -7,15 +7,12 @@ import { TermLibraryManager } from './TermLibraryManager';
 import { useTheme } from '../hooks/useTheme';
 import { useStatsStore, useSessionStore } from '../store';
 import { createModuleLogger } from '../utils/logger';
-import { eventDispatcher } from '../services/eventDispatcher';
 import { useTermLibrary } from '../hooks/useTermLibrary';
 import { formatTokens, formatPercentage, formatCostByLocale } from '../utils/formatters';
 import { useAppStore } from '../store/useAppStore';
-import { useAppData } from '../providers/AppDataProvider';
-import { useEffect as useEffectHook } from 'react';
+import { useAppData } from '../hooks/useConfig';
 import { aiModelCommands } from '../services/commands';
 import type { ModelInfo } from '../types/generated/ModelInfo';
-// providerMapping 已移除，直接使用 config.providerId
 
 const log = createModuleLogger('AIWorkspace');
 
@@ -26,33 +23,23 @@ interface AIWorkspaceProps {
   // ⛔ 移除: apiKey (TermLibraryManager内部使用useAppData获取)
 }
 
-export const AIWorkspace: React.FC<AIWorkspaceProps> = ({
+const AIWorkspace: React.FC<AIWorkspaceProps> = memo(({
   isTranslating,
   onResetStats,
-  // ⛔ 移除: apiKey 参数
 }) => {
   const [memoryManagerVisible, setMemoryManagerVisible] = useState(false);
   const [termLibraryVisible, setTermLibraryVisible] = useState(false);
-  const [shouldLoadTerms, setShouldLoadTerms] = useState(true); // 🔧 改为默认加载，检查是否有术语
-  const { termLibrary, mutate: mutateTermLibrary } = useTermLibrary({ enabled: shouldLoadTerms });
+  const { termLibrary } = useTermLibrary({ enabled: true });
   const { colors } = useTheme();
 
-  // 📊 三层统计数据
-  // 1. stats (prop): 本次翻译详情（实时更新）
-  // 2. sessionStats: 本次会话聚合（当前文件打开后的所有翻译）
-  // 3. cumulativeStats: 累计统计（跨文件跨会话）
   const { cumulativeStats, resetCumulativeStats } = useStatsStore();
   const { sessionStats } = useSessionStore();
 
-  // 获取语言设置，用于货币显示
   const { language } = useAppStore();
-
-  // 🆕 获取当前 AI 配置和模型信息
   const { activeAIConfig } = useAppData();
   const [modelInfo, setModelInfo] = useState<ModelInfo | null>(null);
 
-  // 🆕 加载模型信息（用于检查缓存支持）
-  useEffectHook(() => {
+  React.useEffect(() => {
     if (activeAIConfig && activeAIConfig.providerId && activeAIConfig.model) {
       aiModelCommands
         .getModelInfo(activeAIConfig.providerId, activeAIConfig.model)
@@ -75,19 +62,6 @@ export const AIWorkspace: React.FC<AIWorkspaceProps> = ({
       setModelInfo(null);
     }
   }, [activeAIConfig?.providerId, activeAIConfig?.model]);
-
-  // 监听术语更新事件（说明有术语了，开始加载）
-  useEffect(() => {
-    const unsubscribe = eventDispatcher.on('term:updated', () => {
-      log.debug('收到术语更新事件，启用术语库加载');
-      setShouldLoadTerms(true);
-      mutateTermLibrary();
-    });
-
-    return () => {
-      unsubscribe();
-    };
-  }, [mutateTermLibrary]);
 
   // ❌ 移除在视图层的累计累加，统一在 App.tsx 的聚合器处处理
 
@@ -559,7 +533,6 @@ export const AIWorkspace: React.FC<AIWorkspaceProps> = ({
                   type="link"
                   size="small"
                   onClick={() => {
-                    setShouldLoadTerms(true);
                     setTermLibraryVisible(true);
                   }}
                   style={{ fontSize: '11px', height: '22px' }}
@@ -609,10 +582,12 @@ export const AIWorkspace: React.FC<AIWorkspaceProps> = ({
         visible={termLibraryVisible}
         onClose={() => {
           setTermLibraryVisible(false);
-          mutateTermLibrary(); // 关闭后重新加载术语库
+          // 关闭后重新加载术语库
         }}
         // ⛔ 移除: apiKey (TermLibraryManager内部使用useAppData获取)
       />
     </>
   );
-};
+});
+
+export default AIWorkspace;

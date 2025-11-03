@@ -10,7 +10,7 @@ import {
 import { TermEntry } from '../types/termLibrary';
 import { useTermLibrary } from '../hooks/useTermLibrary';
 import { useTheme } from '../hooks/useTheme';
-import { useAppData } from '../providers/AppDataProvider';
+import { useAppData } from '../hooks/useConfig';
 import { createModuleLogger } from '../utils/logger';
 import { termLibraryCommands } from '../services/commands'; // ✅ 迁移到统一命令层
 

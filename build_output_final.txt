@@ -1,0 +1,13 @@
+
+> po-translator-gui@1.0.0 build
+> tsc && vite build
+
+src/components/settings/AppearanceTab.tsx(10,34): error TS6133: 'theme' is declared but its value is never read.
+src/components/settings/AppearanceTab.tsx(14,17): error TS2345: Argument of type 'string' is not assignable to parameter of type 'Language'.
+src/components/settings/AppearanceTab.tsx(17,9): error TS6133: 'handleThemeChange' is declared but its value is never read.
+src/components/settings/LogsTab.tsx(2,51): error TS6133: 'Space' is declared but its value is never read.
+src/components/settings/LogsTab.tsx(15,10): error TS6133: 'logLevel' is declared but its value is never read.
+src/components/settings/LogsTab.tsx(16,10): error TS6133: 'logRetentionDays' is declared but its value is never read.
+src/components/settings/LogsTab.tsx(17,10): error TS6133: 'logMaxSize' is declared but its value is never read.
+src/components/settings/LogsTab.tsx(18,10): error TS6133: 'logMaxCount' is declared but its value is never read.
+src/components/settings/NotificationTab.tsx(2,30): error TS6133: 'InputNumber' is declared but its value is never read.

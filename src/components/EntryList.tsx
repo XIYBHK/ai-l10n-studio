@@ -1,11 +1,12 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, memo } from 'react';
 import { Progress, Button } from 'antd';
-import { CheckOutlined, ThunderboltOutlined } from '@ant-design/icons'; // Phase 7: 添加精翻图标
+import { CheckOutlined, ThunderboltOutlined } from '@ant-design/icons';
 import { POEntry } from '../types/tauri';
 import { useSessionStore } from '../store';
 import { useTheme } from '../hooks/useTheme';
 import { createModuleLogger } from '../utils/logger';
 
+// 💡 优化：使用 React.memo 避免不必要的重渲染
 const log = createModuleLogger('EntryList');
 
 interface EntryListProps {
@@ -18,7 +19,7 @@ interface EntryListProps {
   onContextualRefine?: (indices: number[]) => void; // Phase 7: 精翻选中的条目
 }
 
-export const EntryList: React.FC<EntryListProps> = ({
+const EntryList: React.FC<EntryListProps> = memo(({
   entries,
   currentEntry,
   isTranslating,
@@ -643,4 +644,6 @@ export const EntryList: React.FC<EntryListProps> = ({
       </div>
     </div>
   );
-};
+});
+
+export default EntryList;
