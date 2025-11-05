@@ -60,6 +60,14 @@ const EditorPane: React.FC<EditorPaneProps> = memo(({
     setHasUnsavedChanges(entry?.msgstr !== value);
   };
 
+  // ✅ 新增: 失去焦点时自动保存（触发术语检测）
+  const handleBlur = () => {
+    if (hasUnsavedChanges && entry) {
+      log.debug('译文输入框失去焦点，自动保存');
+      handleSaveTranslation();
+    }
+  };
+
   // 保存译文
   const handleSaveTranslation = () => {
     if (!entry) return;
@@ -319,6 +327,7 @@ const EditorPane: React.FC<EditorPaneProps> = memo(({
             <TextArea
               value={translation}
               onChange={(e) => handleTranslationChange(e.target.value)}
+              onBlur={handleBlur}
               placeholder="请输入翻译内容..."
               bordered={false}
               style={{

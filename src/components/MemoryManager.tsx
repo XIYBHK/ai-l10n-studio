@@ -141,14 +141,25 @@ export const MemoryManager: React.FC<MemoryManagerProps> = ({ visible, onClose }
 
       // 调用后端接口合并并保存内置词库
       const addedCount = await translationMemoryCommands.mergeBuiltinPhrases();
+      log.info('内置词库合并完成', { addedCount });
 
-      // 刷新记忆库显示
-      await mutate();
+      // 等待 SWR 重新获取最新数据
+      const updatedTM = await mutate();
+      log.debug('SWR 刷新完成', { hasTM: !!updatedTM });
+
+      // 立即更新前端显示
+      if (updatedTM && (updatedTM as any).memory) {
+        const entries: MemoryEntry[] = Object.entries((updatedTM as any).memory).map(
+          ([source, target], index) => ({ key: `${index}`, source, target: target as string })
+        );
+        setMemories(entries);
+        log.info('记忆库界面已更新', { count: entries.length });
+      }
 
       message.success(`已加载内置词库，新增 ${addedCount} 条短语`);
-      log.info('内置词库合并成功', { addedCount });
     } catch (error) {
       log.logError(error, '加载内置词库失败');
+      message.error(`加载失败: ${error instanceof Error ? error.message : '未知错误'}`);
     } finally {
       setLoading(false);
     }

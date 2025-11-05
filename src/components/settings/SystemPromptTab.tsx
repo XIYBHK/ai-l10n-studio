@@ -21,9 +21,11 @@ export const SystemPromptTab: React.FC<SystemPromptTabProps> = () => {
 
   // 同步SWR数据到本地表单状态
   useEffect(() => {
-    setPromptText(prompt || '');
+    const promptValue = prompt || '';
+    setPromptText(promptValue);
+    form.setFieldsValue({ prompt: promptValue });
     setIsModified(false);
-  }, [prompt]);
+  }, [prompt, form]);
 
   const handleSave = async (values: { prompt: string }) => {
     try {

@@ -13,28 +13,29 @@ export const LogsTab: React.FC<LogsTabProps> = () => {
   const [loading, setLoading] = useState(false);
 
   useEffect(() => {
-    if (true) {
-      configCommands
-        .get()
-        .then((config) => {
-          if (config.log_level) {
-            form.setFieldValue('log_level', config.log_level);
-          }
-          if (config.log_retention_days !== undefined) {
-            form.setFieldValue('log_retention_days', config.log_retention_days);
-          }
-          if (config.log_max_size !== undefined) {
-            form.setFieldValue('log_max_size', config.log_max_size);
-          }
-          if (config.log_max_count !== undefined) {
-            form.setFieldValue('log_max_count', config.log_max_count);
-          }
-        })
-        .catch((err) => {
-          log.error('加载日志配置失败:', err);
+    configCommands
+      .get()
+      .then((config) => {
+        // 设置表单默认值
+        form.setFieldsValue({
+          log_level: config.log_level || 'info',
+          log_retention_days: config.log_retention_days !== undefined ? config.log_retention_days : 7,
+          log_max_size: config.log_max_size !== undefined ? config.log_max_size : 128,
+          log_max_count: config.log_max_count !== undefined ? config.log_max_count : 8,
         });
-    }
-  }, []);
+        log.debug('日志配置已加载', config);
+      })
+      .catch((err) => {
+        log.error('加载日志配置失败:', err);
+        // 设置默认值
+        form.setFieldsValue({
+          log_level: 'info',
+          log_retention_days: 7,
+          log_max_size: 128,
+          log_max_count: 8,
+        });
+      });
+  }, [form]);
 
   const handleSave = async (values: any) => {
     setLoading(true);

@@ -14,6 +14,7 @@ import { useTheme } from '../hooks/useTheme';
 import { LanguageSelector } from './LanguageSelector';
 import type { LanguageInfo } from '../types/generated/LanguageInfo'; // ✅ 使用生成的类型
 import { useAppData } from '../hooks/useConfig';
+import { useSupportedLanguages } from '../hooks/useLanguage';
 
 const { Text } = Typography;
 
@@ -55,6 +56,16 @@ export const MenuBar: React.FC<MenuBarProps> = ({
 
   // ✅ 使用统一数据提供者获取AI配置状态
   const { activeAIConfig } = useAppData();
+
+  // ✅ 获取支持的语言列表用于显示可读名称
+  const { languages } = useSupportedLanguages();
+
+  // 根据语言代码查找显示名称
+  const getLanguageDisplayName = (code?: string) => {
+    if (!code) return '';
+    const lang = languages.find((l) => l.code === code);
+    return lang ? lang.display_name : code;
+  };
 
   return (
     <div
@@ -119,7 +130,7 @@ export const MenuBar: React.FC<MenuBarProps> = ({
             <GlobalOutlined style={{ fontSize: '16px', color: colors.textSecondary }} />
             {sourceLanguage && (
               <Text type="secondary" style={{ fontSize: '13px' }}>
-                {sourceLanguage}
+                {getLanguageDisplayName(sourceLanguage)}
               </Text>
             )}
             <Text type="secondary" style={{ fontSize: '13px' }}>
