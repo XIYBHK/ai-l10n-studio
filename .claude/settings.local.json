@@ -12,7 +12,8 @@
       "WebFetch(domain:docs.pmnd.rs)",
       "Bash(npm install:*)",
       "WebFetch(domain:v2.tauri.app)",
-      "Bash(cloc:*)"
+      "Bash(cloc:*)",
+      "Bash(cargo check:*)"
     ],
     "deny": [],
     "ask": []

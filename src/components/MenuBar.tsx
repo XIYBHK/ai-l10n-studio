@@ -1,3 +1,4 @@
+import React from 'react';
 import { Button, Tooltip, Divider, Space, Typography } from 'antd';
 import {
   FolderOpenOutlined,
@@ -36,7 +37,7 @@ interface MenuBarProps {
   onTargetLanguageChange?: (langCode: string, langInfo: LanguageInfo | undefined) => void;
 }
 
-export const MenuBar: React.FC<MenuBarProps> = ({
+export const MenuBar: React.FC<MenuBarProps> = React.memo(({
   onOpenFile,
   onSaveFile,
   onSaveAsFile,
@@ -200,4 +201,4 @@ export const MenuBar: React.FC<MenuBarProps> = ({
       )}
     </div>
   );
-};
+});

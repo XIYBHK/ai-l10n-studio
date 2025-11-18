@@ -7,7 +7,8 @@
 use anyhow::{Context, Result};
 use std::collections::HashMap;
 use std::path::{Path, PathBuf};
-use std::sync::{Arc, RwLock};
+use std::sync::Arc;
+use parking_lot::RwLock;
 
 use super::plugin_config::{PluginConfig, PluginScanner};
 use super::provider::{ProviderInfo, with_global_registry_mut};
@@ -135,7 +136,7 @@ impl PluginLoader {
         };
 
         {
-            let mut plugins = self.loaded_plugins.write().unwrap();
+            let mut plugins = self.loaded_plugins.write();
             plugins.insert(plugin_id.clone(), loaded_plugin);
         }
 
@@ -152,7 +153,7 @@ impl PluginLoader {
             loaded_at: chrono::Utc::now(),
         };
 
-        let mut plugins = self.loaded_plugins.write().unwrap();
+        let mut plugins = self.loaded_plugins.write();
         plugins.insert(config.plugin.id.clone(), loaded_plugin);
     }
 
@@ -172,13 +173,13 @@ impl PluginLoader {
 
     /// 获取所有已加载的插件信息
     pub fn get_loaded_plugins(&self) -> HashMap<String, LoadedPlugin> {
-        let plugins = self.loaded_plugins.read().unwrap();
+        let plugins = self.loaded_plugins.read();
         plugins.clone()
     }
 
     /// 获取特定插件的状态
     pub fn get_plugin_status(&self, plugin_id: &str) -> Option<PluginStatus> {
-        let plugins = self.loaded_plugins.read().unwrap();
+        let plugins = self.loaded_plugins.read();
         plugins.get(plugin_id).map(|p| p.status.clone())
     }
 
@@ -188,7 +189,7 @@ impl PluginLoader {
         
         // 1. 从已加载列表中获取插件路径
         let plugin_path = {
-            let plugins = self.loaded_plugins.read().unwrap();
+            let plugins = self.loaded_plugins.read();
             plugins.get(plugin_id)
                 .map(|p| p.path.clone())
                 .ok_or_else(|| anyhow::anyhow!("插件未找到: {}", plugin_id))?
@@ -289,7 +290,7 @@ impl AIProvider for DynamicAIProvider {
 }
 
 /// 全局插件加载器实例
-static GLOBAL_PLUGIN_LOADER: std::sync::OnceLock<std::sync::RwLock<Option<PluginLoader>>> = std::sync::OnceLock::new();
+static GLOBAL_PLUGIN_LOADER: std::sync::OnceLock<parking_lot::RwLock<Option<PluginLoader>>> = std::sync::OnceLock::new();
 
 /// 初始化全局插件加载器
 pub fn init_global_plugin_loader<P: AsRef<Path>>(plugins_dir: P) -> Result<()> {
@@ -297,11 +298,11 @@ pub fn init_global_plugin_loader<P: AsRef<Path>>(plugins_dir: P) -> Result<()> {
     loader.ensure_plugins_directory()?;
     
     let global_loader = GLOBAL_PLUGIN_LOADER.get_or_init(|| {
-        std::sync::RwLock::new(None)
+        parking_lot::RwLock::new(None)
     });
-    
+
     {
-        let mut loader_guard = global_loader.write().unwrap();
+        let mut loader_guard = global_loader.write();
         *loader_guard = Some(loader);
     }
 
@@ -316,11 +317,11 @@ where
 {
     let global_loader = GLOBAL_PLUGIN_LOADER.get()
         .ok_or_else(|| anyhow::anyhow!("插件加载器未初始化"))?;
-    
-    let loader_guard = global_loader.read().unwrap();
+
+    let loader_guard = global_loader.read();
     let loader = loader_guard.as_ref()
         .ok_or_else(|| anyhow::anyhow!("插件加载器未设置"))?;
-    
+
     f(loader)
 }
 

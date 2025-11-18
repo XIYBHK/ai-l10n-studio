@@ -2,6 +2,7 @@
 /// <reference types="react/jsx-runtime" />
 // ========== Phase 5: 语言选择器组件 ==========
 
+import React from 'react';
 import { Select } from 'antd';
 import { type LanguageInfo } from '../types/generated/LanguageInfo'; // ✅ 使用生成的类型
 import { createModuleLogger } from '../utils/logger';
@@ -18,7 +19,7 @@ export interface LanguageSelectorProps {
   disabled?: boolean;
 }
 
-export function LanguageSelector({
+export const LanguageSelector = React.memo(function LanguageSelector({
   value,
   onChange,
   placeholder = '选择语言',
@@ -54,4 +55,4 @@ export function LanguageSelector({
       ))}
     </Select>
   );
-}
+});

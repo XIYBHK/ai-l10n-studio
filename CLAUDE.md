@@ -1,5 +1,7 @@
 # CLAUDE.md
 
+This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
+
 本文件为 Claude Code (claude.ai/code) 在此代码库中工作时提供指导。
 
 ## 项目概述
@@ -8,7 +10,7 @@
 
 **架构**: 前端 (React + TypeScript + Ant Design) + 后端 (Rust + Tauri)
 **主要用途**: 为本地化文件提供 AI 辅助的专业翻译工作流
-**当前版本**: Phase 9+ (2025-10 架构重构完成)
+**当前版本**: Phase 9+ (2025-11 性能优化完成)
 **开发状态**: 生产就绪
 
 ### 核心功能
@@ -21,9 +23,9 @@
 - **上下文细化**: 上下文感知的精细翻译 (Ctrl+Shift+R)
 - **性能优化**: 大文件处理, 进度节流, 内存优化
 
-### 架构增强 (2025-11 性能优化)
+### 架构增强 (2025-11 性能优化 - 重大重构)
 
-**重大重构完成** - 删除了 3698 行过度工程化代码，应用流畅度提升 80-90%
+**性能革命性提升** - 删除 3698 行过度工程化代码，应用流畅度提升 80-90%
 
 - **彻底简化事件系统**: 删除 `eventDispatcher.ts` (368行) 和 `useTauriEventBridge.enhanced.ts` (421行)，直接使用 Tauri 2.0 原生 `listen()` API
 - **组件拆解重构**:
@@ -34,6 +36,12 @@
 - **配置管理简化**: 删除 `configSync.ts` (227行)，直接使用 Tauri `invoke()`
 - **性能优化**: 添加 `React.memo` 优化核心组件，移除 22 处 `setTimeout(0)` 调用
 - **日志系统优化**: 直接使用 `console.log`，消除宏任务队列膨胀
+
+**性能提升成果**:
+- 主题切换: ~200ms → <50ms (提升 75%)
+- 语言切换: ~500ms → <100ms (提升 80%)
+- 事件响应: ~100ms → <30ms (提升 70%)
+- 整体流畅度提升 80-90%
 
 ## 开发命令
 
@@ -122,15 +130,14 @@ npm run build  # 先单独构建前端
     - `dialogCommands`, `i18nCommands`, `logCommands`, `systemCommands`
   - `api.ts` - **[已弃用]** 旧 API 层 (部分迁移到 `commands.ts`)
   - `formatters.ts` - 统一格式化工具 (成本、token、百分比)
-  - ~~`eventDispatcher.ts`~~ - **[已删除]** 过度复杂的事件系统
-  - ~~`statsEngine.ts`~~ - **[已删除]** 事件溯源系统
+  - `eventDispatcher.simple.ts` - **简化事件系统** (2025-11 重构)
+  - `logService.ts` - 日志服务 (2025-11 新增)
 
 - **Hook**: 自定义 React hooks
   - `useTheme` - **简化版主题管理** (~100行，直接 DOM 操作)
   - `useAsync` - 通用异步操作处理
   - `useChannelTranslation` - 简化版翻译通道 (移除事件分发)
-  - ~~`useTauriEventBridge.enhanced.ts`~~ - **[已删除]** 过度封装的事件桥接
-  - ~~`useAppData`~~ - **[已删除]** AppDataProvider 相关
+  - `useAppData` - **统一数据访问** (简化版 SWR hooks，无需 Provider)
 
 - **状态管理**: Zustand 状态管理
   - `useAppStore.ts` - 主应用状态，持久化主题、语言、累积统计
@@ -184,17 +191,37 @@ npm run build  # 先单独构建前端
 
 ### 关键集成点 (更新 2025-11)
 
-**简化三层架构**:
+**简化三层架构** (2025-11 重构后):
 
 ```
-组件层 → 命令层 → Tauri IPC → Rust 服务层
+组件层 (React Components)
+   ↓ useAppData (简化版 SWR hooks)
+命令层 (commands.ts - 13 模块)
+   ↓ 统一错误处理 + 日志
+Tauri Commands (52 个)
+   ↓ 序列化/反序列化
+Rust 服务层 (services/)
+   ↓ ConfigDraft (原子更新)
+Rust 持久化层 (JSON文件)
 ```
 
-- **命令层** (`commands.ts`): 类型安全的 Tauri 调用，统一错误处理
-- **直接事件系统**: 使用 Tauri 2.0 原生 `listen()` API，无额外封装
+**2025-11 重大简化**:
+- ❌ **删除 AppDataProvider**: 过度封装 (280行)，组件直接使用 `useAppData` hooks
+- ❌ **删除增强事件桥接**: `useTauriEventBridge.enhanced.ts` (421行)，直接使用 Tauri 2.0 `listen()`
+- ❌ **删除事件分发器**: `eventDispatcher.ts` (368行)，事件处理更直接
+- ❌ **删除统计引擎**: `statsEngine.ts` + `statsManagerV2.ts` (259行)，使用简单 `useState`
+- ✅ **保留命令层**: `commands.ts` 提供类型安全和统一错误处理
+- ✅ **保留 Draft 模式**: `ConfigDraft` 实现配置的原子更新和并发安全
+
+**核心特性**:
+- **命令层** (`commands.ts`): 类型安全的 Tauri 调用，统一错误处理，52个命令，13个模块
+- **简化事件系统**: 直接使用 Tauri 2.0 原生 `listen()` API，无额外封装层，事件响应提升70%
+- **简化数据访问**: 直接使用 SWR hooks，无需额外 Provider 层
 - **草稿模式配置** (`ConfigDraft`): 使用 `parking_lot::RwLock` 的原子更新，自动持久化和事件发射
 - **翻译流水线**: PO 解析 → TM 查找 → AI 翻译 → TM 更新 → 直接回调
-- **日志系统**: 优化版日志，直接 `console.log` 输出，结构化日志，轮转 (每个文件 128KB，保留 8 个文件，保留天数)
+- **Channel API**: 唯一翻译路径，高性能实时推送，替代轮询
+- **简化统计系统**: 使用简单的 `useState`，避免过度工程化的事件溯源
+- **简化主题系统**: 直接 DOM 操作，最小化状态管理，切换速度提升75%
 
 **性能优化成果**:
 - 主题切换: ~200ms → <50ms (提升 75%)
@@ -305,9 +332,23 @@ useEffect(() => {
 }, []);
 ```
 
+**简化数据访问模式** (2025-11 重构):
+
+```typescript
+// ✅ 推荐：直接使用 useAppData
+import { useAppData } from '@/hooks/useConfig';
+
+function MyComponent() {
+  const { config, aiConfigs, activeAIConfig, systemPrompt, refreshAll } = useAppData();
+  // 数据自动缓存和重验证
+  return <div>{config?.apiKey}</div>;
+}
+```
+
 **已删除的复杂系统**:
-- ~~`eventDispatcher.ts`~~ - 过度复杂的事件分发器
-- ~~`useTauriEventBridge.enhanced.ts`~~ - 不必要的封装层
+- ~~`eventDispatcher.ts`~~ - 过度复杂的事件分发器 (368行)
+- ~~`useTauriEventBridge.enhanced.ts`~~ - 不必要的封装层 (421行)
+- ~~`AppDataProvider.tsx`~~ - 过度封装的 Context Provider (280行)
 - ~~防抖/节流机制~~ - Tauri 原生已经足够高效
 
 ### 文件操作
@@ -497,7 +538,10 @@ await configCommands.update(updatedConfig);
   - `NotificationTab.tsx` - 通知设置标签页
   - `LogsTab.tsx` - 日志查看标签页
 - `src/hooks/useTheme.ts` - **简化版主题系统** (从 253 行优化到 100 行)
+- `src/hooks/useConfig.ts` - **统一数据访问** (useAppData hooks，无需 Provider)
 - `src/store/useAppStore.ts` - 主应用状态
+- `src/services/eventDispatcher.simple.ts` - **简化事件系统**
+- `src/services/logService.ts` - 日志服务 (2025-11 新增)
 
 **后端**:
 
@@ -509,11 +553,12 @@ await configCommands.update(updatedConfig);
 - `src-tauri/src/services/po_parser.rs` - PO 文件解析器 (基于 nom)
 
 **已删除的文件** (2025-11 优化):
-- ~~`src/services/eventDispatcher.ts`~~ - 过度复杂的事件系统
-- ~~`src/hooks/useTauriEventBridge.enhanced.ts`~~ - 不必要的事件桥接
-- ~~`src/services/statsEngine.ts`~~ - 事件溯源系统
-- ~~`src/services/statsManagerV2.ts`~~ - 重试版本的统计管理器
-- ~~`src/services/configSync.ts`~~ - 配置同步管理器
+- ~~`src/services/eventDispatcher.ts`~~ - 过度复杂的事件系统 (368行)
+- ~~`src/hooks/useTauriEventBridge.enhanced.ts`~~ - 不必要的事件桥接 (421行)
+- ~~`src/services/statsEngine.ts`~~ - 事件溯源系统 (147行)
+- ~~`src/services/statsManagerV2.ts`~~ - 重试版本的统计管理器 (112行)
+- ~~`src/services/configSync.ts`~~ - 配置同步管理器 (227行)
+- ~~`src/providers/AppDataProvider.tsx`~~ - 过度封装的 Context Provider (280行)
 - ~~`src/providers/`~~ - 整个 providers 目录
 
 ---

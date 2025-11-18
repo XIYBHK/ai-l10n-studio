@@ -12,7 +12,7 @@ interface ThemeModeSwitchProps {
   className?: string;
 }
 
-export const ThemeModeSwitch: React.FC<ThemeModeSwitchProps> = ({ style, className }) => {
+export const ThemeModeSwitch: React.FC<ThemeModeSwitchProps> = React.memo(({ style, className }) => {
   const { themeMode, setTheme } = useTheme();
   const { t } = useTranslation();
 
@@ -55,4 +55,4 @@ export const ThemeModeSwitch: React.FC<ThemeModeSwitchProps> = ({ style, classNa
       onChange={(value) => setTheme(value as 'light' | 'dark' | 'system')}
     />
   );
-};
+});

@@ -1,11 +1,9 @@
-#![allow(clippy::unwrap_used)]
-#![allow(clippy::expect_used)]
 #![allow(clippy::collapsible_if)]
 #![allow(clippy::useless_format)]
 
 use chrono::Local;
 use serde::{Deserialize, Serialize};
-use std::sync::Mutex;
+use parking_lot::Mutex;
 
 /// 提示词日志条目
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -22,7 +20,7 @@ static PROMPT_LOGS: Mutex<Option<Vec<PromptLogEntry>>> = Mutex::new(None);
 
 /// 初始化提示词日志
 pub fn init_prompt_logger() {
-    let mut logs = PROMPT_LOGS.lock().unwrap();
+    let mut logs = PROMPT_LOGS.lock();
     if logs.is_none() {
         *logs = Some(Vec::new());
     }
@@ -30,7 +28,7 @@ pub fn init_prompt_logger() {
 
 /// 记录提示词
 pub fn log_prompt(log_type: &str, prompt: String, metadata: Option<serde_json::Value>) -> String {
-    let mut logs = PROMPT_LOGS.lock().unwrap();
+    let mut logs = PROMPT_LOGS.lock();
     if logs.is_none() {
         *logs = Some(Vec::new());
     }
@@ -63,7 +61,7 @@ pub fn log_prompt(log_type: &str, prompt: String, metadata: Option<serde_json::V
 
 /// 更新提示词的响应
 pub fn update_prompt_response(index: usize, response: String) {
-    let mut logs = PROMPT_LOGS.lock().expect("PROMPT_LOGS lock poisoned");
+    let mut logs = PROMPT_LOGS.lock();
     if let Some(ref mut log_vec) = *logs {
         if let Some(entry) = log_vec.get_mut(index) {
             entry.response = Some(response);
@@ -73,13 +71,13 @@ pub fn update_prompt_response(index: usize, response: String) {
 
 /// 获取所有提示词日志
 pub fn get_prompt_logs() -> Vec<PromptLogEntry> {
-    let logs = PROMPT_LOGS.lock().expect("PROMPT_LOGS lock poisoned");
+    let logs = PROMPT_LOGS.lock();
     logs.as_ref().map(|v| v.clone()).unwrap_or_default()
 }
 
 /// 清空提示词日志
 pub fn clear_prompt_logs() {
-    let mut logs = PROMPT_LOGS.lock().expect("PROMPT_LOGS lock poisoned");
+    let mut logs = PROMPT_LOGS.lock();
     if let Some(ref mut log_vec) = *logs {
         log_vec.clear();
     }

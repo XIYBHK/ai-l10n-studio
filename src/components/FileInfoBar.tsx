@@ -7,7 +7,7 @@ interface FileInfoBarProps {
   filePath?: string | null;
 }
 
-export const FileInfoBar: React.FC<FileInfoBarProps> = ({ filePath }) => {
+export const FileInfoBar: React.FC<FileInfoBarProps> = React.memo(({ filePath }) => {
   const { format, isLoading: loadingFormat } = useFileFormat(filePath || null);
   const { metadata, isLoading: loadingMeta } = useFileMetadata(filePath || null);
   const { colors } = useTheme();
@@ -42,4 +42,4 @@ export const FileInfoBar: React.FC<FileInfoBarProps> = ({ filePath }) => {
       </Space>
     </div>
   );
-};
+});

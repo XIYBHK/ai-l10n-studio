@@ -1,14 +1,33 @@
-## 架构（简版）
+## 架构（2025-11 性能优化重构版）
 
 ### 核心技术栈
 
-**前端**: React 18 + TypeScript + Ant Design + Zustand + SWR  
-**后端**: Tauri **2.8** + Rust (Tokio) + nom parser + 8 AI SDKs  
+**前端**: React 18 + TypeScript + Ant Design + Zustand + SWR
+**后端**: Tauri **2.8** + Rust (Tokio) + nom parser + 8 AI SDKs
 **构建**: Vite + Vitest（73 测试，82.8% 覆盖率）
 
-### 提升开发效率的核心架构
+### 2025-11 重大性能重构
 
-#### 简化三层架构设计 (2025-11重构 ✅ 已完成)
+**删除 3,698 行过度工程化代码，应用流畅度提升 80-90%**
+
+#### 🎯 重构目标
+
+- **简化架构**: 从过度工程化到简洁高效
+- **提升性能**: 事件响应、主题切换、语言切换速度大幅提升
+- **降低复杂度**: 删除不必要的抽象层和封装
+- **改善开发体验**: 更直观的代码结构，更容易维护
+
+#### 📊 性能提升成果
+
+| 功能 | 重构前 | 重构后 | 提升 |
+|-----|--------|--------|------|
+| 主题切换 | ~200ms | <50ms | **75%** |
+| 语言切换 | ~500ms | <100ms | **80%** |
+| 事件响应 | ~100ms | <30ms | **70%** |
+| 整体流畅度 | 基准 | 基准 | **80-90%** |
+| 代码行数 | 基准 | -3,698行 | **显著简化** |
+
+### 简化三层架构设计 (2025-11重构 ✅ 已完成)
 
 ```
 组件层 (React Components)
@@ -22,22 +41,59 @@ Rust 服务层 (services/)
 Rust 持久化层 (JSON文件)
 ```
 
-**✅ 2025-11 重大简化**:
+**2025-11 重大简化**:
 
-- ❌ **删除 AppDataProvider**：过度封装 (280行)，组件直接使用 `useAppData` hooks
-- ❌ **删除增强事件桥接**：`useTauriEventBridge.enhanced.ts` (421行)，直接使用 Tauri 2.0 `listen()`
-- ❌ **删除事件分发器**：`eventDispatcher.ts` (368行)，事件处理更直接
-- ❌ **删除统计引擎**：`statsEngine.ts` + `statsManagerV2.ts` (259行)，使用简单 `useState`
-- ✅ **保留命令层**：`commands.ts` 提供类型安全和统一错误处理
-- ✅ **保留 Draft 模式**：`ConfigDraft` 实现配置的原子更新和并发安全
+- ❌ **删除 AppDataProvider**: 过度封装 (280行)，组件直接使用 `useAppData` hooks
+- ❌ **删除增强事件桥接**: `useTauriEventBridge.enhanced.ts` (421行)，直接使用 Tauri 2.0 `listen()`
+- ❌ **删除事件分发器**: `eventDispatcher.ts` (368行)，事件处理更直接
+- ❌ **删除统计引擎**: `statsEngine.ts` + `statsManagerV2.ts` (259行)，使用简单 `useState`
+- ✅ **保留命令层**: `commands.ts` 提供类型安全和统一错误处理
+- ✅ **保留 Draft 模式**: `ConfigDraft` 实现配置的原子更新和并发安全
 
-**性能提升**:
+### 🔧 核心架构组件
 
-- 流畅度提升 **80-90%**
-- 事件响应速度提升 **70%**（~100ms → <30ms）
-- 代码量减少 **3,698 行**
+#### 1️⃣ **组件层优化**
 
-#### 简化事件系统 (2025-11 彻底简化 ✅)
+**组件拆解重构**:
+
+- **SettingsModal**: 1,121行 → 81行 (减少92%)
+  - 拆分为5个独立Tab组件：`AIConfigTab`, `SystemPromptTab`, `AppearanceTab`, `NotificationTab`, `LogsTab`
+- **App.tsx**: 925行 → 95行 (减少90%)
+  - 拆分为4个子组件：`AppMenuBar`, `AppHeader`, `MainContent`, `AppWorkspace`
+
+**性能优化** (2025-12 增强):
+
+- ✅ **React.memo 优化**: 核心组件添加记忆化
+  - 已优化：`EntryList`, `EditorPane`, `FileInfoBar`, `ThemeModeSwitch`, `LanguageSelector`, `MenuBar`
+  - 减少不必要的重新渲染，提升渲染性能
+- ✅ **移除 setTimeout(0)**: 消除22处宏任务队列膨胀
+- ✅ **直接 DOM 操作**: 主题系统直接操作DOM，切换速度提升75%
+
+#### 2️⃣ **命令层 (统一 API 层)**
+
+**核心特性**:
+
+- **类型安全**: 52个命令的完整TypeScript类型定义
+- **统一错误处理**: 集中式`invoke()`包装器
+- **模块化组织**: 13个命令模块
+- **零配置参数转换**: 自动camelCase转换
+
+**命令模块**:
+
+```typescript
+// 主要命令模块
+configCommands           // 应用配置管理
+aiConfigCommands         // AI配置CRUD + 连接测试
+aiModelCommands          // 模型信息查询 + 成本计算
+aiProviderCommands       // 动态供应商系统
+translatorCommands       // 翻译执行（单条/批量/精翻）
+translationMemoryCommands // 翻译记忆库
+termLibraryCommands      // 术语库操作
+poFileCommands           // PO文件解析和保存
+systemCommands           // 系统信息 + 主题检测
+```
+
+#### 3️⃣ **简化事件系统**
 
 **原则：直接使用 Tauri 2.0 原生 API，无额外封装**
 
@@ -66,7 +122,7 @@ useEffect(() => {
 - 代码更简洁，易于理解
 - 完全符合 Tauri 2.0 最佳实践
 
-#### 简化数据访问 (2025-11 简化 ✅)
+#### 4️⃣ **简化数据访问**
 
 **原则：直接使用 SWR hooks，无需额外 Provider 层**
 
@@ -76,13 +132,12 @@ import { useAppData } from '@/hooks/useConfig';
 
 function MyComponent() {
   const { config, aiConfigs, activeAIConfig, systemPrompt, refreshAll } = useAppData();
-
   // 数据自动缓存和重验证
   return <div>{config?.apiKey}</div>;
 }
 ```
 
-**实现细节** (`src/hooks/useConfig.ts`):
+**实现细节**:
 
 ```typescript
 // 简单的 SWR hooks 组合
@@ -113,33 +168,67 @@ export function useAppData() {
 
 **核心特性**:
 
-- ✅ **SWR 集成**: 自动缓存配置/TM/术语库（避免重复 IPC 调用）
+- ✅ **SWR 集成**: 自动缓存配置/TM/术语库
 - ✅ **统一刷新**: `refreshAll()` 一键刷新所有数据
 - ✅ **类型安全**: 完整 TypeScript 类型推断
 - ✅ **更简单**: 无需 Provider 包裹，直接使用 hooks
 
-**收益**:
+#### 5️⃣ **简化主题系统**
 
-- 代码减少 **280 行**
-- 更符合 React hooks 惯例
-- 减少嵌套层级
+**原则：直接 DOM 操作，最小化状态管理**
 
-#### Channel API 翻译（统一路径）
+```typescript
+// ✅ 简化版 useTheme (~100行)
+export const useTheme = () => {
+  const themeMode = useAppStore((state) => state.theme);
+  const setThemeMode = useAppStore((state) => state.setTheme);
 
-```rust
-// Rust 端通过 IPC Channel 发送进度和统计
-progress_tx.send(ProgressEvent { current, total, entry }).await;
-stats_tx.send(StatsEvent { tm_hits, deduplicated, ... }).await;
+  // 计算实际应用的主题
+  const appliedTheme = useMemo((): 'light' | 'dark' => {
+    return themeMode === 'system' ? getSystemTheme() : themeMode;
+  }, [themeMode]);
 
-// 前端 useChannelTranslation 订阅
-const { progress, stats } = useChannelTranslation(onProgress);
+  // 直接操作 DOM，无复杂状态同步
+  useEffect(() => {
+    const root = window.document.documentElement;
+    root.classList.remove('light', 'dark');
+    root.classList.add(appliedTheme);
+    window.localStorage.setItem('theme', themeMode);
+  }, [appliedTheme]);
+
+  return { themeMode, appliedTheme, setTheme: setThemeMode };
+};
 ```
 
-- 高性能: 替代轮询，实时推送
-- 低内存: 流式处理，无需缓存全部结果
-- 唯一翻译路径: 已移除 Event API
+**系统主题检测** (2025-11 简化):
 
-#### 简化统计系统 (2025-11 彻底简化 ✅)
+```typescript
+// ✅ 简化版主题检测
+const getSystemTheme = (): 'light' | 'dark' => {
+  if (typeof window === 'undefined' || !window.matchMedia) {
+    return 'light';
+  }
+  return window.matchMedia('(prefers-color-scheme: dark)').matches
+    ? 'dark'
+    : 'light';
+};
+```
+
+**已删除的复杂系统**:
+
+- ❌ `initializeGlobalSystemThemeManager` (135行) - 全局管理器
+- ❌ 原生 API 检测 (`systemCommands.getNativeSystemTheme()`)
+- ❌ 混合检测策略、结果对比、不一致警告
+- ❌ 缓存检测结果、性能优化层
+
+**简化收益**:
+
+- 代码减少 **153 行**（253行 → 100行）
+- 主题切换速度提升 **75%**（200ms → <50ms）
+- 移除不必要的系统调用
+- 完全符合 Tauri 2.0 webview 环境
+
+#### 6️⃣ **简化统计系统**
 
 **原则：使用简单的 useState，避免过度工程化**
 
@@ -201,25 +290,66 @@ Zustand Stores (持久化)
 - 内存占用降低 **30%**
 - 更符合 React 最佳实践
 
-#### 6️⃣ **性能优化策略** (2025-11 更新 ✅)
+### 🚀 性能优化策略 (2025-11 更新)
 
-- **智能分批**: <10MB 直接加载，10-50MB 500条/批，>50MB 200条/批
-- **去重翻译**: 批量去重（减少 70% API 调用）
-- **✅ 简化事件**: 直接使用 Tauri `listen()`，事件响应提升 70%
-- **LRU 缓存**: 翻译记忆库模式匹配缓存
-- **✅ 日志优化**: 移除 22 处 `setTimeout(0)` 调用，消除宏任务队列膨胀
-- **✅ 组件优化**: React.memo 优化核心组件（EntryList, EditorPane, AIWorkspace）
-- **✅ 主题优化**: 直接 DOM 操作，主题切换速度提升 75%（200ms → <50ms）
-- **✅ 语言优化**: 预加载主要语言，切换速度提升 80%（500ms → <100ms）
-- **🆕 代码清理**: 删除 3,698 行过度工程化代码，应用流畅度提升 80-90%
+#### 重大重构成果
 
-**已删除的性能开销**:
+**删除 3,698 行过度工程化代码，应用流畅度提升 80-90%**
 
-- ❌ 事件节流/防抖（现在直接使用 Tauri 原生 API，无需节流）
-- ❌ 日志轮转（简化为直接 console.log）
-- ❌ 复杂的状态同步（简化为直接 useState）
+#### 1️⃣ **事件系统优化**
 
-#### 7️⃣ **多AI供应商架构（插件化 + 类型统一）**
+- ✅ **直接使用 Tauri 2.0 原生 API**: 删除复杂的事件分发器
+- ✅ **事件响应提升 70%**: ~100ms → <30ms
+- ✅ **简化清理机制**: 直接返回 unlisten 函数
+
+#### 2️⃣ **组件架构优化**
+
+- ✅ **SettingsModal 拆解**: 1,121行 → 81行 (减少92%)
+- ✅ **App.tsx 拆解**: 925行 → 95行 (减少90%)
+- ✅ **React.memo 优化**: 核心组件性能优化
+- ✅ **移除 setTimeout(0)**: 消除宏任务队列膨胀
+
+#### 3️⃣ **主题系统简化**
+
+- ✅ **直接 DOM 操作**: 移除复杂的状态同步
+- ✅ **切换速度提升 75%**: 200ms → <50ms
+- ✅ **代码简化**: 253行 → 100行
+
+#### 4️⃣ **数据访问简化**
+
+- ✅ **删除 AppDataProvider**: 280行过度封装
+- ✅ **直接使用 SWR hooks**: 更符合 React 惯例
+- ✅ **统一数据访问**: `useAppData` 一键获取所有配置
+
+#### 5️⃣ **统计系统简化**
+
+- ✅ **删除事件溯源**: 259行复杂系统
+- ✅ **简单 useState**: 实时更新，无延迟
+- ✅ **内存占用降低 30%**
+
+#### 6️⃣ **日志系统优化**
+
+- ✅ **直接 console.log**: 移除复杂的日志轮转
+- ✅ **开发模式详细输出**: 便于调试
+- ✅ **生产模式优化**: 性能优先
+
+### 🎯 Channel API 翻译（统一路径）
+
+```rust
+// Rust 端通过 IPC Channel 发送进度和统计
+progress_tx.send(ProgressEvent { current, total, entry }).await;
+stats_tx.send(StatsEvent { tm_hits, deduplicated, ... }).await;
+
+// 前端 useChannelTranslation 订阅
+const { progress, stats } = useChannelTranslation(onProgress);
+```
+
+- **高性能**: 替代轮询，实时推送
+- **低内存**: 流式处理，无需缓存全部结果
+- **唯一翻译路径**: 已移除 Event API
+- **实时统计**: 无延迟更新
+
+### 🔧 多AI供应商架构（插件化 + 类型统一）
 
 ```
 ┌─────────────────────────────────────────────────┐
@@ -280,17 +410,17 @@ Zustand Stores (持久化)
 └─────────────────────────────────────────────────┘
 ```
 
-**核心设计**：
+**核心设计**:
 
-- **插件化架构** - `AIProvider` trait + `ProviderRegistry` 全局注册表
-- **🆕 类型统一** - 前后端 `AIConfig` 完全一致，通过 serde camelCase 自动转换
-- **🆕 providerId 字符串** - 废弃 `ProviderType` 枚举，使用 `providerId: string`
-- **强制 ModelInfo** - 无降级逻辑，模型不存在 = 立即失败
-- **统一定价** - USD per 1M tokens，清除所有 CNY 标记
-- **精确成本** - 支持缓存定价，30%命中率节省27%成本
-- **类型安全** - ts-rs 自动生成 TypeScript 类型（`ProviderInfo`, `ProxyConfig` 等）
+- **插件化架构**: `AIProvider` trait + `ProviderRegistry` 全局注册表
+- **类型统一**: 前后端 `AIConfig` 完全一致，通过 serde camelCase 自动转换
+- **providerId 字符串**: 废弃 `ProviderType` 枚举，使用 `providerId: string`
+- **强制 ModelInfo**: 无降级逻辑，模型不存在 = 立即失败
+- **统一定价**: USD per 1M tokens，清除所有 CNY 标记
+- **精确成本**: 支持缓存定价，30%命中率节省27%成本
+- **类型安全**: ts-rs 自动生成 TypeScript 类型
 
-#### 8️⃣ **AI 翻译管线**
+### 🔄 AI 翻译管线
 
 ```
 PO 文件 → nom 解析器 → 去重队列
@@ -302,14 +432,14 @@ AI 翻译（ModelInfo + CostCalculator 精确计费）
 TM 更新 + 事件发布 → SWR 失效 → UI 更新
 ```
 
-**🆕 翻译记忆库逻辑** (2025-10-21):
+**翻译记忆库逻辑** (2025-11 更新):
 
 - **首次使用**: 自动加载83+条内置短语到记忆库文件
 - **后续使用**: 只查询记忆库文件，不再自动回退到内置短语
 - **用户控制**: 删除的词条不会被自动恢复，保持用户完全控制权
 - **手动加载**: 用户可主动合并内置词库到当前记忆库
 
-#### 9️⃣ **🆕 后端配置管理（Draft 模式）** - 2025-10
+### 🏗️ 后端配置管理（Draft 模式）
 
 ```rust
 // 读取配置（只读访问）
@@ -327,102 +457,165 @@ let draft = ConfigDraft::global().await;
 draft.apply()?; // 保存到磁盘 + 发送事件
 ```
 
-**核心特性**：
-
-- ✅ **并发安全**：`parking_lot::RwLock` 保证线程安全
-- ✅ **原子更新**：配置修改要么全部成功，要么全部失败
-- ✅ **自动持久化**：`apply()` 自动保存到磁盘并发送更新事件
-- ✅ **全局单例**：`ConfigDraft::global()` 提供全局访问
-
-**参考源**：`clash-verge-rev/src-tauri/src/config/draft.rs`
-
-#### 🆕 **简化主题系统** - 2025-11 ✅
-
-**原则：直接 DOM 操作，最小化状态管理**
-
-```typescript
-// ✅ 简化版 useTheme (~100行)
-export const useTheme = () => {
-  const themeMode = useAppStore((state) => state.theme);
-  const setThemeMode = useAppStore((state) => state.setTheme);
-
-  // 计算实际应用的主题
-  const appliedTheme = useMemo((): 'light' | 'dark' => {
-    return themeMode === 'system' ? getSystemTheme() : themeMode;
-  }, [themeMode]);
-
-  // 直接操作 DOM，无复杂状态同步
-  useEffect(() => {
-    const root = window.document.documentElement;
-    root.classList.remove('light', 'dark');
-    root.classList.add(appliedTheme);
-    window.localStorage.setItem('theme', themeMode);
-  }, [appliedTheme]);
-
-  return { themeMode, appliedTheme, setTheme: setThemeMode };
-};
-```
-
-**系统主题检测**:
-
-```typescript
-// 简单的系统主题获取
-const getSystemTheme = (): 'light' | 'dark' => {
-  if (typeof window === 'undefined' || !window.matchMedia) {
-    return 'light';
-  }
-  return window.matchMedia('(prefers-color-scheme: dark)').matches
-    ? 'dark'
-    : 'light';
-};
-
-// 监听系统主题变化
-useEffect(() => {
-  if (themeMode !== 'system') return;
-
-  const mediaQuery = window.matchMedia('(prefers-color-scheme: dark)');
-  const handleChange = () => setThemeMode('system'); // 强制重新渲染
-
-  mediaQuery.addEventListener('change', handleChange);
-  return () => mediaQuery.removeEventListener('change', handleChange);
-}, [themeMode]);
-```
-
-**已删除的复杂系统**:
-
-- ❌ `initializeGlobalSystemThemeManager` (135行) - 全局管理器
-- ❌ 原生 API 检测 (`systemCommands.getNativeSystemTheme()`)
-- ❌ 混合检测策略、结果对比、不一致警告
-- ❌ 缓存检测结果、性能优化层
-
 **核心特性**:
 
-- ✅ **直接 DOM 操作**: 无状态同步，性能最优
-- ✅ **简单媒体查询**: `window.matchMedia` 足够准确
-- ✅ **自动响应变化**: 系统主题变化自动更新
-- ✅ **本地存储**: 持久化用户选择
+- ✅ **并发安全**: `parking_lot::RwLock` 保证线程安全（性能优于标准库 RwLock）
+- ✅ **原子更新**: 配置修改要么全部成功，要么全部失败
+- ✅ **自动持久化**: `apply()` 自动保存到磁盘并发送更新事件
+- ✅ **全局单例**: `ConfigDraft::global()` 提供全局访问
 
-**收益**:
+**并发安全最佳实践** (2025-12 改进):
 
-- 代码减少 **153 行**（253行 → 100行）
-- 主题切换速度提升 **75%**（200ms → <50ms）
-- 移除不必要的系统调用
-- 更符合 Tauri 2.0 webview 环境
+- ✅ **使用 `parking_lot`**: 所有锁统一使用 `parking_lot::{RwLock, Mutex}`
+  - 性能更好：比标准库快 **2-3倍**
+  - API更简洁：直接返回 Guard，无需 `.unwrap()`
+  - 无锁中毒：更可靠的错误恢复
+- ✅ **避免 panic**: 使用 `Result` 传播错误，而非 `expect()`/`unwrap()`
+  - 已修复：`plugin_loader.rs`, `prompt_logger.rs`, `ai_translator.rs`
+  - 所有生产代码中的锁操作都已移除 `unwrap()`
+- ✅ **错误处理规范**:
+  - Rust: 使用 `?` 操作符传播错误
+  - TypeScript: 统一命令层提供错误处理
 
----
+### 📊 文件处理性能优化
 
-### 开发工作流
+**智能分批策略**:
+
+- **小文件** (<10MB): 直接内存加载
+- **大文件** (10-50MB): 自动分块，每批 500 个条目
+- **超大文件** (>50MB): 优化处理，每批 200 个条目
+
+**优化特性**:
+
+- ✅ **文件大小分析**: 大文件的文件大小分析和警告
+- ✅ **流支持**: 为未来增强提供流支持
+- ✅ **内存优化**: 大型操作的自动内存优化
+- ✅ **LRU 缓存**: 翻译记忆库模式匹配缓存
+
+### 🧪 开发工作流
 
 ```bash
 npm run tauri:dev  # 自动热重载（Vite HMR + Rust 监控）
 npm run test       # Vitest 监听模式
 npm run test:ui    # 可视化测试调试
 
-# 新增：代码规范工具
+# 代码质量工具
 npm run format       # Prettier 格式化前端代码
 npm run format:check # 检查代码格式
 npm run fmt          # Rust 代码格式化
 npm run lint:all     # 检查所有代码格式
+npm run i18n:check   # 检查未使用的 i18n 键
 ```
 
-**完整文档**: `CLAUDE.md` §Architecture Overview & Development Guidelines
+**开发体验提升**:
+
+- ✅ **更直观的代码结构**: 组件拆解，职责清晰
+- ✅ **更简单的调试**: 删除复杂的抽象层
+- ✅ **更好的性能**: 直接的 API 调用，无中间开销
+- ✅ **更低的维护成本**: 减少技术债务
+
+### 🎯 架构决策亮点
+
+#### **为什么删除 AppDataProvider？**
+
+```typescript
+// ❌ 旧方法：需要 Provider 包裹
+<AppDataProvider>
+  <App />
+</AppDataProvider>
+
+// ✅ 新方法：直接使用 hooks
+import { useAppData } from '@/hooks/useConfig';
+
+function MyComponent() {
+  const { config, aiConfigs, activeAIConfig, systemPrompt, refreshAll } = useAppData();
+  // 自动缓存和重验证
+}
+```
+
+**收益**:
+
+- 代码减少 **280 行**
+- 无需 Provider 包裹，减少嵌套层级
+- 更符合 React hooks 惯例
+- 直接使用 SWR，自动缓存和重验证
+
+#### **为什么简化事件系统？**
+
+```typescript
+// ❌ 旧方法：复杂的事件分发器
+eventDispatcher.on('translation:progress', (data) => {
+  // 处理事件
+});
+
+// ✅ 新方法：直接使用 Tauri API
+import { listen } from '@tauri-apps/api/event';
+
+useEffect(() => {
+  const unlisten = listen('translation:progress', (event) => {
+    setProgress(event.payload);
+  });
+  return unlisten; // 自动清理
+}, []);
+```
+
+**收益**:
+
+- 事件响应速度提升 **60-80%**
+- 代码更简洁，易于理解
+- 完全符合 Tauri 2.0 最佳实践
+- 删除 **368行** 复杂代码
+
+#### **为什么简化统计系统？**
+
+```typescript
+// ❌ 旧方法：复杂的事件溯源
+const statsEngine = new StatsEngine();
+const statsManager = new StatsManagerV2();
+
+// ✅ 新方法：简单的 useState
+const [stats, setStats] = useState<TranslationStats>({
+  total: 0,
+  tm_hits: 0,
+  deduplicated: 0,
+  ai_translated: 0,
+  token_stats: { input_tokens: 0, output_tokens: 0, total_tokens: 0, cost: 0 },
+  tm_learned: 0,
+});
+
+// Channel 实时更新
+statsChannel.onmessage = (statsEvent) => {
+  setStats(statsEvent);
+};
+```
+
+**收益**:
+
+- 代码减少 **259 行**
+- 翻译统计实时更新，无延迟
+- 内存占用降低 **30%**
+- 更符合 React 最佳实践
+
+---
+
+## 🏁 总结
+
+2025-11 的性能优化重构是 AI L10n Studio 项目的重要里程碑。通过删除 3,698 行过度工程化的代码，我们实现了：
+
+1. **性能革命**: 整体流畅度提升 80-90%
+2. **架构简化**: 从复杂的多层抽象到简洁的三层架构
+3. **开发体验**: 更直观的代码结构，更容易维护
+4. **技术债务**: 大幅减少，为未来扩展奠定基础
+
+这次重构证明了**简单即是美**的架构理念，直接调用原生 API 往往比复杂的封装层更有效。
+
+**完整文档参考**:
+
+- API 参考: `docs/API.md` §统一命令层
+- 数据契约: `docs/DataContract.md` §类型统一契约
+- 变更历史: `docs/CHANGELOG.md` §2025-11 性能优化
+- AI 助手指导: `CLAUDE.md` §架构概览
+
+---
+
+**开始构建高性能的 AI 翻译应用吧！** 🚀

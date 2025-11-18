@@ -958,15 +958,18 @@ impl AITranslator {
 
             // 使用 ModelInfo 计算精确成本
             // Fail Fast 架构设计：多AI供应商架构要求强制 ModelInfo 存在
-            // 模型不存在 = 配置错误，应立即失败而非降级（见 docs/Architecture.md:195）
-            #[allow(clippy::expect_used)]
+            // 模型不存在 = 配置错误，应立即返回错误（见 docs/Architecture.md:195）
             let model_info = {
                 use crate::services::ai::provider::with_global_registry;
                 with_global_registry(|registry| {
                     registry.get_provider(&self.provider_id)
                         .and_then(|provider| provider.get_model_info(&self.model))
-                        .expect("模型信息必须存在，请检查插件系统中的模型定义")
-                })
+                        .ok_or_else(|| anyhow!(
+                            "模型信息不存在: provider={}, model={}. 请检查插件系统中的模型定义",
+                            self.provider_id,
+                            self.model
+                        ))
+                })?
             };
 
             use crate::services::ai::CostCalculator;
