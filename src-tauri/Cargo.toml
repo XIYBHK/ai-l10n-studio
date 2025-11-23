@@ -119,5 +119,8 @@ useless_format = "allow"
 dead_code = "allow"
 unused_mut = "allow"
 
+[dev-dependencies]
+tempfile = "3.23.0"
+
 [lints.clippy.upper_case_acronyms]
 level = "allow"

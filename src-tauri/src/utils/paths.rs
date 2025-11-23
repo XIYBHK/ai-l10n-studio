@@ -124,6 +124,23 @@ pub fn ensure_tm_dir() -> std::io::Result<()> {
     Ok(())
 }
 
+/// 获取术语库路径
+/// 路径：app_data_dir/term_library.json
+pub fn get_term_library_path() -> PathBuf {
+    app_data_dir()
+        .map(|dir| dir.join("term_library.json"))
+        .unwrap_or_else(|_| {
+            // 降级：使用程序目录
+            let mut path = std::env::current_exe()
+                .ok()
+                .and_then(|p| p.parent().map(|p| p.to_path_buf()))
+                .unwrap_or_else(|| PathBuf::from("."));
+            path.push("data");
+            path.push("term_library.json");
+            path
+        })
+}
+
 // ========== 初始化函数 ==========
 
 /// 初始化应用目录结构

@@ -9,7 +9,10 @@
  * 4. 便于重构和维护
  */
 
-import { invoke } from './api';
+import { apiClient } from './apiClient';
+
+// 便捷的 invoke 包装
+const invoke = apiClient.invoke.bind(apiClient);
 import type { POEntry, TranslationStats, ContextualRefineRequest } from '../types/tauri';
 import type { AIConfig } from '../types/aiProvider';
 import type { TermLibrary } from '../types/termLibrary';
@@ -114,7 +117,7 @@ export const configCommands = {
     });
   },
 
-  async update(config: any) {
+  async update(config: Record<string, unknown>) {
     return invoke<void>(
       COMMANDS.CONFIG_UPDATE,
       { config },
@@ -124,7 +127,7 @@ export const configCommands = {
     );
   },
 
-  async validate(config: any) {
+  async validate(config: Record<string, unknown>) {
     return invoke<boolean>(
       COMMANDS.CONFIG_VALIDATE,
       { config },
@@ -425,7 +428,7 @@ export const translationMemoryCommands = {
     });
   },
 
-  async save(memory: any) {
+  async save(memory: Record<string, unknown>) {
     return invoke<void>(
       COMMANDS.TM_SAVE,
       { memory },

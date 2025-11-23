@@ -39,7 +39,7 @@ export const AppearanceTab: React.FC<AppearanceTabProps> = () => {
 
           <Col span={12}>
             <Form.Item label="主题模式">
-              <ThemeModeSwitch style={{ width: '100%' }} />
+              <ThemeModeSwitch />
             </Form.Item>
           </Col>
         </Row>

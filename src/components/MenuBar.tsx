@@ -8,7 +8,6 @@ import {
   BulbOutlined,
   BulbFilled,
   BugOutlined,
-  CodeOutlined,
   GlobalOutlined,
 } from '@ant-design/icons';
 import { useTheme } from '../hooks/useTheme';
@@ -73,42 +72,54 @@ export const MenuBar: React.FC<MenuBarProps> = React.memo(({
       style={{
         display: 'flex',
         alignItems: 'center',
-        padding: '8px 16px',
-        background: colors.bgTertiary,
+        padding: '12px 20px',
+        background: colors.bgSecondary,
         borderBottom: `1px solid ${colors.borderPrimary}`,
-        gap: '8px',
+        gap: '12px',
+        height: '64px',
+        boxShadow: isDarkMode ? 'none' : '0 1px 2px rgba(0,0,0,0.03)',
+        zIndex: 10
       }}
     >
       <div
         style={{
-          fontSize: '16px',
-          fontWeight: 600,
-          marginRight: '16px',
+          fontSize: '18px',
+          fontWeight: 700,
+          marginRight: '24px',
           color: colors.statusUntranslated,
+          display: 'flex',
+          alignItems: 'center',
+          gap: '8px',
+          letterSpacing: '-0.5px'
         }}
       >
-        🌐 PO 翻译工具
+        <GlobalOutlined style={{fontSize: '24px'}} />
+        <span style={{background: `linear-gradient(135deg, ${colors.statusUntranslated}, ${colors.statusTranslated})`, WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent'}}>
+          AI L10n Studio
+        </span>
       </div>
 
-      <Tooltip title="打开 PO 文件 (Ctrl+O)">
-        <Button icon={<FolderOpenOutlined />} onClick={onOpenFile} size="middle">
-          打开
-        </Button>
-      </Tooltip>
+      <Space size="small">
+        <Tooltip title="打开 PO 文件 (Ctrl+O)">
+          <Button icon={<FolderOpenOutlined />} onClick={onOpenFile}>
+            打开
+          </Button>
+        </Tooltip>
 
-      <Tooltip title="保存到原文件 (Ctrl+S)">
-        <Button icon={<SaveOutlined />} onClick={onSaveFile} disabled={!hasEntries} size="middle">
-          保存
-        </Button>
-      </Tooltip>
+        <Tooltip title="保存到原文件 (Ctrl+S)">
+          <Button icon={<SaveOutlined />} onClick={onSaveFile} disabled={!hasEntries}>
+            保存
+          </Button>
+        </Tooltip>
 
-      <Tooltip title="另存为新文件">
-        <Button icon={<SaveOutlined />} onClick={onSaveAsFile} disabled={!hasEntries} size="middle">
-          另存为
-        </Button>
-      </Tooltip>
+        <Tooltip title="另存为新文件">
+          <Button onClick={onSaveAsFile} disabled={!hasEntries}>
+            另存为
+          </Button>
+        </Tooltip>
+      </Space>
 
-      <Divider type="vertical" style={{ height: '24px', margin: '0 8px' }} />
+      <Divider type="vertical" style={{ height: '24px', margin: '0 12px', borderColor: colors.borderSecondary }} />
 
       <Tooltip title="翻译所有未翻译条目">
         <Button
@@ -117,7 +128,13 @@ export const MenuBar: React.FC<MenuBarProps> = React.memo(({
           onClick={onTranslateAll}
           loading={isTranslating}
           disabled={!activeAIConfig || !hasEntries}
-          size="middle"
+          style={{
+            borderRadius: '6px',
+            fontWeight: 500,
+            padding: '4px 20px',
+            height: '36px',
+            boxShadow: '0 2px 4px rgba(59, 130, 246, 0.2)'
+          }}
         >
           {isTranslating ? '翻译中...' : '批量翻译'}
         </Button>
@@ -125,16 +142,22 @@ export const MenuBar: React.FC<MenuBarProps> = React.memo(({
 
       {/* Phase 5: 语言选择器 */}
       {hasEntries && (
-        <>
-          <Divider type="vertical" style={{ height: '24px', margin: '0 8px' }} />
-          <Space size="small" align="center">
-            <GlobalOutlined style={{ fontSize: '16px', color: colors.textSecondary }} />
+        <div style={{
+            display: 'flex', 
+            alignItems: 'center', 
+            background: colors.bgTertiary, 
+            padding: '4px 12px', 
+            borderRadius: '6px',
+            border: `1px solid ${colors.borderSecondary}`,
+            marginLeft: '12px'
+        }}>
+            <GlobalOutlined style={{ fontSize: '16px', color: colors.textSecondary, marginRight: 8 }} />
             {sourceLanguage && (
-              <Text type="secondary" style={{ fontSize: '13px' }}>
+              <Text strong style={{ fontSize: '13px', color: colors.textSecondary }}>
                 {getLanguageDisplayName(sourceLanguage)}
               </Text>
             )}
-            <Text type="secondary" style={{ fontSize: '13px' }}>
+            <Text type="secondary" style={{ fontSize: '13px', margin: '0 8px' }}>
               →
             </Text>
             <LanguageSelector
@@ -142,63 +165,60 @@ export const MenuBar: React.FC<MenuBarProps> = React.memo(({
               onChange={onTargetLanguageChange}
               placeholder="目标语言"
               disabled={isTranslating}
-              style={{ width: 180 }}
+              style={{ width: 160 }}
             />
-          </Space>
-        </>
+        </div>
       )}
 
       <div style={{ flex: 1 }} />
 
-      {onThemeToggle && (
-        <Tooltip title={isDarkMode ? '切换到亮色模式' : '切换到暗色模式'}>
-          <Button
-            icon={isDarkMode ? <BulbFilled /> : <BulbOutlined />}
-            onClick={onThemeToggle}
-            size="middle"
-            type="text"
-          />
-        </Tooltip>
-      )}
-
-      {onDevTools && (
-        <Tooltip title="后端日志 - 查看Rust翻译引擎日志">
-          <Button icon={<BugOutlined />} onClick={onDevTools} size="middle" type="text" />
-        </Tooltip>
-      )}
-
-      <Tooltip title="前端日志 - 按 F12 打开浏览器开发者工具">
-        <Button
-          icon={<CodeOutlined />}
-          onClick={() => {
-            // 仅日志提示，避免阻塞弹窗
-            console.info('[DevTools] 按 F12 打开开发者工具，或右键 → 检查 → Console');
-          }}
-          size="middle"
-          type="text"
-        />
-      </Tooltip>
-
-      <Tooltip title="设置 API 密钥和翻译选项">
-        <Button icon={<SettingOutlined />} onClick={onSettings} size="middle">
-          设置
-        </Button>
-      </Tooltip>
-
       {!activeAIConfig && (
         <div
           style={{
-            padding: '4px 12px',
+            padding: '6px 16px',
             background: isDarkMode ? 'rgba(250, 173, 20, 0.15)' : '#fff7e6',
             border: `1px solid ${colors.statusNeedsReview}`,
-            borderRadius: '4px',
+            borderRadius: '20px',
             fontSize: '12px',
+            fontWeight: 500,
             color: colors.statusNeedsReview,
+            display: 'flex',
+            alignItems: 'center',
+            gap: '6px'
           }}
         >
-          ⚠️ 请先在设置中配置 AI 服务
+          <BulbFilled />
+          请先配置 AI 服务
         </div>
       )}
+
+      <Space size={4}>
+        {onThemeToggle && (
+            <Tooltip title={isDarkMode ? '切换到亮色模式' : '切换到暗色模式'}>
+            <Button
+                icon={isDarkMode ? <BulbFilled /> : <BulbOutlined />}
+                onClick={onThemeToggle}
+                type="text"
+                style={{color: colors.textSecondary}}
+            />
+            </Tooltip>
+        )}
+
+        <Tooltip title="设置">
+            <Button 
+                icon={<SettingOutlined />} 
+                onClick={onSettings} 
+                type="text"
+                style={{color: colors.textSecondary}}
+            />
+        </Tooltip>
+        
+        {onDevTools && (
+            <Tooltip title="调试日志">
+            <Button icon={<BugOutlined />} onClick={onDevTools} type="text" style={{color: colors.textTertiary}} />
+            </Tooltip>
+        )}
+      </Space>
     </div>
   );
 });

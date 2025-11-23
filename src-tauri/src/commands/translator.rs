@@ -561,20 +561,11 @@ pub fn get_frontend_logs() -> Result<Vec<String>, String> {
 
 // ==================== 术语库相关命令 ====================
 
-/// 获取术语库路径
-fn get_term_library_path() -> std::path::PathBuf {
-    let data_dir = std::env::current_exe()
-        .ok()
-        .and_then(|p| p.parent().map(|p| p.to_path_buf()))
-        .unwrap_or_else(|| std::path::PathBuf::from("."));
-
-    data_dir.join("data").join("term_library.json")
-}
 
 /// 获取术语库
 #[tauri::command]
 pub fn get_term_library() -> Result<TermLibrary, String> {
-    let path = get_term_library_path();
+    let path = crate::utils::paths::get_term_library_path();
     TermLibrary::load_from_file(path).map_err(|e| e.to_string())
 }
 
@@ -586,7 +577,7 @@ pub fn add_term_to_library(
     ai_translation: String,
     context: Option<String>,
 ) -> Result<(), String> {
-    let path = get_term_library_path();
+    let path = crate::utils::paths::get_term_library_path();
     let mut library = TermLibrary::load_from_file(&path).map_err(|e| e.to_string())?;
 
     library
@@ -601,7 +592,7 @@ pub fn add_term_to_library(
 /// 从术语库删除术语
 #[tauri::command]
 pub fn remove_term_from_library(source: String) -> Result<(), String> {
-    let path = get_term_library_path();
+    let path = crate::utils::paths::get_term_library_path();
     let mut library = TermLibrary::load_from_file(&path).map_err(|e| e.to_string())?;
 
     library.remove_term(&source).map_err(|e| e.to_string())?;
@@ -614,7 +605,7 @@ pub fn remove_term_from_library(source: String) -> Result<(), String> {
 /// 生成风格总结（调用AI）
 #[tauri::command]
 pub async fn generate_style_summary() -> Result<String, String> {
-    let path = get_term_library_path();
+    let path = crate::utils::paths::get_term_library_path();
     let mut library = TermLibrary::load_from_file(&path).map_err(|e| e.to_string())?;
 
     if library.terms.is_empty() {
@@ -936,7 +927,7 @@ pub async fn contextual_refine(
 /// 检查是否需要更新风格总结
 #[tauri::command]
 pub fn should_update_style_summary() -> Result<bool, String> {
-    let path = get_term_library_path();
+    let path = crate::utils::paths::get_term_library_path();
     let library = TermLibrary::load_from_file(&path).map_err(|e| e.to_string())?;
     Ok(library.should_update_style_summary())
 }

@@ -474,11 +474,13 @@ const AIWorkspace: React.FC<AIWorkspaceProps> = memo(({
   return (
     <>
       <Card
+        bordered={false}
         title={
-          <span>
-            <RobotOutlined /> AI 工作区
+          <span style={{ fontSize: '14px', fontWeight: 600 }}>
+            <RobotOutlined style={{ marginRight: 8, color: colors.statusUntranslated }} /> 
+            AI 工作区
             {isTranslating && (
-              <Tag color="processing" style={{ marginLeft: 8 }}>
+              <Tag color="processing" style={{ marginLeft: 8, border: 'none' }}>
                 翻译中...
               </Tag>
             )}
@@ -490,12 +492,29 @@ const AIWorkspace: React.FC<AIWorkspaceProps> = memo(({
             size="small"
             icon={<SettingOutlined />}
             onClick={() => setMemoryManagerVisible(true)}
+            style={{ color: colors.textSecondary }}
           >
             记忆库
           </Button>
         }
         size="small"
-        style={{ height: '100%', overflowY: 'auto' }}
+        style={{ 
+          height: '100%', 
+          overflowY: 'auto', 
+          background: colors.bgSecondary, // 使用稍深的背景色区分
+          borderRadius: 0 
+        }}
+        styles={{
+            header: {
+              background: colors.bgSecondary,
+              borderBottom: `1px solid ${colors.borderSecondary}`,
+              minHeight: '46px'
+            },
+            body: {
+              padding: '12px',
+              background: colors.bgSecondary
+            }
+        }}
       >
         {/* 累计统计 - 简化样式 */}
         {renderCumulativeStats()}

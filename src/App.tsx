@@ -84,8 +84,9 @@ export default function App() {
 
     const setupListener = async () => {
       // 监听翻译完成事件，更新统计
-      unlisten = await listen<TranslationStats>('translation:after', (event) => {
-        const stats = event.payload;
+      unlisten = await listen<{ stats: TranslationStats }>('translation:after', (event) => {
+        // 后端发送的是 { stats: TranslationStats } 结构
+        const stats = event.payload.stats;
         log.info('📊 收到翻译统计', stats);
         
         // 更新会话统计（当前会话累计）
@@ -440,30 +441,57 @@ export default function App() {
 
   // 拖拽调整列宽
   const [isResizing, setIsResizing] = useState(false);
+  const sidebarRef = useRef<HTMLDivElement>(null); // 左侧边栏 ref
+
   const handleMouseDown = () => setIsResizing(true);
 
   useEffect(() => {
+    if (!isResizing) return;
+    
+    let animationFrameId: number;
+
     const handleMouseMove = (e: MouseEvent) => {
-      if (!isResizing) return;
+      // 使用 requestAnimationFrame 节流 DOM 操作
+      cancelAnimationFrame(animationFrameId);
+      animationFrameId = requestAnimationFrame(() => {
+        const windowWidth = window.innerWidth;
+        const newWidth = (e.clientX / windowWidth) * 100;
+        
+        if (newWidth >= 20 && newWidth <= 60) {
+          // 直接操作 DOM，不触发 React 重渲染
+          if (sidebarRef.current) {
+             sidebarRef.current.style.width = `${newWidth}%`;
+          }
+        }
+      });
+    };
+
+    const handleMouseUp = (e: MouseEvent) => {
+      cancelAnimationFrame(animationFrameId);
+      setIsResizing(false);
+      
+      // 拖拽结束，同步最终状态
       const windowWidth = window.innerWidth;
       const newWidth = (e.clientX / windowWidth) * 100;
       if (newWidth >= 20 && newWidth <= 60) {
         setLeftWidth(newWidth);
       }
+      
+      document.body.style.cursor = '';
+      document.body.style.userSelect = '';
     };
 
-    const handleMouseUp = () => setIsResizing(false);
-
-    if (isResizing) {
-      document.addEventListener('mousemove', handleMouseMove);
-      document.addEventListener('mouseup', handleMouseUp);
-      document.body.style.cursor = 'col-resize';
-    }
+    document.addEventListener('mousemove', handleMouseMove);
+    document.addEventListener('mouseup', handleMouseUp);
+    document.body.style.cursor = 'col-resize';
+    document.body.style.userSelect = 'none';
 
     return () => {
+      cancelAnimationFrame(animationFrameId);
       document.removeEventListener('mousemove', handleMouseMove);
       document.removeEventListener('mouseup', handleMouseUp);
       document.body.style.cursor = '';
+      document.body.style.userSelect = '';
     };
   }, [isResizing]);
 
@@ -499,6 +527,7 @@ export default function App() {
               <Layout style={{ height: 'calc(100vh - 48px - 28px)', position: 'relative' }}>
                 {/* 左侧：条目列表 */}
                 <div
+                  ref={sidebarRef}
                   style={{
                     width: `${leftWidth}%`,
                     background: themeData.colors.bgPrimary,
@@ -506,6 +535,7 @@ export default function App() {
                     overflow: 'hidden',
                     position: 'relative',
                     minWidth: '300px',
+                    transition: isResizing ? 'none' : 'width 0.1s ease', // 拖拽时禁用过渡动画
                   }}
                 >
                   <EntryList

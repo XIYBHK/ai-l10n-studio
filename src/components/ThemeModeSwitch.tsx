@@ -19,7 +19,11 @@ export const ThemeModeSwitch: React.FC<ThemeModeSwitchProps> = React.memo(({ sty
   const options = [
     {
       label: (
-        <div style={{ padding: '4px 8px', display: 'flex', alignItems: 'center', gap: '8px' }}>
+        <div style={{ 
+          display: 'flex', 
+          alignItems: 'center', 
+          gap: '6px'
+        }}>
           <BulbOutlined />
           <span>{t('theme.light') || '浅色'}</span>
         </div>
@@ -28,7 +32,11 @@ export const ThemeModeSwitch: React.FC<ThemeModeSwitchProps> = React.memo(({ sty
     },
     {
       label: (
-        <div style={{ padding: '4px 8px', display: 'flex', alignItems: 'center', gap: '8px' }}>
+        <div style={{ 
+          display: 'flex', 
+          alignItems: 'center', 
+          gap: '6px'
+        }}>
           <MoonOutlined />
           <span>{t('theme.dark') || '深色'}</span>
         </div>
@@ -37,7 +45,11 @@ export const ThemeModeSwitch: React.FC<ThemeModeSwitchProps> = React.memo(({ sty
     },
     {
       label: (
-        <div style={{ padding: '4px 8px', display: 'flex', alignItems: 'center', gap: '8px' }}>
+        <div style={{ 
+          display: 'flex', 
+          alignItems: 'center', 
+          gap: '6px'
+        }}>
           <DesktopOutlined />
           <span>{t('theme.system') || '跟随系统'}</span>
         </div>

@@ -1,11 +1,10 @@
 /**
  * Tauri invoke 包装器
  *
- * 提供参数转换功能，避免循环依赖
+ * 简化版封装，提供日志记录和敏感信息掩码
  */
 
 import { invoke as tauriInvoke } from '@tauri-apps/api/core';
-import { convertKeysToSnakeCase } from '../utils/paramConverter';
 import { createModuleLogger } from '../utils/logger';
 
 const log = createModuleLogger('TauriInvoke');
@@ -68,28 +67,15 @@ export function maskSensitiveData(data: any): any {
 }
 
 interface InvokeOptions {
-  /**
-   * 是否自动转换参数为 snake_case
-   *
-   * **架构约定**（2025-10）：
-   * - 默认 `false` - Tauri 2.x 已自动处理 camelCase，无需转换
-   * - 前端统一使用 camelCase 参数
-   * - 后端通过 `#[serde(rename_all = "camelCase")]` 统一序列化
-   *
-   * 仅在特殊场景（如旧版兼容）需要设置为 `true`
-   */
-  autoConvertParams?: boolean;
   /** 是否静默模式，不输出调试日志 */
   silent?: boolean;
 }
 
 /**
- * 带参数转换的 Tauri invoke 包装器
+ * Tauri invoke 包装器
  *
- * **架构设计**（2025-10）：
- * - Tauri 2.x 期望前端传递 camelCase 参数
- * - 默认不转换参数（`autoConvertParams = false`）
- * - 前后端统一使用 camelCase 格式
+ * 提供统一的错误处理和敏感信息掩码
+ * Tauri 2.x 已自动处理 camelCase，前后端统一使用 camelCase 格式
  *
  * @param command 命令名称
  * @param args 参数对象
@@ -99,44 +85,14 @@ interface InvokeOptions {
 export async function invoke<T>(
   command: string,
   args?: Record<string, unknown>,
-  options: InvokeOptions = {}
+  _options: InvokeOptions = {}
 ): Promise<T> {
-  const {
-    autoConvertParams = false, // 🎯 架构决策：默认不转换，Tauri 2.x 已处理
-    silent = true, // ✅ 默认静默，减少控制台日志污染（参考 clash-verge-rev）
-  } = options;
-
-  let processedArgs = args;
-
-  // 🔄 自动参数转换：camelCase → snake_case
-  if (autoConvertParams && args) {
-    processedArgs = convertKeysToSnakeCase(args as Record<string, any>);
-
-    if (!silent && JSON.stringify(args) !== JSON.stringify(processedArgs)) {
-      log.debug(`🔄 参数转换: ${command}`, {
-        original: maskSensitiveData(args),
-        converted: maskSensitiveData(processedArgs),
-      });
-    }
-  }
-
-  // ❌ 默认不输出调试日志，避免控制台污染
-  // if (!silent) {
-  //   log.debug(`📤 Tauri调用: ${command}`, maskSensitiveData(processedArgs));
-  // }
-
   try {
-    const result = await tauriInvoke<T>(command, processedArgs as Record<string, any>);
-
-    // ❌ 默认不输出调试日志，避免控制台污染
-    // if (!silent) {
-    //   log.debug(`📥 Tauri响应: ${command}`, maskSensitiveData(result));
-    // }
-
+    const result = await tauriInvoke<T>(command, args as Record<string, any>);
     return result;
   } catch (error) {
     log.error(`❌ Tauri调用失败: ${command}`, {
-      args: maskSensitiveData(processedArgs),
+      args: maskSensitiveData(args),
       error,
     });
     throw error;

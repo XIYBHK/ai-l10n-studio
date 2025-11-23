@@ -1,6 +1,6 @@
 import React, { useState, useEffect, memo } from 'react';
 import { Input, Button, message } from 'antd';
-import { CopyOutlined, SaveOutlined } from '@ant-design/icons';
+import { CopyOutlined, SaveOutlined, GlobalOutlined, TranslationOutlined } from '@ant-design/icons';
 import { POEntry } from '../types/tauri';
 import { useSessionStore } from '../store';
 import { useTheme } from '../hooks/useTheme';
@@ -91,15 +91,21 @@ const EditorPane: React.FC<EditorPaneProps> = memo(({
       log.info('译文已保存', { index, translation });
 
       // 保存后检测术语差异
-      if (aiTranslation && translation && translation !== aiTranslation) {
+      // 修复：使用 needsReview 标记判断是否是AI译文
+      if (entry.needsReview && entry.msgstr && translation !== entry.msgstr) {
         log.debug('开始检测术语差异', {
           original: entry.msgid,
-          aiTranslation,
+          aiTranslation: entry.msgstr,
           userTranslation: translation,
+          reason: '用户修改了AI译文（needsReview=true）',
         });
 
         try {
-          const difference = analyzeTranslationDifference(entry.msgid, aiTranslation, translation);
+          const difference = analyzeTranslationDifference(
+            entry.msgid,
+            entry.msgstr,  // 原始AI译文（保存在 entry.msgstr 中）
+            translation     // 用户修改后的译文
+          );
 
           log.debug('差异分析结果', JSON.stringify(difference, null, 2));
 
@@ -120,8 +126,8 @@ const EditorPane: React.FC<EditorPaneProps> = memo(({
 
             const diffData = {
               original: entry.msgid,
-              aiTranslation: aiTranslation,
-              userTranslation: translation,
+              aiTranslation: entry.msgstr,  // 原始AI译文
+              userTranslation: translation,  // 用户修改后的译文
               difference: difference,
             };
 
@@ -140,10 +146,12 @@ const EditorPane: React.FC<EditorPaneProps> = memo(({
         }
       } else {
         log.debug('跳过术语检测', {
-          hasAiTranslation: !!aiTranslation,
-          hasTranslation: !!translation,
-          isDifferent: translation !== aiTranslation,
-          reason: !aiTranslation ? '非AI翻译（可能是手动输入或从文件加载）' : '译文未修改',
+          needsReview: entry.needsReview,
+          hasOriginalMsgstr: !!entry.msgstr,
+          isDifferent: translation !== entry.msgstr,
+          reason: !entry.needsReview 
+            ? '非AI翻译（手动输入或从文件加载）' 
+            : '译文未修改',
         });
       }
     }
@@ -234,6 +242,7 @@ const EditorPane: React.FC<EditorPaneProps> = memo(({
           display: 'flex',
           flexDirection: 'column',
           overflow: 'hidden',
+          backgroundColor: colors.bgPrimary,
         }}
       >
         {/* 原文区域 */}
@@ -251,50 +260,62 @@ const EditorPane: React.FC<EditorPaneProps> = memo(({
               background: colors.bgTertiary,
               borderBottom: `1px solid ${colors.borderSecondary}`,
               fontSize: '12px',
-              fontWeight: 500,
+              fontWeight: 600,
               color: colors.textSecondary,
+              display: 'flex',
+              alignItems: 'center',
+              gap: '8px'
             }}
           >
-            原文 (Source)
+            <GlobalOutlined /> 原文 (Source)
           </div>
           <div
+            className="font-mono"
             style={{
               flex: 1,
-              padding: '12px 16px',
-              background: colors.bgTertiary,
+              padding: '16px',
+              background: colors.bgPrimary,
               fontSize: '14px',
               lineHeight: '1.6',
               color: colors.textPrimary,
               overflowY: 'auto',
+              whiteSpace: 'pre-wrap',
+              wordBreak: 'break-word',
             }}
           >
-            {entry.msgid || '(空)'}
+            {entry.msgid || <span style={{color: colors.textDisabled}}>(空)</span>}
 
             {/* 上下文和注释 */}
             {(entry.msgctxt || (entry.comments && entry.comments.length > 0)) && (
               <div
                 style={{
-                  marginTop: 16,
-                  paddingTop: 12,
-                  borderTop: `1px solid ${colors.borderSecondary}`,
+                  marginTop: 20,
+                  padding: '12px',
+                  background: colors.bgSecondary,
+                  borderRadius: '6px',
+                  border: `1px solid ${colors.borderSecondary}`,
                 }}
               >
                 {entry.msgctxt && (
                   <div
                     style={{
                       fontSize: '12px',
-                      color: colors.statusUntranslated,
-                      marginBottom: 8,
+                      color: colors.textSecondary,
+                      marginBottom: entry.comments?.length ? 8 : 0,
+                      fontFamily: 'sans-serif'
                     }}
                   >
-                    <strong>上下文:</strong> {entry.msgctxt}
+                    <div style={{fontWeight: 600, marginBottom: 4}}>上下文:</div>
+                    <div style={{fontFamily: 'monospace', background: colors.bgPrimary, padding: '2px 6px', borderRadius: '4px', display: 'inline-block'}}>
+                      {entry.msgctxt}
+                    </div>
                   </div>
                 )}
                 {entry.comments && entry.comments.length > 0 && (
-                  <div style={{ fontSize: '12px', color: colors.statusNeedsReview }}>
-                    <strong>注释:</strong>
+                  <div style={{ fontSize: '12px', color: colors.textSecondary, fontFamily: 'sans-serif' }}>
+                     <div style={{fontWeight: 600, marginBottom: 4}}>注释:</div>
                     {entry.comments.map((comment, index) => (
-                      <div key={index}>{comment}</div>
+                      <div key={index} style={{color: colors.textTertiary}}>{comment}</div>
                     ))}
                   </div>
                 )}
@@ -317,27 +338,49 @@ const EditorPane: React.FC<EditorPaneProps> = memo(({
               background: colors.bgTertiary,
               borderBottom: `1px solid ${colors.borderSecondary}`,
               fontSize: '12px',
-              fontWeight: 500,
+              fontWeight: 600,
               color: colors.textSecondary,
+              display: 'flex',
+              alignItems: 'center',
+              gap: '8px'
             }}
           >
-            译文 (Translation)
+            <TranslationOutlined /> 译文 (Translation)
           </div>
-          <div style={{ flex: 1, display: 'flex', flexDirection: 'column' }}>
+          <div style={{ flex: 1, display: 'flex', flexDirection: 'column', position: 'relative' }}>
             <TextArea
+              className="font-mono"
               value={translation}
               onChange={(e) => handleTranslationChange(e.target.value)}
               onBlur={handleBlur}
-              placeholder="请输入翻译内容..."
+              placeholder="在此输入翻译内容..."
               bordered={false}
               style={{
                 flex: 1,
                 fontSize: '14px',
                 lineHeight: '1.6',
-                padding: '12px 16px',
+                padding: '16px',
                 resize: 'none',
+                backgroundColor: colors.bgPrimary,
               }}
             />
+            {/* 悬浮保存提示 */}
+            {hasUnsavedChanges && (
+               <div style={{
+                 position: 'absolute',
+                 bottom: '16px',
+                 right: '16px',
+                 padding: '4px 12px',
+                 background: 'rgba(0,0,0,0.6)',
+                 color: '#fff',
+                 borderRadius: '20px',
+                 fontSize: '12px',
+                 pointerEvents: 'none',
+                 backdropFilter: 'blur(4px)'
+               }}>
+                 按 Ctrl+Enter 保存
+               </div>
+            )}
           </div>
         </div>
       </div>

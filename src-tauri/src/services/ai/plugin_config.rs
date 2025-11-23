@@ -294,6 +294,7 @@ mod tests {
                 default_model: "test-model".to_string(),
                 supports_cache: true,
                 supports_images: false,
+                models: vec![],
                 extra_config: HashMap::new(),
             },
             models: ModelOverrides::default(),

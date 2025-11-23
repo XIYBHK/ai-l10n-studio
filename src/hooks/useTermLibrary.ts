@@ -1,9 +1,8 @@
 import useSWR from 'swr';
 import type { TermLibrary } from '../types/termLibrary';
-import type { TauriKey } from '../services/swr';
 import { termLibraryCommands } from '../services/commands';
 
-const KEY: TauriKey = ['get_term_library'];
+const KEY = 'term_library';
 
 interface UseTermLibraryOptions {
   enabled?: boolean; // 是否启用请求

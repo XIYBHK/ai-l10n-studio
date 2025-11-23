@@ -137,13 +137,7 @@ impl AITranslator {
         let base_url = base_url.unwrap_or_else(|| "https://api.moonshot.cn/v1".to_string());
 
         // 加载术语库并构建系统提示词
-        let term_library_path = std::env::current_exe()
-            .ok()
-            .and_then(|p| p.parent().map(|p| p.to_path_buf()))
-            .unwrap_or_else(|| std::path::PathBuf::from("."))
-            .join("data")
-            .join("term_library.json");
-
+        let term_library_path = crate::utils::paths::get_term_library_path();
         let term_library = TermLibrary::load_from_file(&term_library_path).ok();
 
         // 🔍 调试日志：检查术语库状态
@@ -225,13 +219,7 @@ impl AITranslator {
             .unwrap_or_else(|| provider_info.default_model.clone());
 
         // 加载术语库并构建系统提示词
-        let term_library_path = std::env::current_exe()
-            .ok()
-            .and_then(|p| p.parent().map(|p| p.to_path_buf()))
-            .unwrap_or_else(|| std::path::PathBuf::from("."))
-            .join("data")
-            .join("term_library.json");
-
+        let term_library_path = crate::utils::paths::get_term_library_path();
         let term_library = TermLibrary::load_from_file(&term_library_path).ok();
 
         // 🔍 调试日志：检查术语库状态

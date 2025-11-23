@@ -6,8 +6,10 @@
  * - 超时控制
  * - 自动重试
  * - 请求去重
+ * - 统一错误提示
  */
 
+import { message } from 'antd';
 import { invoke } from './tauriInvoke';
 import { createModuleLogger } from '../utils/logger';
 
@@ -20,11 +22,7 @@ interface InvokeOptions {
   silent?: boolean; // 静默模式（不显示错误提示）
   errorMessage?: string; // 自定义错误消息
   dedup?: boolean; // 是否去重（相同参数的并发请求）
-  /**
-   * 是否自动转换参数（默认false，遵循架构约定）
-   * @see tauriInvoke.ts - 架构设计说明
-   */
-  autoConvertParams?: boolean;
+  showErrorMessage?: boolean; // 是否自动显示错误消息（默认 true）
 }
 
 interface PendingRequest {
@@ -52,7 +50,7 @@ class APIClient {
       silent = false,
       errorMessage,
       dedup = false,
-      autoConvertParams, // 🎯 不设默认值，让 tauriInvoke 处理（默认 false）
+      showErrorMessage = true,
     } = options;
 
     // 请求去重
@@ -80,8 +78,7 @@ class APIClient {
       retry,
       retryDelay,
       silent,
-      errorMessage,
-      autoConvertParams // 传递参数转换选项
+      errorMessage
     );
 
     // 存储待处理的请求
@@ -96,6 +93,18 @@ class APIClient {
     try {
       const result = await promise;
       return result;
+    } catch (error) {
+      // 统一错误处理
+      const errMsg = error instanceof Error ? error.message : String(error);
+      const displayMsg = errorMessage || `${command} 调用失败: ${errMsg}`;
+
+      log.logError(error, `API调用失败: ${command}`);
+
+      if (showErrorMessage) {
+        message.error(displayMsg);
+      }
+
+      throw error;
     } finally {
       // 清理
       if (dedup) {
@@ -115,8 +124,7 @@ class APIClient {
     maxRetries: number,
     retryDelay: number,
     silent: boolean,
-    errorMessage?: string,
-    autoConvertParams?: boolean // 🎯 让 tauriInvoke 处理默认值
+    errorMessage?: string
   ): Promise<T> {
     let lastError: Error | null = null;
 
@@ -127,8 +135,7 @@ class APIClient {
           params,
           timeout,
           controller,
-          silent,
-          autoConvertParams
+          silent
         );
 
         if (attempt > 0) {
@@ -178,8 +185,7 @@ class APIClient {
     params: Record<string, any>,
     timeout: number,
     controller: AbortController,
-    silent: boolean,
-    autoConvertParams?: boolean // 🎯 让 tauriInvoke 处理默认值
+    silent: boolean
   ): Promise<T> {
     return new Promise(async (resolve, reject) => {
       // 设置超时
@@ -189,11 +195,8 @@ class APIClient {
       }, timeout);
 
       try {
-        // 执行实际的调用（传递参数转换选项）
-        const result = await invoke<T>(command, params, {
-          autoConvertParams, // 🔧 使用传递的选项，而非硬编码
-          silent, // 使用传递的选项
-        });
+        // 执行实际的调用
+        const result = await invoke<T>(command, params, { silent });
         clearTimeout(timeoutId);
         resolve(result);
       } catch (error) {

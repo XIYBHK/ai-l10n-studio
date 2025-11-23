@@ -4,44 +4,56 @@
 
 **位置**: `src/services/commands.ts`
 
-所有 Tauri 后端调用已迁移到统一命令层，2025-11 重构后进一步简化：
+所有 Tauri 后端调用已迁移到统一命令层，经过三轮优化后的简化架构：
 
 - **类型安全**: 52 个命令的完整 TypeScript 类型定义
-- **统一错误处理**: 集中式 `invoke()` 包装器，自动日志和用户提示
+- **统一错误处理**: 集中式错误处理，自动日志和用户提示
 - **模块化组织**: 13 个命令模块（`configCommands`, `aiConfigCommands`, `translatorCommands` 等）
 - **易于维护**: 命令名称统一管理在 `COMMANDS` 常量中
-- **零配置参数转换**: 默认遵循 camelCase 约定，无需手动配置
+- **两层架构**: 删除中间透传层，直接使用 `apiClient`
 
 **2025-11 简化特性**:
-- ✅ **移除过度抽象**: 简化为 2 层调用链（组件 → 命令层 → Tauri）
+- ✅ **两层 API 封装**: 删除 `api.ts` 中间层，`commands.ts` 直接调用 `apiClient`
 - ✅ **直接使用 Tauri API**: 删除复杂的事件分发器和桥接层
 - ✅ **简化数据访问**: 使用 `useAppData` hooks，无需 Provider 包裹
 - ✅ **简化统计系统**: 使用简单 `useState`，避免事件溯源过度工程化
+- ✅ **内联 SWR 配置**: 删除 `swr.ts`，hooks 直接传入 fetcher
 
 **推荐用法**:
 
 ```typescript
 import { configCommands, aiConfigCommands, translatorCommands } from '@/services/commands';
 
-// ✅ 使用命令层（推荐）- 自动遵循 camelCase 约定
+// ✅ 使用命令层（推荐）
 const config = await configCommands.get();
-await aiConfigCommands.add(newConfig); // newConfig 使用 camelCase 字段
+await aiConfigCommands.add(newConfig);
 const result = await translatorCommands.translateBatch(entries, targetLang);
 
-// ✅ 简化数据访问（2025-11 新增）
+// ✅ 简化数据访问
 import { useAppData } from '@/hooks/useConfig';
 
 function MyComponent() {
   const { config, aiConfigs, activeAIConfig, systemPrompt, refreshAll } = useAppData();
-  // 自动缓存和重验证，无需 Provider 包裹
+  // 数据自动缓存和重验证，无需 Provider 包裹
 }
+
+// ✅ SWR hooks 直接传入 fetcher（第三轮优化）
+import useSWR from 'swr';
+import { translationMemoryCommands } from '@/services/commands';
+
+const { data, mutate } = useSWR(
+  'translation_memory',
+  () => translationMemoryCommands.get(),
+  { revalidateOnFocus: false }
+);
 ```
 
 **架构约定**（2025-11）：
 
 - 所有参数使用 **camelCase** 格式（如 `apiKey`, `baseUrl`）
-- Tauri 2.x 自动处理 camelCase，无需手动配置
+- Tauri 2.x 自动处理 camelCase，前后端自动对齐
 - 简化事件监听：直接使用 Tauri `listen()` API
+- **两层 API 封装**：`commands/hooks → apiClient → tauriInvoke → Tauri`
 
 **命令模块索引**:
 
@@ -399,21 +411,22 @@ aiModelCommands.estimateTranslationCost(
 
 **统一格式化工具** (`src/utils/formatters.ts`):
 
-- 单一数据源 - 所有格式化逻辑集中在一个模块
-- 全局一致 - `formatCost()` 确保所有地方显示成本的格式完全相同
-- 易于维护 - 修改一处，全局生效
-- 可复用 - `formatTokens()`, `formatPercentage()`, `formatDuration()` 等
+第三轮优化删除了 `statsFormatter.ts`（277行，功能重复），统一使用 `formatters.ts`：
 
 ```typescript
-// 统一的格式化函数
+// 统一的格式化函数（唯一数据源）
 import { formatCost, formatTokens, formatPercentage } from '@/utils/formatters';
 
 // 推荐：使用统一函数
-const costDisplay = formatCost(0.0042); // "0.42¢"
-
-// 避免：手动格式化（分散逻辑）
-const costDisplay = cost < 0.01 ? `${(cost * 100).toFixed(2)}¢` : `$${cost.toFixed(4)}`;
+const costDisplay = formatCost(0.0042); // "$0.0042"
+const tokensDisplay = formatTokens(12345); // "12,345"
+const percentDisplay = formatPercentage(0.856); // "85.6%"
 ```
+
+**核心优势**：
+- ✅ 单一数据源 - 所有格式化逻辑集中在一个模块
+- ✅ 全局一致 - 修改一处，全局生效
+- ✅ 易于维护 - 删除重复的包装层
 
 ---
 
