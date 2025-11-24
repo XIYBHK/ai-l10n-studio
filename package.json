@@ -28,7 +28,7 @@
     "@types/lodash": "^4.17.20",
     "@types/react-virtualized-auto-sizer": "^1.0.4",
     "@vitejs/plugin-react": "^5.0.4",
-    "antd": "^5.12.0",
+    "antd": "^6.0.0",
     "i18next": "^25.6.3",
     "immer": "^10.0.3",
     "lodash": "^4.17.21",
