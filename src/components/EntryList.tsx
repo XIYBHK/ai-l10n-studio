@@ -149,27 +149,6 @@ const RowItem = (props: any) => {
           </span>
         </div>
       )}
-      {entry.msgctxt && (
-        <div
-          style={{
-            fontSize: '11px',
-            color: colors.textTertiary,
-            marginTop: 6,
-            overflow: 'hidden',
-            textOverflow: 'ellipsis',
-            whiteSpace: 'nowrap',
-            background: colors.bgSecondary,
-            padding: '2px 6px',
-            borderRadius: '4px',
-            display: 'inline-block',
-            maxWidth: '100%',
-            height: '20px'
-          }}
-          title={`上下文信息: ${entry.msgctxt}`}
-        >
-          📌 {entry.msgctxt}
-        </div>
-      )}
       {status === 'needs-review' && (
         <div style={{ marginTop: 8, textAlign: 'right', height: '24px' }}>
           <Button
