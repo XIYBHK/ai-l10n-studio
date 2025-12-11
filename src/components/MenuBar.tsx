@@ -93,8 +93,8 @@ export const MenuBar: React.FC<MenuBarProps> = React.memo(({
           letterSpacing: '-0.5px'
         }}
       >
-        <GlobalOutlined style={{fontSize: '24px'}} />
-        <span style={{background: `linear-gradient(135deg, ${colors.statusUntranslated}, ${colors.statusTranslated})`, WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent'}}>
+        <GlobalOutlined style={{fontSize: '24px', color: colors.statusUntranslated}} />
+        <span style={{ color: colors.textPrimary }}>
           AI L10n Studio
         </span>
       </div>
