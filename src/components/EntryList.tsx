@@ -22,26 +22,8 @@ interface EntryListProps {
 }
 
 // 列表项组件（react-window 2.x rowComponent）
-// react-window 2.x 会自动传入 { index, style, ariaAttributes, ...rowProps }
 const RowItem = (props: any) => {
   const { index, style, items, entries, selectedRowKeys, currentEntry, colors, columnType, onRowClick, onConfirm } = props;
-  
-  // 调试日志：查看 props
-  if (index === 0) {
-    log.info('🔍 RowItem props (index=0)', {
-      hasItems: !!items,
-      itemsLength: items?.length,
-      index,
-      hasStyle: !!style,
-      allPropsKeys: Object.keys(props),
-      items: items ? `Array(${items.length})` : 'undefined',
-      entries: entries ? `Array(${entries.length})` : 'undefined',
-      firstItem: items?.[0] ? {
-        msgid: items[0].msgid?.substring(0, 50),
-        msgstr: items[0].msgstr?.substring(0, 50)
-      } : 'no item'
-    });
-  }
   
   if (!items || !items[index]) {
     log.warn(`⚠️ RowItem ${index}: items 为空或索引越界`);
@@ -50,15 +32,6 @@ const RowItem = (props: any) => {
   
   const entry = items[index];
   
-  // 添加渲染日志
-  if (index < 3) {
-    log.info(`✅ 渲染条目 ${index}`, {
-      msgid: entry.msgid?.substring(0, 30),
-      msgstr: entry.msgstr?.substring(0, 30),
-      hasStyle: !!style,
-      styleHeight: style?.height,
-    });
-  }
   const globalIndex = entries.indexOf(entry);
   const isSelected = selectedRowKeys.includes(globalIndex);
   const isCurrent = currentEntry === entry;
@@ -76,9 +49,6 @@ const RowItem = (props: any) => {
     <div
       style={{
         ...style,
-        position: 'absolute',
-        left: 0,
-        right: 0,
         padding: '10px 12px',
         cursor: 'pointer',
         backgroundColor: isSelected
@@ -513,11 +483,6 @@ const EntryList: React.FC<EntryListProps> = memo(({
     statusColor: string,
     columnType: 'untranslated' | 'needsReview' | 'translated'
   ) => {
-    log.debug(`🎨 渲染列: ${title}`, {
-      columnType,
-      itemCount: items.length,
-      hasItems: items.length > 0,
-    });
     
     return (<div
       style={{
@@ -574,56 +539,36 @@ const EntryList: React.FC<EntryListProps> = memo(({
           </Button>
         )}
       </div>
-      <div style={{ flex: 1, width: '100%', height: '100%', overflow: 'hidden', position: 'relative' }}>
+      <div style={{ flex: 1, width: '100%', overflow: 'hidden', position: 'relative' }}>
         <AutoSizer>
           {({ height, width }) => {
-            log.info(`📐 AutoSizer ${columnType}`, { 
-              height, 
-              itemCount: items.length,
-              calculatedHeight: height || 'undefined'
-            });
-            
             if (items.length === 0) {
-              log.warn(`⚠️ ${columnType} 列表为空，不渲染List`);
               return <div style={{ padding: 20, color: colors.textTertiary }}>暂无数据</div>;
             }
-            
-            log.info(`🚀 准备渲染 List ${columnType}`, {
-              rowCount: items.length,
-              rowHeight: 100,
-              height,
-              width,
-              hasRowComponent: !!RowItem
-            });
-            
-            log.info(`🚀 List渲染 ${columnType}`, {
-              rowCount: items.length,
-              rowHeight: 100,
-              height,
-              width,
-            });
-            
+
+            if (!height || !width || height === 0 || width === 0) {
+              return <div style={{ padding: 20, color: colors.textTertiary }}>容器尺寸为0</div>;
+            }
+
             return (
-              <List
-                defaultHeight={height}
-                rowCount={items.length}
-                rowHeight={100}
-                rowProps={{
-                  items,
-                  entries,
-                  selectedRowKeys,
-                  currentEntry,
-                  colors,
-                  columnType,
-                  onRowClick: handleRowClick,
-                  onConfirm: handleConfirm
-                }}
-                rowComponent={RowItem}
-                style={{
-                  position: 'relative',
-                  overflow: 'auto'
-                }}
-              />
+              <div style={{ height, width, position: 'relative' }}>
+                <List
+                  rowComponent={RowItem}
+                  rowCount={items.length}
+                  rowHeight={100}
+                  rowProps={{
+                    items,
+                    entries,
+                    selectedRowKeys,
+                    currentEntry,
+                    colors,
+                    columnType,
+                    onRowClick: handleRowClick,
+                    onConfirm: handleConfirm
+                  }}
+                  style={{ height: '100%', width: '100%' }}
+                />
+              </div>
             );
           }}
         </AutoSizer>
@@ -721,17 +666,18 @@ const EntryList: React.FC<EntryListProps> = memo(({
         </div>
       )}
 
-      <div style={{ flex: 1, display: 'flex', overflow: 'hidden', minHeight: 0 }}>
+      <div style={{ flex: 1, height: 0, display: 'flex', overflow: 'hidden', minHeight: 0 }}>
         {/* 第一列 */}
-        <div 
+        <div
           ref={col1Ref}
-          style={{ 
-            width: `${columnWidths[0]}%`, 
-            display: 'flex', 
-            flexDirection: 'column', 
-            position: 'relative', 
-            minHeight: 0, 
-            flex: 'none' 
+          style={{
+            width: `${columnWidths[0]}%`,
+            height: '100%',
+            display: 'flex',
+            flexDirection: 'column',
+            position: 'relative',
+            minHeight: 0,
+            flex: 'none'
           }}
         >
              {renderColumn(
@@ -760,15 +706,16 @@ const EntryList: React.FC<EntryListProps> = memo(({
         </div>
 
         {/* 第二列 */}
-        <div 
+        <div
           ref={col2Ref}
-          style={{ 
-            width: `${columnWidths[1]}%`, 
-            display: 'flex', 
-            flexDirection: 'column', 
-            position: 'relative', 
-            minHeight: 0, 
-            flex: 'none' 
+          style={{
+            width: `${columnWidths[1]}%`,
+            height: '100%',
+            display: 'flex',
+            flexDirection: 'column',
+            position: 'relative',
+            minHeight: 0,
+            flex: 'none'
           }}
         >
             {renderColumn(
@@ -795,12 +742,13 @@ const EntryList: React.FC<EntryListProps> = memo(({
         </div>
 
         {/* 第三列 */}
-        <div 
+        <div
           ref={col3Ref}
-          style={{ 
+          style={{
             width: `${columnWidths[2]}%`,
-            display: 'flex', 
-            flexDirection: 'column', 
+            height: '100%',
+            display: 'flex',
+            flexDirection: 'column',
             minHeight: 0,
             flex: 'none'
           }}

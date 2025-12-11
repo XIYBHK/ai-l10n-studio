@@ -530,6 +530,7 @@ export default function App() {
                   ref={sidebarRef}
                   style={{
                     width: `${leftWidth}%`,
+                    height: '100%',
                     background: themeData.colors.bgPrimary,
                     borderRight: `1px solid ${themeData.colors.borderPrimary}`,
                     overflow: 'hidden',
