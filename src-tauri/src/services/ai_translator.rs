@@ -593,20 +593,15 @@ impl AITranslator {
                 }
 
                 // Step 4: 更新翻译记忆库（每个unique文本只学习一次）
+                // 只检查当前记忆库，不检查代码内置词库（用户清空后内置词库不参与）
                 if let Some(ref mut tm) = self.tm {
                     if is_simple_phrase(unique_text) && translation.len() <= 50 {
-                        let builtin = crate::services::translation_memory::get_builtin_memory();
-                        let exists_in_learned = tm.memory.contains_key(unique_text);
-                        let exists_in_builtin = builtin.contains_key(unique_text);
-
-                        if !exists_in_learned && !exists_in_builtin {
+                        if !tm.memory.contains_key(unique_text) {
                             tm.add_translation(unique_text.clone(), translation.clone());
                             self.batch_stats.tm_learned += 1;
                             crate::app_log!("[TM学习] {} -> {}", unique_text, translation);
-                        } else if exists_in_builtin {
-                            crate::app_log!("[TM跳过] {} (已在内置词库)", unique_text);
                         } else {
-                            crate::app_log!("[TM跳过] {} (已在学习记录)", unique_text);
+                            crate::app_log!("[TM跳过] {} (已在记忆库)", unique_text);
                         }
                     }
                 }

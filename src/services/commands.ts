@@ -10,14 +10,15 @@
  */
 
 import { apiClient } from './apiClient';
-
-// 便捷的 invoke 包装
-const invoke = apiClient.invoke.bind(apiClient);
+import { open, save } from '@tauri-apps/plugin-dialog';
 import type { POEntry, TranslationStats, ContextualRefineRequest } from '../types/tauri';
 import type { AIConfig } from '../types/aiProvider';
 import type { TermLibrary } from '../types/termLibrary';
 import type { ModelInfo } from '../types/generated/ModelInfo';
 import type { ProviderInfo } from '../types/generated/ProviderInfo';
+
+// 便捷的 invoke 包装
+const invoke = apiClient.invoke.bind(apiClient);
 
 // ========================================
 // 命令常量定义（集中管理，避免硬编码）
@@ -542,19 +543,29 @@ export const translatorCommands = {
 };
 
 /**
- * 对话框命令
+ * 对话框命令 - 直接使用前端 API，避免通过 Rust 后端的额外开销
  */
 export const dialogCommands = {
   async openFile() {
-    return invoke<string | null>(COMMANDS.DIALOG_OPEN_FILE, undefined, {
-      showErrorMessage: false,
+    const result = await open({
+      multiple: false,
+      directory: false,
+      filters: [
+        { name: 'PO Files', extensions: ['po'] },
+        { name: 'All Files', extensions: ['*'] },
+      ],
     });
+    return result as string | null;
   },
 
   async saveFile() {
-    return invoke<string | null>(COMMANDS.DIALOG_SAVE_FILE, undefined, {
-      showErrorMessage: false,
+    const result = await save({
+      filters: [
+        { name: 'PO Files', extensions: ['po'] },
+        { name: 'All Files', extensions: ['*'] },
+      ],
     });
+    return result as string | null;
   },
 };
 

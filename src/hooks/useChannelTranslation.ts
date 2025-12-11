@@ -49,7 +49,7 @@ export interface BatchStatsEvent {
 }
 
 /**
- * Token 统计事件
+ * Token 统计事件（Channel 事件使用）
  */
 export interface TokenStatsEvent {
   total_tokens: number;
@@ -59,12 +59,34 @@ export interface TokenStatsEvent {
 }
 
 /**
+ * Token 统计（最终结果使用）
+ */
+export interface TokenStats {
+  input_tokens: number;
+  output_tokens: number;
+  total_tokens: number;
+  cost: number;
+}
+
+/**
+ * 翻译统计（最终结果使用）
+ */
+export interface TranslationStats {
+  total: number;
+  tm_hits: number;
+  deduplicated: number;
+  ai_translated: number;
+  token_stats: TokenStats;
+  tm_learned: number;
+}
+
+/**
  * 批量翻译结果
  */
 export interface BatchResult {
   translations: Record<number, string>;
   translation_sources: string[]; // 每个翻译的来源：'tm', 'dedup', 'ai'
-  stats: BatchStatsEvent;
+  stats: TranslationStats;
 }
 
 /**

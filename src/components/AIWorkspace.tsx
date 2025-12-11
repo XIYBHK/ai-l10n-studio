@@ -575,7 +575,7 @@ const AIWorkspace: React.FC<AIWorkspaceProps> = memo(({
                   <div style={{ fontWeight: 600, marginBottom: 4, color: colors.textPrimary }}>
                     翻译风格提示 ({termLibrary.style_summary.based_on_terms}条术语)
                   </div>
-                  <div>{termLibrary.style_summary.prompt}</div>
+                  <div style={{ whiteSpace: 'pre-line' }}>{termLibrary.style_summary.prompt}</div>
                   <div
                     style={{
                       marginTop: 8,

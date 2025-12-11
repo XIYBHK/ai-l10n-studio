@@ -49,7 +49,7 @@ const RowItem = (props: any) => {
     <div
       style={{
         ...style,
-        padding: '10px 12px',
+        padding: '8px 12px',
         cursor: 'pointer',
         backgroundColor: isSelected
           ? colors.selectedBg
@@ -63,22 +63,23 @@ const RowItem = (props: any) => {
         transition: 'background-color 0.1s',
         userSelect: 'none',
         boxSizing: 'border-box',
-      }}
-      onClick={(event) => onRowClick(entry, globalIndex, event, columnType)}
-      className={isSelected ? 'table-row-selected' : ''}
-    >
+        overflow: 'hidden',
+        }}
+        onClick={(event) => onRowClick(entry, globalIndex, event, columnType)}
+        className={isSelected ? 'table-row-selected' : ''}
+      >
       <div
         style={{
-          fontSize: '12px',
+          fontSize: '11px',
           color: colors.textTertiary,
-          marginBottom: 6,
+          marginBottom: 4,
           display: 'flex',
           justifyContent: 'space-between',
           alignItems: 'center',
-          height: '20px'
+          height: '16px'
         }}
       >
-        <span style={{ fontFamily: 'monospace', opacity: 0.7 }}>#{globalIndex + 1}</span>
+        <span style={{ fontFamily: 'monospace', opacity: 0.7, fontSize: '11px' }}>#{globalIndex + 1}</span>
         {status === 'needs-review' && entry.translationSource && (
           <span
             style={{
@@ -116,16 +117,13 @@ const RowItem = (props: any) => {
       <div
         style={{
           fontSize: '13px',
-          lineHeight: '1.5',
-          marginBottom: 6,
+          lineHeight: '1.4',
+          marginBottom: 4,
           overflow: 'hidden',
           textOverflow: 'ellipsis',
-          display: '-webkit-box',
-          WebkitLineClamp: 2,
-          WebkitBoxOrient: 'vertical',
+          whiteSpace: 'nowrap',
           color: colors.textPrimary,
           fontWeight: 500,
-          height: '40px' // 固定高度以保持列表项高度一致
         }}
       >
         {entry.msgid || <span style={{ color: colors.textDisabled }}>(空)</span>}
@@ -133,30 +131,24 @@ const RowItem = (props: any) => {
       {entry.msgstr && (
         <div
           style={{
-            fontSize: '13px',
+            fontSize: '12px',
             color: colors.textSecondary,
             overflow: 'hidden',
             textOverflow: 'ellipsis',
             whiteSpace: 'nowrap',
-            display: 'flex',
-            alignItems: 'center',
-            gap: '6px',
-            height: '20px'
           }}
         >
-          <span style={{ flex: 1, overflow: 'hidden', textOverflow: 'ellipsis' }}>
-            {entry.msgstr}
-          </span>
+          {entry.msgstr}
         </div>
       )}
-      {status === 'needs-review' && (
-        <div style={{ marginTop: 8, textAlign: 'right', height: '24px' }}>
+      {status === 'needs-review' && isSelected && (
+        <div style={{ position: 'absolute', right: 12, bottom: 8 }}>
           <Button
             type="primary"
             size="small"
             icon={<CheckOutlined />}
             onClick={(e) => onConfirm(globalIndex, e)}
-            style={{ fontSize: '12px', height: '24px', padding: '0 10px' }}
+            style={{ fontSize: '11px', height: '20px', padding: '0 6px' }}
           >
             确认
           </Button>
@@ -270,7 +262,17 @@ const EntryList: React.FC<EntryListProps> = memo(({
     return groups;
   }, [entries, getEntryStatus]);
 
-  // 列宽调整 - 🚀 性能优化版：直接操作 DOM
+  // 移除指定列的所有翻译（清空 msgstr，回到未翻译状态）
+  const handleRemoveAll = useCallback((columnType: 'needsReview' | 'translated') => {
+    const targetEntries = groupedEntries[columnType];
+    targetEntries.forEach((entry) => {
+      const index = entries.indexOf(entry);
+      updateEntry(index, { msgstr: '', needsReview: false, translationSource: undefined });
+    });
+    setSelectedRowKeys([]);
+  }, [entries, groupedEntries, updateEntry]);
+
+  // 列宽调整 - 性能优化版：直接操作 DOM
   useEffect(() => {
     if (resizingColumn === null) return;
 
@@ -493,28 +495,51 @@ const EntryList: React.FC<EntryListProps> = memo(({
           flexShrink: 0
         }}
       >
-        <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 6, whiteSpace: 'nowrap', overflow: 'hidden' }}>
           <Badge color={statusColor} />
-          <span>{title}</span>
+          <span style={{ flexShrink: 0 }}>{title}</span>
           <span style={{ 
             fontSize: '12px', 
             fontWeight: 'normal', 
             color: colors.textTertiary,
             backgroundColor: colors.bgSecondary,
             padding: '1px 6px',
-            borderRadius: '10px'
+            borderRadius: '10px',
+            flexShrink: 0
           }}>
             {items.length}
           </span>
         </div>
         {columnType === 'needsReview' && items.length > 0 && (
+          <div style={{ display: 'flex', gap: 8 }}>
+            <Button
+              type="link"
+              size="small"
+              onClick={handleConfirmAll}
+              style={{ fontSize: '12px', padding: 0, height: 'auto', whiteSpace: 'nowrap', flexShrink: 0 }}
+            >
+              确认所有
+            </Button>
+            <Button
+              type="link"
+              size="small"
+              danger
+              onClick={() => handleRemoveAll('needsReview')}
+              style={{ fontSize: '12px', padding: 0, height: 'auto', whiteSpace: 'nowrap', flexShrink: 0 }}
+            >
+              移除
+            </Button>
+          </div>
+        )}
+        {columnType === 'translated' && items.length > 0 && (
           <Button
             type="link"
             size="small"
-            onClick={handleConfirmAll}
-            style={{ fontSize: '12px', padding: 0, height: 'auto' }}
+            danger
+            onClick={() => handleRemoveAll('translated')}
+            style={{ fontSize: '12px', padding: 0, height: 'auto', whiteSpace: 'nowrap', flexShrink: 0 }}
           >
-            确认所有
+            移除
           </Button>
         )}
       </div>
@@ -534,7 +559,7 @@ const EntryList: React.FC<EntryListProps> = memo(({
                 <List
                   rowComponent={RowItem}
                   rowCount={items.length}
-                  rowHeight={100}
+                  rowHeight={80}
                   rowProps={{
                     items,
                     entries,
@@ -578,10 +603,10 @@ const EntryList: React.FC<EntryListProps> = memo(({
           flexShrink: 0
         }}
       >
-        <span style={{ fontSize: '13px', fontWeight: 500, color: colors.textPrimary }}>
+        <span style={{ fontSize: '13px', fontWeight: 500, color: colors.textPrimary, whiteSpace: 'nowrap', flexShrink: 0 }}>
           共 {entries.length} 条 {selectedRowKeys.length > 0 && `(已选 ${selectedRowKeys.length})`}
         </span>
-        <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+        <div style={{ display: 'flex', gap: '8px', alignItems: 'center', flexWrap: 'wrap', justifyContent: 'flex-end' }}>
           {selectedRowKeys.length > 0 &&
             (() => {
               const hasNeedsReview = selectedRowKeys.some((key) => {

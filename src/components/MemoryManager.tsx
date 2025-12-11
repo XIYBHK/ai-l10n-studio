@@ -10,9 +10,10 @@ import {
 } from '@ant-design/icons';
 import { save, open } from '@tauri-apps/plugin-dialog';
 import { writeTextFile, readTextFile } from '@tauri-apps/plugin-fs';
-import { translationMemoryCommands } from '../services/commands'; // ✅ 迁移到统一命令层
+import { translationMemoryCommands } from '../services/commands';
 import { createModuleLogger } from '../utils/logger';
 import { useTranslationMemory } from '../hooks/useTranslationMemory';
+import { useStatsStore } from '../store';
 
 const log = createModuleLogger('MemoryManager');
 
@@ -116,7 +117,7 @@ export const MemoryManager: React.FC<MemoryManagerProps> = ({ visible, onClose }
 
       // 保存空的记忆库到后端
       await translationMemoryCommands.save({
-        memory: {}, // 空的memory字段
+        memory: {},
         stats: {
           total_entries: 0,
           hits: 0,
@@ -125,8 +126,15 @@ export const MemoryManager: React.FC<MemoryManagerProps> = ({ visible, onClose }
         last_updated: new Date().toISOString(),
       });
 
+      // 重置累计统计中的 tm_learned
+      const { cumulativeStats, setCumulativeStats } = useStatsStore.getState();
+      setCumulativeStats({
+        ...cumulativeStats,
+        tm_learned: 0,
+      });
+
       message.success('已清空所有记忆');
-      log.info('记忆库已清空');
+      log.info('记忆库已清空，tm_learned 统计已重置');
     } catch (error) {
       log.logError(error, '清空记忆库失败');
       await mutate();
@@ -143,13 +151,16 @@ export const MemoryManager: React.FC<MemoryManagerProps> = ({ visible, onClose }
       const addedCount = await translationMemoryCommands.mergeBuiltinPhrases();
       log.info('内置词库合并完成', { addedCount });
 
-      // 等待 SWR 重新获取最新数据
-      const updatedTM = await mutate();
-      log.debug('SWR 刷新完成', { hasTM: !!updatedTM });
+      // 重新从后端获取最新数据
+      const freshTM = await translationMemoryCommands.get();
+      log.debug('重新获取记忆库', { hasTM: !!freshTM });
+
+      // 更新 SWR 缓存
+      await mutate(freshTM, false);
 
       // 立即更新前端显示
-      if (updatedTM && (updatedTM as any).memory) {
-        const entries: MemoryEntry[] = Object.entries((updatedTM as any).memory).map(
+      if (freshTM && (freshTM as any).memory) {
+        const entries: MemoryEntry[] = Object.entries((freshTM as any).memory).map(
           ([source, target], index) => ({ key: `${index}`, source, target: target as string })
         );
         setMemories(entries);

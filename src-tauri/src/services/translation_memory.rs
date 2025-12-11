@@ -81,7 +81,7 @@ impl TranslationMemory {
                 let learned_count = memory.len();
                 if learned_count > 0 {
                     crate::app_log!(
-                        "[TM] 加载翻译记忆库: {} 条学习记录（不含内置短语）",
+                        "[TM] 加载翻译记忆库: {} 条记录",
                         learned_count
                     );
                 } else {
@@ -123,24 +123,16 @@ impl TranslationMemory {
         Ok(memory)
     }
 
+    /// 保存记忆库到文件
+    /// 保存当前 memory 中的所有内容，不再过滤内置词库
+    /// 用户清空后内置词库不在 memory 中，用户加载后内置词库在 memory 中
     pub fn save_to_file<P: AsRef<Path>>(&self, file_path: P) -> Result<()> {
-        // 分离内置和学习的翻译（与Python版本保持一致）
-        let builtin = get_builtin_memory();
-        let learned: IndexMap<String, String> = self
-            .memory
-            .iter()
-            .filter(|(k, _)| !builtin.contains_key(k.as_str()))
-            .map(|(k, v)| (k.clone(), v.clone()))
-            .collect();
-
-        // 构造保存的数据结构（与Python版本一致）
         let data = serde_json::json!({
-            "learned": learned,
+            "learned": self.memory,
             "last_updated": self.last_updated.to_rfc3339(),
             "stats": {
-                "total_entries": self.stats.total_entries,
-                "learned_entries": learned.len(),
-                "builtin_entries": builtin.len(),
+                "total_entries": self.memory.len(),
+                "learned_entries": self.memory.len(),
                 "hits": self.stats.hits,
                 "misses": self.stats.misses,
             }
@@ -149,8 +141,13 @@ impl TranslationMemory {
         let content = serde_json::to_string_pretty(&data)?;
         fs::write(file_path, content)?;
 
-        crate::app_log!("[TM] 保存翻译记忆库: {} 条学习记录", learned.len());
+        crate::app_log!("[TM] 保存记忆库: {} 条记录", self.memory.len());
         Ok(())
+    }
+
+    /// save_all 现在与 save_to_file 相同，保留以兼容现有调用
+    pub fn save_all<P: AsRef<Path>>(&self, file_path: P) -> Result<()> {
+        self.save_to_file(file_path)
     }
 
     pub fn get_translation(&mut self, source: &str) -> Option<String> {

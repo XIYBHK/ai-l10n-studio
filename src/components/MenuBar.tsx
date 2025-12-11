@@ -90,7 +90,9 @@ export const MenuBar: React.FC<MenuBarProps> = React.memo(({
           display: 'flex',
           alignItems: 'center',
           gap: '8px',
-          letterSpacing: '-0.5px'
+          letterSpacing: '-0.5px',
+          flexShrink: 0,
+          whiteSpace: 'nowrap'
         }}
       >
         <GlobalOutlined style={{fontSize: '24px', color: colors.statusUntranslated}} />
@@ -99,7 +101,7 @@ export const MenuBar: React.FC<MenuBarProps> = React.memo(({
         </span>
       </div>
 
-      <Space size="small">
+      <Space size="small" style={{ flexShrink: 0 }}>
         <Tooltip title="打开 PO 文件 (Ctrl+O)">
           <Button icon={<FolderOpenOutlined />} onClick={onOpenFile}>
             打开
@@ -149,7 +151,9 @@ export const MenuBar: React.FC<MenuBarProps> = React.memo(({
             padding: '4px 12px', 
             borderRadius: '6px',
             border: `1px solid ${colors.borderSecondary}`,
-            marginLeft: '12px'
+            marginLeft: '12px',
+            flexShrink: 0,
+            whiteSpace: 'nowrap'
         }}>
             <GlobalOutlined style={{ fontSize: '16px', color: colors.textSecondary, marginRight: 8 }} />
             {sourceLanguage && (

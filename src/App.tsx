@@ -69,7 +69,7 @@ export default function App() {
   const themeData = useTheme();
   const { execute: parsePOFile } = useAsync(poFileCommands.parse);
   const channelTranslation = useChannelTranslation();
-  const { active } = useAIConfigs();
+  const { active, loading: aiConfigLoading } = useAIConfigs();
   const hasCheckedAIConfig = useRef(false);
 
   // 🔧 启动时重置会话统计
@@ -104,8 +104,9 @@ export default function App() {
     };
   }, [updateSessionStats, updateCumulativeStats]);
 
-  // 检查 AI 配置
+  // 检查 AI 配置（等待加载完成后再判断）
   useEffect(() => {
+    if (aiConfigLoading) return; // 等待加载完成
     if (!hasCheckedAIConfig.current && !active) {
       hasCheckedAIConfig.current = true;
       setSettingsVisible(true);
@@ -114,7 +115,7 @@ export default function App() {
     if (active) {
       hasCheckedAIConfig.current = true;
     }
-  }, [active]);
+  }, [active, aiConfigLoading]);
 
   // 全局快捷键
   useEffect(() => {
@@ -315,7 +316,7 @@ export default function App() {
         });
       }
 
-      // ✅ 更新统计数据（Tauri 最佳实践：简单直接）
+      // 更新统计数据
       if (result.stats) {
         const finalStats: TranslationStats = {
           total: texts.length,
@@ -323,8 +324,8 @@ export default function App() {
           deduplicated: result.stats.deduplicated || 0,
           ai_translated: result.stats.ai_translated || 0,
           token_stats: {
-            input_tokens: result.stats.token_stats.prompt_tokens || 0,
-            output_tokens: result.stats.token_stats.completion_tokens || 0,
+            input_tokens: result.stats.token_stats.input_tokens || 0,
+            output_tokens: result.stats.token_stats.output_tokens || 0,
             total_tokens: result.stats.token_stats.total_tokens || 0,
             cost: result.stats.token_stats.cost || 0,
           },

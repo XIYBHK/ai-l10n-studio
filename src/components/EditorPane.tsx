@@ -10,6 +10,7 @@ import { ErrorBoundary } from './ErrorBoundary';
 import { createModuleLogger } from '../utils/logger';
 import { termLibraryCommands } from '../services/commands';
 import { useAppData } from '../hooks/useConfig';
+import { useTermLibrary } from '../hooks/useTermLibrary';
 
 // 💡 优化：使用 React.memo 避免不必要的重渲染
 const { TextArea } = Input;
@@ -30,6 +31,7 @@ const EditorPane: React.FC<EditorPaneProps> = memo(({
 }) => {
   // ✅ 使用统一数据提供者获取AI配置
   const { activeAIConfig } = useAppData();
+  const { refresh: refreshTermLibrary } = useTermLibrary();
 
   const [translation, setTranslation] = useState('');
   const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
@@ -446,6 +448,8 @@ const EditorPane: React.FC<EditorPaneProps> = memo(({
                     message.success('术语已添加到术语库');
                   }
 
+                  // 刷新术语库显示
+                  refreshTermLibrary();
                   log.debug('术语已更新');
                 }
               } catch (error) {

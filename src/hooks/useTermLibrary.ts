@@ -1,4 +1,6 @@
+import { useEffect } from 'react';
 import useSWR from 'swr';
+import { listen } from '@tauri-apps/api/event';
 import type { TermLibrary } from '../types/termLibrary';
 import { termLibraryCommands } from '../services/commands';
 
@@ -20,6 +22,23 @@ export function useTermLibrary(options?: UseTermLibraryOptions) {
       dedupingInterval: 2000, // 2秒内去重
     }
   );
+
+  // 监听翻译完成事件，自动刷新术语库（术语库在翻译后可能更新）
+  useEffect(() => {
+    if (!enabled) return;
+
+    let unlisten: (() => void) | undefined;
+
+    listen('translation:after', () => {
+      mutate(); // 翻译完成后刷新术语库
+    }).then((fn) => {
+      unlisten = fn;
+    });
+
+    return () => {
+      unlisten?.();
+    };
+  }, [enabled, mutate]);
 
   return {
     termLibrary: data ?? null,

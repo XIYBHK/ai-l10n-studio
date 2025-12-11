@@ -72,14 +72,16 @@ pub struct ContextualRefineRequest {
 
 // TranslationMemory 结构体已移至 services/translation_memory.rs
 
-// 🔧 辅助函数：自动保存翻译记忆库（内部使用）
+// 辅助函数：自动保存翻译记忆库（内部使用）
 fn auto_save_translation_memory(translator: &AITranslator) {
     if let Some(tm) = translator.get_translation_memory() {
         let tm_path = get_translation_memory_path().to_string_lossy().to_string();
         if let Some(parent) = std::path::Path::new(&tm_path).parent() {
             let _ = std::fs::create_dir_all(parent);
         }
-        let _ = tm.save_to_file(tm_path);
+        if let Err(e) = tm.save_to_file(&tm_path) {
+            log::error!("[TM] 保存失败: {}", e);
+        }
     }
 }
 
@@ -181,7 +183,9 @@ pub struct BatchResult {
 pub fn get_translation_memory() -> Result<TranslationMemory, String> {
     let memory_path = get_translation_memory_path().to_string_lossy().to_string();
 
-    // 使用 new_from_file 而不是 load_from_file，因为它能正确处理Python格式的JSON
+    // 使用 new_from_file 加载记忆库
+    // 注意：这里不合并内置词库，保持与翻译时一致的行为
+    // 用户清空后，UI 也不显示内置词库
     TranslationMemory::new_from_file(memory_path).map_err(|e| {
         println!("[TM] 加载记忆库失败: {}", e);
         format!("加载记忆库失败: {}", e)
@@ -226,8 +230,8 @@ pub fn merge_builtin_phrases() -> Result<usize, String> {
     // 更新统计
     tm.stats.total_entries = tm.memory.len();
     
-    // 保存到文件
-    tm.save_to_file(&memory_path)
+    // 保存到文件（使用 save_all 保存完整内容，不过滤内置词库）
+    tm.save_all(&memory_path)
         .map_err(|e| format!("保存记忆库失败: {}", e))?;
     
     crate::app_log!("[TM] 合并内置词库: {} 条内置短语，新增 {} 条", builtin_count, added_count);
@@ -675,21 +679,39 @@ pub async fn generate_style_summary() -> Result<String, String> {
         .lines()
         .filter_map(|line| {
             let trimmed = line.trim();
-            // 跳过包含提示性文本的行
-            if trimmed.starts_with("第1行") || trimmed.starts_with("第2行") {
-                // 提取冒号后的实际内容
-                if let Some(pos) = trimmed.find('：') {
-                    let content = trimmed[pos + '：'.len_utf8()..].trim();
-                    if !content.is_empty() {
-                        return Some(content.to_string());
-                    }
-                }
-                None
-            } else if !trimmed.is_empty() {
-                Some(trimmed.to_string())
-            } else {
-                None
+            if trimmed.is_empty() {
+                return None;
             }
+            
+            // 需要清理的前缀模式（匹配各种 AI 输出格式）
+            let prefixes_to_clean = [
+                "第1行",
+                "第2行",
+                "风格概括（",  // 匹配 "风格概括（10-15字..."
+                "风格概括",
+                "详细指导（",  // 匹配 "详细指导（不超过150字..."
+                "详细指导",
+            ];
+            
+            // 检查是否包含需要清理的前缀
+            for prefix in &prefixes_to_clean {
+                if trimmed.starts_with(prefix) {
+                    // 提取分隔符后的实际内容（支持 "：" ":" " - " 等分隔符）
+                    let separators = ["：", ":", " - ", "- "];
+                    for sep in separators {
+                        if let Some(pos) = trimmed.find(sep) {
+                            let content = trimmed[pos + sep.len()..].trim();
+                            if !content.is_empty() {
+                                return Some(content.to_string());
+                            }
+                        }
+                    }
+                    return None;
+                }
+            }
+            
+            // 不包含前缀的行直接保留
+            Some(trimmed.to_string())
         })
         .collect::<Vec<_>>()
         .join("\n");
@@ -1049,7 +1071,7 @@ pub async fn translate_batch_with_channel(
     // 保存翻译记忆库
     auto_save_translation_memory(&translator);
 
-    // 🔧 发送任务完成统计事件 - 与其他翻译方式保持一致
+    // 发送任务完成统计事件 - 与其他翻译方式保持一致
     // 注意：需要从上下文获取 app_handle，但 Channel API 没有传入
     // 这是一个架构问题，暂时通过返回值让前端处理
 

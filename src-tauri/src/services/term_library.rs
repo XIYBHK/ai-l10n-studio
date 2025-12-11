@@ -249,10 +249,11 @@ impl TermLibrary {
         }
 
         prompt.push_str("【分析任务】\n");
-        prompt.push_str("对比上述每组「AI译」和「用户译」，找出用户的翻译偏好和风格特征。\n\n");
+        prompt.push_str("逐一对比上述每组「AI译」和「用户译」的差异，总结用户的翻译偏好。\n");
+        prompt.push_str("注意：必须分析所有术语组，不要遗漏任何一组差异。\n\n");
         
         prompt.push_str("【检查维度】\n");
-        prompt.push_str("1. 词汇偏好：用户是否偏好特定词汇？（如：保留英文原词、使用简洁表达等）\n");
+        prompt.push_str("1. 词汇选择：用户偏好的具体词汇（如：Proximity→邻近 而非 接近度）\n");
         prompt.push_str("2. 符号习惯：空格、下划线、标点等使用习惯\n");
         prompt.push_str("3. 整体风格：直译/意译、正式/口语、简洁/详细等\n\n");
         

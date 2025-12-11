@@ -287,3 +287,4 @@ docs/examples/data/*.json
 ref/
 .cursor/rules/
 docs/PLAN_STATUS_AUDIT.md
+.kiro/steering/xiybhk.md
