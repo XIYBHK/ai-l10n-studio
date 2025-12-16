@@ -6,16 +6,19 @@
 
 **删除复杂的事件溯源系统和过度封装，简化数据流**
 
-*第一轮优化*:
+_第一轮优化_:
+
 - ✅ **简化统计事件**: 使用简单 `useState`，删除 `StatsEvent` 复杂结构
 - ✅ **删除事件存储**: 移除 `EventStore` 和幂等性逻辑
 - ✅ **直接 Channel 通信**: 实时统计，无事件聚合器
 
-*第二轮优化*:
+_第二轮优化_:
+
 - ✅ **删除未使用文件**: 5个文件共 687行
 - ✅ **简化参数转换**: 移除 `paramConverter.ts` 和相关逻辑
 
-*第三轮优化*:
+_第三轮优化_:
+
 - ✅ **简化 API 封装**: 从三层简化为两层
 - ✅ **删除 SWR 配置**: 删除 `swr.ts`，hooks 直接传入 fetcher
 - ✅ **保留类型安全**: 核心数据契约保持不变
@@ -135,16 +138,16 @@ Zustand Stores (持久化部分)
 ```typescript
 // ❌ 已删除：复杂的统计事件系统
 interface StatsEvent {
-  meta: StatsEventMeta;    // 删除：事件元数据
-  data: TranslationStats;  // 保留：但直接使用
+  meta: StatsEventMeta; // 删除：事件元数据
+  data: TranslationStats; // 保留：但直接使用
 }
 
 interface StatsEventMeta {
-  eventId: string;         // 删除：幂等性标识
-  type: StatsEventType;    // 删除：事件类型
+  eventId: string; // 删除：幂等性标识
+  type: StatsEventType; // 删除：事件类型
   translationMode: string; // 删除：翻译模式
-  timestamp: number;       // 删除：时间戳
-  taskId?: string;         // 删除：任务ID
+  timestamp: number; // 删除：时间戳
+  taskId?: string; // 删除：任务ID
 }
 
 // ❌ 已删除：事件存储和调试工具
@@ -502,17 +505,16 @@ const getSystemTheme = (): 'light' | 'dark' => {
   if (typeof window === 'undefined' || !window.matchMedia) {
     return 'light';
   }
-  return window.matchMedia('(prefers-color-scheme: dark)').matches
-    ? 'dark'
-    : 'light';
+  return window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
 };
 
 // ✅ 简化版主题系统（~100行）
 export const useTheme = () => {
   const themeMode = useAppStore((state) => state.theme);
-  const appliedTheme = useMemo(() =>
-    themeMode === 'system' ? getSystemTheme() : themeMode,
-  [themeMode]);
+  const appliedTheme = useMemo(
+    () => (themeMode === 'system' ? getSystemTheme() : themeMode),
+    [themeMode]
+  );
 
   useEffect(() => {
     const root = window.document.documentElement;
@@ -553,12 +555,12 @@ class SystemThemeManager {
 
 ### 简化收益
 
-| 指标 | 重构前 | 重构后 | 提升 |
-|-----|--------|--------|------|
-| 代码行数 | 253行 | 100行 | **-153行** |
-| 主题切换 | ~200ms | <50ms | **75%** |
-| 系统调用 | 有 | 无 | **简化** |
-| 复杂度 | 高 | 低 | **显著降低** |
+| 指标     | 重构前 | 重构后 | 提升         |
+| -------- | ------ | ------ | ------------ |
+| 代码行数 | 253行  | 100行  | **-153行**   |
+| 主题切换 | ~200ms | <50ms  | **75%**      |
+| 系统调用 | 有     | 无     | **简化**     |
+| 复杂度   | 高     | 低     | **显著降低** |
 
 **核心优势**:
 
@@ -631,13 +633,13 @@ Frontend (直接使用)
 
 **与旧系统的对比**:
 
-| 方面 | 旧系统 (事件分发器) | 新系统 (直接 Tauri) |
-|-----|-------------------|-------------------|
-| 代码复杂度 | 高 (368行) | 低 (0行，直接使用) |
-| 事件响应 | ~100ms | <30ms |
-| 内存占用 | 高 (事件历史) | 低 (无存储) |
-| 调试难度 | 高 (多层转发) | 低 (直接调用) |
-| 维护成本 | 高 (自定义系统) | 低 (标准 API) |
+| 方面       | 旧系统 (事件分发器) | 新系统 (直接 Tauri) |
+| ---------- | ------------------- | ------------------- |
+| 代码复杂度 | 高 (368行)          | 低 (0行，直接使用)  |
+| 事件响应   | ~100ms              | <30ms               |
+| 内存占用   | 高 (事件历史)       | 低 (无存储)         |
+| 调试难度   | 高 (多层转发)       | 低 (直接调用)       |
+| 维护成本   | 高 (自定义系统)     | 低 (标准 API)       |
 
 ---
 
@@ -714,31 +716,124 @@ Serde 序列化 → JSON
 
 ### 三轮重构前后对比
 
-| 数据契约方面 | 2025-10 (重构前) | 2025-11 (三轮优化后) | 改进 |
-|-------------|------------------|---------------------|------|
-| 事件系统 | 复杂事件溯源 | 简单直接调用 | **简化 80%** |
-| 统计存储 | EventStore + 幂等性 | 直接 useState | **内存 -30%** |
-| API 封装 | 三层透传 | 两层直接调用 | **代码 -240行** |
-| 类型转换 | 手动转换函数 | 零转换成本 | **代码 -200行** |
-| 响应延迟 | ~100ms | <30ms | **速度 +70%** |
-| 调试复杂度 | 高 (多层转发) | 低 (直接调用) | **调试 +50%** |
-| 代码总量 | 基准 | -5917行 | **减少 18%** |
+| 数据契约方面 | 2025-10 (重构前)    | 2025-11 (三轮优化后) | 改进            |
+| ------------ | ------------------- | -------------------- | --------------- |
+| 事件系统     | 复杂事件溯源        | 简单直接调用         | **简化 80%**    |
+| 统计存储     | EventStore + 幂等性 | 直接 useState        | **内存 -30%**   |
+| API 封装     | 三层透传            | 两层直接调用         | **代码 -240行** |
+| 类型转换     | 手动转换函数        | 零转换成本           | **代码 -200行** |
+| 响应延迟     | ~100ms              | <30ms                | **速度 +70%**   |
+| 调试复杂度   | 高 (多层转发)       | 低 (直接调用)        | **调试 +50%**   |
+| 代码总量     | 基准                | -5917行              | **减少 18%**    |
+
+### Phase 10 类型安全恢复 (2025-12-16)
+
+#### 🔧 问题：SWR 类型安全丢失
+
+**错误的类型定义** (`src/types/swr-shim.d.ts` - 已删除):
+
+```typescript
+// ❌ 将所有 SWR 类型定义为 any，完全丢失类型安全
+declare module 'swr' {
+  const SWR: any; // 💥 所有类型变为 any
+  export default SWR;
+  export const SWRConfig: any;
+  export type SWRConfiguration = any;
+  export function mutate(...args: any[]): any;
+  export function useSWR<T = any>(
+    key: any,
+    ...rest: any[]
+  ): {
+    data: T | undefined;
+    error: any;
+    isLoading: boolean;
+    isValidating: boolean;
+    mutate: (data?: any, opts?: any) => Promise<any>;
+  };
+}
+```
+
+**影响**:
+
+- ❌ TypeScript 类型推断完全失效
+- ❌ IDE 智能提示丢失，开发体验下降
+- ❌ 编译时类型检查无法生效
+- ❌ 增加运行时类型错误风险
+
+#### ✅ 解决方案：完全删除错误定义
+
+**修复内容**:
+
+1. 完全删除 `src/types/swr-shim.d.ts` 文件
+2. 依赖 SWR 2.3.6 官方类型定义
+3. 恢复完整的 TypeScript 类型推断
+
+**恢复的类型安全**:
+
+```typescript
+// ✅ 完整的类型推断（来自 SWR 官方定义）
+import useSWR from 'swr';
+
+function useAppConfig() {
+  // ✅ data 类型完全推断为 AppConfig | undefined
+  // ✅ error 类型推断为 Error | undefined
+  // ✅ mutate 类型安全，有完整的参数和返回值类型
+  const { data, error, mutate } = useSWR('app_config', () => configCommands.get());
+
+  return {
+    config: data, // ✅ AppConfig | undefined (完整类型推断)
+    error, // ✅ Error | undefined
+    mutate, // ✅ 完整类型签名
+  };
+}
+```
+
+#### 📊 类型安全对比
+
+| 方面            | 修复前 (swr-shim.d.ts) | 修复后 (官方定义) |
+| --------------- | ---------------------- | ----------------- |
+| TypeScript 推断 | 全部 any               | 完整类型推断      |
+| IDE 智能提示    | 无                     | 完整提示          |
+| 编译时检查      | 无效                   | 完全生效          |
+| 运行时安全      | 低                     | 高                |
+| 开发体验        | 差                     | 优秀              |
+| 类型错误检测    | 无                     | 编译时发现        |
+
+#### 🎯 影响范围
+
+**受益的文件**:
+
+- `src/hooks/useConfig.ts` - 配置相关 hooks
+- `src/hooks/useTermLibrary.ts` - 术语库 hooks
+- `src/hooks/useTranslationMemory.ts` - 翻译记忆库 hooks
+- 所有使用 `useSWR` 的组件和 hooks
+
+**恢复的类型推断**:
+
+- ✅ `AppConfig` 类型完全推断
+- ✅ `AIConfig[]` 类型完全推断
+- ✅ `TranslationMemory` 类型完全推断
+- ✅ `TermLibrary` 类型完全推断
+- ✅ 所有 SWR 返回值类型推断
 
 ### 核心数据契约保持不变
 
 ✅ **保留的类型契约**:
+
 - `AIConfig` - 前后端统一类型
 - `ModelInfo` - 模型信息完整
 - `TranslationStats` - 翻译统计核心
 - `CostBreakdown` - 成本分解精确
 
 ✅ **保留的功能契约**:
+
 - 翻译记忆库用户控制
 - 多AI供应商插件化架构
 - Draft 模式原子更新
 - 类型安全前后端通信
 
 ✅ **简化的实现契约**:
+
 - 删除事件溯源系统
 - 简化统计更新流程
 - 优化主题检测机制

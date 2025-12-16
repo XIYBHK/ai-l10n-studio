@@ -109,7 +109,11 @@ function extractTermDifference(
   const userWords = tokenize(userTranslation);
 
   // 如果分词数量差异太大，直接返回完整译文对比
-  if (Math.abs(aiWords.length - userWords.length) > 1 || aiWords.length <= 1 || userWords.length <= 1) {
+  if (
+    Math.abs(aiWords.length - userWords.length) > 1 ||
+    aiWords.length <= 1 ||
+    userWords.length <= 1
+  ) {
     // 返回完整译文作为对比
     return {
       ai: aiTranslation,

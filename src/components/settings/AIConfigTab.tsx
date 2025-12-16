@@ -19,11 +19,7 @@ import {
   CheckOutlined,
   ApiOutlined,
 } from '@ant-design/icons';
-import {
-  aiConfigCommands,
-  aiModelCommands,
-  aiProviderCommands,
-} from '../../services/commands';
+import { aiConfigCommands, aiModelCommands, aiProviderCommands } from '../../services/commands';
 import { AIConfig } from '../../types/aiProvider';
 import { createModuleLogger } from '../../utils/logger';
 import { useAIConfigs } from '../../hooks/useConfig';
@@ -128,7 +124,11 @@ export const AIConfigTab: React.FC<AIConfigTabProps> = () => {
             }
           : undefined,
       };
-      await aiConfigCommands.testConnection(testConfig.providerId, testConfig.apiKey, testConfig.baseUrl);
+      await aiConfigCommands.testConnection(
+        testConfig.providerId,
+        testConfig.apiKey,
+        testConfig.baseUrl
+      );
       message.success('连接测试成功！');
       log.info('连接测试成功', { providerId: values.providerId });
     } catch (error) {
@@ -332,16 +332,14 @@ export const AIConfigTab: React.FC<AIConfigTabProps> = () => {
 
             <Form.Item>
               <Space>
-                <Button
-                  type="primary"
-                  htmlType="submit"
-                  loading={testing}
-                  icon={<CheckOutlined />}
-                >
+                <Button type="primary" htmlType="submit" loading={testing} icon={<CheckOutlined />}>
                   {isAddingNew ? '添加' : '更新'}
                 </Button>
                 <Button onClick={handleCancel}>取消</Button>
-                <Button onClick={() => form.validateFields().then(handleTestConnection)} loading={testing}>
+                <Button
+                  onClick={() => form.validateFields().then(handleTestConnection)}
+                  loading={testing}
+                >
                   测试连接
                 </Button>
               </Space>
@@ -349,7 +347,12 @@ export const AIConfigTab: React.FC<AIConfigTabProps> = () => {
           </Form>
         </Card>
       ) : (
-        <Button type="primary" icon={<PlusOutlined />} onClick={handleAddNew} style={{ marginTop: 16 }}>
+        <Button
+          type="primary"
+          icon={<PlusOutlined />}
+          onClick={handleAddNew}
+          style={{ marginTop: 16 }}
+        >
           新增配置
         </Button>
       )}

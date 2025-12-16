@@ -2,8 +2,8 @@
 #![allow(clippy::useless_format)]
 
 use chrono::Local;
-use serde::{Deserialize, Serialize};
 use parking_lot::Mutex;
+use serde::{Deserialize, Serialize};
 
 /// 提示词日志条目
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -91,17 +91,20 @@ pub fn format_prompt_logs() -> String {
     }
 
     let mut output = String::new();
-    output.push_str(&format!("========== 提示词日志 (共 {} 条) ==========\n\n", logs.len()));
+    output.push_str(&format!(
+        "========== 提示词日志 (共 {} 条) ==========\n\n",
+        logs.len()
+    ));
 
     for (idx, entry) in logs.iter().enumerate() {
         output.push_str(&format!("========== #{} ==========\n", idx + 1));
-        
+
         // 头部信息（一行显示）
         let mut header_parts = vec![
             format!("时间: {}", entry.timestamp),
             format!("类型: {}", entry.log_type),
         ];
-        
+
         // 从元数据提取关键信息
         if let Some(ref metadata) = entry.metadata {
             if let Some(model) = metadata.get("model").and_then(|v| v.as_str()) {

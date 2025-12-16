@@ -205,19 +205,19 @@ pub fn get_builtin_phrases() -> Result<serde_json::Value, String> {
 /// 合并内置词库到当前翻译记忆库并保存
 #[tauri::command]
 pub fn merge_builtin_phrases() -> Result<usize, String> {
-    use crate::services::translation_memory::{get_builtin_memory, TranslationMemory};
+    use crate::services::translation_memory::{TranslationMemory, get_builtin_memory};
     use crate::utils::paths::get_translation_memory_path;
 
     let memory_path = get_translation_memory_path();
-    
+
     // 加载当前记忆库
     let mut tm = TranslationMemory::new_from_file(&memory_path)
         .map_err(|e| format!("加载记忆库失败: {}", e))?;
-    
+
     // 获取内置词库
     let builtin = get_builtin_memory();
     let builtin_count = builtin.len();
-    
+
     // 合并：内置词库优先级低，不覆盖用户已有的翻译
     let mut added_count = 0;
     for (source, target) in builtin {
@@ -226,16 +226,20 @@ pub fn merge_builtin_phrases() -> Result<usize, String> {
             added_count += 1;
         }
     }
-    
+
     // 更新统计
     tm.stats.total_entries = tm.memory.len();
-    
+
     // 保存到文件（使用 save_all 保存完整内容，不过滤内置词库）
     tm.save_all(&memory_path)
         .map_err(|e| format!("保存记忆库失败: {}", e))?;
-    
-    crate::app_log!("[TM] 合并内置词库: {} 条内置短语，新增 {} 条", builtin_count, added_count);
-    
+
+    crate::app_log!(
+        "[TM] 合并内置词库: {} 条内置短语，新增 {} 条",
+        builtin_count,
+        added_count
+    );
+
     Ok(added_count)
 }
 
@@ -409,7 +413,7 @@ pub fn get_app_logs() -> Result<Vec<String>, String> {
                             .filter(|line| !line.trim().is_empty()) // 过滤空行
                             .map(|line| line.to_string())
                             .collect();
-                        
+
                         if !lines.is_empty() {
                             return Ok(lines);
                         }
@@ -565,7 +569,6 @@ pub fn get_frontend_logs() -> Result<Vec<String>, String> {
 
 // ==================== 术语库相关命令 ====================
 
-
 /// 获取术语库
 #[tauri::command]
 pub fn get_term_library() -> Result<TermLibrary, String> {
@@ -628,7 +631,7 @@ pub async fn generate_style_summary() -> Result<String, String> {
             .cloned() // 克隆配置
             .ok_or_else(|| "未找到活动的AI配置".to_string())?
     }; // config_guard 在此释放
-    
+
     crate::app_log!(
         "[风格总结] 使用AI配置: 供应商={}, 模型={}",
         active_config.provider_id,
@@ -645,11 +648,12 @@ pub async fn generate_style_summary() -> Result<String, String> {
     // 调用AI生成总结（使用自定义提示词方法，避免批量翻译格式）
     let mut translator = AITranslator::new_with_config(
         active_config, // 已克隆，可直接使用
-        false, // 不使用TM
-        None,  // 不使用系统提示词（风格分析有自己的系统角色）
-        None,  // 不指定目标语言
-    ).map_err(|e| e.to_string())?;
-    
+        false,         // 不使用TM
+        None,          // 不使用系统提示词（风格分析有自己的系统角色）
+        None,          // 不指定目标语言
+    )
+    .map_err(|e| e.to_string())?;
+
     // 记录提示词到提示词日志
     let metadata = serde_json::json!({
         "type": "风格分析",
@@ -657,7 +661,7 @@ pub async fn generate_style_summary() -> Result<String, String> {
         "provider": "current_active",
     });
     crate::services::log_prompt("风格分析", analysis_prompt.clone(), Some(metadata));
-    
+
     let summary = translator
         .translate_with_custom_user_prompt(analysis_prompt.clone())
         .await
@@ -673,7 +677,7 @@ pub async fn generate_style_summary() -> Result<String, String> {
     }
 
     crate::app_log!("[风格总结] AI生成成功，总结长度: {} 字符", summary.len());
-    
+
     // 清理 AI 返回内容中的提示性文本
     let cleaned_summary = summary
         .lines()
@@ -682,17 +686,17 @@ pub async fn generate_style_summary() -> Result<String, String> {
             if trimmed.is_empty() {
                 return None;
             }
-            
+
             // 需要清理的前缀模式（匹配各种 AI 输出格式）
             let prefixes_to_clean = [
                 "第1行",
                 "第2行",
-                "风格概括（",  // 匹配 "风格概括（10-15字..."
+                "风格概括（", // 匹配 "风格概括（10-15字..."
                 "风格概括",
-                "详细指导（",  // 匹配 "详细指导（不超过150字..."
+                "详细指导（", // 匹配 "详细指导（不超过150字..."
                 "详细指导",
             ];
-            
+
             // 检查是否包含需要清理的前缀
             for prefix in &prefixes_to_clean {
                 if trimmed.starts_with(prefix) {
@@ -709,7 +713,7 @@ pub async fn generate_style_summary() -> Result<String, String> {
                     return None;
                 }
             }
-            
+
             // 不包含前缀的行直接保留
             Some(trimmed.to_string())
         })
@@ -969,7 +973,8 @@ pub async fn translate_batch_with_channel(
     progress_channel: tauri::ipc::Channel<crate::services::BatchProgressEvent>,
     stats_channel: tauri::ipc::Channel<crate::services::BatchStatsEvent>,
 ) -> Result<BatchResult, String> {
-    use crate::services::{BatchProgressManager, BatchStatsEvent, TokenStatsEvent};
+    use crate::services::{BatchStatsEvent, TokenStatsEvent};
+    use crate::utils::progress_throttler::ProgressThrottler;
 
     // 初始化配置和翻译器（在单独的作用域中以释放guard）
     let mut translator = {
@@ -985,8 +990,8 @@ pub async fn translate_batch_with_channel(
             .map_err(|e| format!("AI翻译器初始化失败: {}", e))?
     };
 
-    // 创建进度管理器（暂未使用，保留以备后续优化）
-    let _progress_mgr = BatchProgressManager::new(texts.len());
+    // 创建进度节流器（100ms 间隔，避免高频更新导致 UI 卡顿）
+    let progress_throttler = std::sync::Arc::new(ProgressThrottler::with_default_interval());
 
     // 翻译处理（按批次）
     let mut translations = Vec::with_capacity(texts.len());
@@ -1011,17 +1016,21 @@ pub async fn translate_batch_with_channel(
         let chunk_vec = chunk.to_vec();
         let chunk_start_index = global_index;
 
-        // 🔔 创建 progress_callback，实时推送 TM 命中和 AI 翻译结果
+        // 🔔 创建 progress_callback，实时推送 TM 命中和 AI 翻译结果（带节流优化）
         let progress_channel_clone = progress_channel.clone();
+        let throttler_clone = progress_throttler.clone();
         let progress_callback = Box::new(move |local_idx: usize, translation: String| {
-            let global_idx = chunk_start_index + local_idx;
-            let event = crate::services::BatchProgressEvent::with_index(
-                global_idx + 1,
-                total_count,
-                Some(translation.clone()),
-                global_idx,
-            );
-            let _ = progress_channel_clone.send(event);
+            // 使用节流器减少高频更新，仅每100ms发送一次进度
+            if throttler_clone.should_update() {
+                let global_idx = chunk_start_index + local_idx;
+                let event = crate::services::BatchProgressEvent::with_index(
+                    global_idx + 1,
+                    total_count,
+                    Some(translation.clone()),
+                    global_idx,
+                );
+                let _ = progress_channel_clone.send(event);
+            }
         });
 
         // 📍 使用 translate_batch_with_sources 获取翻译和来源

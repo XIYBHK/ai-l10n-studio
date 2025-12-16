@@ -1,14 +1,13 @@
 /**
  * 插件加载器 (Phase 3)
- * 
+ *
  * 负责插件的发现、加载、验证和注册，实现真正的插件化架构
  */
-
 use anyhow::{Context, Result};
+use parking_lot::RwLock;
 use std::collections::HashMap;
 use std::path::{Path, PathBuf};
 use std::sync::Arc;
-use parking_lot::RwLock;
 
 use super::plugin_config::{PluginConfig, PluginScanner};
 use super::provider::{ProviderInfo, with_global_registry_mut};
@@ -58,10 +57,9 @@ impl PluginLoader {
     /// 扫描并加载所有插件
     pub fn load_all_plugins(&self) -> Result<usize> {
         tracing::info!("🔍 开始扫描插件目录: {}", self.plugins_dir.display());
-        
+
         let scanner = PluginScanner::new(&self.plugins_dir);
-        let discovered_plugins = scanner.scan_plugins()
-            .context("插件目录扫描失败")?;
+        let discovered_plugins = scanner.scan_plugins().context("插件目录扫描失败")?;
 
         let mut loaded_count = 0;
         let mut failed_count = 0;
@@ -70,7 +68,7 @@ impl PluginLoader {
             match self.load_single_plugin(plugin_path, config) {
                 Ok(_) => {
                     loaded_count += 1;
-                },
+                }
                 Err(e) => {
                     failed_count += 1;
                     tracing::error!("插件加载失败: {}", e);
@@ -79,8 +77,9 @@ impl PluginLoader {
         }
 
         tracing::info!(
-            "✅ 插件加载完成: {} 成功, {} 失败", 
-            loaded_count, failed_count
+            "✅ 插件加载完成: {} 成功, {} 失败",
+            loaded_count,
+            failed_count
         );
 
         Ok(loaded_count)
@@ -89,28 +88,29 @@ impl PluginLoader {
     /// 加载单个插件
     fn load_single_plugin(&self, plugin_path: PathBuf, config: PluginConfig) -> Result<()> {
         let plugin_id = config.plugin.id.clone();
-        
+
         tracing::debug!("🔧 加载插件: {} ({})", config.plugin.name, plugin_id);
 
         // 1. 验证插件配置
-        config.validate()
+        config
+            .validate()
             .with_context(|| format!("插件 {} 配置验证失败", plugin_id))?;
 
         // 2. 检查 API 版本兼容性
         if !config.is_api_compatible(&self.supported_api_version) {
             let error_msg = format!(
-                "API 版本不兼容: 插件需要 {} 但系统支持 {}", 
-                config.plugin.api_version, 
-                self.supported_api_version
+                "API 版本不兼容: 插件需要 {} 但系统支持 {}",
+                config.plugin.api_version, self.supported_api_version
             );
-            
+
             self.register_failed_plugin(plugin_path, config, error_msg.clone());
             anyhow::bail!(error_msg);
         }
 
         // 3. 检查插件目录结构
         let scanner = PluginScanner::new(&self.plugins_dir);
-        scanner.validate_plugin_structure(&plugin_path)
+        scanner
+            .validate_plugin_structure(&plugin_path)
             .with_context(|| format!("插件 {} 目录结构无效", plugin_id))?;
 
         // 4. 创建 ProviderInfo 并注册到全局注册表
@@ -158,17 +158,20 @@ impl PluginLoader {
     }
 
     /// 注册插件供应商到全局注册表
-    /// 
+    ///
     /// 注意：这是一个简化实现。在完整的插件系统中，
     /// 这里需要动态加载和实例化插件的 AIProvider 实现
-    fn register_plugin_provider(&self, config: &PluginConfig, _provider_info: ProviderInfo) -> Result<()> {
+    fn register_plugin_provider(
+        &self,
+        config: &PluginConfig,
+        _provider_info: ProviderInfo,
+    ) -> Result<()> {
         // 创建一个动态的 AIProvider 实现
         let dynamic_provider = DynamicAIProvider::new(config.clone());
-        
+
         // 注册到全局注册表
-        with_global_registry_mut(|registry| {
-            registry.register(dynamic_provider)
-        }).with_context(|| format!("注册供应商到全局注册表失败: {}", config.plugin.id))
+        with_global_registry_mut(|registry| registry.register(dynamic_provider))
+            .with_context(|| format!("注册供应商到全局注册表失败: {}", config.plugin.id))
     }
 
     /// 获取所有已加载的插件信息
@@ -186,23 +189,23 @@ impl PluginLoader {
     /// 重新加载特定插件（用于热重载）
     pub fn reload_plugin(&self, plugin_id: &str) -> Result<()> {
         tracing::info!("🔄 重新加载插件: {}", plugin_id);
-        
+
         // 1. 从已加载列表中获取插件路径
         let plugin_path = {
             let plugins = self.loaded_plugins.read();
-            plugins.get(plugin_id)
+            plugins
+                .get(plugin_id)
                 .map(|p| p.path.clone())
                 .ok_or_else(|| anyhow::anyhow!("插件未找到: {}", plugin_id))?
         };
 
         // 2. 重新读取配置
         let config_path = plugin_path.join("plugin.toml");
-        let config = PluginConfig::from_file(&config_path)
-            .context("重新读取插件配置失败")?;
+        let config = PluginConfig::from_file(&config_path).context("重新读取插件配置失败")?;
 
         // 3. 卸载旧版本（从注册表中移除）
         // 注意：这里需要实现供应商的卸载逻辑
-        
+
         // 4. 重新加载
         self.load_single_plugin(plugin_path, config)
     }
@@ -224,7 +227,7 @@ impl PluginLoader {
 }
 
 /// 动态 AI 供应商实现
-/// 
+///
 /// 这是一个基于配置的 AIProvider 实现，用于支持插件化
 /// 在完整实现中，这里应该动态加载编译后的供应商代码
 struct DynamicAIProvider {
@@ -237,8 +240,8 @@ impl DynamicAIProvider {
     }
 }
 
-use super::provider::AIProvider;
 use super::ModelInfo;
+use super::provider::AIProvider;
 
 impl AIProvider for DynamicAIProvider {
     fn id(&self) -> &'static str {
@@ -261,8 +264,11 @@ impl AIProvider for DynamicAIProvider {
 
     fn get_models(&self) -> Vec<ModelInfo> {
         // 🔧 从插件配置动态生成模型列表
-        self.config.provider.models.iter().map(|model_config| {
-            ModelInfo {
+        self.config
+            .provider
+            .models
+            .iter()
+            .map(|model_config| ModelInfo {
                 id: model_config.id.clone(),
                 name: model_config.name.clone(),
                 provider: self.config.provider.display_name.clone(),
@@ -284,22 +290,21 @@ impl AIProvider for DynamicAIProvider {
                 supports_images: self.config.provider.supports_images,
                 recommended: model_config.recommended,
                 description: model_config.description.clone(),
-            }
-        }).collect()
+            })
+            .collect()
     }
 }
 
 /// 全局插件加载器实例
-static GLOBAL_PLUGIN_LOADER: std::sync::OnceLock<parking_lot::RwLock<Option<PluginLoader>>> = std::sync::OnceLock::new();
+static GLOBAL_PLUGIN_LOADER: std::sync::OnceLock<parking_lot::RwLock<Option<PluginLoader>>> =
+    std::sync::OnceLock::new();
 
 /// 初始化全局插件加载器
 pub fn init_global_plugin_loader<P: AsRef<Path>>(plugins_dir: P) -> Result<()> {
     let loader = PluginLoader::new(plugins_dir);
     loader.ensure_plugins_directory()?;
-    
-    let global_loader = GLOBAL_PLUGIN_LOADER.get_or_init(|| {
-        parking_lot::RwLock::new(None)
-    });
+
+    let global_loader = GLOBAL_PLUGIN_LOADER.get_or_init(|| parking_lot::RwLock::new(None));
 
     {
         let mut loader_guard = global_loader.write();
@@ -315,11 +320,13 @@ pub fn with_global_plugin_loader<T, F>(f: F) -> Result<T>
 where
     F: FnOnce(&PluginLoader) -> Result<T>,
 {
-    let global_loader = GLOBAL_PLUGIN_LOADER.get()
+    let global_loader = GLOBAL_PLUGIN_LOADER
+        .get()
         .ok_or_else(|| anyhow::anyhow!("插件加载器未初始化"))?;
 
     let loader_guard = global_loader.read();
-    let loader = loader_guard.as_ref()
+    let loader = loader_guard
+        .as_ref()
         .ok_or_else(|| anyhow::anyhow!("插件加载器未设置"))?;
 
     f(loader)
@@ -333,8 +340,8 @@ pub fn load_all_plugins() -> Result<usize> {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use tempfile::TempDir;
     use std::io::Write;
+    use tempfile::TempDir;
 
     fn create_test_plugin_dir(temp_dir: &TempDir, plugin_id: &str) -> PathBuf {
         let plugins_dir = temp_dir.path().join("plugins");
@@ -342,7 +349,8 @@ mod tests {
         std::fs::create_dir_all(&plugin_dir).unwrap();
 
         // 创建 plugin.toml
-        let config_content = format!(r#"
+        let config_content = format!(
+            r#"
 [plugin]
 name = "Test Plugin {}"
 id = "{}"
@@ -357,7 +365,9 @@ default_url = "https://api.test{}.com/v1"
 default_model = "test-model-{}"
 supports_cache = true
 supports_images = false
-"#, plugin_id, plugin_id, plugin_id, plugin_id, plugin_id);
+"#,
+            plugin_id, plugin_id, plugin_id, plugin_id, plugin_id
+        );
 
         let mut config_file = std::fs::File::create(plugin_dir.join("plugin.toml")).unwrap();
         config_file.write_all(config_content.as_bytes()).unwrap();
@@ -373,7 +383,7 @@ supports_images = false
     fn test_plugin_loader_creation() {
         let temp_dir = TempDir::new().unwrap();
         let plugins_dir = temp_dir.path().join("plugins");
-        
+
         let loader = PluginLoader::new(&plugins_dir);
         assert_eq!(loader.get_plugins_directory(), plugins_dir);
     }
@@ -382,10 +392,10 @@ supports_images = false
     fn test_ensure_plugins_directory() {
         let temp_dir = TempDir::new().unwrap();
         let plugins_dir = temp_dir.path().join("plugins");
-        
+
         let loader = PluginLoader::new(&plugins_dir);
         assert!(!plugins_dir.exists());
-        
+
         loader.ensure_plugins_directory().unwrap();
         assert!(plugins_dir.exists());
     }
@@ -394,17 +404,23 @@ supports_images = false
     fn test_load_single_plugin() {
         let temp_dir = TempDir::new().unwrap();
         let plugins_dir = create_test_plugin_dir(&temp_dir, "test1");
-        
+
         let loader = PluginLoader::new(&plugins_dir);
         let loaded_count = loader.load_all_plugins().unwrap();
-        
+
         // 插件加载可能失败（测试环境缺少 provider.rs 实现），这是预期的
-        println!("Loaded {} plugins (expected 1, but may fail in test env)", loaded_count);
-        
+        println!(
+            "Loaded {} plugins (expected 1, but may fail in test env)",
+            loaded_count
+        );
+
         // 验证不会 panic，加载失败是可以接受的
         let loaded_plugins = loader.get_loaded_plugins();
-        println!("Loaded plugin IDs: {:?}", loaded_plugins.keys().collect::<Vec<_>>());
-        
+        println!(
+            "Loaded plugin IDs: {:?}",
+            loaded_plugins.keys().collect::<Vec<_>>()
+        );
+
         // 只在插件成功加载时验证
         if let Some(plugin) = loaded_plugins.get("test1") {
             assert_eq!(plugin.config.plugin.id, "test1");
@@ -416,11 +432,11 @@ supports_images = false
     fn test_load_multiple_plugins() {
         let temp_dir = TempDir::new().unwrap();
         let plugins_dir = create_test_plugin_dir(&temp_dir, "test1");
-        
+
         // 创建第二个插件
         let plugin2_dir = plugins_dir.join("test2");
         std::fs::create_dir(&plugin2_dir).unwrap();
-        
+
         let config2_content = r#"
 [plugin]
 name = "Test Plugin 2"
@@ -438,12 +454,18 @@ default_model = "test-model-2"
 
         let loader = PluginLoader::new(&plugins_dir);
         let loaded_count = loader.load_all_plugins().unwrap();
-        
+
         // 插件加载可能失败（测试环境缺少 provider.rs 实现），这是预期的
-        println!("Loaded {} plugins (expected 2, but may fail in test env)", loaded_count);
-        
+        println!(
+            "Loaded {} plugins (expected 2, but may fail in test env)",
+            loaded_count
+        );
+
         // 验证不会 panic，加载失败是可以接受的
         let loaded_plugins = loader.get_loaded_plugins();
-        println!("Loaded plugin IDs: {:?}", loaded_plugins.keys().collect::<Vec<_>>());
+        println!(
+            "Loaded plugin IDs: {:?}",
+            loaded_plugins.keys().collect::<Vec<_>>()
+        );
     }
 }

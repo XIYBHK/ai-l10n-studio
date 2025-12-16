@@ -1,5 +1,5 @@
 // AI 供应商具体实现模块
-// 
+//
 // 每个供应商都实现 AIProvider trait，实现插件化架构
 // 添加新供应商时只需在此目录创建新文件即可
 
@@ -16,7 +16,7 @@ use super::provider::with_global_registry_mut;
 use anyhow::Result;
 
 /// 注册所有内置供应商
-/// 
+///
 /// 在应用启动时调用，自动注册所有可用的AI供应商
 pub fn register_all_providers() -> Result<()> {
     with_global_registry_mut(|registry| {
@@ -37,13 +37,13 @@ mod tests {
     fn test_register_all_providers() {
         // 测试中供应商可能已经注册过（其他测试或 init.rs），忽略重复注册错误
         let _ = register_all_providers();
-        
+
         with_global_registry(|registry| {
             // 验证所有供应商都已注册
             assert!(registry.get_provider("deepseek").is_some());
             assert!(registry.get_provider("moonshot").is_some());
             assert!(registry.get_provider("openai").is_some());
-            
+
             // 验证至少有3个供应商（可能更多，如果插件也加载了）
             assert!(registry.get_provider_ids().len() >= 3);
         });

@@ -75,10 +75,7 @@ export const SystemPromptTab: React.FC<SystemPromptTabProps> = () => {
       </p>
 
       <Form form={form} layout="vertical" onFinish={handleSave}>
-        <Form.Item
-          name="prompt"
-          rules={[{ required: true, message: '请输入系统提示词' }]}
-        >
+        <Form.Item name="prompt" rules={[{ required: true, message: '请输入系统提示词' }]}>
           <Input.TextArea
             value={promptText}
             onChange={handlePromptChange}
@@ -90,19 +87,10 @@ export const SystemPromptTab: React.FC<SystemPromptTabProps> = () => {
 
         <Form.Item>
           <Space>
-            <Button
-              type="primary"
-              htmlType="submit"
-              loading={saving}
-              disabled={!isModified}
-            >
+            <Button type="primary" htmlType="submit" loading={saving} disabled={!isModified}>
               保存
             </Button>
-            <Button
-              icon={<UndoOutlined />}
-              onClick={handleReset}
-              loading={resetting}
-            >
+            <Button icon={<UndoOutlined />} onClick={handleReset} loading={resetting}>
               重置为默认值
             </Button>
           </Space>

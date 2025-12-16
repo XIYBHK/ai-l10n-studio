@@ -15,12 +15,12 @@ pub fn get_moonshot_models() -> Vec<ModelInfo> {
             context_window: 128000,
             max_output_tokens: 4096,
             // 💰 USD per 1M tokens
-            input_price: 1.67,   // 估算，自动根据上下文选择模型计费
+            input_price: 1.67, // 估算，自动根据上下文选择模型计费
             output_price: 1.67,
-            cache_reads_price: Some(0.14),   // ￥1/M ≈ $0.14/1M (90% 节省)
-            cache_writes_price: Some(2.09),  // 估算 25% 溢价
-            supports_cache: true,  // 支持自动缓存
-            supports_images: true, // 支持视觉理解
+            cache_reads_price: Some(0.14), // ￥1/M ≈ $0.14/1M (90% 节省)
+            cache_writes_price: Some(2.09), // 估算 25% 溢价
+            supports_cache: true,          // 支持自动缓存
+            supports_images: true,         // 支持视觉理解
             description: Some("最新模型，自动缓存，支持视觉 (2025-02发布)".to_string()),
             recommended: true,
         },
@@ -31,11 +31,11 @@ pub fn get_moonshot_models() -> Vec<ModelInfo> {
             context_window: 128000,
             max_output_tokens: 4096,
             // 💰 USD per 1M tokens
-            input_price: 1.67,  // $1.67/1M tokens
-            output_price: 1.67, // $1.67/1M tokens
-            cache_reads_price: Some(0.17),   // 估算 90% 节省
-            cache_writes_price: Some(2.09),  // 估算 25% 溢价
-            supports_cache: true,  // Context Caching 支持
+            input_price: 1.67,              // $1.67/1M tokens
+            output_price: 1.67,             // $1.67/1M tokens
+            cache_reads_price: Some(0.17),  // 估算 90% 节省
+            cache_writes_price: Some(2.09), // 估算 25% 溢价
+            supports_cache: true,           // Context Caching 支持
             supports_images: false,
             description: Some("智能选择最优模型，128K上下文".to_string()),
             recommended: true,
@@ -119,10 +119,14 @@ mod tests {
     #[test]
     fn test_cache_support() {
         let models = get_moonshot_models();
-        
+
         // 所有模型都应该支持缓存
         for model in &models {
-            assert!(model.supports_cache, "Model {} should support cache", model.id);
+            assert!(
+                model.supports_cache,
+                "Model {} should support cache",
+                model.id
+            );
             assert!(model.cache_reads_price.is_some());
             assert!(model.cache_writes_price.is_some());
         }

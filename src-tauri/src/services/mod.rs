@@ -13,7 +13,7 @@ pub mod term_library;
 pub mod translation_memory; // 提示词日志
 
 // 重新导出核心模块 (精确导出，避免导出废弃类型)
-pub use ai_translator::{ProxyConfig, AIConfig, TokenStats, AITranslator};
+pub use ai_translator::{AIConfig, AITranslator, ProxyConfig, TokenStats};
 pub use batch_progress_channel::*; // Tauri 2.x: IPC Channel 优化
 pub use batch_translator::*;
 pub use config_draft::*; // Phase 9: Draft 模式配置管理

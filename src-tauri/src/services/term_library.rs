@@ -244,19 +244,22 @@ impl TermLibrary {
         for (idx, term) in sorted_terms.iter().take(30).enumerate() {
             prompt.push_str(&format!(
                 "{}. 原文: {}\n   AI译: {}\n   用户译: {}\n\n",
-                idx + 1, term.source, term.ai_translation, term.user_translation
+                idx + 1,
+                term.source,
+                term.ai_translation,
+                term.user_translation
             ));
         }
 
         prompt.push_str("【分析任务】\n");
         prompt.push_str("逐一对比上述每组「AI译」和「用户译」的差异，总结用户的翻译偏好。\n");
         prompt.push_str("注意：必须分析所有术语组，不要遗漏任何一组差异。\n\n");
-        
+
         prompt.push_str("【检查维度】\n");
         prompt.push_str("1. 词汇选择：用户偏好的具体词汇（如：Proximity→邻近 而非 接近度）\n");
         prompt.push_str("2. 符号习惯：空格、下划线、标点等使用习惯\n");
         prompt.push_str("3. 整体风格：直译/意译、正式/口语、简洁/详细等\n\n");
-        
+
         prompt.push_str("【输出要求】\n");
         prompt.push_str("严格按照以下格式输出两行：\n\n");
         prompt.push_str("第1行 - 风格概括（10-15字，一句话形容）：\n");

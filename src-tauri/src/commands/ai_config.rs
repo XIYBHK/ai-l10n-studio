@@ -231,7 +231,8 @@ pub async fn test_ai_connection(
             let provider_display_name = {
                 use crate::services::ai::provider::with_global_registry;
                 with_global_registry(|registry| {
-                    registry.get_provider_info(&ai_config.provider_id)
+                    registry
+                        .get_provider_info(&ai_config.provider_id)
                         .map(|info| info.display_name)
                         .unwrap_or_else(|| ai_config.provider_id.clone())
                 })

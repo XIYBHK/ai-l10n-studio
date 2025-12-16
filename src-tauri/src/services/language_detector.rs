@@ -31,6 +31,14 @@ pub enum Language {
     Russian,
     #[serde(rename = "ar")]
     Arabic,
+    #[serde(rename = "pt")]
+    Portuguese,
+    #[serde(rename = "it")]
+    Italian,
+    #[serde(rename = "th")]
+    Thai,
+    #[serde(rename = "vi")]
+    Vietnamese,
 }
 
 impl Language {
@@ -47,6 +55,10 @@ impl Language {
             Language::Spanish => "es",
             Language::Russian => "ru",
             Language::Arabic => "ar",
+            Language::Portuguese => "pt",
+            Language::Italian => "it",
+            Language::Thai => "th",
+            Language::Vietnamese => "vi",
         }
     }
 
@@ -63,6 +75,10 @@ impl Language {
             Language::Spanish => "Español",
             Language::Russian => "Русский",
             Language::Arabic => "العربية",
+            Language::Portuguese => "Português",
+            Language::Italian => "Italiano",
+            Language::Thai => "ไทย",
+            Language::Vietnamese => "Tiếng Việt",
         }
     }
 
@@ -79,6 +95,10 @@ impl Language {
             Language::Spanish => "Spanish",
             Language::Russian => "Russian",
             Language::Arabic => "Arabic",
+            Language::Portuguese => "Portuguese",
+            Language::Italian => "Italian",
+            Language::Thai => "Thai",
+            Language::Vietnamese => "Vietnamese",
         }
     }
 
@@ -95,6 +115,10 @@ impl Language {
             "es" | "spanish" => Some(Language::Spanish),
             "ru" | "russian" => Some(Language::Russian),
             "ar" | "arabic" => Some(Language::Arabic),
+            "pt" | "pt-br" | "pt_br" | "portuguese" => Some(Language::Portuguese),
+            "it" | "italian" => Some(Language::Italian),
+            "th" | "thai" => Some(Language::Thai),
+            "vi" | "vietnamese" => Some(Language::Vietnamese),
             _ => None,
         }
     }
@@ -201,6 +225,10 @@ pub fn get_supported_languages() -> Vec<LanguageInfo> {
         Language::Spanish.into(),
         Language::Russian.into(),
         Language::Arabic.into(),
+        Language::Portuguese.into(),
+        Language::Italian.into(),
+        Language::Thai.into(),
+        Language::Vietnamese.into(),
     ]
 }
 

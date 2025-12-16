@@ -1,6 +1,6 @@
 /**
  * 全局日志服务（参考 clash-verge-rev）
- * 
+ *
  * 架构设计：
  * - Zustand 管理全局日志状态
  * - 固定 1000 条日志上限
@@ -203,10 +203,10 @@ export const clearBackendLogs = async () => {
   try {
     // 1. 清空前端显示（立即生效）
     useGlobalLogStore.getState().clearBackendLogs();
-    
+
     // 2. 清空后端文件（后台操作）
     await logCommands.clear();
-    
+
     // 3. 继续监控（不停止），后续显示的是清空后的增量日志
     console.log('[LogService] 后端日志已清空（继续监控，显示增量日志）');
   } catch (error) {
@@ -222,10 +222,10 @@ export const clearPromptLogs = async () => {
   try {
     // 1. 先清空前端显示（立即生效）
     useGlobalLogStore.getState().clearPromptLogs();
-    
+
     // 2. 再清空后端文件（后台操作）
     await logCommands.clearPromptLogs();
-    
+
     console.log('[LogService] 提示词日志已清空');
   } catch (error) {
     console.error('[LogService] 清空提示词日志失败:', error);
@@ -266,4 +266,3 @@ export const toggleFrontendLogEnabled = () => {
 export const isFrontendLogEnabled = () => {
   return useGlobalLogStore.getState().frontendEnabled;
 };
-

@@ -53,16 +53,11 @@ export const NotificationTab: React.FC<NotificationTabProps> = () => {
 
       <Form form={form} layout="vertical">
         <Form.Item label="启用通知">
-          <Switch
-            checked={notificationEnabled}
-            onChange={handleNotificationToggle}
-          />
+          <Switch checked={notificationEnabled} onChange={handleNotificationToggle} />
         </Form.Item>
 
         <Form.Item>
-          <Button onClick={handleRequestPermission}>
-            请求通知权限
-          </Button>
+          <Button onClick={handleRequestPermission}>请求通知权限</Button>
         </Form.Item>
       </Form>
     </Card>

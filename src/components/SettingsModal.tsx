@@ -5,7 +5,13 @@
 
 import React from 'react';
 import { Modal, Tabs } from 'antd';
-import { ApiOutlined, FileTextOutlined, BgColorsOutlined, BellOutlined, InfoCircleOutlined } from '@ant-design/icons';
+import {
+  ApiOutlined,
+  FileTextOutlined,
+  BgColorsOutlined,
+  BellOutlined,
+  InfoCircleOutlined,
+} from '@ant-design/icons';
 import AIConfigTab from './settings/AIConfigTab';
 import SystemPromptTab from './settings/SystemPromptTab';
 import AppearanceTab from './settings/AppearanceTab';
@@ -67,14 +73,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({ visible, onClose }
   ];
 
   return (
-    <Modal
-      title="设置"
-      open={visible}
-      onCancel={onClose}
-      footer={null}
-      width={800}
-      destroyOnClose
-    >
+    <Modal title="设置" open={visible} onCancel={onClose} footer={null} width={800} destroyOnClose>
       <Tabs items={tabItems} defaultActiveKey="ai-config" />
     </Modal>
   );

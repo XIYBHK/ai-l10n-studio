@@ -44,15 +44,15 @@ export function useTauriEvent(
 /**
  * 订阅 SWR 数据更新事件
  */
-export function useSWRRevalidate(
-  key: string,
-  eventName: string,
-  deps: any[] = []
-) {
-  useTauriEvent(eventName, () => {
-    // 重新验证 SWR 数据
-    mutate(key);
-  }, deps);
+export function useSWRRevalidate(key: string, eventName: string, deps: any[] = []) {
+  useTauriEvent(
+    eventName,
+    () => {
+      // 重新验证 SWR 数据
+      mutate(key);
+    },
+    deps
+  );
 }
 
 /**

@@ -258,7 +258,12 @@ export const aiModelCommands = {
     );
   },
 
-  async estimateCost(providerId: string, modelId: string, totalChars: number, cacheHitRate?: number) {
+  async estimateCost(
+    providerId: string,
+    modelId: string,
+    totalChars: number,
+    cacheHitRate?: number
+  ) {
     return invoke<number>(
       COMMANDS.AI_MODEL_ESTIMATE_COST,
       {
@@ -393,13 +398,9 @@ export const termLibraryCommands = {
   },
 
   async generateStyleSummary() {
-    return invoke<string>(
-      COMMANDS.TERM_LIBRARY_GENERATE_STYLE,
-      undefined,
-      {
-        errorMessage: '生成风格总结失败',
-      }
-    );
+    return invoke<string>(COMMANDS.TERM_LIBRARY_GENERATE_STYLE, undefined, {
+      errorMessage: '生成风格总结失败',
+    });
   },
 
   async shouldUpdateStyleSummary() {

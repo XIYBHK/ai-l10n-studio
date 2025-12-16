@@ -1,9 +1,8 @@
 /**
  * 插件配置管理系统 (Phase 3)
- * 
+ *
  * 负责解析和验证插件的 TOML 配置文件，提供插件元数据管理功能
  */
-
 use anyhow::{Context, Result};
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
@@ -126,19 +125,17 @@ impl PluginConfig {
         let path = path.as_ref();
         let content = std::fs::read_to_string(path)
             .with_context(|| format!("无法读取插件配置文件: {}", path.display()))?;
-        
+
         Self::from_toml(&content)
             .with_context(|| format!("解析插件配置文件失败: {}", path.display()))
     }
 
     /// 从 TOML 字符串解析插件配置
     pub fn from_toml(content: &str) -> Result<Self> {
-        let config: PluginConfig = toml::from_str(content)
-            .context("TOML 格式解析失败")?;
-        
-        config.validate()
-            .context("插件配置验证失败")?;
-        
+        let config: PluginConfig = toml::from_str(content).context("TOML 格式解析失败")?;
+
+        config.validate().context("插件配置验证失败")?;
+
         Ok(config)
     }
 
@@ -148,7 +145,12 @@ impl PluginConfig {
         if self.plugin.id.is_empty() {
             anyhow::bail!("插件 ID 不能为空");
         }
-        if !self.plugin.id.chars().all(|c| c.is_ascii_lowercase() || c == '_' || c == '-') {
+        if !self
+            .plugin
+            .id
+            .chars()
+            .all(|c| c.is_ascii_lowercase() || c == '_' || c == '-')
+        {
             anyhow::bail!("插件 ID 只能包含小写字母、下划线和连字符");
         }
 
@@ -180,7 +182,7 @@ impl PluginConfig {
         if parts.len() < 2 || parts.len() > 3 {
             return false;
         }
-        
+
         parts.iter().all(|part| part.parse::<u32>().is_ok())
     }
 
@@ -232,7 +234,11 @@ impl PluginScanner {
                 if config_path.exists() {
                     match PluginConfig::from_file(&config_path) {
                         Ok(config) => {
-                            tracing::info!("发现插件: {} ({})", config.plugin.name, config.plugin.id);
+                            tracing::info!(
+                                "发现插件: {} ({})",
+                                config.plugin.name,
+                                config.plugin.id
+                            );
                             plugins.push((path, config));
                         }
                         Err(e) => {
@@ -345,12 +351,12 @@ supports_images = false
     #[test]
     fn test_api_compatibility() {
         let config = create_test_config();
-        
+
         // 兼容的版本
         assert!(config.is_api_compatible("1.0"));
         assert!(config.is_api_compatible("1.2"));
         assert!(config.is_api_compatible("1.0.5"));
-        
+
         // 不兼容的版本
         assert!(!config.is_api_compatible("2.0"));
         assert!(!config.is_api_compatible("0.9"));
@@ -368,7 +374,9 @@ supports_images = false
 
         let config_path = plugin_dir.join("plugin.toml");
         let mut config_file = std::fs::File::create(&config_path).unwrap();
-        writeln!(config_file, r#"
+        writeln!(
+            config_file,
+            r#"
 [plugin]
 name = "Test Plugin"
 id = "test_plugin"
@@ -379,14 +387,16 @@ api_version = "1.0"
 display_name = "Test Provider"
 default_url = "https://api.test.com/v1"
 default_model = "test-model"
-"#).unwrap();
+"#
+        )
+        .unwrap();
 
         // 创建必需的文件
         std::fs::File::create(plugin_dir.join("provider.rs")).unwrap();
 
         let scanner = PluginScanner::new(&plugins_dir);
         let plugins = scanner.scan_plugins().unwrap();
-        
+
         assert_eq!(plugins.len(), 1);
         assert_eq!(plugins[0].1.plugin.id, "test_plugin");
     }

@@ -91,7 +91,7 @@ export const TermConfirmModal: React.FC<TermConfirmModalProps> = ({
       }
       open={visible}
       onCancel={onCancel}
-      destroyOnHidden={true}
+      destroyOnClose={true}
       mask={false}
       footer={[
         <Button

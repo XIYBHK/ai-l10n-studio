@@ -1,5 +1,9 @@
-import React, { useState, useRef, useEffect } from 'react';
-import { Modal, Input, Button, Space, Tabs, App } from 'antd';
+/**
+ * 开发者工具独立窗口页面
+ * 将 DevToolsModal 的内容提取为独立页面，可以在独立窗口中运行
+ */
+import React, { useRef, useEffect } from 'react';
+import { Input, Button, Space, Tabs, App } from 'antd';
 import {
   CopyOutlined,
   ClearOutlined,
@@ -9,9 +13,9 @@ import {
   PlayCircleOutlined,
   PauseCircleOutlined,
 } from '@ant-design/icons';
-import Draggable from 'react-draggable';
+import { useTheme } from '../hooks/useTheme';
 
-// ✅ 新的日志服务（参考 clash-verge-rev）
+// ✅ 新的日志服务
 import {
   useGlobalLogStore,
   toggleBackendLogEnabled,
@@ -25,40 +29,43 @@ import {
 
 const { TextArea } = Input;
 
-interface DevToolsModalProps {
-  visible: boolean;
-  onClose: () => void;
-}
-
-export const DevToolsModal: React.FC<DevToolsModalProps> = ({ visible, onClose }) => {
-  // ✅ 使用 App 提供的 message（避免静态方法警告）
+export const DevToolsPage: React.FC = () => {
   const { message } = App.useApp();
+  const { colors, isDark } = useTheme();
 
-  // ✅ 使用全局日志 Store（参考 clash-verge-rev）
+  // ✅ 使用全局日志 Store
   const { backendLogs, backendEnabled, promptLogs } = useGlobalLogStore();
 
   // 格式化日志显示
   const backendLogText = backendLogs.join('\n');
   const promptLogText = promptLogs;
-  const draggleRef = useRef<HTMLDivElement>(null);
+
+  // 📝 日志文本框样式（根据主题动态调整）
+  const logTextAreaStyle: React.CSSProperties = {
+    fontFamily: 'Consolas, Monaco, "Courier New", monospace',
+    fontSize: '12px',
+    backgroundColor: isDark ? '#1e1e1e' : '#f5f5f5',
+    color: isDark ? '#d4d4d4' : '#24292e',
+    border: `1px solid ${colors.borderPrimary}`,
+  };
 
   // 📜 日志自动滚动 refs
   const backendLogRef = useRef<any>(null);
   const promptLogRef = useRef<any>(null);
 
-  // ⏸️ 暂停/继续日志收集（参考 clash-verge-rev）
+  // ⏸️ 暂停/继续日志收集
   const handleToggleBackendLog = () => {
     toggleBackendLogEnabled();
     message.info(backendEnabled ? '⏸️ 后端日志已暂停' : '▶️ 后端日志已继续');
   };
 
-  // 🧹 清空日志（参考 clash-verge-rev）
+  // 🧹 清空日志
   const handleClearBackendLogs = async () => {
     try {
       await clearBackendLogs();
       message.success('🧹 后端日志已清空');
     } catch (error) {
-      console.error('[DevToolsModal] 清空后端日志失败:', error);
+      console.error('[DevToolsPage] 清空后端日志失败:', error);
       message.error('清空失败');
     }
   };
@@ -68,28 +75,23 @@ export const DevToolsModal: React.FC<DevToolsModalProps> = ({ visible, onClose }
       await clearPromptLogs();
       message.success('🧹 提示词日志已清空');
     } catch (error) {
-      console.error('[DevToolsModal] 清空提示词日志失败:', error);
+      console.error('[DevToolsPage] 清空提示词日志失败:', error);
       message.error('清空失败');
     }
   };
 
-  // 🎯 模态框打开时启动日志监控（参考 clash）
+  // 🎯 页面加载时启动日志监控
   useEffect(() => {
-    if (visible) {
-      startBackendLogMonitoring();
-      startPromptLogMonitoring();
-    } else {
-      stopBackendLogMonitoring();
-      stopPromptLogMonitoring();
-    }
+    startBackendLogMonitoring();
+    startPromptLogMonitoring();
 
     return () => {
       stopBackendLogMonitoring();
       stopPromptLogMonitoring();
     };
-  }, [visible]);
+  }, []);
 
-  // 📜 自动滚动到底部（显示最新日志）
+  // 📜 自动滚动到底部
   useEffect(() => {
     if (backendLogRef.current?.resizableTextArea?.textArea) {
       const textarea = backendLogRef.current.resizableTextArea.textArea;
@@ -103,8 +105,6 @@ export const DevToolsModal: React.FC<DevToolsModalProps> = ({ visible, onClose }
       textarea.scrollTop = textarea.scrollHeight;
     }
   }, [promptLogs]);
-
-  // SWR 已处理日志加载与轮询
 
   const handleCopy = () => {
     navigator.clipboard
@@ -132,45 +132,25 @@ export const DevToolsModal: React.FC<DevToolsModalProps> = ({ visible, onClose }
       URL.revokeObjectURL(url);
       message.success(`后端日志已导出: ${filename}`);
     } catch (error) {
-      console.error('[DevToolsModal] 导出日志失败:', error);
+      console.error('[DevToolsPage] 导出日志失败:', error);
       message.error('导出失败');
     }
   };
 
   return (
-    <Modal
-      title={
-        <div
-          style={{
-            width: '100%',
-            cursor: 'move',
-          }}
-        >
-          🛠️ 开发者工具
-        </div>
-      }
-      open={visible}
-      onCancel={onClose}
-      width={900}
-      style={{ top: 20 }}
-      destroyOnClose={true}
-      mask={false}
-      footer={[
-        <Button key="close" onClick={onClose}>
-          关闭
-        </Button>,
-      ]}
-      modalRender={(modal) => (
-        <Draggable
-          bounds={false}
-          nodeRef={draggleRef as unknown as React.RefObject<HTMLDivElement>}
-        >
-          <div ref={draggleRef}>{modal}</div>
-        </Draggable>
-      )}
+    <div
+      style={{
+        padding: '16px',
+        height: '100vh',
+        display: 'flex',
+        flexDirection: 'column',
+        background: colors.bgPrimary,
+        color: colors.textPrimary,
+      }}
     >
       <Tabs
         defaultActiveKey="logs"
+        style={{ flex: 1, display: 'flex', flexDirection: 'column' }}
         items={[
           {
             key: 'logs',
@@ -193,7 +173,7 @@ export const DevToolsModal: React.FC<DevToolsModalProps> = ({ visible, onClose }
                     <Button icon={<ClearOutlined />} onClick={handleClearBackendLogs}>
                       清空
                     </Button>
-                    <span style={{ fontSize: '12px', color: '#999' }}>
+                    <span style={{ fontSize: '12px', color: colors.textSecondary }}>
                       {backendEnabled ? '(每2秒更新)' : '(已暂停)'}
                     </span>
                   </Space>
@@ -211,21 +191,16 @@ export const DevToolsModal: React.FC<DevToolsModalProps> = ({ visible, onClose }
                   ref={backendLogRef}
                   value={backendLogText}
                   readOnly
-                  rows={20}
+                  rows={25}
                   placeholder="暂无后端日志"
-                  style={{
-                    fontFamily: 'Consolas, Monaco, "Courier New", monospace',
-                    fontSize: '12px',
-                    backgroundColor: '#1e1e1e',
-                    color: '#d4d4d4',
-                  }}
+                  style={logTextAreaStyle}
                 />
 
                 <div
                   style={{
                     marginTop: 12,
                     fontSize: '12px',
-                    color: '#999',
+                    color: colors.textSecondary,
                     display: 'flex',
                     justifyContent: 'space-between',
                   }}
@@ -251,7 +226,7 @@ export const DevToolsModal: React.FC<DevToolsModalProps> = ({ visible, onClose }
                     <Button icon={<ClearOutlined />} onClick={handleClearPromptLogs}>
                       清空
                     </Button>
-                    <span style={{ fontSize: '12px', color: '#999' }}>
+                    <span style={{ fontSize: '12px', color: colors.textSecondary }}>
                       {backendEnabled ? '(每2秒更新)' : '(已暂停)'}
                     </span>
                   </Space>
@@ -278,12 +253,12 @@ export const DevToolsModal: React.FC<DevToolsModalProps> = ({ visible, onClose }
                 <div
                   style={{
                     fontSize: '12px',
-                    color: '#666',
+                    color: isDark ? '#d4d4d4' : '#666',
                     marginBottom: 12,
                     padding: '8px 12px',
-                    background: '#e6fffb',
+                    background: isDark ? 'rgba(59, 130, 246, 0.1)' : '#e6fffb',
                     borderRadius: 4,
-                    border: '1px solid #87e8de',
+                    border: `1px solid ${isDark ? 'rgba(59, 130, 246, 0.3)' : '#87e8de'}`,
                   }}
                 >
                   💡 捕获精翻（Contextual Refine）和批量翻译时发送给 AI 的提示词及响应
@@ -297,17 +272,14 @@ export const DevToolsModal: React.FC<DevToolsModalProps> = ({ visible, onClose }
                   ref={promptLogRef}
                   value={promptLogText}
                   readOnly
-                  rows={20}
+                  rows={25}
                   placeholder="等待提示词日志输出...
-提示: 
+提示:
 - 执行精翻或批量翻译时会自动记录
 - 包含完整的输入提示词和AI响应
 - 便于调试和优化翻译质量"
                   style={{
-                    fontFamily: 'Consolas, Monaco, "Courier New", monospace',
-                    fontSize: '12px',
-                    backgroundColor: '#1e1e1e',
-                    color: '#d4d4d4',
+                    ...logTextAreaStyle,
                     whiteSpace: 'pre-wrap',
                   }}
                 />
@@ -316,7 +288,7 @@ export const DevToolsModal: React.FC<DevToolsModalProps> = ({ visible, onClose }
                   style={{
                     marginTop: 12,
                     fontSize: '12px',
-                    color: '#999',
+                    color: colors.textSecondary,
                     display: 'flex',
                     justifyContent: 'space-between',
                   }}
@@ -330,6 +302,6 @@ export const DevToolsModal: React.FC<DevToolsModalProps> = ({ visible, onClose }
           },
         ]}
       />
-    </Modal>
+    </div>
   );
 };

@@ -1,5 +1,5 @@
-import React, { useState, useEffect } from 'react';
-import { Modal, Table, Input, Button, message, Space, Popconfirm } from 'antd';
+import React, { useState, useEffect, useMemo } from 'react';
+import { Modal, Table, Input, Button, message, Space, Popconfirm, Tag } from 'antd';
 import {
   DeleteOutlined,
   PlusOutlined,
@@ -13,6 +13,7 @@ import { writeTextFile, readTextFile } from '@tauri-apps/plugin-fs';
 import { translationMemoryCommands } from '../services/commands';
 import { createModuleLogger } from '../utils/logger';
 import { useTranslationMemory } from '../hooks/useTranslationMemory';
+import { useSupportedLanguages } from '../hooks/useLanguage';
 import { useStatsStore } from '../store';
 
 const log = createModuleLogger('MemoryManager');
@@ -21,7 +22,16 @@ interface MemoryEntry {
   key: string;
   source: string;
   target: string;
+  language?: string; // 语言代码（如 "ja", "zh-Hans"）
 }
+
+// 组合记忆库键值（如 { source: "Debug", language: "ja" } → "Debug|ja"）
+const buildMemoryKey = (source: string, language?: string): string => {
+  if (language) {
+    return `${source}|${language}`;
+  }
+  return source;
+};
 
 interface MemoryManagerProps {
   visible: boolean;
@@ -32,16 +42,70 @@ export const MemoryManager: React.FC<MemoryManagerProps> = ({ visible, onClose }
   const [memories, setMemories] = useState<MemoryEntry[]>([]);
   const [loading, setLoading] = useState(false);
   const { tm, isLoading: loadingTM, mutate } = useTranslationMemory();
+  const { languages } = useSupportedLanguages(); // 🔧 从后端动态获取语言列表
   const [searchText, setSearchText] = useState('');
   const [newSource, setNewSource] = useState('');
   const [newTarget, setNewTarget] = useState('');
   const [tableHeight, setTableHeight] = useState(400);
 
+  // 🔧 动态生成语言配置映射（单一数据源）
+  const languageConfig = useMemo(() => {
+    const config: Record<string, string> = {};
+    languages.forEach((lang) => {
+      config[lang.code] = lang.display_name;
+    });
+    return config;
+  }, [languages]);
+
+  // 🔧 解析记忆库键值（使用动态语言配置）
+  // 支持格式：
+  // - "Debug|zh-Hans" → { source: "Debug", language: "zh-Hans" }
+  // - "XTools|Random|zh-Hans" → { source: "XTools|Random", language: "zh-Hans" }
+  // - "Debug" → { source: "Debug", language: undefined }
+  const parseMemoryKey = useMemo(
+    () =>
+      (key: string): { source: string; language?: string } => {
+        const parts = key.split('|');
+
+        // 检查最后一个部分是否是已知的语言代码
+        if (parts.length >= 2) {
+          const lastPart = parts[parts.length - 1];
+          if (languageConfig[lastPart]) {
+            // 最后一部分是语言代码，前面的所有部分是原文
+            const source = parts.slice(0, -1).join('|');
+            return { source, language: lastPart };
+          }
+        }
+
+        // 没有语言代码，或者无法识别
+        return { source: key, language: undefined };
+      },
+    [languageConfig]
+  );
+
+  // 🔧 关键修复：每次打开时强制刷新一次，确保显示最新数据
+  // 原因：如果用户在翻译后才打开记忆库管理器，会错过 translation:after 事件
+  useEffect(() => {
+    if (visible) {
+      mutate();
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [visible]); // 只依赖 visible，避免无限循环
+
+  // 当 TM 数据更新时，重新设置 memories
   useEffect(() => {
     if (visible) {
       if (tm && (tm as any).memory) {
         const entries: MemoryEntry[] = Object.entries((tm as any).memory).map(
-          ([source, target], index) => ({ key: `${index}`, source, target: target as string })
+          ([memoryKey, target], index) => {
+            const { source, language } = parseMemoryKey(memoryKey);
+            return {
+              key: `${index}`,
+              source,
+              target: target as string,
+              language,
+            };
+          }
         );
         setMemories(entries);
         log.info('记忆库加载成功', { count: entries.length });
@@ -81,7 +145,8 @@ export const MemoryManager: React.FC<MemoryManagerProps> = ({ visible, onClose }
     try {
       const memoryMap: Record<string, string> = {};
       memories.forEach((entry) => {
-        memoryMap[entry.source] = entry.target;
+        const key = buildMemoryKey(entry.source, entry.language);
+        memoryMap[key] = entry.target;
       });
 
       await translationMemoryCommands.save({
@@ -126,6 +191,13 @@ export const MemoryManager: React.FC<MemoryManagerProps> = ({ visible, onClose }
         last_updated: new Date().toISOString(),
       });
 
+      // 重新从后端获取最新数据（应该是空的）
+      const freshTM = await translationMemoryCommands.get();
+      log.debug('清空后重新获取记忆库', { hasTM: !!freshTM });
+
+      // 更新 SWR 缓存（关键修复：之前缺少这一步）
+      await mutate(freshTM, false);
+
       // 重置累计统计中的 tm_learned
       const { cumulativeStats, setCumulativeStats } = useStatsStore.getState();
       setCumulativeStats({
@@ -161,7 +233,15 @@ export const MemoryManager: React.FC<MemoryManagerProps> = ({ visible, onClose }
       // 立即更新前端显示
       if (freshTM && (freshTM as any).memory) {
         const entries: MemoryEntry[] = Object.entries((freshTM as any).memory).map(
-          ([source, target], index) => ({ key: `${index}`, source, target: target as string })
+          ([memoryKey, target], index) => {
+            const { source, language } = parseMemoryKey(memoryKey);
+            return {
+              key: `${index}`,
+              source,
+              target: target as string,
+              language,
+            };
+          }
         );
         setMemories(entries);
         log.info('记忆库界面已更新', { count: entries.length });
@@ -191,7 +271,8 @@ export const MemoryManager: React.FC<MemoryManagerProps> = ({ visible, onClose }
       if (filePath) {
         const memoryMap: Record<string, string> = {};
         memories.forEach((entry) => {
-          memoryMap[entry.source] = entry.target;
+          const key = buildMemoryKey(entry.source, entry.language);
+          memoryMap[key] = entry.target;
         });
 
         const exportData = {
@@ -230,11 +311,15 @@ export const MemoryManager: React.FC<MemoryManagerProps> = ({ visible, onClose }
 
         if (data.memory) {
           const entries: MemoryEntry[] = Object.entries(data.memory).map(
-            ([source, target], index) => ({
-              key: `${index}`,
-              source,
-              target: target as string,
-            })
+            ([memoryKey, target], index) => {
+              const { source, language } = parseMemoryKey(memoryKey);
+              return {
+                key: `${index}`,
+                source,
+                target: target as string,
+                language,
+              };
+            }
           );
           setMemories(entries);
           message.success(`已导入 ${entries.length} 条记忆`);
@@ -281,7 +366,7 @@ export const MemoryManager: React.FC<MemoryManagerProps> = ({ visible, onClose }
       title: '原文',
       dataIndex: 'source',
       key: 'source',
-      width: '40%',
+      width: '35%',
       render: (text: string, record: MemoryEntry) => (
         <Input
           value={text}
@@ -294,7 +379,7 @@ export const MemoryManager: React.FC<MemoryManagerProps> = ({ visible, onClose }
       title: '译文',
       dataIndex: 'target',
       key: 'target',
-      width: '40%',
+      width: '35%',
       render: (text: string, record: MemoryEntry) => (
         <Input
           value={text}
@@ -304,9 +389,26 @@ export const MemoryManager: React.FC<MemoryManagerProps> = ({ visible, onClose }
       ),
     },
     {
+      title: '语言',
+      dataIndex: 'language',
+      key: 'language',
+      width: '15%',
+      render: (language?: string) => {
+        if (!language) {
+          return <Tag color="default">未指定</Tag>;
+        }
+        const languageName = languageConfig[language];
+        if (languageName) {
+          return <Tag color="blue">{languageName}</Tag>;
+        }
+        // 未知语言代码，显示原始值
+        return <Tag color="blue">{language}</Tag>;
+      },
+    },
+    {
       title: '操作',
       key: 'action',
-      width: '20%',
+      width: '15%',
       render: (_: any, record: MemoryEntry) => (
         <Popconfirm
           title="确定删除这条记忆吗？"
@@ -332,7 +434,7 @@ export const MemoryManager: React.FC<MemoryManagerProps> = ({ visible, onClose }
       okText="保存"
       cancelText="取消"
       confirmLoading={loading}
-      destroyOnHidden={true}
+      destroyOnClose={true}
       mask={false}
       style={{ top: 20 }}
       styles={{

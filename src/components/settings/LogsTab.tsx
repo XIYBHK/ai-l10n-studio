@@ -19,7 +19,8 @@ export const LogsTab: React.FC<LogsTabProps> = () => {
         // 设置表单默认值
         form.setFieldsValue({
           log_level: config.log_level || 'info',
-          log_retention_days: config.log_retention_days !== undefined ? config.log_retention_days : 7,
+          log_retention_days:
+            config.log_retention_days !== undefined ? config.log_retention_days : 7,
           log_max_size: config.log_max_size !== undefined ? config.log_max_size : 128,
           log_max_count: config.log_max_count !== undefined ? config.log_max_count : 8,
         });
@@ -67,15 +68,12 @@ export const LogsTab: React.FC<LogsTabProps> = () => {
       size="small"
     >
       <p style={{ marginBottom: 16, color: '#666', fontSize: '13px' }}>
-        配置应用日志的输出级别、保留时间、文件大小和数量。建议在开发和调试时使用 DEBUG级别，生产环境使用 INFO 级别。
+        配置应用日志的输出级别、保留时间、文件大小和数量。建议在开发和调试时使用
+        DEBUG级别，生产环境使用 INFO 级别。
       </p>
 
       <Form form={form} layout="vertical" onFinish={handleSave}>
-        <Form.Item
-          label="日志级别"
-          name="log_level"
-          tooltip="DEBUG 最详细，ERROR 最简洁"
-        >
+        <Form.Item label="日志级别" name="log_level" tooltip="DEBUG 最详细，ERROR 最简洁">
           <Select>
             <Select.Option value="debug">DEBUG - 调试信息</Select.Option>
             <Select.Option value="info">INFO - 一般信息</Select.Option>
@@ -109,11 +107,7 @@ export const LogsTab: React.FC<LogsTabProps> = () => {
         </Form.Item>
 
         <Form.Item>
-          <Button
-            type="primary"
-            htmlType="submit"
-            loading={loading}
-          >
+          <Button type="primary" htmlType="submit" loading={loading}>
             保存设置
           </Button>
         </Form.Item>

@@ -84,7 +84,7 @@ export interface TranslationStats {
  * 批量翻译结果
  */
 export interface BatchResult {
-  translations: Record<number, string>;
+  translations: string[]; // 🔧 修复：后端返回数组，而非对象
   translation_sources: string[]; // 每个翻译的来源：'tm', 'dedup', 'ai'
   stats: TranslationStats;
 }
@@ -187,7 +187,7 @@ export const useChannelTranslation = () => {
         );
 
         log.info('✅ 批量翻译完成', {
-          translated: Object.keys(result.translations).length,
+          translated: result.translations.length,
           tm_hits: result.stats.tm_hits,
           ai_translated: result.stats.ai_translated,
           cost: result.stats.token_stats.cost,

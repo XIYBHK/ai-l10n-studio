@@ -125,7 +125,10 @@ export function cleanup(): void {
  */
 export function getStats(): { events: number; listeners: number; tauriEvents: number } {
   const eventCount = eventListeners.size;
-  const listenerCount = Array.from(eventListeners.values()).reduce((sum, list) => sum + list.length, 0);
+  const listenerCount = Array.from(eventListeners.values()).reduce(
+    (sum, list) => sum + list.length,
+    0
+  );
   const tauriEventCount = tauriUnlisteners.size;
 
   return {

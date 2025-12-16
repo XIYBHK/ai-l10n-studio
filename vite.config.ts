@@ -1,5 +1,6 @@
 import { defineConfig } from 'vite';
 import react from '@vitejs/plugin-react';
+import { resolve } from 'path';
 
 // https://vitejs.dev/config/
 export default defineConfig(async () => ({
@@ -34,6 +35,15 @@ export default defineConfig(async () => ({
   resolve: {
     alias: {
       '@': '/src',
+    },
+  },
+  // 7. build configuration for multiple entry points
+  build: {
+    rollupOptions: {
+      input: {
+        main: resolve(__dirname, 'index.html'),
+        devtools: resolve(__dirname, 'devtools.html'),
+      },
     },
   },
 }));

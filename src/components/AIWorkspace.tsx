@@ -23,10 +23,7 @@ interface AIWorkspaceProps {
   // ⛔ 移除: apiKey (TermLibraryManager内部使用useAppData获取)
 }
 
-const AIWorkspace: React.FC<AIWorkspaceProps> = memo(({
-  isTranslating,
-  onResetStats,
-}) => {
+const AIWorkspace: React.FC<AIWorkspaceProps> = memo(({ isTranslating, onResetStats }) => {
   const [memoryManagerVisible, setMemoryManagerVisible] = useState(false);
   const [termLibraryVisible, setTermLibraryVisible] = useState(false);
   const { termLibrary } = useTermLibrary({ enabled: true });
@@ -477,7 +474,7 @@ const AIWorkspace: React.FC<AIWorkspaceProps> = memo(({
         bordered={false}
         title={
           <span style={{ fontSize: '14px', fontWeight: 600 }}>
-            <RobotOutlined style={{ marginRight: 8, color: colors.statusUntranslated }} /> 
+            <RobotOutlined style={{ marginRight: 8, color: colors.statusUntranslated }} />
             AI 工作区
             {isTranslating && (
               <Tag color="processing" style={{ marginLeft: 8, border: 'none' }}>
@@ -498,22 +495,23 @@ const AIWorkspace: React.FC<AIWorkspaceProps> = memo(({
           </Button>
         }
         size="small"
-        style={{ 
-          height: '100%', 
-          overflowY: 'auto', 
+        style={{
+          height: '100%',
+          overflowY: 'auto',
           background: colors.bgSecondary, // 使用稍深的背景色区分
-          borderRadius: 0 
+          borderRadius: 0,
         }}
+        // @ts-ignore - Ant Design 5.5+ styles 属性类型定义问题
         styles={{
-            header: {
-              background: colors.bgSecondary,
-              borderBottom: `1px solid ${colors.borderSecondary}`,
-              minHeight: '46px'
-            },
-            body: {
-              padding: '12px',
-              background: colors.bgSecondary
-            }
+          header: {
+            background: colors.bgSecondary,
+            borderBottom: `1px solid ${colors.borderSecondary}`,
+            minHeight: '46px',
+          },
+          body: {
+            padding: '12px',
+            background: colors.bgSecondary,
+          },
         }}
       >
         {/* 累计统计 - 简化样式 */}

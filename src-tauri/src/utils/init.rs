@@ -7,7 +7,6 @@ use crate::{logging, logging_error};
 use anyhow::Result;
 use flexi_logger::{Cleanup, Criterion, Duplicate, FileSpec, LogSpecBuilder, Logger};
 
-#[cfg(not(debug_assertions))]
 use crate::utils::logging::NoModuleFilter;
 
 /// 初始化应用程序
@@ -56,58 +55,42 @@ pub async fn init_app() -> Result<()> {
 /// 3. 加载所有插件供应商
 async fn init_ai_providers() -> Result<()> {
     // Step 1: 注册内置供应商（Phase 1-2 兼容）
-    logging!(
-        info,
-        LogType::Init,
-        "🔧 开始注册内置AI供应商..."
-    );
-    
+    logging!(info, LogType::Init, "🔧 开始注册内置AI供应商...");
+
     register_all_providers()?;
-    
+
     // 验证注册结果
     use crate::services::ai::provider::with_global_registry;
     let registered_count = with_global_registry(|registry| {
         let ids = registry.get_provider_ids();
-        logging!(
-            info,
-            LogType::Init,
-            "✅ 已注册供应商: {:?}",
-            ids
-        );
+        logging!(info, LogType::Init, "✅ 已注册供应商: {:?}", ids);
         ids.len()
     });
-    
+
     logging!(
         info,
         LogType::Init,
         "✅ 内置供应商注册完成，共 {} 个",
         registered_count
     );
-    
+
     // Step 2: 初始化插件系统
     // 🔧 开发模式：使用项目根目录的 plugins 文件夹（从 src-tauri 向上一级）
     #[cfg(debug_assertions)]
     let plugins_dir = {
-        let current_dir = std::env::current_dir().unwrap_or_else(|_| {
-            std::path::PathBuf::from(".")
-        });
+        let current_dir = std::env::current_dir().unwrap_or_else(|_| std::path::PathBuf::from("."));
         // Tauri 开发模式下当前目录是 src-tauri，需要向上一级到项目根目录
         current_dir.parent().unwrap_or(&current_dir).join("plugins")
     };
-    
+
     // 生产模式：使用用户数据目录的 plugins 文件夹
     #[cfg(not(debug_assertions))]
     let plugins_dir = paths::app_home_dir()?.join("plugins");
-    
-    logging!(
-        info,
-        LogType::Init,
-        "🔧 插件目录路径: {:?}",
-        plugins_dir
-    );
-    
+
+    logging!(info, LogType::Init, "🔧 插件目录路径: {:?}", plugins_dir);
+
     plugin_loader::init_global_plugin_loader(&plugins_dir)?;
-    
+
     // Step 3: 加载所有插件供应商
     match plugin_loader::load_all_plugins() {
         Ok(count) => {
@@ -173,7 +156,7 @@ async fn init_logger() -> Result<()> {
     Ok(())
 }
 
-/// 开发环境：不过滤模块，输出更详细的日志
+/// 开发环境：输出详细日志，但过滤 tao 事件循环警告
 #[cfg(debug_assertions)]
 async fn init_logger() -> Result<()> {
     // 从配置读取日志参数（参考 clash-verge-rev）
@@ -191,6 +174,7 @@ async fn init_logger() -> Result<()> {
         .default(log::LevelFilter::Debug)
         .build();
 
+    // 开发环境：只过滤 tao 的无害警告，保留其他所有日志
     let logger = Logger::with(spec)
         .log_to_file(FileSpec::default().directory(&log_dir).basename("app"))
         .duplicate_to_stdout(Duplicate::Debug)
@@ -201,7 +185,8 @@ async fn init_logger() -> Result<()> {
                 format: "%Y-%m-%d_%H-%M-%S",
             },
             Cleanup::KeepLogFiles(log_max_count as usize), // 配置项：保留文件数量
-        );
+        )
+        .filter(Box::new(NoModuleFilter(&[])));
 
     logger.start()?;
     Ok(())

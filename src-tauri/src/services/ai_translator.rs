@@ -172,7 +172,7 @@ impl AITranslator {
             base_url,
             model: "moonshot-v1-auto".to_string(),
             provider_id: "moonshot".to_string(), // 🔧 插件化：默认使用 Moonshot
-            provider_info: None, // 延迟加载
+            provider_info: None,                 // 延迟加载
             system_prompt,
             conversation_history: Vec::new(),
             max_history_tokens: 2000,
@@ -207,7 +207,7 @@ impl AITranslator {
 
         // 从插件系统获取供应商信息
         let provider_info = Self::get_provider_info(&config.provider_id)?;
-        
+
         // 使用自定义URL或默认URL
         let base_url = config
             .base_url
@@ -291,13 +291,14 @@ impl AITranslator {
     /// 从插件系统获取供应商信息
     fn get_provider_info(provider_id: &str) -> Result<crate::services::ai::ProviderInfo> {
         use crate::services::ai::provider::with_global_registry;
-        
+
         with_global_registry(|registry| {
-            registry.get_provider_info(provider_id)
+            registry
+                .get_provider_info(provider_id)
                 .ok_or_else(|| anyhow!("未找到供应商: {}", provider_id))
         })
     }
-    
+
     /// 获取供应商显示名称（带缓存）
     fn get_provider_display_name(&self) -> String {
         if let Some(ref info) = self.provider_info {
@@ -437,7 +438,8 @@ impl AITranslator {
 
         if let Some(ref mut tm) = self.tm {
             for (i, text) in texts.iter().enumerate() {
-                if let Some(translation) = tm.get_translation(text) {
+                // 🔧 修复：传入目标语言，避免跨语言命中
+                if let Some(translation) = tm.get_translation(text, self.target_language.as_deref()) {
                     // TM命中
                     result[i] = translation.clone();
                     self.batch_stats.tm_hits += 1;
@@ -596,10 +598,18 @@ impl AITranslator {
                 // 只检查当前记忆库，不检查代码内置词库（用户清空后内置词库不参与）
                 if let Some(ref mut tm) = self.tm {
                     if is_simple_phrase(unique_text) && translation.len() <= 50 {
-                        if !tm.memory.contains_key(unique_text) {
-                            tm.add_translation(unique_text.clone(), translation.clone());
+                        // 🔧 修复：构造带语言的键来检查是否已存在
+                        let check_key = if let Some(lang) = self.target_language.as_deref() {
+                            format!("{}|{}", unique_text, lang)
+                        } else {
+                            unique_text.clone()
+                        };
+
+                        if !tm.memory.contains_key(&check_key) {
+                            // 🔧 修复：保存时记录目标语言
+                            tm.add_translation(unique_text.clone(), translation.clone(), self.target_language.as_deref());
                             self.batch_stats.tm_learned += 1;
-                            crate::app_log!("[TM学习] {} -> {}", unique_text, translation);
+                            crate::app_log!("[TM学习] {} -> {} ({})", unique_text, translation, self.target_language.as_deref().unwrap_or("无语言"));
                         } else {
                             crate::app_log!("[TM跳过] {} (已在记忆库)", unique_text);
                         }
@@ -942,18 +952,19 @@ impl AITranslator {
             // 使用 ModelInfo 计算精确成本
             // Fail Fast 架构设计：多AI供应商架构要求强制 ModelInfo 存在
             // 模型不存在 = 配置错误，应立即返回错误（见 docs/Architecture.md:195）
-            let model_info = {
-                use crate::services::ai::provider::with_global_registry;
-                with_global_registry(|registry| {
-                    registry.get_provider(&self.provider_id)
+            let model_info =
+                {
+                    use crate::services::ai::provider::with_global_registry;
+                    with_global_registry(|registry| {
+                        registry.get_provider(&self.provider_id)
                         .and_then(|provider| provider.get_model_info(&self.model))
                         .ok_or_else(|| anyhow!(
                             "模型信息不存在: provider={}, model={}. 请检查插件系统中的模型定义",
                             self.provider_id,
                             self.model
                         ))
-                })?
-            };
+                    })?
+                };
 
             use crate::services::ai::CostCalculator;
             let breakdown = CostCalculator::calculate_openai(
@@ -999,6 +1010,10 @@ impl AITranslator {
             Some("es") => "Español",
             Some("ru") => "Русский",
             Some("ar") => "العربية",
+            Some("pt") => "Português",
+            Some("it") => "Italiano",
+            Some("th") => "ไทย",
+            Some("vi") => "Tiếng Việt",
             Some(lang) => lang,
             None => "目标语言", // 默认（未指定语言）
         };

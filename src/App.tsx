@@ -16,8 +16,8 @@ import EntryList from './components/EntryList';
 import EditorPane from './components/EditorPane';
 import AIWorkspace from './components/AIWorkspace';
 import { SettingsModal } from './components/SettingsModal';
-import { DevToolsModal } from './components/DevToolsModal';
 import { ErrorBoundary } from './components/ErrorBoundary';
+import { openDevToolsWindow } from './utils/devToolsWindow';
 import { FileInfoBar } from './components/FileInfoBar';
 import { POEntry, TranslationStats } from './types/tauri';
 import type { LanguageInfo } from './types/generated/LanguageInfo';
@@ -59,7 +59,6 @@ export default function App() {
 
   // UI 状态
   const [settingsVisible, setSettingsVisible] = useState(false);
-  const [devToolsVisible, setDevToolsVisible] = useState(false);
   const [translationStats, setTranslationStats] = useState<TranslationStats | null>(null);
   const [leftWidth, setLeftWidth] = useState(35);
   const [sourceLanguage, setSourceLanguage] = useState<string>('');
@@ -88,10 +87,10 @@ export default function App() {
         // 后端发送的是 { stats: TranslationStats } 结构
         const stats = event.payload.stats;
         log.info('📊 收到翻译统计', stats);
-        
+
         // 更新会话统计（当前会话累计）
         updateSessionStats(stats);
-        
+
         // 更新累计统计（跨会话持久化）
         updateCumulativeStats(stats);
       });
@@ -305,16 +304,28 @@ export default function App() {
         },
       });
 
-      // 设置翻译来源标识
-      if (result.translation_sources && result.translation_sources.length > 0) {
-        entriesToTranslate.forEach((entry, localIndex) => {
-          const entryIndex = entries.indexOf(entry);
-          if (entryIndex >= 0 && localIndex < result.translation_sources.length) {
-            const source = result.translation_sources[localIndex] as 'tm' | 'dedup' | 'ai';
-            updateEntry(entryIndex, { translationSource: source });
+      // 🔧 使用最终结果更新所有条目（而不仅仅依赖 onItem 回调）
+      entriesToTranslate.forEach((entry, localIndex) => {
+        const entryIndex = entries.indexOf(entry);
+        if (entryIndex >= 0 && localIndex < result.translations.length) {
+          // 获取翻译结果
+          const translation = result.translations[localIndex];
+          const source = (result.translation_sources && result.translation_sources[localIndex]) as
+            | 'tm'
+            | 'dedup'
+            | 'ai'
+            | undefined;
+
+          // 更新翻译文本和来源
+          if (translation) {
+            updateEntry(entryIndex, {
+              msgstr: translation,
+              needsReview: true,
+              translationSource: source,
+            });
           }
-        });
-      }
+        }
+      });
 
       // 更新统计数据
       if (result.stats) {
@@ -335,7 +346,7 @@ export default function App() {
         // 更新会话统计和累计统计
         updateSessionStats(finalStats);
         updateCumulativeStats(finalStats);
-        
+
         log.info('📊 统计已更新', finalStats);
       }
 
@@ -360,9 +371,7 @@ export default function App() {
       return;
     }
 
-    const selectedEntries = indices
-      .map((i) => entries[i])
-      .filter((e) => e && e.msgid && !e.msgstr);
+    const selectedEntries = indices.map((i) => entries[i]).filter((e) => e && e.msgid && !e.msgstr);
 
     if (selectedEntries.length === 0) {
       msg.info('选中的条目都已翻译');
@@ -448,7 +457,7 @@ export default function App() {
 
   useEffect(() => {
     if (!isResizing) return;
-    
+
     let animationFrameId: number;
 
     const handleMouseMove = (e: MouseEvent) => {
@@ -457,11 +466,11 @@ export default function App() {
       animationFrameId = requestAnimationFrame(() => {
         const windowWidth = window.innerWidth;
         const newWidth = (e.clientX / windowWidth) * 100;
-        
+
         if (newWidth >= 20 && newWidth <= 60) {
           // 直接操作 DOM，不触发 React 重渲染
           if (sidebarRef.current) {
-             sidebarRef.current.style.width = `${newWidth}%`;
+            sidebarRef.current.style.width = `${newWidth}%`;
           }
         }
       });
@@ -470,14 +479,14 @@ export default function App() {
     const handleMouseUp = (e: MouseEvent) => {
       cancelAnimationFrame(animationFrameId);
       setIsResizing(false);
-      
+
       // 拖拽结束，同步最终状态
       const windowWidth = window.innerWidth;
       const newWidth = (e.clientX / windowWidth) * 100;
       if (newWidth >= 20 && newWidth <= 60) {
         setLeftWidth(newWidth);
       }
-      
+
       document.body.style.cursor = '';
       document.body.style.userSelect = '';
     };
@@ -514,7 +523,13 @@ export default function App() {
                 onSaveAsFile={saveAsFile}
                 onTranslateAll={translateAll}
                 onSettings={() => setSettingsVisible(true)}
-                onDevTools={() => setDevToolsVisible(true)}
+                onDevTools={async () => {
+                  try {
+                    await openDevToolsWindow();
+                  } catch (error) {
+                    console.error('[App] 打开开发者工具失败:', error);
+                  }
+                }}
                 isTranslating={isTranslating}
                 hasEntries={entries.length > 0}
                 isDarkMode={themeData.isDark}
@@ -583,10 +598,7 @@ export default function App() {
                     flex: 1,
                   }}
                 >
-                  <EditorPane
-                    entry={currentEntry}
-                    onEntryUpdate={handleEntryUpdate}
-                  />
+                  <EditorPane entry={currentEntry} onEntryUpdate={handleEntryUpdate} />
                 </Layout.Content>
 
                 {/* 右侧：AI 工作区 */}
@@ -608,16 +620,7 @@ export default function App() {
               </Layout>
 
               {/* 设置窗口 */}
-              <SettingsModal
-                visible={settingsVisible}
-                onClose={() => setSettingsVisible(false)}
-              />
-
-              {/* 开发工具窗口 */}
-              <DevToolsModal
-                visible={devToolsVisible}
-                onClose={() => setDevToolsVisible(false)}
-              />
+              <SettingsModal visible={settingsVisible} onClose={() => setSettingsVisible(false)} />
 
               {/* 底部文件信息栏 */}
               <FileInfoBar filePath={currentFilePath} />

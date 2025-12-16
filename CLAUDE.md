@@ -28,6 +28,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 **性能革命性提升** - 累计删除 5917 行过度工程化代码，应用流畅度提升 80-90%
 
 **第一轮优化 (2025-11-01)**: 删除 3698 行
+
 - **彻底简化事件系统**: 删除 `eventDispatcher.ts` (368行) 和 `useTauriEventBridge.enhanced.ts` (421行)，直接使用 Tauri 2.0 原生 `listen()` API
 - **组件拆解重构**:
   - `SettingsModal.tsx` 从 1121 行拆解为 5 个独立 Tab 组件 (减少 92%)
@@ -39,27 +40,30 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 - **日志系统优化**: 直接使用 `console.log`，消除宏任务队列膨胀
 
 **第二轮优化 (2025-11-23)**: 删除 1232 行未使用代码
-- **删除未使用文件**: 
+
+- **删除未使用文件**:
   - `useNotification.ts` (221行) - 与 notificationManager 功能重复
   - `statsFormatter.ts` (277行) - 只是简单包装 formatters.ts
   - `useValidation.ts` (18行) - 完全未使用
   - `providerUtils.ts` (71行) - 完全未使用
   - `paramConverter.ts` (99行) - Tauri 2.x 已自动处理 camelCase
-- **简化 API 封装**: 
+- **简化 API 封装**:
   - 删除 `useAsync.ts` 中的 `useAsyncEffect` 函数 (60行)
   - 简化 `tauriInvoke.ts`、`apiClient.ts`、`api.ts` 中的参数转换逻辑 (~486行)
 - **清理空目录**: 删除 `src/components/app/` 空目录
 
 **第三轮优化 (2025-11-23)**: 删除 987 行深度封装
-- **简化 API 封装为两层**: 
+
+- **简化 API 封装为两层**:
   - 删除 `api.ts` (97行) - 中间透传层，commands.ts 直接调用 apiClient
   - 删除 `swr.ts` (42行) - hooks 直接传入 fetcher
   - 简化 `apiClient.ts` 和 `tauriInvoke.ts` (~100行) - 移除所有参数转换代码
-- **精简注释**: 
+- **精简注释**:
   - 精简 `store/index.ts` 中的长注释 (~30行)
   - 优化文档可读性
 
 **性能提升成果**:
+
 - 主题切换: ~200ms → <50ms (提升 75%)
 - 语言切换: ~500ms → <100ms (提升 80%)
 - 事件响应: ~100ms → <30ms (提升 70%)
@@ -95,6 +99,7 @@ npm run i18n:check     # 检查未使用的 i18n 键
 首次开发前必须安装 Rust 和平台依赖：
 
 **Windows**:
+
 ```powershell
 winget install --id Rustlang.Rustup -e
 rustup default stable
@@ -102,6 +107,7 @@ rustup default stable
 ```
 
 **macOS**:
+
 ```bash
 curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh
 rustup default stable
@@ -109,6 +115,7 @@ xcode-select --install
 ```
 
 **Linux** (Debian/Ubuntu):
+
 ```bash
 curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh
 rustup default stable
@@ -233,23 +240,27 @@ Rust 持久化层 (JSON文件)
 
 **三轮优化简化**:
 
-*第一轮 (2025-11-01)*:
+_第一轮 (2025-11-01)_:
+
 - ❌ **删除 AppDataProvider**: 过度封装 (280行)
 - ❌ **删除增强事件桥接**: `useTauriEventBridge.enhanced.ts` (421行)
 - ❌ **删除事件分发器**: `eventDispatcher.ts` (368行)
 - ❌ **删除统计引擎**: `statsEngine.ts` + `statsManagerV2.ts` (259行)
 
-*第二轮 (2025-11-23)*:
+_第二轮 (2025-11-23)_:
+
 - ❌ **删除未使用文件**: 5个文件共 687行
 - ❌ **删除未使用函数**: `useAsyncEffect` (60行)
 - ❌ **简化参数转换**: 移除 autoConvertParams 逻辑 (~486行)
 
-*第三轮 (2025-11-23)*:
+_第三轮 (2025-11-23)_:
+
 - ❌ **删除中间层**: `api.ts` (97行)，`commands.ts` 直接调用 `apiClient`
 - ❌ **删除 SWR 配置**: `swr.ts` (42行)，hooks 直接传入 fetcher
 - ❌ **简化封装链**: API 调用从三层简化为两层 (~240行)
 
 **保留的核心功能**:
+
 - ✅ **命令层** (`commands.ts`): 类型安全的 Tauri 调用，52个命令，13个模块
 - ✅ **API 客户端** (`apiClient.ts`): 重试、超时、去重、错误提示
 - ✅ **Tauri 包装** (`tauriInvoke.ts`): 敏感信息掩码、错误日志
@@ -261,6 +272,7 @@ Rust 持久化层 (JSON文件)
 - ✅ **简化主题系统**: 直接 DOM 操作
 
 **性能优化成果**:
+
 - 主题切换: ~200ms → <50ms (提升 75%)
 - 语言切换: ~500ms → <100ms (提升 80%)
 - 事件响应: ~100ms → <30ms (提升 70%)
@@ -324,11 +336,9 @@ const result = await translatorCommands.translateBatch(entries, targetLang);
 import useSWR from 'swr';
 import { translationMemoryCommands } from '@/services/commands';
 
-const { data, mutate } = useSWR(
-  'translation_memory',
-  () => translationMemoryCommands.get(),
-  { revalidateOnFocus: false }
-);
+const { data, mutate } = useSWR('translation_memory', () => translationMemoryCommands.get(), {
+  revalidateOnFocus: false,
+});
 ```
 
 **架构简化**:
@@ -380,6 +390,7 @@ useEffect(() => {
 ```
 
 **已删除的复杂系统**:
+
 - ~~`swr.ts`~~ - 未使用的 SWR 配置文件 (42行)
 - ~~`api.ts`~~ - 中间透传层 (97行)
 - ~~复杂的事件分发系统~~ - 现在直接使用 Tauri `listen()`
@@ -417,6 +428,7 @@ function MyComponent() {
 ```
 
 **已删除的复杂系统**:
+
 - ~~`eventDispatcher.ts`~~ - 过度复杂的事件分发器 (368行)
 - ~~`useTauriEventBridge.enhanced.ts`~~ - 不必要的封装层 (421行)
 - ~~`AppDataProvider.tsx`~~ - 过度封装的 Context Provider (280行)
@@ -549,9 +561,13 @@ useEffect(() => {
 // 示例：添加新命令
 export const myCommands = {
   async doSomething(param: string): Promise<Result> {
-    return invoke(COMMANDS.MY_COMMAND, { param }, {
-      errorMessage: '操作失败',
-    });
+    return invoke(
+      COMMANDS.MY_COMMAND,
+      { param },
+      {
+        errorMessage: '操作失败',
+      }
+    );
   },
 };
 ```
@@ -643,7 +659,8 @@ export const myCommands = {
 
 **已删除的文件** (三轮优化):
 
-*第一轮优化 (2025-11-01, 3698行)*:
+_第一轮优化 (2025-11-01, 3698行)_:
+
 - ~~`src/services/eventDispatcher.ts`~~ - 过度复杂的事件系统 (368行)
 - ~~`src/hooks/useTauriEventBridge.enhanced.ts`~~ - 不必要的事件桥接 (421行)
 - ~~`src/services/statsEngine.ts`~~ - 事件溯源系统 (147行)
@@ -652,7 +669,8 @@ export const myCommands = {
 - ~~`src/providers/AppDataProvider.tsx`~~ - 过度封装的 Context Provider (280行)
 - ~~`src/providers/`~~ - 整个 providers 目录
 
-*第二轮优化 (2025-11-23, 1232行)*:
+_第二轮优化 (2025-11-23, 1232行)_:
+
 - ~~`src/hooks/useNotification.ts`~~ - 与 notificationManager 功能重复 (221行)
 - ~~`src/services/statsFormatter.ts`~~ - 只是简单包装 formatters.ts (277行)
 - ~~`src/hooks/useValidation.ts`~~ - 完全未使用 (18行)
@@ -662,7 +680,8 @@ export const myCommands = {
 - ~~`src/components/app/`~~ - 空目录
 - 简化参数转换逻辑 - 移除 autoConvertParams 相关代码 (~486行)
 
-*第三轮优化 (2025-11-23, 987行)*:
+_第三轮优化 (2025-11-23, 987行)_:
+
 - ~~`src/services/api.ts`~~ - 中间透传层 (97行)
 - ~~`src/services/swr.ts`~~ - 未使用的 SWR 配置 (42行)
 - 简化 API 封装 - 从三层简化为两层 (~240行)

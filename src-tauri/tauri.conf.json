@@ -17,12 +17,13 @@
     "windows": [
       {
         "title": "PO 翻译工具",
-        "width": 1200,
-        "height": 800,
-        "minWidth": 800,
-        "minHeight": 600,
+        "width": 1400,
+        "height": 850,
+        "minWidth": 1000,
+        "minHeight": 700,
         "resizable": true,
-        "fullscreen": false
+        "fullscreen": false,
+        "visible": false
       }
     ]
   },

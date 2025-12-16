@@ -222,7 +222,7 @@ export const TermLibraryManager: React.FC<TermLibraryManagerProps> = ({
       open={visible}
       onCancel={onClose}
       width={1000}
-      destroyOnHidden={true}
+      destroyOnClose={true}
       mask={false}
       footer={[
         <Button key="refresh" icon={<ReloadOutlined />} onClick={() => refresh()}>

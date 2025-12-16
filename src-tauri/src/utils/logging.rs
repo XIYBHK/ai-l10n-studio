@@ -1,7 +1,5 @@
 use flexi_logger::writers::FileLogWriter;
-#[cfg(not(debug_assertions))]
 use flexi_logger::{DeferredNow, filter::LogLineFilter};
-#[cfg(not(debug_assertions))]
 use log::Record;
 use std::{fmt, sync::Arc};
 use tokio::sync::Mutex;
@@ -138,14 +136,13 @@ macro_rules! logging_error {
     };
 }
 
-/// 模块过滤器（用于 flexi_logger，生产环境屏蔽噪音日志）
-#[cfg(not(debug_assertions))]
+/// 模块和消息过滤器（用于 flexi_logger，屏蔽噪音日志）
 pub struct NoModuleFilter<'a>(pub &'a [&'a str]);
 
-#[cfg(not(debug_assertions))]
 impl<'a> NoModuleFilter<'a> {
     #[inline]
-    pub fn filter(&self, record: &Record) -> bool {
+    pub fn filter(&self, record: &log::Record) -> bool {
+        // 过滤特定模块
         if let Some(module) = record.module_path() {
             for blocked in self.0 {
                 if module.len() >= blocked.len()
@@ -155,11 +152,19 @@ impl<'a> NoModuleFilter<'a> {
                 }
             }
         }
+
+        // 过滤 tao 的特定警告消息（这些是无害的事件循环警告）
+        let msg = format!("{}", record.args());
+        if msg.contains("NewEvents emitted without explicit RedrawEventsCleared")
+            || msg.contains("RedrawEventsCleared emitted without explicit MainEventsCleared")
+        {
+            return false;
+        }
+
         true
     }
 }
 
-#[cfg(not(debug_assertions))]
 impl<'a> LogLineFilter for NoModuleFilter<'a> {
     fn write(
         &self,
