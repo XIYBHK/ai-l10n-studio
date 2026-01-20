@@ -10,7 +10,14 @@ const log = createModuleLogger('useAppStore');
 type ThemeMode = 'light' | 'dark' | 'system';
 type Language = 'zh-CN' | 'en-US';
 
-interface AppState {
+function getInitialSystemTheme(): 'light' | 'dark' {
+  if (typeof window === 'undefined' || !window.matchMedia) {
+    return 'light';
+  }
+  return window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
+}
+
+export interface AppState {
   // 文件状态
   entries: POEntry[];
   currentEntry: POEntry | null;
@@ -78,11 +85,7 @@ export const useAppStore = create<AppState>()((set, get) => ({
   language: 'zh-CN',
 
   // 🏗️ 系统主题状态（运行时检测，不持久化）
-  systemTheme: (typeof window !== 'undefined' && window.matchMedia
-    ? window.matchMedia('(prefers-color-scheme: dark)').matches
-      ? 'dark'
-      : 'light'
-    : 'light') as 'light' | 'dark',
+  systemTheme: getInitialSystemTheme(),
   cumulativeStats: {
     total: 0,
     tm_hits: 0,

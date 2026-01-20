@@ -4,11 +4,10 @@
  */
 
 import { useState, useEffect, useRef } from 'react';
-import { Layout, ConfigProvider } from 'antd';
-import { App as AntApp } from 'antd';
+import { Layout, ConfigProvider, App as AntApp } from 'antd';
 import { listen } from '@tauri-apps/api/event';
 import { useTheme } from './hooks/useTheme';
-import { useSessionStore, useStatsStore } from './store';
+import { useSessionStore, useStatsStore, initializeStores } from './store';
 import { useAsync } from './hooks/useAsync';
 import { useChannelTranslation } from './hooks/useChannelTranslation';
 import { MenuBar } from './components/MenuBar';
@@ -71,8 +70,15 @@ export default function App() {
   const { active, loading: aiConfigLoading } = useAIConfigs();
   const hasCheckedAIConfig = useRef(false);
 
-  // 🔧 启动时重置会话统计
+  // 🔧 启动时初始化 Store 和重置会话统计
   useEffect(() => {
+    initializeStores()
+      .then(() => {
+        log.info('Store 初始化完成');
+      })
+      .catch((error) => {
+        log.error('Store 初始化失败', error);
+      });
     resetSessionStats();
     log.info('🔄 应用启动，会话统计已重置');
   }, []);
@@ -149,6 +155,7 @@ export default function App() {
               log.info('通过拖放导入文件成功', { filePath });
             } catch (error) {
               log.logError(error, '解析拖放文件失败');
+              msg.error(`文件导入失败：${error instanceof Error ? error.message : '未知错误'}`);
             }
           }
         }

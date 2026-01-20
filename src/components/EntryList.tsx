@@ -11,6 +11,39 @@ import { TruncatedText } from './TruncatedText';
 // 💡 优化：使用 @tanstack/react-virtual（性能更好，API更现代）
 const log = createModuleLogger('EntryList');
 
+// 翻译来源样式映射
+const TRANSLATION_SOURCE_STYLES = {
+  tm: {
+    bg: 'rgba(82, 196, 26, 0.1)',
+    color: '#52c41a',
+    label: '记忆',
+  },
+  dedup: {
+    bg: 'rgba(24, 144, 255, 0.1)',
+    color: '#1890ff',
+    label: '去重',
+  },
+  ai: {
+    bg: 'rgba(250, 173, 20, 0.1)',
+    color: '#faad14',
+    label: 'AI',
+  },
+} as const;
+
+function getSourceStyle(source: 'tm' | 'dedup' | 'ai' | undefined) {
+  return TRANSLATION_SOURCE_STYLES[source || 'ai'];
+}
+
+function getEntryBackground(
+  isSelected: boolean,
+  isCurrent: boolean,
+  colors: { selectedBg: string; hoverBg: string; bgPrimary: string }
+): string {
+  if (isSelected) return colors.selectedBg;
+  if (isCurrent) return colors.hoverBg;
+  return colors.bgPrimary;
+}
+
 interface EntryListProps {
   entries: POEntry[];
   currentEntry: POEntry | null;
@@ -56,11 +89,7 @@ const renderVirtualItem = (
         transform: `translateY(${virtualItem.start}px)`,
         padding: '8px 12px',
         cursor: 'pointer',
-        backgroundColor: isSelected
-          ? colors.selectedBg
-          : isCurrent
-            ? colors.hoverBg
-            : colors.bgPrimary,
+        backgroundColor: getEntryBackground(isSelected, isCurrent, colors),
         borderBottom: `1px solid ${colors.borderSecondary}`,
         borderLeft: isSelected ? `3px solid ${colors.selectedBorder}` : '3px solid transparent',
         transition: 'background-color 0.1s',
@@ -93,29 +122,15 @@ const renderVirtualItem = (
               borderRadius: '4px',
               whiteSpace: 'nowrap',
               fontWeight: 500,
-              backgroundColor:
-                entry.translationSource === 'tm'
-                  ? 'rgba(82, 196, 26, 0.1)'
-                  : entry.translationSource === 'dedup'
-                    ? 'rgba(24, 144, 255, 0.1)'
-                    : 'rgba(250, 173, 20, 0.1)',
-              color:
-                entry.translationSource === 'tm'
-                  ? '#52c41a'
-                  : entry.translationSource === 'dedup'
-                    ? '#1890ff'
-                    : '#faad14',
+              backgroundColor: getSourceStyle(entry.translationSource).bg,
+              color: getSourceStyle(entry.translationSource).color,
               display: 'flex',
               alignItems: 'center',
               gap: '3px',
               lineHeight: '1.2',
             }}
           >
-            {entry.translationSource === 'tm'
-              ? '记忆'
-              : entry.translationSource === 'dedup'
-                ? '去重'
-                : 'AI'}
+            {getSourceStyle(entry.translationSource).label}
           </span>
         )}
       </div>

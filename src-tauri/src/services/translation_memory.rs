@@ -151,9 +151,19 @@ impl TranslationMemory {
     /// target_lang: 目标语言代码（如 "zh-CN", "ja", "en"）
     pub fn get_translation(&mut self, source: &str, target_lang: Option<&str>) -> Option<String> {
         // 🔧 修复：支持多语言记忆库
+        // 标准化语言代码映射
+        fn normalize_lang_code(lang: &str) -> &str {
+            match lang {
+                "zh-CN" | "zh-TW" | "zh-HK" => "zh-Hans",
+                "en-US" | "en-GB" => "en",
+                other => other,
+            }
+        }
+
         // 尝试按"源文本|目标语言"查询（新格式，支持多语言）
         if let Some(lang) = target_lang {
-            let key_with_lang = format!("{}|{}", source, lang);
+            let normalized_lang = normalize_lang_code(lang);
+            let key_with_lang = format!("{}|{}", source, normalized_lang);
             if let Some(translation) = self.memory.get(&key_with_lang) {
                 self.stats.hits += 1;
                 crate::app_log!("[TM] 命中翻译（{}）: {} -> {}", lang, source, translation);

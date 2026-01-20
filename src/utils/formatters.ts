@@ -5,6 +5,25 @@
  */
 
 /**
+ * 提取错误消息
+ * 统一处理 Error 对象和其他类型的错误
+ *
+ * @param error - 错误对象
+ * @returns 错误消息字符串
+ *
+ * @example
+ * getErrorMessage(new Error('test'))  // "test"
+ * getErrorMessage('string error')     // "string error"
+ * getErrorMessage(123)                // "123"
+ */
+export function getErrorMessage(error: unknown): string {
+  if (error instanceof Error) {
+    return error.message;
+  }
+  return String(error);
+}
+
+/**
  * 汇率配置（USD to CNY）
  * TODO: 后续可以从配置文件或 API 获取实时汇率
  */

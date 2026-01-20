@@ -200,7 +200,7 @@ export const AIConfigTab: React.FC<AIConfigTabProps> = () => {
         await aiConfigCommands.add(config);
         message.success('配置已添加');
       } else if (editingIndex !== null) {
-        await aiConfigCommands.update(String(editingIndex), config);
+        await aiConfigCommands.update(editingIndex, config);
         message.success('配置已更新');
       }
 

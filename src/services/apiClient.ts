@@ -170,10 +170,6 @@ class APIClient {
     // 抛出错误
     const finalError = new Error(errorMessage || lastError?.message || `API调用失败: ${command}`);
 
-    if (!silent) {
-      throw finalError;
-    }
-
     throw finalError;
   }
 
@@ -187,23 +183,23 @@ class APIClient {
     controller: AbortController,
     silent: boolean
   ): Promise<T> {
-    return new Promise(async (resolve, reject) => {
-      // 设置超时
-      const timeoutId = setTimeout(() => {
-        controller.abort();
-        reject(new Error(`请求超时: ${command} (${timeout}ms)`));
-      }, timeout);
+    // 设置超时
+    const timeoutId = setTimeout(() => {
+      controller.abort();
+    }, timeout);
 
-      try {
-        // 执行实际的调用
-        const result = await invoke<T>(command, params, { silent });
-        clearTimeout(timeoutId);
-        resolve(result);
-      } catch (error) {
-        clearTimeout(timeoutId);
-        reject(error);
+    try {
+      // 执行实际的调用
+      const result = await invoke<T>(command, params, { silent });
+      clearTimeout(timeoutId);
+      return result;
+    } catch (error) {
+      clearTimeout(timeoutId);
+      if (controller.signal.aborted) {
+        throw new Error(`请求超时: ${command} (${timeout}ms)`);
       }
-    });
+      throw error;
+    }
   }
 
   /**

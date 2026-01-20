@@ -1,6 +1,7 @@
 import { useEffect, useMemo } from 'react';
 import { theme as antTheme } from 'antd';
 import { useAppStore } from '../store/useAppStore';
+import type { AppState } from '../store/useAppStore';
 import { lightTheme, darkTheme, semanticColors } from '../theme/config';
 import { emit } from '@tauri-apps/api/event';
 
@@ -11,8 +12,8 @@ type Theme = 'light' | 'dark' | 'system';
 
 // 简化的 useTheme Hook（直接操作 DOM，无复杂状态管理）
 export const useTheme = () => {
-  const themeMode = useAppStore((state: any) => state.theme);
-  const setThemeMode = useAppStore((state: any) => state.setTheme);
+  const themeMode = useAppStore((state: AppState) => state.theme);
+  const setThemeMode = useAppStore((state: AppState) => state.setTheme);
 
   // 获取系统主题
   const getSystemTheme = (): 'light' | 'dark' => {
