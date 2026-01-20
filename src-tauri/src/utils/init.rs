@@ -5,9 +5,13 @@ use crate::utils::logging::Type as LogType;
 use crate::utils::paths;
 use crate::{logging, logging_error};
 use anyhow::Result;
-use flexi_logger::{Cleanup, Criterion, Duplicate, FileSpec, LogSpecBuilder, Logger};
+use flexi_logger::{Cleanup, Criterion, Duplicate, FileSpec, LogSpecBuilder, Logger, WriteMode};
+use std::sync::OnceLock;
+use tokio::time::{timeout, Duration};
 
 use crate::utils::logging::NoModuleFilter;
+
+pub static LOGGER_HANDLE: OnceLock<flexi_logger::LoggerHandle> = OnceLock::new();
 
 /// 初始化应用程序
 /// 步骤：
@@ -121,27 +125,40 @@ async fn init_ai_providers() -> Result<()> {
 /// - 日志清理：保留最近 N 天的日志
 #[cfg(not(debug_assertions))]
 async fn init_logger() -> Result<()> {
-    // 从配置读取日志参数（参考 clash-verge-rev）
-    let (log_max_size, log_max_count) = {
-        let draft = ConfigDraft::global().await;
-        let config = draft.data();
-        (
-            config.log_max_size.unwrap_or(128), // 默认 128KB
-            config.log_max_count.unwrap_or(8),  // 默认 8 个文件
-        )
+    // 1. 获取日志目录并确保存在
+    let log_dir = paths::app_logs_dir()?;
+    if !log_dir.exists() {
+        std::fs::create_dir_all(&log_dir)?;
+    }
+
+    // 2. 尝试从配置读取参数，失败则使用默认值（解耦依赖风险）
+    let (log_max_size, log_max_count) = match timeout(Duration::from_millis(500), ConfigDraft::global()).await {
+        Ok(draft) => {
+            let config = draft.data();
+            (
+                config.log_max_size.unwrap_or(128) * 1024, // KB -> Bytes
+                config.log_max_count.unwrap_or(8),
+            )
+        }
+        Err(_) => {
+            eprintln!("⚠️ 日志初始化: 配置加载超时，使用默认值");
+            (128 * 1024, 8) // 默认 128KB, 8个文件
+        }
     };
 
-    let log_dir = paths::app_logs_dir()?;
     let spec = LogSpecBuilder::new()
         .default(log::LevelFilter::Info)
         .build();
 
+    // 3. 配置 Logger
     // 生产环境：过滤噪音模块
     let logger = Logger::with(spec)
         .log_to_file(FileSpec::default().directory(&log_dir).basename("app"))
+        // 关键修复: 显式设置写入模式，确保立即写入文件
+        .write_mode(WriteMode::BufferAndFlush)
         .duplicate_to_stdout(Duplicate::Info)
         .rotate(
-            Criterion::Size((log_max_size * 1024) as u64), // 配置项：单个文件最大大小
+            Criterion::Size(log_max_size as u64), // 配置项：单个文件最大大小
             flexi_logger::Naming::TimestampsCustomFormat {
                 current_infix: Some("latest"),
                 format: "%Y-%m-%d_%H-%M-%S",
@@ -152,34 +169,51 @@ async fn init_logger() -> Result<()> {
             "wry", "tauri", "tokio", "hyper",
         ])));
 
-    logger.start()?;
+    // 4. 启动并保存 Handle
+    let handle = logger.start()?;
+    LOGGER_HANDLE.set(handle).ok(); // 保存 handle 防止被 drop
+
+    log::info!("日志系统初始化完成，路径: {:?}", log_dir);
     Ok(())
 }
 
 /// 开发环境：输出详细日志，但过滤 tao 事件循环警告
 #[cfg(debug_assertions)]
 async fn init_logger() -> Result<()> {
-    // 从配置读取日志参数（参考 clash-verge-rev）
-    let (log_max_size, log_max_count) = {
-        let draft = ConfigDraft::global().await;
-        let config = draft.data();
-        (
-            config.log_max_size.unwrap_or(128), // 默认 128KB
-            config.log_max_count.unwrap_or(8),  // 默认 8 个文件
-        )
+    // 1. 获取日志目录并确保存在
+    let log_dir = paths::app_logs_dir()?;
+    if !log_dir.exists() {
+        std::fs::create_dir_all(&log_dir)?;
+    }
+
+    // 2. 尝试从配置读取参数，失败则使用默认值（解耦依赖风险）
+    let (log_max_size, log_max_count) = match timeout(Duration::from_millis(500), ConfigDraft::global()).await {
+        Ok(draft) => {
+            let config = draft.data();
+            (
+                config.log_max_size.unwrap_or(128) * 1024, // KB -> Bytes
+                config.log_max_count.unwrap_or(8),
+            )
+        }
+        Err(_) => {
+            eprintln!("⚠️ 日志初始化: 配置加载超时，使用默认值");
+            (128 * 1024, 8) // 默认 128KB, 8个文件
+        }
     };
 
-    let log_dir = paths::app_logs_dir()?;
     let spec = LogSpecBuilder::new()
         .default(log::LevelFilter::Debug)
         .build();
 
+    // 3. 配置 Logger
     // 开发环境：只过滤 tao 的无害警告，保留其他所有日志
     let logger = Logger::with(spec)
         .log_to_file(FileSpec::default().directory(&log_dir).basename("app"))
+        // 关键修复: 显式设置写入模式，确保立即写入文件
+        .write_mode(WriteMode::BufferAndFlush)
         .duplicate_to_stdout(Duplicate::Debug)
         .rotate(
-            Criterion::Size((log_max_size * 1024) as u64), // 配置项：单个文件最大大小
+            Criterion::Size(log_max_size as u64), // 配置项：单个文件最大大小
             flexi_logger::Naming::TimestampsCustomFormat {
                 current_infix: Some("latest"),
                 format: "%Y-%m-%d_%H-%M-%S",
@@ -188,7 +222,11 @@ async fn init_logger() -> Result<()> {
         )
         .filter(Box::new(NoModuleFilter(&[])));
 
-    logger.start()?;
+    // 4. 启动并保存 Handle
+    let handle = logger.start()?;
+    LOGGER_HANDLE.set(handle).ok(); // 保存 handle 防止被 drop
+
+    log::info!("日志系统初始化完成，路径: {:?}", log_dir);
     Ok(())
 }
 

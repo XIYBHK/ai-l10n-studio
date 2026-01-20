@@ -4,6 +4,123 @@
 
 ---
 
+## 2026-01-20 - 日志系统无法生成文件问题
+
+### 问题概述
+
+日志功能无法生成日志文件，导致调试困难，无法追踪系统运行状态。
+
+### 问题表现
+
+- 应用运行后 `logs/` 目录下没有生成任何 `.log` 文件
+- 重启应用后日志完全丢失
+- 无法进行问题排查和性能分析
+
+### 问题根源
+
+1. **缺少 WriteMode 配置**:
+   - `flexi_logger` 默认可能使用缓冲模式
+   - 日志积压在内存中，无法及时写入磁盘
+   - 程序退出时日志可能丢失
+
+2. **配置依赖风险**:
+   - 日志初始化依赖 `ConfigDraft` 读取配置
+   - 如果配置文件损坏或加载失败，日志初始化失败
+   - 导致没有任何日志文件生成
+
+3. **Logger Handle 丢失**:
+   - `logger.start()` 返回的 handle 被直接丢弃
+   - handle 对于管理日志生命周期很重要（如强制刷新缓冲区）
+
+### 解决方案
+
+**修改文件**: `src-tauri/src/utils/init.rs`
+
+#### 1. 添加必要导入和全局变量
+
+```rust
+use flexi_logger::{Cleanup, Criterion, Duplicate, FileSpec, LogSpecBuilder, Logger, WriteMode};
+use std::sync::OnceLock;
+use tokio::time::{timeout, Duration};
+
+pub static LOGGER_HANDLE: OnceLock<flexi_logger::LoggerHandle> = OnceLock::new();
+```
+
+#### 2. 修改配置加载逻辑（添加超时保护）
+
+```rust
+// 尝试从配置读取参数，失败则使用默认值（解耦依赖风险）
+let (log_max_size, log_max_count) = match timeout(Duration::from_millis(500), ConfigDraft::global()).await {
+    Ok(draft) => {
+        let config = draft.data();
+        (
+            config.log_max_size.unwrap_or(128) * 1024, // KB -> Bytes
+            config.log_max_count.unwrap_or(8),
+        )
+    }
+    Err(_) => {
+        eprintln!("⚠️ 日志初始化: 配置加载超时，使用默认值");
+        (128 * 1024, 8) // 默认 128KB, 8个文件
+    }
+};
+```
+
+#### 3. 添加 WriteMode 配置
+
+```rust
+let logger = Logger::with(spec)
+    .log_to_file(FileSpec::default().directory(&log_dir).basename("app"))
+    // 关键修复: 显式设置写入模式，确保立即写入文件
+    .write_mode(WriteMode::BufferAndFlush)
+    .duplicate_to_stdout(Duplicate::Info)
+    // ... 其他配置 ...
+```
+
+#### 4. 保存 Logger Handle
+
+```rust
+let handle = logger.start()?;
+LOGGER_HANDLE.set(handle).ok(); // 保存 handle 防止被 drop
+
+log::info!("日志系统初始化完成，路径: {:?}", log_dir);
+```
+
+### 影响范围
+
+- ✅ 日志文件立即写入磁盘（BufferAndFlush 模式）
+- ✅ 即使配置加载失败，日志系统仍能正常初始化（默认值保护）
+- ✅ Logger handle 保持在内存中，确保日志系统正常运行
+- ✅ 在启动时会输出初始化成功消息，便于调试
+
+### 验证方法
+
+**开发环境测试**:
+
+```bash
+npm run tauri:dev
+```
+
+- 检查控制台是否输出 "日志系统初始化完成"
+- 检查 `<项目根目录>\src-tauri\target\debug\logs\` 是否生成日志文件
+
+**生产环境测试**:
+
+```bash
+npm run tauri:build
+```
+
+- 运行构建后的应用
+- 检查 `%APPDATA%\com.potranslator.gui\logs\` 是否生成日志文件
+
+### 预防措施
+
+1. **初始化顺序**: 日志系统应在所有其他系统之前初始化
+2. **错误隔离**: 日志初始化失败不应影响其他功能启动
+3. **默认值策略**: 配置依赖系统必须有合理的默认值
+4. **生命周期管理**: 长生命周期资源（如 Logger）必须正确持有 handle
+
+---
+
 ## 2025-12-16 - Phase 10 CI 质量与类型安全问题
 
 ### 问题概述

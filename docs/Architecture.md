@@ -386,7 +386,9 @@ Zustand Stores (持久化)
 
 #### 6️⃣ **日志系统优化**
 
-- ✅ **直接 console.log**: 移除复杂的日志轮转
+- ✅ **WriteMode 配置**: 使用 `BufferAndFlush` 确保日志立即写入磁盘
+- ✅ **超时保护**: 配置加载超时 500ms，失败时使用默认值
+- ✅ **Handle 管理**: 全局 `OnceLock` 保存 LoggerHandle，防止被丢弃
 - ✅ **开发模式详细输出**: 便于调试
 - ✅ **生产模式优化**: 性能优先
 
