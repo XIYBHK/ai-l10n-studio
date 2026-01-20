@@ -143,23 +143,25 @@ fn init_global_registry() -> &'static RwLock<ProviderRegistry> {
 }
 
 /// 获取全局供应商注册表（只读访问）
+#[allow(clippy::expect_used)]
 pub fn with_global_registry<T, F>(f: F) -> T
 where
     F: FnOnce(&ProviderRegistry) -> T,
 {
     let registry = init_global_registry();
-    let guard = registry.read().unwrap();
-    f(&*guard)
+    let guard = registry.read().expect("Global registry lock poisoned");
+    f(&guard)
 }
 
 /// 获取可变的全局供应商注册表（用于注册）
+#[allow(clippy::expect_used)]
 pub fn with_global_registry_mut<T, F>(f: F) -> T
 where
     F: FnOnce(&mut ProviderRegistry) -> T,
 {
     let registry = init_global_registry();
-    let mut guard = registry.write().unwrap();
-    f(&mut *guard)
+    let mut guard = registry.write().expect("Global registry lock poisoned");
+    f(&mut guard)
 }
 
 /// 便捷宏：注册供应商

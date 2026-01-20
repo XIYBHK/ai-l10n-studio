@@ -352,7 +352,7 @@ pub async fn update_app_config(config: serde_json::Value) -> Result<(), String> 
     // 在草稿上替换整个配置
     {
         let mut draft_config = draft.draft();
-        *draft_config = Box::new(app_config);
+        **draft_config = app_config;
     }
 
     // 原子提交并保存
@@ -443,7 +443,7 @@ pub fn clear_app_logs() -> Result<(), String> {
         if let Ok(entries) = fs::read_dir(&log_dir) {
             for entry in entries.flatten() {
                 let path = entry.path();
-                if path.is_file() && path.extension().map_or(false, |ext| ext == "log") {
+                if path.is_file() && path.extension().is_some_and(|ext| ext == "log") {
                     // 清空文件内容而不是删除文件
                     let _ = fs::write(&path, "");
                 }
@@ -549,7 +549,6 @@ pub fn get_frontend_logs() -> Result<Vec<String>, String> {
             }
             Err(e) => {
                 crate::app_log!("❌ [前端日志] 无法读取 {}: {}", dir_name, e);
-                continue;
             }
         }
     }
@@ -1018,7 +1017,7 @@ pub async fn translate_batch_with_channel(
 
         // 🔔 创建 progress_callback，实时推送 TM 命中和 AI 翻译结果（带节流优化）
         let progress_channel_clone = progress_channel.clone();
-        let throttler_clone = progress_throttler.clone();
+        let throttler_clone = std::sync::Arc::clone(&progress_throttler);
         let progress_callback = Box::new(move |local_idx: usize, translation: String| {
             // 使用节流器减少高频更新，仅每100ms发送一次进度
             if throttler_clone.should_update() {

@@ -29,7 +29,7 @@ pub async fn init_app() -> Result<()> {
     init_logger().await?;
 
     // Step 4: 初始化 AI 供应商系统
-    init_ai_providers().await?;
+    init_ai_providers()?;
 
     logging!(
         info,
@@ -57,7 +57,7 @@ pub async fn init_app() -> Result<()> {
 /// 1. 注册内置供应商（向后兼容）
 /// 2. 初始化插件加载器
 /// 3. 加载所有插件供应商
-async fn init_ai_providers() -> Result<()> {
+fn init_ai_providers() -> Result<()> {
     // Step 1: 注册内置供应商（Phase 1-2 兼容）
     logging!(info, LogType::Init, "🔧 开始注册内置AI供应商...");
 
