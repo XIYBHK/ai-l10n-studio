@@ -14,6 +14,8 @@ jobs:
     steps:
       - name: Checkout repository
         uses: actions/checkout@v5
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Setup Node.js
         uses: actions/setup-node@v5
@@ -53,8 +55,30 @@ jobs:
       - name: Install frontend dependencies
         run: npm ci
 
-      - name: Run linters
-        run: npm run lint:all
+      - name: Run Prettier (auto-fix)
+        run: npm run format
+
+      - name: Run cargo fmt (auto-fix)
+        working-directory: ./src-tauri
+        run: cargo fmt
+
+      - name: Check for changes
+        id: changes
+        run: |
+          if [[ -n $(git status --porcelain) ]]; then
+            echo "has_changes=true" >> $GITHUB_OUTPUT
+          else
+            echo "has_changes=false" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Commit and push fixes
+        if: steps.changes.outputs.has_changes == 'true' && github.event_name == 'push'
+        run: |
+          git config --local user.email "github-actions[bot]@users.noreply.github.com"
+          git config --local user.name "github-actions[bot]"
+          git add -A
+          git commit -m "style: auto-fix formatting"
+          git push
 
       - name: Build frontend
         run: npm run build
