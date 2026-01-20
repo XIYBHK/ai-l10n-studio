@@ -1,4 +1,4 @@
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useRef, useEffect } from 'react';
 import { Modal, Input, Button, Space, Tabs, App } from 'antd';
 import {
   CopyOutlined,

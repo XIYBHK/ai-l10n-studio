@@ -55,6 +55,11 @@ export interface AppConfig {
   base_url: string;
   batch_size: number;
   use_translation_memory: boolean;
+  // 日志配置
+  log_level?: 'debug' | 'info' | 'warn' | 'error';
+  log_retention_days?: number;
+  log_max_size?: number;
+  log_max_count?: number;
 }
 
 // Phase 7: Contextual Refine 请求类型
