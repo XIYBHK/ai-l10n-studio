@@ -51,3 +51,7 @@ ref/
 archive/
 docs/archive/
 
+# Claude Code config
+CLAUDE.md
+.claude/
+
