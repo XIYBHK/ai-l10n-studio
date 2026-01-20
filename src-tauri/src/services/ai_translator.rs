@@ -439,7 +439,8 @@ impl AITranslator {
         if let Some(ref mut tm) = self.tm {
             for (i, text) in texts.iter().enumerate() {
                 // 🔧 修复：传入目标语言，避免跨语言命中
-                if let Some(translation) = tm.get_translation(text, self.target_language.as_deref()) {
+                if let Some(translation) = tm.get_translation(text, self.target_language.as_deref())
+                {
                     // TM命中
                     result[i] = translation.clone();
                     self.batch_stats.tm_hits += 1;
@@ -607,9 +608,18 @@ impl AITranslator {
 
                         if !tm.memory.contains_key(&check_key) {
                             // 🔧 修复：保存时记录目标语言
-                            tm.add_translation(unique_text.clone(), translation.clone(), self.target_language.as_deref());
+                            tm.add_translation(
+                                unique_text.clone(),
+                                translation.clone(),
+                                self.target_language.as_deref(),
+                            );
                             self.batch_stats.tm_learned += 1;
-                            crate::app_log!("[TM学习] {} -> {} ({})", unique_text, translation, self.target_language.as_deref().unwrap_or("无语言"));
+                            crate::app_log!(
+                                "[TM学习] {} -> {} ({})",
+                                unique_text,
+                                translation,
+                                self.target_language.as_deref().unwrap_or("无语言")
+                            );
                         } else {
                             crate::app_log!("[TM跳过] {} (已在记忆库)", unique_text);
                         }

@@ -268,18 +268,36 @@ pub fn get_builtin_memory() -> IndexMap<String, String> {
     let mut memory = IndexMap::new();
 
     // XTools 命名空间
-    memory.insert("XTools|Random|zh-Hans".to_string(), "XTools|随机".to_string());
+    memory.insert(
+        "XTools|Random|zh-Hans".to_string(),
+        "XTools|随机".to_string(),
+    );
     memory.insert("XTools|Sort|zh-Hans".to_string(), "XTools|排序".to_string());
-    memory.insert("XTools|Array|zh-Hans".to_string(), "XTools|数组".to_string());
-    memory.insert("XTools|Collision|zh-Hans".to_string(), "XTools|碰撞".to_string());
+    memory.insert(
+        "XTools|Array|zh-Hans".to_string(),
+        "XTools|数组".to_string(),
+    );
+    memory.insert(
+        "XTools|Collision|zh-Hans".to_string(),
+        "XTools|碰撞".to_string(),
+    );
     memory.insert("XTools|Math|zh-Hans".to_string(), "XTools|数学".to_string());
-    memory.insert("XTools|String|zh-Hans".to_string(), "XTools|字符串".to_string());
+    memory.insert(
+        "XTools|String|zh-Hans".to_string(),
+        "XTools|字符串".to_string(),
+    );
     memory.insert(
         "XTools|Transform|zh-Hans".to_string(),
         "XTools|Transform".to_string(),
     );
-    memory.insert("XTools|Utilities|zh-Hans".to_string(), "XTools|工具".to_string());
-    memory.insert("XTools|Debug|zh-Hans".to_string(), "XTools|调试".to_string());
+    memory.insert(
+        "XTools|Utilities|zh-Hans".to_string(),
+        "XTools|工具".to_string(),
+    );
+    memory.insert(
+        "XTools|Debug|zh-Hans".to_string(),
+        "XTools|调试".to_string(),
+    );
 
     // Asset Naming 相关
     memory.insert("Asset Naming|zh-Hans".to_string(), "资产命名".to_string());
@@ -302,7 +320,10 @@ pub fn get_builtin_memory() -> IndexMap<String, String> {
 
     // 常见术语
     memory.insert("Connection|zh-Hans".to_string(), "连接".to_string());
-    memory.insert("Connection Mode|zh-Hans".to_string(), "连接模式".to_string());
+    memory.insert(
+        "Connection Mode|zh-Hans".to_string(),
+        "连接模式".to_string(),
+    );
     memory.insert("Ascending|zh-Hans".to_string(), "升序".to_string());
     memory.insert("Descending|zh-Hans".to_string(), "降序".to_string());
     memory.insert("Input Array|zh-Hans".to_string(), "输入数组".to_string());
@@ -313,11 +334,23 @@ pub fn get_builtin_memory() -> IndexMap<String, String> {
     memory.insert("Max Distance|zh-Hans".to_string(), "最大距离".to_string());
     memory.insert("Min Distance|zh-Hans".to_string(), "最小距离".to_string());
     memory.insert("Random Stream|zh-Hans".to_string(), "随机流送".to_string());
-    memory.insert("Reference Location|zh-Hans".to_string(), "参考位置".to_string());
-    memory.insert("Sorted Actors|zh-Hans".to_string(), "排序后的Actors".to_string());
-    memory.insert("Original Indices|zh-Hans".to_string(), "原始索引".to_string());
+    memory.insert(
+        "Reference Location|zh-Hans".to_string(),
+        "参考位置".to_string(),
+    );
+    memory.insert(
+        "Sorted Actors|zh-Hans".to_string(),
+        "排序后的Actors".to_string(),
+    );
+    memory.insert(
+        "Original Indices|zh-Hans".to_string(),
+        "原始索引".to_string(),
+    );
     memory.insert("Static Mesh|zh-Hans".to_string(), "静态网格体".to_string());
-    memory.insert("Skeletal Mesh|zh-Hans".to_string(), "骨骼网格体".to_string());
+    memory.insert(
+        "Skeletal Mesh|zh-Hans".to_string(),
+        "骨骼网格体".to_string(),
+    );
     memory.insert("Is Valid|zh-Hans".to_string(), "是否有效".to_string());
     memory.insert("In Place|zh-Hans".to_string(), "原地".to_string());
     memory.insert("By Value|zh-Hans".to_string(), "按值".to_string());

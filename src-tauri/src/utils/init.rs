@@ -7,7 +7,7 @@ use crate::{logging, logging_error};
 use anyhow::Result;
 use flexi_logger::{Cleanup, Criterion, Duplicate, FileSpec, LogSpecBuilder, Logger, WriteMode};
 use std::sync::OnceLock;
-use tokio::time::{timeout, Duration};
+use tokio::time::{Duration, timeout};
 
 use crate::utils::logging::NoModuleFilter;
 
@@ -132,19 +132,20 @@ async fn init_logger() -> Result<()> {
     }
 
     // 2. 尝试从配置读取参数，失败则使用默认值（解耦依赖风险）
-    let (log_max_size, log_max_count) = match timeout(Duration::from_millis(500), ConfigDraft::global()).await {
-        Ok(draft) => {
-            let config = draft.data();
-            (
-                config.log_max_size.unwrap_or(128) * 1024, // KB -> Bytes
-                config.log_max_count.unwrap_or(8),
-            )
-        }
-        Err(_) => {
-            eprintln!("⚠️ 日志初始化: 配置加载超时，使用默认值");
-            (128 * 1024, 8) // 默认 128KB, 8个文件
-        }
-    };
+    let (log_max_size, log_max_count) =
+        match timeout(Duration::from_millis(500), ConfigDraft::global()).await {
+            Ok(draft) => {
+                let config = draft.data();
+                (
+                    config.log_max_size.unwrap_or(128) * 1024, // KB -> Bytes
+                    config.log_max_count.unwrap_or(8),
+                )
+            }
+            Err(_) => {
+                eprintln!("⚠️ 日志初始化: 配置加载超时，使用默认值");
+                (128 * 1024, 8) // 默认 128KB, 8个文件
+            }
+        };
 
     let spec = LogSpecBuilder::new()
         .default(log::LevelFilter::Info)
@@ -187,19 +188,20 @@ async fn init_logger() -> Result<()> {
     }
 
     // 2. 尝试从配置读取参数，失败则使用默认值（解耦依赖风险）
-    let (log_max_size, log_max_count) = match timeout(Duration::from_millis(500), ConfigDraft::global()).await {
-        Ok(draft) => {
-            let config = draft.data();
-            (
-                config.log_max_size.unwrap_or(128) * 1024, // KB -> Bytes
-                config.log_max_count.unwrap_or(8),
-            )
-        }
-        Err(_) => {
-            eprintln!("⚠️ 日志初始化: 配置加载超时，使用默认值");
-            (128 * 1024, 8) // 默认 128KB, 8个文件
-        }
-    };
+    let (log_max_size, log_max_count) =
+        match timeout(Duration::from_millis(500), ConfigDraft::global()).await {
+            Ok(draft) => {
+                let config = draft.data();
+                (
+                    config.log_max_size.unwrap_or(128) * 1024, // KB -> Bytes
+                    config.log_max_count.unwrap_or(8),
+                )
+            }
+            Err(_) => {
+                eprintln!("⚠️ 日志初始化: 配置加载超时，使用默认值");
+                (128 * 1024, 8) // 默认 128KB, 8个文件
+            }
+        };
 
     let spec = LogSpecBuilder::new()
         .default(log::LevelFilter::Debug)

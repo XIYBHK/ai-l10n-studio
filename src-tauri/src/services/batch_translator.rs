@@ -236,8 +236,11 @@ impl BatchTranslator {
         for (original, translation) in &translations_map {
             if is_simple_phrase(original) && translation.len() <= 50 {
                 // 🔧 修复：BatchTranslator 不支持目标语言，使用 None 降级到兼容模式
-                self.translation_memory
-                    .add_translation(original.clone(), translation.clone(), None);
+                self.translation_memory.add_translation(
+                    original.clone(),
+                    translation.clone(),
+                    None,
+                );
             }
         }
 
