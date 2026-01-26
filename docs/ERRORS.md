@@ -713,6 +713,7 @@ pub enum AppError {
 ```
 
 **设计要点**：
+
 - 使用 `thiserror` 自动实现 `Display` 和 `Error`
 - `#[from]` 自动实现 `From` trait（Io、Serde）
 - `Translation` 错误包含 `retryable` 标志
@@ -817,6 +818,7 @@ async fn translate_entry(&self, entry: &Entry) -> Result<String, AppError> {
 ```
 
 **代码对比**：
+
 - ❌ 删除 `anyhow!()` 宏
 - ❌ 删除 `.map_err(|e| anyhow!(...))`
 - ✅ 使用 `AppError::validation()` 创建特定错误
@@ -825,6 +827,7 @@ async fn translate_entry(&self, entry: &Entry) -> Result<String, AppError> {
 ### 影响范围
 
 **更新的模块**：
+
 1. `services/ai_translator.rs` - AI 翻译核心（~15 处优化）
 2. `services/batch_translator.rs` - 批量翻译（~5 处优化）
 3. `services/config_draft.rs` - 配置管理（~8 处优化）
@@ -860,6 +863,7 @@ async fn translate_with_retry(entry: &Entry) -> Result<String, AppError> {
 ```
 
 **重试策略**：
+
 - 网络错误：自动重试（最多 3 次）
 - 翻译错误：根据 `retryable` 标志决定
 - 配置错误：不重试（用户需要修复配置）
@@ -906,6 +910,7 @@ cargo check
 ```
 
 预期输出：
+
 ```
 ✅ 无编译错误
 ⚠️  仅有 1 个无关警告（未使用的导入）
@@ -978,6 +983,7 @@ log::error!("翻译失败: {}", err);
 **从 anyhow 迁移到 AppError**：
 
 1. **第一步**：更新导入
+
    ```rust
    // 删除
    use anyhow::{Result, anyhow};
@@ -987,6 +993,7 @@ log::error!("翻译失败: {}", err);
    ```
 
 2. **第二步**：更新返回类型
+
    ```rust
    // 之前
    async fn foo() -> Result<String>
@@ -996,6 +1003,7 @@ log::error!("翻译失败: {}", err);
    ```
 
 3. **第三步**：替换错误创建
+
    ```rust
    // 之前
    return Err(anyhow!("配置错误"));
@@ -1005,6 +1013,7 @@ log::error!("翻译失败: {}", err);
    ```
 
 4. **第四步**：删除手动转换
+
    ```rust
    // 之前
    .map_err(|e| anyhow!("请求失败: {}", e))?

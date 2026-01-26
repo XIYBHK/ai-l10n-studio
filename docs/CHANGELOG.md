@@ -40,6 +40,7 @@
 ### Refactor
 
 **前端架构优化**：
+
 - 拆分 App.tsx：640 行 → 168 行（-73.7%）
   - 提取 useTranslationFlow Hook（370 行）
   - 提取 TranslationWorkspace 组件（172 行）
@@ -49,6 +50,7 @@
   - 精简 useSessionStore（-89 行）
 
 **后端架构优化**：
+
 - 拆分 ai_translator.rs：1196 行 → 模块化结构
   - 新增 prompt_builder.rs（106 行）
   - 新增 translation_stats.rs（231 行）
@@ -58,6 +60,7 @@
   - 减少 135 处重复错误处理代码
 
 **质量提升**：
+
 - 消除所有超大文件（最大文件从 1196 行降至 370 行）
 - Store 职责清晰化（消除重复状态管理）
 - 错误处理统一化（支持智能重试）

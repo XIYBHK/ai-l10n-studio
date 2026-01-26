@@ -696,6 +696,7 @@ some_async_fn().await; // 编译错误：Send bound not satisfied
 **用途**: 封装所有翻译相关的业务逻辑，包括文件操作、翻译执行、条目管理和统计更新。
 
 **核心特性**:
+
 - ✅ **完整封装**: 文件、翻译、条目、统计全流程管理
 - ✅ **状态集成**: 自动对接 useTranslationStore 和 useSessionStore
 - ✅ **事件监听**: 内置翻译进度和完成事件监听
@@ -707,30 +708,30 @@ some_async_fn().await; // 编译错误：Send bound not satisfied
 ```typescript
 function useTranslationFlow(): {
   // === 状态 ===
-  entries: POEntry[];              // 条目列表
-  currentEntry: POEntry | null;    // 当前条目
-  currentEntryIndex: number;       // 当前索引
-  isTranslating: boolean;          // 是否正在翻译
-  progress: number;                // 翻译进度 0-1
-  report: TranslationReport | null;// 翻译报告
+  entries: POEntry[]; // 条目列表
+  currentEntry: POEntry | null; // 当前条目
+  currentEntryIndex: number; // 当前索引
+  isTranslating: boolean; // 是否正在翻译
+  progress: number; // 翻译进度 0-1
+  report: TranslationReport | null; // 翻译报告
 
   // === 文件操作 ===
-  openFile: () => Promise<void>;           // 打开文件
-  saveFile: () => Promise<void>;           // 保存文件
-  saveAsFile: () => Promise<void>;         // 另存为
-  closeFile: () => void;                   // 关闭文件
+  openFile: () => Promise<void>; // 打开文件
+  saveFile: () => Promise<void>; // 保存文件
+  saveAsFile: () => Promise<void>; // 另存为
+  closeFile: () => void; // 关闭文件
 
   // === 翻译执行 ===
-  translateBatch: () => Promise<void>;     // 批量翻译所有条目
+  translateBatch: () => Promise<void>; // 批量翻译所有条目
   translateSelection: () => Promise<void>; // 翻译选中条目
-  refineTranslation: () => Promise<void>;  // 精翻当前条目
+  refineTranslation: () => Promise<void>; // 精翻当前条目
 
   // === 条目操作 ===
-  selectEntry: (index: number) => void;    // 选择条目
+  selectEntry: (index: number) => void; // 选择条目
   updateCurrentEntry: (msgstr: string) => void; // 更新当前条目
-  nextEntry: () => void;                   // 下一条目
-  previousEntry: () => void;               // 上一条目
-}
+  nextEntry: () => void; // 下一条目
+  previousEntry: () => void; // 上一条目
+};
 ```
 
 **使用示例**:
@@ -765,6 +766,7 @@ function TranslationApp() {
 ```
 
 **设计亮点**:
+
 - 370 行代码封装复杂逻辑，使 App.tsx 从 640 行减少到 168 行
 - 自动管理翻译状态和统计更新
 - 内置文件拖放支持
@@ -783,6 +785,7 @@ function TranslationApp() {
 **职责**: 应用级配置管理（主题、语言、累计统计）
 
 **状态**:
+
 ```typescript
 interface AppState {
   // 主题
@@ -812,6 +815,7 @@ interface AppState {
 **职责**: 翻译会话状态管理（条目、导航、文件路径）
 
 **状态**:
+
 ```typescript
 interface TranslationState {
   // 条目数据
@@ -843,6 +847,7 @@ interface TranslationState {
 **职责**: 会话临时状态（翻译进度、会话统计）
 
 **状态**:
+
 ```typescript
 interface SessionState {
   // 翻译状态
@@ -869,6 +874,7 @@ interface SessionState {
 **职责**: 累计统计管理（持久化到 TauriStore）
 
 **状态**:
+
 ```typescript
 interface StatsState {
   cumulativeStats: TranslationStats;
@@ -878,6 +884,7 @@ interface StatsState {
 ```
 
 **使用原则**:
+
 - ✅ **useAppStore**: 应用配置（主题、语言）
 - ✅ **useTranslationStore**: 翻译状态（条目、导航） - **2026-01 新增**
 - ✅ **useSessionStore**: 会话状态（进度、临时）
@@ -985,6 +992,7 @@ impl AppError {
 ```
 
 **优势**:
+
 - ✅ 统一错误类型管理（10 种错误类型）
 - ✅ 自动转换（From trait）
 - ✅ 智能重试支持（retryable 标志）
@@ -992,6 +1000,7 @@ impl AppError {
 - ✅ 减少 135 处重复错误处理代码
 
 **已更新的模块**:
+
 - `services/ai_translator.rs` - AI 翻译核心
 - `services/batch_translator.rs` - 批量翻译
 - `services/config_draft.rs` - 配置管理
