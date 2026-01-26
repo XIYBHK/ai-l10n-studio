@@ -1,14 +1,14 @@
-use anyhow::{Result, anyhow};
+use crate::commands::POEntry;
+use crate::error::AppError;
+use crate::services::translation_stats::TokenStats;
+use crate::services::{AITranslator, POParser, TranslationMemory};
+use crate::utils::common::is_simple_phrase;
+use crate::utils::paths::get_translation_memory_path;
 use chrono::Utc;
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use std::fs;
 use std::path::{Path, PathBuf};
-
-use crate::commands::POEntry;
-use crate::services::{AITranslator, POParser, TokenStats, TranslationMemory};
-use crate::utils::common::is_simple_phrase;
-use crate::utils::paths::get_translation_memory_path;
 
 #[cfg(feature = "ts-rs")]
 use ts_rs::TS;
@@ -65,7 +65,7 @@ pub struct BatchTranslator {
 }
 
 impl BatchTranslator {
-    pub fn new(api_key: String, base_url: Option<String>) -> Result<Self> {
+    pub fn new(api_key: String, base_url: Option<String>) -> Result<Self, AppError> {
         let parser = POParser::new()?;
 
         // Phase 3: 从配置获取自定义系统提示词
@@ -91,7 +91,7 @@ impl BatchTranslator {
         &mut self,
         directory: P,
         progress_callback: Option<Box<dyn Fn(String, usize, usize) + Send + Sync>>,
-    ) -> Result<Vec<TranslationReport>> {
+    ) -> Result<Vec<TranslationReport>, AppError> {
         let directory = directory.as_ref();
         let mut reports = Vec::new();
 
@@ -152,7 +152,7 @@ impl BatchTranslator {
     async fn translate_po_file<P: AsRef<Path>>(
         &mut self,
         file_path: P,
-    ) -> Result<TranslationReport> {
+    ) -> Result<TranslationReport, AppError> {
         let file_path = file_path.as_ref();
 
         // 解析PO文件
@@ -303,7 +303,7 @@ impl BatchTranslator {
         })
     }
 
-    fn scan_po_files<P: AsRef<Path>>(&self, directory: P) -> Result<Vec<PathBuf>> {
+    fn scan_po_files<P: AsRef<Path>>(&self, directory: P) -> Result<Vec<PathBuf>, AppError> {
         let directory = directory.as_ref();
         let mut po_files = Vec::new();
 
@@ -314,11 +314,10 @@ impl BatchTranslator {
             return Ok(po_files);
         }
 
-        let entries = fs::read_dir(directory)
-            .map_err(|e| anyhow!("无法读取目录 {}: {}", directory.display(), e))?;
+        let entries = fs::read_dir(directory).map_err(|e| AppError::Io(e))?;
 
         for entry in entries {
-            let entry = entry.map_err(|e| anyhow!("读取目录条目失败: {}", e))?;
+            let entry = entry.map_err(AppError::from)?;
             let path = entry.path();
 
             if path.is_file() {
@@ -359,7 +358,7 @@ impl BatchTranslator {
         }
     }
 
-    fn generate_summary_report(&self, reports: &[TranslationReport]) -> Result<()> {
+    fn generate_summary_report(&self, reports: &[TranslationReport]) -> Result<(), AppError> {
         let log_dir = Path::new("log");
         if !log_dir.exists() {
             fs::create_dir_all(log_dir)?;

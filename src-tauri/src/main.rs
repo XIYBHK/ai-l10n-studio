@@ -3,6 +3,7 @@
 #![allow(clippy::expect_used)]
 
 mod commands;
+mod error;
 mod services;
 mod utils;
 

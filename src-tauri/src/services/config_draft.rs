@@ -7,7 +7,7 @@
  * 3. 自动事件通知（配置变更时通知前端）
  * 4. 并发安全
  */
-use anyhow::{Result, anyhow};
+use crate::error::AppError;
 use chrono; // For backup timestamp
 use std::fs;
 use std::path::PathBuf;
@@ -76,7 +76,7 @@ impl ConfigDraft {
     }
 
     /// 创建新的配置管理器实例
-    pub fn new(config_path: Option<PathBuf>) -> Result<Self> {
+    pub fn new(config_path: Option<PathBuf>) -> Result<Self, AppError> {
         let config_path = config_path.unwrap_or_else(|| {
             paths::app_home_dir()
                 .map(|dir| dir.join("config.json"))
@@ -111,12 +111,11 @@ impl ConfigDraft {
     }
 
     /// 从文件加载配置
-    fn load_from_file<P: AsRef<std::path::Path>>(path: P) -> Result<AppConfig> {
+    fn load_from_file<P: AsRef<std::path::Path>>(path: P) -> Result<AppConfig, AppError> {
         let path_ref = path.as_ref();
 
         // 读取配置文件内容
-        let content = fs::read_to_string(path_ref)
-            .map_err(|e| anyhow!("无法读取配置文件 {:?}: {}", path_ref, e))?;
+        let content = fs::read_to_string(path_ref).map_err(|e| AppError::from(e))?;
 
         // 尝试反序列化配置
         let config: AppConfig = serde_json::from_str(&content).map_err(|e| {
@@ -136,10 +135,10 @@ impl ConfigDraft {
                 }
             }
 
-            anyhow!(
+            AppError::Config(format!(
                 "配置文件解析失败: {}。已备份损坏的文件，将使用默认配置。",
                 e
-            )
+            ))
         })?;
 
         log::info!("✅ 配置文件加载成功: {:?}", path_ref);
@@ -168,7 +167,7 @@ impl ConfigDraft {
     /// 成功后会自动：
     /// 1. 保存配置到磁盘
     /// 2. 发送配置更新事件（通知前端）
-    pub fn apply(&self) -> Result<()> {
+    pub fn apply(&self) -> Result<(), AppError> {
         if let Some(_old_config) = self.config.apply() {
             // 保存到磁盘
             self.save_to_disk()?;
@@ -202,7 +201,7 @@ impl ConfigDraft {
     ///
     /// ⚠️ 注意：这会跳过草稿机制，请谨慎使用
     /// 推荐使用 draft() + apply() 的方式
-    pub fn update_direct(&self, updater: impl FnOnce(&mut AppConfig)) -> Result<()> {
+    pub fn update_direct(&self, updater: impl FnOnce(&mut AppConfig)) -> Result<(), AppError> {
         {
             let mut config = self.config.data_mut();
             updater(&mut config);
@@ -221,11 +220,10 @@ impl ConfigDraft {
     }
 
     /// 保存配置到磁盘
-    fn save_to_disk(&self) -> Result<()> {
+    fn save_to_disk(&self) -> Result<(), AppError> {
         let config = self.config.clone_latest();
-        let json =
-            serde_json::to_string_pretty(&*config).map_err(|e| anyhow!("序列化配置失败: {}", e))?;
-        fs::write(&*self.config_path, json).map_err(|e| anyhow!("写入配置文件失败: {}", e))?;
+        let json = serde_json::to_string_pretty(&*config).map_err(|e| AppError::from(e))?;
+        fs::write(&*self.config_path, json).map_err(|e| AppError::from(e))?;
         Ok(())
     }
 
@@ -234,7 +232,7 @@ impl ConfigDraft {
     /// TODO: 事件发送需要在 Tauri 命令上下文中实现
     /// 当前先保留为空实现，在 Phase 2 迁移时从命令层发送事件
     #[allow(unused_variables)]
-    fn emit_config_updated(config: &AppConfig) -> Result<()> {
+    fn emit_config_updated(config: &AppConfig) -> Result<(), AppError> {
         // 事件发送逻辑将在 Phase 2 迁移时从命令层实现
         // 参考：src-tauri/src/commands/ai_config.rs 中的事件发送
         Ok(())
@@ -245,7 +243,7 @@ impl ConfigDraft {
     // ========================================
 
     /// 更新配置（使用 draft + apply）
-    pub fn update<F>(&self, updater: F) -> Result<()>
+    pub fn update<F>(&self, updater: F) -> Result<(), AppError>
     where
         F: FnOnce(&mut AppConfig),
     {
@@ -257,7 +255,7 @@ impl ConfigDraft {
     }
 
     /// 批量更新配置（多个修改在同一个草稿中完成）
-    pub fn batch_update<F>(&self, updates: Vec<F>) -> Result<()>
+    pub fn batch_update<F>(&self, updates: Vec<F>) -> Result<(), AppError>
     where
         F: FnOnce(&mut AppConfig),
     {

@@ -1,25 +1,19 @@
-use anyhow::{Result, anyhow};
-use reqwest::Client as HttpClient;
-use serde::{Deserialize, Serialize};
-// use std::collections::HashMap;
-
+use crate::error::AppError;
 use crate::services::term_library::TermLibrary;
 use crate::services::translation_memory::TranslationMemory;
+// 🆕 使用新的提示词和统计模块
+use crate::services::prompt_builder;
+use crate::services::translation_stats::{BatchStats, TokenStats};
 use crate::utils::common::is_simple_phrase;
 use crate::utils::paths::get_translation_memory_path;
+use reqwest::Client as HttpClient;
+use serde::{Deserialize, Serialize};
 
 #[cfg(feature = "ts-rs")]
 use ts_rs::TS;
 
-// ========== 默认系统提示词 (Phase 3) ==========
-
-pub const DEFAULT_SYSTEM_PROMPT: &str = r"专业游戏本地化翻译。
-规则:
-1. 术语保留英文: Actor/Blueprint/Component/Transform/Mesh/Material/Widget/Collision/Array/Float/Integer
-2. 固定翻译: Asset→资产, Unique→去重, Slice→截取, Primitives→基础类型, Constant Speed→匀速, Stream→流送, Ascending→升序, Descending→降序
-3. Category: 保持XTools等命名空间和|符号, 如 XTools|Sort|Actor → XTools|排序|Actor
-4. 保留所有特殊符号: |、{}、%%、[]、()、\n、\t、{0}、{1}等
-5. 特殊表达: in-place→原地, by value→按值, True/False保持原样";
+// ========== 重新导出类型 ==========
+pub use crate::services::prompt_builder::DEFAULT_SYSTEM_PROMPT;
 
 // ========== Phase 1: AI 供应商配置系统 ==========
 
@@ -52,16 +46,7 @@ pub struct AIConfig {
     pub proxy: Option<ProxyConfig>,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
-#[cfg_attr(feature = "ts-rs", derive(TS))]
-#[cfg_attr(feature = "ts-rs", ts(export, export_to = "../src/types/generated/"))]
-pub struct TokenStats {
-    pub input_tokens: u32,
-    pub output_tokens: u32,
-    pub total_tokens: u32,
-    pub cost: f64,
-}
-
+// ========== Chat API 数据结构 ==========
 #[derive(Debug, Clone, Serialize, Deserialize)]
 struct ChatMessage {
     role: String,
@@ -115,15 +100,6 @@ pub struct AITranslator {
     pub batch_stats: BatchStats,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct BatchStats {
-    pub total: usize,
-    pub tm_hits: usize,
-    pub deduplicated: usize,
-    pub ai_translated: usize,
-    pub tm_learned: usize,
-}
-
 impl AITranslator {
     /// 原有构造函数（Phase 3: 支持自定义提示词，Phase 5: 支持目标语言）
     pub fn new(
@@ -132,7 +108,7 @@ impl AITranslator {
         use_tm: bool,
         custom_system_prompt: Option<&str>,
         target_language: Option<String>,
-    ) -> Result<Self> {
+    ) -> Result<Self, AppError> {
         let client = HttpClient::new();
         let base_url = base_url.unwrap_or_else(|| "https://api.moonshot.cn/v1".to_string());
 
@@ -155,7 +131,8 @@ impl AITranslator {
             crate::app_log!("[AITranslator] 术语库文件不存在或加载失败");
         }
 
-        let system_prompt = Self::get_system_prompt(custom_system_prompt, term_library.as_ref());
+        let system_prompt =
+            prompt_builder::build_system_prompt(custom_system_prompt, term_library.as_ref());
 
         // 从文件加载TM（合并内置短语和已保存的翻译）
         let tm = if use_tm {
@@ -176,22 +153,11 @@ impl AITranslator {
             system_prompt,
             conversation_history: Vec::new(),
             max_history_tokens: 2000,
-            token_stats: TokenStats {
-                input_tokens: 0,
-                output_tokens: 0,
-                total_tokens: 0,
-                cost: 0.0,
-            },
+            token_stats: TokenStats::default(),
             use_tm,
             tm,
             target_language, // Phase 5: 目标语言
-            batch_stats: BatchStats {
-                total: 0,
-                tm_hits: 0,
-                deduplicated: 0,
-                ai_translated: 0,
-                tm_learned: 0,
-            },
+            batch_stats: BatchStats::default(),
         })
     }
 
@@ -201,7 +167,7 @@ impl AITranslator {
         use_tm: bool,
         custom_system_prompt: Option<&str>,
         target_language: Option<String>,
-    ) -> Result<Self> {
+    ) -> Result<Self, AppError> {
         // 构建HTTP客户端（支持代理）
         let client = Self::build_client_with_proxy(config.proxy.clone())?;
 
@@ -237,7 +203,8 @@ impl AITranslator {
             crate::app_log!("[AITranslator] 术语库文件不存在或加载失败");
         }
 
-        let system_prompt = Self::get_system_prompt(custom_system_prompt, term_library.as_ref());
+        let system_prompt =
+            prompt_builder::build_system_prompt(custom_system_prompt, term_library.as_ref());
 
         // 从文件加载TM
         let tm = if use_tm {
@@ -269,33 +236,22 @@ impl AITranslator {
             system_prompt,
             conversation_history: Vec::new(),
             max_history_tokens: 2000,
-            token_stats: TokenStats {
-                input_tokens: 0,
-                output_tokens: 0,
-                total_tokens: 0,
-                cost: 0.0,
-            },
+            token_stats: TokenStats::default(),
             use_tm,
             tm,
             target_language, // Phase 5: 目标语言
-            batch_stats: BatchStats {
-                total: 0,
-                tm_hits: 0,
-                deduplicated: 0,
-                ai_translated: 0,
-                tm_learned: 0,
-            },
+            batch_stats: BatchStats::default(),
         })
     }
 
     /// 从插件系统获取供应商信息
-    fn get_provider_info(provider_id: &str) -> Result<crate::services::ai::ProviderInfo> {
+    fn get_provider_info(provider_id: &str) -> Result<crate::services::ai::ProviderInfo, AppError> {
         use crate::services::ai::provider::with_global_registry;
 
         with_global_registry(|registry| {
             registry
                 .get_provider_info(provider_id)
-                .ok_or_else(|| anyhow!("未找到供应商: {}", provider_id))
+                .ok_or_else(|| AppError::plugin(format!("未找到供应商: {}", provider_id)))
         })
     }
 
@@ -312,7 +268,7 @@ impl AITranslator {
     }
 
     /// 构建支持代理的HTTP客户端
-    fn build_client_with_proxy(proxy: Option<ProxyConfig>) -> Result<HttpClient> {
+    fn build_client_with_proxy(proxy: Option<ProxyConfig>) -> Result<HttpClient, AppError> {
         let mut builder = HttpClient::builder();
 
         // 检查是否需要启用代理
@@ -323,8 +279,7 @@ impl AITranslator {
                 let proxy_url = format!("http://{}:{}", proxy_cfg.host, proxy_cfg.port);
                 crate::app_log!("[AI翻译器] 使用代理: {}", proxy_url);
 
-                let proxy =
-                    reqwest::Proxy::all(&proxy_url).map_err(|e| anyhow!("代理配置错误: {}", e))?;
+                let proxy = reqwest::Proxy::all(&proxy_url)?;
                 builder = builder.proxy(proxy);
             }
         } else {
@@ -333,9 +288,7 @@ impl AITranslator {
             builder = builder.no_proxy();
         }
 
-        builder
-            .build()
-            .map_err(|e| anyhow!("HTTP客户端构建失败: {}", e))
+        builder.build().map_err(AppError::from)
     }
 
     /// Phase 3: 构建系统提示词（支持自定义 + 术语库拼接）
@@ -367,7 +320,7 @@ impl AITranslator {
         texts: Vec<String>,
         progress_callback: Option<Box<dyn Fn(usize, String) + Send + Sync>>,
         stats_callback: Option<Box<dyn Fn(BatchStats, TokenStats) + Send + Sync>>,
-    ) -> Result<Vec<String>> {
+    ) -> Result<Vec<String>, AppError> {
         self.translate_batch_internal(texts, progress_callback, Some(stats_callback), None)
             .await
     }
@@ -376,7 +329,7 @@ impl AITranslator {
         &mut self,
         texts: Vec<String>,
         progress_callback: Option<Box<dyn Fn(usize, String) + Send + Sync>>,
-    ) -> Result<Vec<String>> {
+    ) -> Result<Vec<String>, AppError> {
         let (translations, _sources) = self
             .translate_batch_with_sources(texts, progress_callback, None)
             .await?;
@@ -389,7 +342,7 @@ impl AITranslator {
         texts: Vec<String>,
         progress_callback: Option<Box<dyn Fn(usize, String) + Send + Sync>>,
         stats_callback: Option<Option<Box<dyn Fn(BatchStats, TokenStats) + Send + Sync>>>,
-    ) -> Result<(Vec<String>, Vec<String>)> {
+    ) -> Result<(Vec<String>, Vec<String>), AppError> {
         if texts.is_empty() {
             return Ok((Vec::new(), Vec::new()));
         }
@@ -409,7 +362,7 @@ impl AITranslator {
         progress_callback: Option<Box<dyn Fn(usize, String) + Send + Sync>>,
         stats_callback: Option<Option<Box<dyn Fn(BatchStats, TokenStats) + Send + Sync>>>,
         mut sources: Option<&mut Vec<String>>, // 可选的来源跟踪
-    ) -> Result<Vec<String>> {
+    ) -> Result<Vec<String>, AppError> {
         if texts.is_empty() {
             return Ok(Vec::new());
         }
@@ -517,7 +470,10 @@ impl AITranslator {
                     let sample_size = std::cmp::min(3, chunk.len());
                     let sample_texts: Vec<String> =
                         chunk.iter().take(sample_size).cloned().collect();
-                    let user_prompt = self.build_user_prompt(&sample_texts);
+                    let user_prompt = prompt_builder::build_translation_prompt(
+                        &sample_texts,
+                        self.target_language.as_deref(),
+                    );
 
                     // 构建提示词日志（只显示实际发送给AI的内容，不包括API参数）
                     let full_prompt = format!(
@@ -663,7 +619,7 @@ impl AITranslator {
     pub async fn translate_with_custom_user_prompt(
         &mut self,
         user_prompt: String,
-    ) -> Result<String> {
+    ) -> Result<String, AppError> {
         // 构建消息数组
         let messages = if self.conversation_history.is_empty() {
             vec![
@@ -695,7 +651,7 @@ impl AITranslator {
         // 最多重试3次，指数退避策略
         let max_retries = 3;
         let mut chat_response: Option<ChatResponse> = None;
-        let mut last_error: Option<anyhow::Error> = None;
+        let mut last_error: Option<AppError> = None;
 
         for retry in 0..max_retries {
             match self
@@ -713,7 +669,7 @@ impl AITranslator {
                         break;
                     }
                     Err(_e) => {
-                        last_error = Some(anyhow::anyhow!("error decoding response body"));
+                        last_error = Some(AppError::translation("解析响应体失败", true));
                         if retry < max_retries - 1 {
                             let delay = 2u64.pow(retry as u32);
                             crate::app_log!(
@@ -727,7 +683,7 @@ impl AITranslator {
                     }
                 },
                 Err(e) => {
-                    last_error = Some(anyhow::anyhow!("request failed: {}", e));
+                    last_error = Some(AppError::from(e));
                     if retry < max_retries - 1 {
                         let delay = 2u64.pow(retry as u32);
                         crate::app_log!(
@@ -742,14 +698,15 @@ impl AITranslator {
             }
         }
 
-        let chat_response = chat_response
-            .ok_or_else(|| last_error.unwrap_or_else(|| anyhow::anyhow!("未知错误")))?;
+        let chat_response = chat_response.ok_or_else(|| {
+            last_error.unwrap_or_else(|| AppError::translation("未知错误", false))
+        })?;
 
         let assistant_response = chat_response
             .choices
             .first()
             .and_then(|choice| Some(choice.message.content.clone()))
-            .ok_or_else(|| anyhow::anyhow!("AI响应为空"))?;
+            .ok_or_else(|| AppError::translation("AI响应为空", false))?;
 
         // 更新对话历史（如果需要）
         self.update_conversation_history(&user_prompt, &assistant_response);
@@ -758,14 +715,15 @@ impl AITranslator {
         Ok(assistant_response.trim().to_string())
     }
 
-    pub async fn translate_with_ai(&mut self, texts: Vec<String>) -> Result<Vec<String>> {
+    pub async fn translate_with_ai(&mut self, texts: Vec<String>) -> Result<Vec<String>, AppError> {
         // 单元测试模拟：如果 api_key 是 test_key，则直接返回原文作为译文，跳过网络请求
         if self.api_key == "test_key" {
             crate::app_log!("[测试模拟] 检测到 test_key，返回模拟翻译结果。");
             return Ok(texts);
         }
 
-        let user_prompt = self.build_user_prompt(&texts);
+        let user_prompt =
+            prompt_builder::build_translation_prompt(&texts, self.target_language.as_deref());
 
         // 构建消息数组
         let messages = if self.conversation_history.is_empty() {
@@ -798,7 +756,7 @@ impl AITranslator {
         // 最多重试3次，指数退避策略
         let max_retries = 3;
         let mut chat_response: Option<ChatResponse> = None;
-        let mut last_error: Option<anyhow::Error> = None;
+        let mut last_error: Option<AppError> = None;
 
         for retry in 0..max_retries {
             match self
@@ -893,7 +851,7 @@ impl AITranslator {
                                 };
 
                                 crate::app_log!("[错误] {}", error_msg);
-                                last_error = Some(anyhow!(error_msg));
+                                last_error = Some(AppError::translation(error_msg, false));
                                 break; // 错误响应不重试
                             }
 
@@ -915,7 +873,7 @@ impl AITranslator {
                                         }
                                     );
                                     crate::app_log!("[错误] {}", error_msg);
-                                    last_error = Some(anyhow!(error_msg));
+                                    last_error = Some(AppError::translation(error_msg, false));
                                     break; // 格式错误不重试
                                 }
                             }
@@ -923,7 +881,7 @@ impl AITranslator {
                         Err(e) => {
                             let error_msg = format!("读取响应体失败: {}", e);
                             crate::app_log!("[错误] {}", error_msg);
-                            last_error = Some(anyhow!(error_msg));
+                            last_error = Some(AppError::translation(error_msg, false));
 
                             if retry < max_retries - 1 {
                                 let delay_secs = 2_u64.pow(retry as u32);
@@ -950,7 +908,9 @@ impl AITranslator {
         }
 
         let chat_response = chat_response.ok_or_else(|| {
-            last_error.unwrap_or_else(|| anyhow!("翻译请求失败，已重试{}次", max_retries))
+            last_error.unwrap_or_else(|| {
+                AppError::translation(format!("翻译请求失败，已重试{}次", max_retries), false)
+            })
         })?;
 
         // 更新token统计（使用新架构精确计算）
@@ -962,19 +922,20 @@ impl AITranslator {
             // 使用 ModelInfo 计算精确成本
             // Fail Fast 架构设计：多AI供应商架构要求强制 ModelInfo 存在
             // 模型不存在 = 配置错误，应立即返回错误（见 docs/Architecture.md:195）
-            let model_info =
-                {
-                    use crate::services::ai::provider::with_global_registry;
-                    with_global_registry(|registry| {
-                        registry.get_provider(&self.provider_id)
+            let model_info = {
+                use crate::services::ai::provider::with_global_registry;
+                with_global_registry(|registry| {
+                    registry
+                        .get_provider(&self.provider_id)
                         .and_then(|provider| provider.get_model_info(&self.model))
-                        .ok_or_else(|| anyhow!(
-                            "模型信息不存在: provider={}, model={}. 请检查插件系统中的模型定义",
-                            self.provider_id,
-                            self.model
-                        ))
-                    })?
-                };
+                        .ok_or_else(|| {
+                            AppError::plugin(format!(
+                                "模型信息不存在: provider={}, model={}. 请检查插件系统中的模型定义",
+                                self.provider_id, self.model
+                            ))
+                        })
+                })?
+            };
 
             use crate::services::ai::CostCalculator;
             let breakdown = CostCalculator::calculate_openai(
@@ -991,7 +952,7 @@ impl AITranslator {
             .choices
             .first()
             .map(|choice| &choice.message.content)
-            .ok_or_else(|| anyhow!("No response content"))?;
+            .ok_or_else(|| AppError::translation("AI响应为空", false))?;
 
         // 更新对话历史
         self.update_conversation_history(&user_prompt, assistant_response);
@@ -1007,33 +968,9 @@ impl AITranslator {
         &self.system_prompt
     }
 
+    /// 构建用户提示词（包装方法，用于向后兼容）
     pub fn build_user_prompt(&self, texts: &[String]) -> String {
-        // Phase 5: 根据目标语言生成提示词
-        let target_lang_instruction = match self.target_language.as_deref() {
-            Some("zh-Hans") => "简体中文",
-            Some("zh-Hant") => "繁体中文",
-            Some("en") => "English",
-            Some("ja") => "日本語",
-            Some("ko") => "한국어",
-            Some("fr") => "Français",
-            Some("de") => "Deutsch",
-            Some("es") => "Español",
-            Some("ru") => "Русский",
-            Some("ar") => "العربية",
-            Some("pt") => "Português",
-            Some("it") => "Italiano",
-            Some("th") => "ไทย",
-            Some("vi") => "Tiếng Việt",
-            Some(lang) => lang,
-            None => "目标语言", // 默认（未指定语言）
-        };
-
-        // 精简提示词：移除冗余说明和空行
-        let mut prompt = format!("翻译为{}（每行一条，带序号）:\n", target_lang_instruction);
-        for (i, text) in texts.iter().enumerate() {
-            prompt.push_str(&format!("{}. {}\n", i + 1, text));
-        }
-        prompt
+        prompt_builder::build_translation_prompt(texts, self.target_language.as_deref())
     }
 
     fn update_conversation_history(&mut self, user_prompt: &str, assistant_response: &str) {
@@ -1070,7 +1007,11 @@ impl AITranslator {
         }
     }
 
-    fn parse_translations(&self, response: &str, original_texts: &[String]) -> Result<Vec<String>> {
+    fn parse_translations(
+        &self,
+        response: &str,
+        original_texts: &[String],
+    ) -> Result<Vec<String>, AppError> {
         let lines: Vec<&str> = response
             .lines()
             .map(|line| line.trim())
@@ -1108,11 +1049,11 @@ impl AITranslator {
                 response
             );
 
-            return Err(anyhow!(
+            return Err(AppError::parse(format!(
                 "翻译数量不匹配！请求 {} 条，实际返回 {} 条",
                 original_texts.len(),
                 translations.len()
-            ));
+            )));
         }
 
         // 验证特殊字符保留
