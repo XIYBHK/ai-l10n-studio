@@ -71,7 +71,7 @@ export interface AppState {
   previousEntry: () => void;
 }
 
-export const useAppStore = create<AppState>()((set, get) => ({
+export const useAppStore = create<AppState>((set, get) => ({
   // 初始状态
   entries: [],
   currentEntry: null,

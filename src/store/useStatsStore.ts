@@ -36,7 +36,7 @@ const initialStats: TranslationStats = {
   tm_learned: 0,
 };
 
-export const useStatsStore = create<StatsState>()((set, get) => ({
+export const useStatsStore = create<StatsState>((set, get) => ({
   // 初始状态
   cumulativeStats: initialStats,
 
