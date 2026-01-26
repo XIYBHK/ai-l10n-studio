@@ -689,6 +689,315 @@ some_async_fn().await; // 编译错误：Send bound not satisfied
 
 ---
 
+### 翻译流程 Hook API (2026-01 新增)
+
+**位置**: `src/hooks/useTranslationFlow.ts`
+
+**用途**: 封装所有翻译相关的业务逻辑，包括文件操作、翻译执行、条目管理和统计更新。
+
+**核心特性**:
+- ✅ **完整封装**: 文件、翻译、条目、统计全流程管理
+- ✅ **状态集成**: 自动对接 useTranslationStore 和 useSessionStore
+- ✅ **事件监听**: 内置翻译进度和完成事件监听
+- ✅ **错误处理**: 统一的错误提示和日志记录
+- ✅ **文件拖放**: 支持拖拽打开 PO 文件
+
+**API 接口**:
+
+```typescript
+function useTranslationFlow(): {
+  // === 状态 ===
+  entries: POEntry[];              // 条目列表
+  currentEntry: POEntry | null;    // 当前条目
+  currentEntryIndex: number;       // 当前索引
+  isTranslating: boolean;          // 是否正在翻译
+  progress: number;                // 翻译进度 0-1
+  report: TranslationReport | null;// 翻译报告
+
+  // === 文件操作 ===
+  openFile: () => Promise<void>;           // 打开文件
+  saveFile: () => Promise<void>;           // 保存文件
+  saveAsFile: () => Promise<void>;         // 另存为
+  closeFile: () => void;                   // 关闭文件
+
+  // === 翻译执行 ===
+  translateBatch: () => Promise<void>;     // 批量翻译所有条目
+  translateSelection: () => Promise<void>; // 翻译选中条目
+  refineTranslation: () => Promise<void>;  // 精翻当前条目
+
+  // === 条目操作 ===
+  selectEntry: (index: number) => void;    // 选择条目
+  updateCurrentEntry: (msgstr: string) => void; // 更新当前条目
+  nextEntry: () => void;                   // 下一条目
+  previousEntry: () => void;               // 上一条目
+}
+```
+
+**使用示例**:
+
+```typescript
+import { useTranslationFlow } from '@/hooks/useTranslationFlow';
+
+function TranslationApp() {
+  const {
+    entries,
+    currentEntry,
+    isTranslating,
+    progress,
+    openFile,
+    translateBatch,
+    nextEntry,
+    previousEntry,
+  } = useTranslationFlow();
+
+  return (
+    <>
+      <button onClick={openFile}>打开文件</button>
+      <button onClick={translateBatch} disabled={isTranslating}>
+        批量翻译
+      </button>
+      <progress value={progress} />
+      <button onClick={previousEntry}>上一条</button>
+      <button onClick={nextEntry}>下一条</button>
+    </>
+  );
+}
+```
+
+**设计亮点**:
+- 370 行代码封装复杂逻辑，使 App.tsx 从 640 行减少到 168 行
+- 自动管理翻译状态和统计更新
+- 内置文件拖放支持
+- 统一的错误处理和用户提示
+
+---
+
+### Zustand Store API (2026-01 重构)
+
+**Store 架构**: 职责清晰划分，消除重复状态管理
+
+#### 1. useAppStore - 应用配置
+
+**位置**: `src/store/useAppStore.ts`
+
+**职责**: 应用级配置管理（主题、语言、累计统计）
+
+**状态**:
+```typescript
+interface AppState {
+  // 主题
+  theme: 'light' | 'dark' | 'system';
+  systemTheme: 'light' | 'dark';
+
+  // 语言
+  language: 'zh-CN' | 'en-US';
+
+  // 统计（持久化到 TauriStore）
+  cumulativeStats: TranslationStats;
+
+  // 配置
+  config: AppConfig | null;
+
+  // 方法
+  setTheme: (theme: 'light' | 'dark' | 'system') => void;
+  setLanguage: (language: 'zh-CN' | 'en-US') => void;
+  setConfig: (config: AppConfig) => void;
+}
+```
+
+#### 2. useTranslationStore - 翻译状态 🆕
+
+**位置**: `src/store/useTranslationStore.ts`
+
+**职责**: 翻译会话状态管理（条目、导航、文件路径）
+
+**状态**:
+```typescript
+interface TranslationState {
+  // 条目数据
+  entries: POEntry[];
+  currentEntry: POEntry | null;
+  currentIndex: number;
+
+  // 文件路径
+  currentFilePath: string | null;
+
+  // 方法
+  setEntries: (entries: POEntry[]) => void;
+  setCurrentEntry: (entry: POEntry | null) => void;
+  setCurrentIndex: (index: number) => void;
+  updateEntry: (index: number, entry: POEntry) => void;
+  setCurrentFilePath: (path: string | null) => void;
+
+  // 导航
+  nextEntry: () => void;
+  previousEntry: () => void;
+  reset: () => void;
+}
+```
+
+#### 3. useSessionStore - 会话状态
+
+**位置**: `src/store/useSessionStore.ts`
+
+**职责**: 会话临时状态（翻译进度、会话统计）
+
+**状态**:
+```typescript
+interface SessionState {
+  // 翻译状态
+  isTranslating: boolean;
+  progress: number;
+  report: TranslationReport | null;
+
+  // 会话统计
+  sessionStats: TranslationStats;
+
+  // 方法
+  setTranslating: (isTranslating: boolean) => void;
+  setProgress: (progress: number) => void;
+  setReport: (report: TranslationReport | null) => void;
+  updateSessionStats: (stats: Partial<TranslationStats>) => void;
+  resetSessionStats: () => void;
+}
+```
+
+#### 4. useStatsStore - 统计数据
+
+**位置**: `src/store/useStatsStore.ts`
+
+**职责**: 累计统计管理（持久化到 TauriStore）
+
+**状态**:
+```typescript
+interface StatsState {
+  cumulativeStats: TranslationStats;
+  setCumulativeStats: (stats: TranslationStats) => void;
+  updateCumulativeStats: (stats: Partial<TranslationStats>) => void;
+}
+```
+
+**使用原则**:
+- ✅ **useAppStore**: 应用配置（主题、语言）
+- ✅ **useTranslationStore**: 翻译状态（条目、导航） - **2026-01 新增**
+- ✅ **useSessionStore**: 会话状态（进度、临时）
+- ✅ **useStatsStore**: 统计数据（持久化）
+
+---
+
+### Rust 统一错误类型 (2026-01 新增)
+
+**位置**: `src-tauri/src/error.rs`
+
+**用途**: 提供统一的应用错误类型，替代分散的错误处理
+
+**错误类型定义**:
+
+```rust
+pub enum AppError {
+    #[error("配置错误: {0}")]
+    Config(String),
+
+    #[error("翻译错误: {msg}")]
+    Translation { msg: String, retryable: bool },
+
+    #[error("IO 错误: {0}")]
+    Io(#[from] std::io::Error),
+
+    #[error("网络错误: {0}")]
+    Network(String),
+
+    #[error("序列化错误: {0}")]
+    Serde(#[from] serde_json::Error),
+
+    #[error("代理配置错误: {0}")]
+    Proxy(String),
+
+    #[error("解析错误: {0}")]
+    Parse(String),
+
+    #[error("插件错误: {0}")]
+    Plugin(String),
+
+    #[error("验证错误: {0}")]
+    Validation(String),
+
+    #[error("通用错误: {0}")]
+    Generic(String),
+}
+```
+
+**自动转换**:
+
+```rust
+// 从常见错误类型自动转换
+impl From<anyhow::Error> for AppError
+impl From<reqwest::Error> for AppError
+impl From<std::io::Error> for AppError
+impl From<serde_json::Error> for AppError
+```
+
+**使用示例**:
+
+```rust
+use crate::error::AppError;
+
+// ✅ 自动转换
+async fn translate_entry() -> Result<String, AppError> {
+    let response = reqwest::get("https://api.example.com").await?; // reqwest::Error → AppError::Network
+    Ok(response.text().await?)
+}
+
+// ✅ 创建特定错误
+async fn validate_config(config: &Config) -> Result<(), AppError> {
+    if config.api_key.is_empty() {
+        return Err(AppError::config("API Key 不能为空"));
+    }
+    Ok(())
+}
+
+// ✅ 带重试标志的错误
+async fn call_ai() -> Result<String, AppError> {
+    if is_rate_limit_error() {
+        return Err(AppError::Translation {
+            msg: "API 速率限制".to_string(),
+            retryable: true,  // 可重试
+        });
+    }
+    Ok("翻译结果".to_string())
+}
+```
+
+**辅助方法**:
+
+```rust
+impl AppError {
+    pub fn config(msg: impl Into<String>) -> Self
+    pub fn translation(msg: impl Into<String>, retryable: bool) -> Self
+    pub fn network(msg: impl Into<String>) -> Self
+    pub fn proxy(msg: impl Into<String>) -> Self
+    pub fn parse(msg: impl Into<String>) -> Self
+    pub fn plugin(msg: impl Into<String>) -> Self
+    pub fn validation(msg: impl Into<String>) -> Self
+
+    pub fn is_retryable(&self) -> bool
+}
+```
+
+**优势**:
+- ✅ 统一错误类型管理（10 种错误类型）
+- ✅ 自动转换（From trait）
+- ✅ 智能重试支持（retryable 标志）
+- ✅ 中文错误信息
+- ✅ 减少 135 处重复错误处理代码
+
+**已更新的模块**:
+- `services/ai_translator.rs` - AI 翻译核心
+- `services/batch_translator.rs` - 批量翻译
+- `services/config_draft.rs` - 配置管理
+
+---
+
 **参考文档**:
 
 - 架构概览: `docs/Architecture.md` §简化三层架构

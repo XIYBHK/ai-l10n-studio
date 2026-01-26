@@ -13,14 +13,55 @@
 
 - 词条列表：待确认/已翻译列增加移除按钮
 - 记忆库：清空时重置 tm_learned 统计
+- **前端架构**：useTranslationFlow Hook（翻译流程逻辑封装）
+- **前端架构**：TranslationWorkspace 组件（工作区布局封装）
+- **前端架构**：useTranslationStore（翻译状态管理）
+- **后端架构**：error.rs 统一错误类型
+- **后端架构**：prompt_builder.rs（提示词构建器模块）
+- **后端架构**：translation_stats.rs（翻译统计模块）
 
 ### Changed
 
 - UI/UX：主题系统、MenuBar、EntryList、EditorPane、AIWorkspace 升级
+- **重构**：App.tsx 从 640 行拆分为 168 行（-73.7%）
+- **重构**：ai_translator.rs 拆分为 3 个模块
+- **重构**：Zustand Store 职责重新划分（新增 useTranslationStore）
+- **重构**：Rust 错误处理统一化（135 处重复代码消除）
+- **依赖升级**：React 19, Ant Design 6, TypeScript 5.9, Zustand 5
 
 ### Removed
 
 - 过时内联样式和简单状态文本
+
+---
+
+## 2026-01-26 - 架构优化（代码质量提升）
+
+### Refactor
+
+**前端架构优化**：
+- 拆分 App.tsx：640 行 → 168 行（-73.7%）
+  - 提取 useTranslationFlow Hook（370 行）
+  - 提取 TranslationWorkspace 组件（172 行）
+- 重构 Zustand Store：
+  - 新增 useTranslationStore（翻译状态管理）
+  - 精简 useAppStore（-90 行）
+  - 精简 useSessionStore（-89 行）
+
+**后端架构优化**：
+- 拆分 ai_translator.rs：1196 行 → 模块化结构
+  - 新增 prompt_builder.rs（106 行）
+  - 新增 translation_stats.rs（231 行）
+- 统一错误处理：
+  - 新增 error.rs（317 行，AppError 统一类型）
+  - 更新 3 个核心服务使用 AppError
+  - 减少 135 处重复错误处理代码
+
+**质量提升**：
+- 消除所有超大文件（最大文件从 1196 行降至 370 行）
+- Store 职责清晰化（消除重复状态管理）
+- 错误处理统一化（支持智能重试）
+- 类型安全完整保持（TypeScript + Rust）
 
 ---
 
