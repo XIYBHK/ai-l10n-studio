@@ -1,6 +1,6 @@
 // ========== Phase 5: 语言检测服务 ==========
 
-use anyhow::{anyhow, Result};
+use anyhow::{Result, anyhow};
 use serde::{Deserialize, Serialize};
 
 #[cfg(feature = "ts-rs")]

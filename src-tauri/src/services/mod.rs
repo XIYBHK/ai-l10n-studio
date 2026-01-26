@@ -8,19 +8,23 @@ pub mod file_chunker; // Phase 8: 性能优化
 pub mod file_format; // Phase 4
 pub mod language_detector; // Phase 5
 pub mod po_parser;
+pub mod prompt_builder; // 🆕 提示词构建器
 pub mod prompt_logger;
 pub mod term_library;
 pub mod translation_memory; // 提示词日志
+pub mod translation_stats; // 🆕 翻译统计
 
 // 重新导出核心模块 (精确导出，避免导出废弃类型)
-pub use ai_translator::{AIConfig, AITranslator, ProxyConfig, TokenStats};
+pub use ai_translator::{AIConfig, AITranslator, ProxyConfig};
 pub use batch_progress_channel::*; // Tauri 2.x: IPC Channel 优化
 pub use batch_translator::*;
 pub use config_draft::*; // Phase 9: Draft 模式配置管理
 pub use config_manager::*;
 pub use po_parser::*;
+pub use prompt_builder::*; // 🆕 导出提示词构建器
 pub use prompt_logger::*;
 pub use term_library::*;
 pub use translation_memory::*; // 提示词日志
+pub use translation_stats::*; // 🆕 导出翻译统计
 
 // AI 架构、文件格式、语言检测等模块（在命令中直接使用 crate::services::ai::* 等访问）
