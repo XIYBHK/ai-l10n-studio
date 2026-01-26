@@ -195,23 +195,5 @@ export async function initializeI18n(): Promise<typeof i18n> {
   return i18n;
 }
 
-// 同步初始化（预加载默认语言资源，避免显示键）
-import zhCN from './locales/zh-CN.json';
-import enUS from './locales/en-US.json';
-
-i18n.use(initReactI18next).init({
-  resources: {
-    'zh-CN': { translation: zhCN },
-    'en-US': { translation: enUS },
-  },
-  lng: DEFAULT_LANGUAGE,
-  fallbackLng: DEFAULT_LANGUAGE,
-  interpolation: {
-    escapeValue: false,
-  },
-  react: {
-    useSuspense: false,
-  },
-});
-
+// 导出默认实例（由 initializeI18n() 初始化）
 export default i18n;
