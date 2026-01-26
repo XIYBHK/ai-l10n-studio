@@ -55,25 +55,13 @@ impl TokenStats {
 }
 
 /// 批量翻译统计
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, Default)]
 pub struct BatchStats {
     pub total: usize,
     pub tm_hits: usize,
     pub deduplicated: usize,
     pub ai_translated: usize,
     pub tm_learned: usize,
-}
-
-impl Default for BatchStats {
-    fn default() -> Self {
-        Self {
-            total: 0,
-            tm_hits: 0,
-            deduplicated: 0,
-            ai_translated: 0,
-            tm_learned: 0,
-        }
-    }
 }
 
 impl BatchStats {

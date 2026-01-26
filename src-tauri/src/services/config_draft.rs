@@ -115,7 +115,7 @@ impl ConfigDraft {
         let path_ref = path.as_ref();
 
         // 读取配置文件内容
-        let content = fs::read_to_string(path_ref).map_err(|e| AppError::from(e))?;
+        let content = fs::read_to_string(path_ref).map_err(AppError::from)?;
 
         // 尝试反序列化配置
         let config: AppConfig = serde_json::from_str(&content).map_err(|e| {
@@ -222,8 +222,8 @@ impl ConfigDraft {
     /// 保存配置到磁盘
     fn save_to_disk(&self) -> Result<(), AppError> {
         let config = self.config.clone_latest();
-        let json = serde_json::to_string_pretty(&*config).map_err(|e| AppError::from(e))?;
-        fs::write(&*self.config_path, json).map_err(|e| AppError::from(e))?;
+        let json = serde_json::to_string_pretty(&*config).map_err(AppError::from)?;
+        fs::write(&*self.config_path, json).map_err(AppError::from)?;
         Ok(())
     }
 

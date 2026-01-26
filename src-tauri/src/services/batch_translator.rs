@@ -314,7 +314,7 @@ impl BatchTranslator {
             return Ok(po_files);
         }
 
-        let entries = fs::read_dir(directory).map_err(|e| AppError::Io(e))?;
+        let entries = fs::read_dir(directory).map_err(AppError::Io)?;
 
         for entry in entries {
             let entry = entry.map_err(AppError::from)?;
