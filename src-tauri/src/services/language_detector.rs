@@ -1,6 +1,6 @@
 // ========== Phase 5: 语言检测服务 ==========
 
-use anyhow::{Result, anyhow};
+use anyhow::{anyhow, Result};
 use serde::{Deserialize, Serialize};
 
 #[cfg(feature = "ts-rs")]
@@ -344,7 +344,7 @@ mod tests {
     #[test]
     fn test_get_supported_languages() {
         let langs = get_supported_languages();
-        assert_eq!(langs.len(), 10);
+        assert_eq!(langs.len(), 14);
         assert_eq!(langs[0].code, "zh-Hans");
     }
 }
