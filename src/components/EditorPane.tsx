@@ -2,7 +2,7 @@ import React, { useState, useEffect, memo } from 'react';
 import { Input, Button, message } from 'antd';
 import { CopyOutlined, SaveOutlined, GlobalOutlined, TranslationOutlined } from '@ant-design/icons';
 import { POEntry } from '../types/tauri';
-import { useSessionStore } from '../store';
+import { useTranslationStore } from '../store';
 import { useTheme } from '../hooks/useTheme';
 import { analyzeTranslationDifference } from '../utils/termAnalyzer';
 import { TermConfirmModal } from './TermConfirmModal';
@@ -75,7 +75,7 @@ const EditorPane: React.FC<EditorPaneProps> = memo(
     const handleSaveTranslation = () => {
       if (!entry) return;
 
-      const { entries } = useSessionStore.getState();
+      const { entries } = useTranslationStore.getState();
       const index = entries.findIndex((e) => e === entry);
 
       log.info('🔍 准备保存译文', {

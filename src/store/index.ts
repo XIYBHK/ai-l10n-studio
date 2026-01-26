@@ -2,8 +2,9 @@
  * Store 模块统一导出
  *
  * 架构：
- * - useAppStore: 主要应用状态（主题、语言、文件状态等）
- * - useSessionStore: 会话状态（条目、翻译状态等）
+ * - useAppStore: 应用级配置（主题、语言、累计统计）
+ * - useTranslationStore: 翻译状态（条目、当前条目、文件路径）
+ * - useSessionStore: 会话状态（翻译进度、会话统计）
  * - useStatsStore: 累计统计（持久化）
  * - tauriStore: 底层持久化存储
  */
@@ -12,6 +13,7 @@ import { loadPersistedState } from './useAppStore';
 import { loadStats } from './useStatsStore';
 
 export { useAppStore } from './useAppStore';
+export { useTranslationStore } from './useTranslationStore';
 export { useSessionStore } from './useSessionStore';
 export { useStatsStore } from './useStatsStore';
 export { tauriStore } from './tauriStore';

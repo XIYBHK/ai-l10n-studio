@@ -3,7 +3,7 @@ import { Progress, Button, Badge } from 'antd';
 import { CheckOutlined, ThunderboltOutlined } from '@ant-design/icons';
 import { useVirtualizer } from '@tanstack/react-virtual';
 import { POEntry } from '../types/tauri';
-import { useSessionStore } from '../store';
+import { useTranslationStore } from '../store';
 import { useTheme } from '../hooks/useTheme';
 import { createModuleLogger } from '../utils/logger';
 import { TruncatedText } from './TruncatedText';
@@ -182,7 +182,7 @@ const EntryList: React.FC<EntryListProps> = memo(
     onTranslateSelected,
     onContextualRefine, // Phase 7
   }) => {
-    const { updateEntry } = useSessionStore();
+    const { updateEntry } = useTranslationStore();
     const { colors } = useTheme();
     const [selectedRowKeys, setSelectedRowKeys] = useState<React.Key[]>([]);
     const [lastClickedIndex, setLastClickedIndex] = useState<number | null>(null);
