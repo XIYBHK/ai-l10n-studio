@@ -11,6 +11,7 @@
  */
 
 import { create } from 'zustand';
+import { devtools } from 'zustand/middleware';
 import { POEntry } from '../types/tauri';
 import { createModuleLogger } from '../utils/logger';
 
@@ -40,7 +41,9 @@ interface TranslationState {
   reset: () => void;
 }
 
-export const useTranslationStore = create<TranslationState>((set, get) => ({
+export const useTranslationStore = create<TranslationState>()(
+  devtools(
+    (set, get) => ({
   // 初始状态
   entries: [],
   currentEntry: null,
@@ -135,4 +138,6 @@ export const useTranslationStore = create<TranslationState>((set, get) => ({
       currentFilePath: null,
     });
   },
-}));
+  }),
+  { name: 'TranslationStore' }
+));

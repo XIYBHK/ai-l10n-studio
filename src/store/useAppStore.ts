@@ -1,4 +1,5 @@
 import { create } from 'zustand';
+import { devtools } from 'zustand/middleware';
 import { AppConfig, TranslationStats } from '../types/tauri';
 import { tauriStore } from './tauriStore';
 import { createModuleLogger } from '../utils/logger';
@@ -60,7 +61,9 @@ export interface AppState {
   resetCumulativeStats: () => void;
 }
 
-export const useAppStore = create<AppState>((set, get) => ({
+export const useAppStore = create<AppState>()(
+  devtools(
+    (set, get) => ({
   // 初始状态
   config: null,
   theme: 'system', // Phase 9: 默认跟随系统
@@ -164,7 +167,9 @@ export const useAppStore = create<AppState>((set, get) => ({
       })
       .catch((err) => log.error('重置累计统计失败', err));
   },
-}));
+  }),
+  { name: 'AppStore' }
+));
 
 /**
  * 从 TauriStore 加载初始状态

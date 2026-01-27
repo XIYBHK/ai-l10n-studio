@@ -8,6 +8,7 @@
  */
 
 import { create } from 'zustand';
+import { devtools } from 'zustand/middleware';
 import { TranslationStats } from '../types/tauri';
 import { tauriStore } from './tauriStore';
 import { createModuleLogger } from '../utils/logger';
@@ -37,7 +38,9 @@ interface StatsState {
   resetCumulativeStats: () => void;
 }
 
-export const useStatsStore = create<StatsState>((set) => ({
+export const useStatsStore = create<StatsState>()(
+  devtools(
+    (set) => ({
   // 初始状态
   cumulativeStats: INITIAL_STATS,
 
@@ -83,7 +86,9 @@ export const useStatsStore = create<StatsState>((set) => ({
       })
       .catch((err) => log.error('重置累计统计失败', err));
   },
-}));
+  }),
+  { name: 'StatsStore' }
+));
 
 /**
  * 从 TauriStore 加载统计数据

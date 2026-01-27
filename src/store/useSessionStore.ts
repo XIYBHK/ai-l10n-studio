@@ -9,6 +9,7 @@
  */
 
 import { create } from 'zustand';
+import { devtools } from 'zustand/middleware';
 import { TranslationReport, TranslationStats } from '../types/tauri';
 
 const INITIAL_SESSION_STATS: TranslationStats = {
@@ -45,7 +46,9 @@ interface SessionState {
   resetSessionStats: () => void;
 }
 
-export const useSessionStore = create<SessionState>((set, get) => ({
+export const useSessionStore = create<SessionState>()(
+  devtools(
+    (set, get) => ({
   // 初始状态
   isTranslating: false,
   progress: 0,
@@ -83,4 +86,6 @@ export const useSessionStore = create<SessionState>((set, get) => ({
   resetSessionStats: () => {
     set({ sessionStats: INITIAL_SESSION_STATS });
   },
-}));
+  }),
+  { name: 'SessionStore' }
+));
