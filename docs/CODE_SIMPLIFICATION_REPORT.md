@@ -29,15 +29,15 @@
 
 ### 代码行数变化
 
-| 类别 | 优化前 | 优化后 | 减少 | 减少比例 |
-|------|--------|--------|------|----------|
-| React/TypeScript 组件 | ~3,500 行 | ~3,440 行 | ~60 行 | ~1.7% |
-| Hooks 和主题 | 492 行 | 383 行 | 109 行 | 22% |
-| 主应用和样式 | ~320 行 | ~310 行 | ~10 行 | ~3% |
-| Rust 模块 | 30 行 | 50 行 | -20 行 | -67%* |
-| **总计** | **~4,342 行** | **~4,183 行** | **~159 行** | **~3.7%** |
+| 类别                  | 优化前        | 优化后        | 减少        | 减少比例  |
+| --------------------- | ------------- | ------------- | ----------- | --------- |
+| React/TypeScript 组件 | ~3,500 行     | ~3,440 行     | ~60 行      | ~1.7%     |
+| Hooks 和主题          | 492 行        | 383 行        | 109 行      | 22%       |
+| 主应用和样式          | ~320 行       | ~310 行       | ~10 行      | ~3%       |
+| Rust 模块             | 30 行         | 50 行         | -20 行      | -67%\*    |
+| **总计**              | **~4,342 行** | **~4,183 行** | **~159 行** | **~3.7%** |
 
-*注：Rust 文件行数增加是因为添加了精确导出列表和分隔注释，提高了代码清晰度。
+\*注：Rust 文件行数增加是因为添加了精确导出列表和分隔注释，提高了代码清晰度。
 
 ---
 
@@ -64,6 +64,7 @@
 #### 应用的优化
 
 ✅ **移除冗余注释**（约 50-60 行）
+
 - 移除接口参数中的版本标记注释（"Phase 5"、"Phase 7" 等）
 - 移除显而易见的技术实现注释（"使用 requestAnimationFrame 节流" 等）
 - 移除函数级别的实现说明注释
@@ -71,6 +72,7 @@
 - 移除架构变更注释（"⛔ 移除: apiKey" 等）
 
 ✅ **保持代码质量**
+
 - 保留重要的调试日志
 - 保留关键业务逻辑说明
 - 保持组件功能完整性
@@ -92,6 +94,7 @@
 ✅ **减少**: 40 行（37%）
 
 **应用的优化**：
+
 - 移除过度注释（删除了分类注释如"背景色"、"文本色"等）
 - 简化类型定义组织，采用扁平化结构
 - 保留核心 JSDoc 注释，说明用途和用法
@@ -103,6 +106,7 @@
 ✅ **减少**: 40 行（33%）
 
 **应用的优化**：
+
 - 移除不必要的类型导入 `AppState`（直接从 store 推断）
 - 合并三个独立的 `useMemo` 调用为一个，减少重复计算
 - 移除描述性注释（"获取系统主题"、"计算实际主题"等）
@@ -114,6 +118,7 @@
 ✅ **减少**: 29 行（11%）
 
 **应用的优化**：
+
 - **提取公共颜色到 `commonSourceColors` 对象**（翻译来源样式和悬浮提示颜色在 light/dark 主题中完全相同）
 - 使用扩展运算符应用到两个主题
 - 移除所有内联注释（如 Catppuccin 颜色名称注释）
@@ -122,6 +127,7 @@
 #### 关键改进
 
 **消除重复定义**：
+
 ```typescript
 // 优化前：两个主题中重复定义
 export const semanticColors = {
@@ -132,11 +138,11 @@ export const semanticColors = {
     // ... 完全相同的定义
   },
   dark: {
-    sourceTmBg: 'rgba(82, 196, 26, 0.1)',  // 重复
-    sourceTmColor: '#52c41a',              // 重复
+    sourceTmBg: 'rgba(82, 196, 26, 0.1)', // 重复
+    sourceTmColor: '#52c41a', // 重复
     sourceDedupBg: 'rgba(24, 144, 255, 0.1)', // 重复
     // ... 完全相同的定义
-  }
+  },
 };
 
 // 优化后：提取公共部分
@@ -171,6 +177,7 @@ export const semanticColors = {
 #### src/App.tsx
 
 **应用的优化**：
+
 1. ✅ **提取 `checkAIConfig()` 函数** - 消除 3 处重复的 AI 配置检查逻辑（减少了约 15 行重复代码）
 2. ✅ 移除文件顶部显而易见的描述注释
 3. ✅ 移除分区注释（"// UI 状态"、"# 使用翻译流程 Hook" 等）
@@ -179,6 +186,7 @@ export const semanticColors = {
 6. ✅ 移除 JSX 中的区域标记注释
 
 **关键改进 - 提取重复逻辑**：
+
 ```typescript
 // 优化前：3 个 wrapper 函数中重复相同的检查代码
 const handleTranslateAll = useCallback(() => {
@@ -223,6 +231,7 @@ const handleTranslateAll = useCallback(() => {
 #### src/App.css
 
 **应用的优化**：
+
 1. ✅ **合并重复的过渡规则** - 将原本分开的两个过渡规则块合并为一个统一规则
 2. ✅ 为 textarea 添加单独规则（因为它的特殊性需要单独处理）
 3. ✅ 移除不必要的 `!important` 标记
@@ -230,15 +239,25 @@ const handleTranslateAll = useCallback(() => {
 5. ✅ 移除所有冗长的分类注释（"统一的动画时长配置"、"主题过渡工具类" 等）
 
 **关键改进 - 合并重复规则**：
+
 ```css
 /* 优化前：两个独立的过渡规则块，有重复定义 */
-body, div, span, p, .ant-btn, .ant-input {
+body,
+div,
+span,
+p,
+.ant-btn,
+.ant-input {
   transition-property: background-color, background, color, border-color, box-shadow, fill, stroke;
   transition-duration: var(--theme-transition-duration) !important;
   transition-timing-function: var(--theme-transition-timing) !important;
 }
 
-.ant-input, .ant-input-textarea, .ant-input-textarea textarea, .ant-btn, .ant-select-selector {
+.ant-input,
+.ant-input-textarea,
+.ant-input-textarea textarea,
+.ant-btn,
+.ant-select-selector {
   transition:
     background-color var(--theme-transition-duration) var(--theme-transition-timing) !important,
     color var(--theme-transition-duration) var(--theme-transition-timing) !important,
@@ -247,7 +266,13 @@ body, div, span, p, .ant-btn, .ant-input {
 }
 
 /* 优化后：合并为一个统一规则 */
-body, div, span, p, .ant-btn, .ant-input, .ant-input-number {
+body,
+div,
+span,
+p,
+.ant-btn,
+.ant-input,
+.ant-input-number {
   transition:
     background-color var(--theme-transition-duration) var(--theme-transition-timing),
     color var(--theme-transition-duration) var(--theme-transition-timing),
@@ -290,6 +315,7 @@ body, div, span, p, .ant-btn, .ant-input, .ant-input-number {
 #### 应用的优化（6 项）
 
 1. ✅ **消除通配符重新导出** - 使用精确导出替代 `use::*`
+
    ```rust
    // 优化前
    pub use batch_translator::*;
@@ -329,14 +355,14 @@ body, div, span, p, .ant-btn, .ant-input, .ant-input-number {
 
 ### 代码质量提升
 
-| 指标 | 改进 |
-|------|------|
-| **代码清晰度** | ⬆️ 大幅提升（移除冗余注释、改进组织） |
-| **可维护性** | ⬆️ 提升（消除重复代码、提取公共逻辑） |
-| **API 边界** | ⬆️ 更清晰（精确导出、明确公共 API） |
-| **代码简洁性** | ⬆️ 提升（减少约 159 行代码） |
-| **命名空间污染** | ⬇️ 减少（精确导出、移除未使用导出） |
-| **重复代码** | ⬇️ 消除（公共颜色、AI 配置检查、CSS 规则） |
+| 指标             | 改进                                       |
+| ---------------- | ------------------------------------------ |
+| **代码清晰度**   | ⬆️ 大幅提升（移除冗余注释、改进组织）      |
+| **可维护性**     | ⬆️ 提升（消除重复代码、提取公共逻辑）      |
+| **API 边界**     | ⬆️ 更清晰（精确导出、明确公共 API）        |
+| **代码简洁性**   | ⬆️ 提升（减少约 159 行代码）               |
+| **命名空间污染** | ⬇️ 减少（精确导出、移除未使用导出）        |
+| **重复代码**     | ⬇️ 消除（公共颜色、AI 配置检查、CSS 规则） |
 
 ### 遵循的优化原则
 
@@ -348,19 +374,23 @@ body, div, span, p, .ant-btn, .ant-input, .ant-input-number {
 ### 工程实践
 
 ✅ **DRY 原则**（Don't Repeat Yourself）
+
 - 提取 `commonSourceColors` 消除颜色定义重复
 - 提取 `checkAIConfig()` 函数消除 AI 配置检查重复
 - 合并 App.css 重复的过渡规则
 
 ✅ **单一职责原则**
+
 - 每个函数专注于单一功能
 - 提取独立函数避免重复逻辑
 
 ✅ **显式优于隐式**
+
 - Rust 精确导出替代通配符
 - TypeScript 类型推断优于显式导入
 
 ✅ **代码即文档**
+
 - 移除描述显而易见代码的注释
 - 保留关键业务逻辑说明
 
