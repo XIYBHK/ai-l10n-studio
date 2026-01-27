@@ -108,28 +108,28 @@ class NotificationManager {
       title,
       body,
     });
-  },
+  }
 
   async error(title: string, body: string): Promise<void> {
     await this.send({
       title,
       body,
     });
-  },
+  }
 
   async info(title: string, body: string): Promise<void> {
     await this.send({
-      title: `${title}`,
+      title,
       body,
     });
-  },
+  }
 
   async warning(title: string, body: string): Promise<void> {
     await this.send({
-      title: `${title}`,
+      title,
       body,
     });
-  },
+  }
 
   async batchTranslationComplete(total: number, success: number, failed: number): Promise<void> {
     const successRate = Math.round((success / total) * 100);
@@ -146,20 +146,20 @@ class NotificationManager {
 
   async fileSaved(filename: string, count: number): Promise<void> {
     await this.success('文件已保存', `${filename} - ${count} 条翻译`);
-  },
+  }
 
   async exportComplete(filename: string): Promise<void> {
     await this.success('导出成功', `文件已导出: ${filename}`);
-  },
+  }
 
   setEnabled(enabled: boolean): void {
     this.enabled = enabled;
     log.info(`通知${enabled ? '已启用' : '已禁用'}`);
-  },
+  }
 
   isEnabled(): boolean {
     return this.enabled;
-  },
+  }
 
   toggle(): void {
     this.setEnabled(!this.enabled);

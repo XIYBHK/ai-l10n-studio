@@ -16,6 +16,7 @@ export interface TestResult {
 }
 
 export async function testGetAllProviders(): Promise<TestResult> {
+  try {
     log.info('🧪 测试获取所有供应商...');
     const providers = await aiProviderCommands.getAll();
 
