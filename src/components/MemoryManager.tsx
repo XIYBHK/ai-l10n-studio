@@ -22,10 +22,9 @@ interface MemoryEntry {
   key: string;
   source: string;
   target: string;
-  language?: string; // 语言代码（如 "ja", "zh-Hans"）
+  language?: string;
 }
 
-// 组合记忆库键值（如 { source: "Debug", language: "ja" } → "Debug|ja"）
 const buildMemoryKey = (source: string, language?: string): string => {
   if (language) {
     return `${source}|${language}`;
@@ -48,7 +47,6 @@ export const MemoryManager: React.FC<MemoryManagerProps> = ({ visible, onClose }
   const [newTarget, setNewTarget] = useState('');
   const [tableHeight, setTableHeight] = useState(400);
 
-  // 🔧 动态生成语言配置映射（单一数据源）
   const languageConfig = useMemo(() => {
     const config: Record<string, string> = {};
     languages.forEach((lang) => {
@@ -57,42 +55,31 @@ export const MemoryManager: React.FC<MemoryManagerProps> = ({ visible, onClose }
     return config;
   }, [languages]);
 
-  // 🔧 解析记忆库键值（使用动态语言配置）
-  // 支持格式：
-  // - "Debug|zh-Hans" → { source: "Debug", language: "zh-Hans" }
-  // - "XTools|Random|zh-Hans" → { source: "XTools|Random", language: "zh-Hans" }
-  // - "Debug" → { source: "Debug", language: undefined }
   const parseMemoryKey = useMemo(
     () =>
       (key: string): { source: string; language?: string } => {
         const parts = key.split('|');
 
-        // 检查最后一个部分是否是已知的语言代码
         if (parts.length >= 2) {
           const lastPart = parts[parts.length - 1];
           if (languageConfig[lastPart]) {
-            // 最后一部分是语言代码，前面的所有部分是原文
             const source = parts.slice(0, -1).join('|');
             return { source, language: lastPart };
           }
         }
 
-        // 没有语言代码，或者无法识别
         return { source: key, language: undefined };
       },
     [languageConfig]
   );
 
-  // 🔧 关键修复：每次打开时强制刷新一次，确保显示最新数据
-  // 原因：如果用户在翻译后才打开记忆库管理器，会错过 translation:after 事件
   useEffect(() => {
     if (visible) {
       mutate();
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [visible]); // 只依赖 visible，避免无限循环
+  }, [visible]);
 
-  // 当 TM 数据更新时，重新设置 memories
   useEffect(() => {
     if (visible) {
       if (tm && (tm as any).memory) {
@@ -115,30 +102,41 @@ export const MemoryManager: React.FC<MemoryManagerProps> = ({ visible, onClose }
     }
   }, [visible, tm, loadingTM]);
 
-  // 计算Table高度，根据窗口高度自适应
   useEffect(() => {
+    let rafId: number | null = null;
+    let lastWidth = window.innerWidth;
+
     const updateTableHeight = () => {
-      // Modal高度 = 窗口高度 - 200px (top + 底部空间)
-      // Table高度 = Modal内容高度 - 操作区高度(约180px) - 分页组件高度(约60px) - padding
       const windowHeight = window.innerHeight;
       const modalContentHeight = windowHeight - 200;
-      const operationAreaHeight = 180; // 搜索框、添加框等的高度
-      const paginationHeight = 60; // 分页组件高度
+      const operationAreaHeight = 180;
+      const paginationHeight = 60;
       const newTableHeight = Math.max(
         200,
         modalContentHeight - operationAreaHeight - paginationHeight
       );
       setTableHeight(newTableHeight);
+      lastWidth = window.innerWidth;
+    };
+
+    const handleResize = () => {
+      if (rafId !== null) {
+        cancelAnimationFrame(rafId);
+      }
+      rafId = requestAnimationFrame(updateTableHeight);
     };
 
     if (visible) {
       updateTableHeight();
-      window.addEventListener('resize', updateTableHeight);
-      return () => window.removeEventListener('resize', updateTableHeight);
+      window.addEventListener('resize', handleResize);
+      return () => {
+        window.removeEventListener('resize', handleResize);
+        if (rafId !== null) {
+          cancelAnimationFrame(rafId);
+        }
+      };
     }
   }, [visible]);
-
-  // 读取交由 SWR；此处保留写操作
 
   const handleSave = async () => {
     setLoading(true);
@@ -160,7 +158,6 @@ export const MemoryManager: React.FC<MemoryManagerProps> = ({ visible, onClose }
       });
 
       message.success('记忆库已保存');
-      log.info('记忆库保存成功', { count: memories.length });
       await mutate();
       onClose();
     } catch (error) {
@@ -177,10 +174,8 @@ export const MemoryManager: React.FC<MemoryManagerProps> = ({ visible, onClose }
   const handleClearAll = async () => {
     try {
       setLoading(true);
-      // 清空前端状态
       setMemories([]);
 
-      // 保存空的记忆库到后端
       await translationMemoryCommands.save({
         memory: {},
         stats: {
@@ -191,14 +186,11 @@ export const MemoryManager: React.FC<MemoryManagerProps> = ({ visible, onClose }
         last_updated: new Date().toISOString(),
       });
 
-      // 重新从后端获取最新数据（应该是空的）
       const freshTM = await translationMemoryCommands.get();
       log.debug('清空后重新获取记忆库', { hasTM: !!freshTM });
 
-      // 更新 SWR 缓存（关键修复：之前缺少这一步）
       await mutate(freshTM, false);
 
-      // 重置累计统计中的 tm_learned
       const { cumulativeStats, setCumulativeStats } = useStatsStore.getState();
       setCumulativeStats({
         ...cumulativeStats,
@@ -206,7 +198,6 @@ export const MemoryManager: React.FC<MemoryManagerProps> = ({ visible, onClose }
       });
 
       message.success('已清空所有记忆');
-      log.info('记忆库已清空，tm_learned 统计已重置');
     } catch (error) {
       log.logError(error, '清空记忆库失败');
       await mutate();
@@ -219,18 +210,14 @@ export const MemoryManager: React.FC<MemoryManagerProps> = ({ visible, onClose }
     try {
       setLoading(true);
 
-      // 调用后端接口合并并保存内置词库
       const addedCount = await translationMemoryCommands.mergeBuiltinPhrases();
       log.info('内置词库合并完成', { addedCount });
 
-      // 重新从后端获取最新数据
       const freshTM = await translationMemoryCommands.get();
       log.debug('重新获取记忆库', { hasTM: !!freshTM });
 
-      // 更新 SWR 缓存
       await mutate(freshTM, false);
 
-      // 立即更新前端显示
       if (freshTM && (freshTM as any).memory) {
         const entries: MemoryEntry[] = Object.entries((freshTM as any).memory).map(
           ([memoryKey, target], index) => {
@@ -286,7 +273,6 @@ export const MemoryManager: React.FC<MemoryManagerProps> = ({ visible, onClose }
 
         await writeTextFile(filePath, JSON.stringify(exportData, null, 2));
         message.success('记忆库已导出');
-        log.info('记忆库导出成功', { path: filePath, count: memories.length });
       }
     } catch (error) {
       log.logError(error, '导出记忆库失败');
@@ -323,7 +309,6 @@ export const MemoryManager: React.FC<MemoryManagerProps> = ({ visible, onClose }
           );
           setMemories(entries);
           message.success(`已导入 ${entries.length} 条记忆`);
-          log.info('记忆库导入成功', { path: filePath, count: entries.length });
         }
       }
     } catch (error) {
@@ -401,7 +386,6 @@ export const MemoryManager: React.FC<MemoryManagerProps> = ({ visible, onClose }
         if (languageName) {
           return <Tag color="blue">{languageName}</Tag>;
         }
-        // 未知语言代码，显示原始值
         return <Tag color="blue">{language}</Tag>;
       },
     },

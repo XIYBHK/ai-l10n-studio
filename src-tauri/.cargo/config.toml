@@ -1,8 +1,1 @@
-[build]
-# 排除 data 和 log 目录的文件监听，避免翻译后自动重启
-watch-exclude = [
-    "data/",
-    "log/",
-    "target/"
-]
 

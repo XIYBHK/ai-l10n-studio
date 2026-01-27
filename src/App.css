@@ -1,7 +1,111 @@
+:root {
+  --theme-transition-duration: 0.3s;
+  --theme-transition-timing: cubic-bezier(0.645, 0.045, 0.355, 1);
+}
+
 * {
   margin: 0;
   padding: 0;
   box-sizing: border-box;
+}
+
+.theme-transition {
+  transition-property: background-color, background, color, border-color, box-shadow, fill, stroke;
+  transition-duration: var(--theme-transition-duration);
+  transition-timing-function: var(--theme-transition-timing);
+}
+
+/* 全局元素过渡 */
+body,
+div,
+span,
+p,
+.ant-btn,
+.ant-input,
+.ant-input-number,
+.ant-select,
+.ant-select-selector,
+.ant-table,
+.ant-table-cell,
+.ant-table-thead > tr > th,
+.ant-table-tbody > tr > td,
+.ant-modal,
+.ant-modal-content,
+.ant-modal-header,
+.ant-modal-body,
+.ant-tooltip,
+.ant-popover,
+.ant-dropdown,
+.ant-menu,
+.ant-card,
+.ant-layout,
+.ant-layout-header,
+.ant-layout-content,
+.ant-layout-sider,
+.ant-input-textarea {
+  transition:
+    background-color var(--theme-transition-duration) var(--theme-transition-timing),
+    color var(--theme-transition-duration) var(--theme-transition-timing),
+    border-color var(--theme-transition-duration) var(--theme-transition-timing),
+    box-shadow var(--theme-transition-duration) var(--theme-transition-timing);
+}
+
+.ant-input-textarea textarea {
+  transition:
+    background-color var(--theme-transition-duration) var(--theme-transition-timing),
+    color var(--theme-transition-duration) var(--theme-transition-timing),
+    border-color var(--theme-transition-duration) var(--theme-transition-timing);
+}
+
+.sidebar-panel {
+  transition:
+    width 0.1s ease,
+    background-color var(--theme-transition-duration) var(--theme-transition-timing),
+    border-color var(--theme-transition-duration) var(--theme-transition-timing),
+    color var(--theme-transition-duration) var(--theme-transition-timing);
+}
+
+.gpu-accelerated {
+  transform: translateZ(0);
+  will-change: transform;
+}
+
+@supports (contain: strict) {
+  .performance-optimized {
+    contain: strict;
+  }
+}
+
+.content-visibility-auto {
+  content-visibility: auto;
+  contain-intrinsic-size: 1px 5000px;
+}
+
+.virtual-scroll-optimized {
+  contain: strict;
+  content-visibility: auto;
+  contain-intrinsic-size: auto 500px;
+}
+
+body::before {
+  content: '';
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  z-index: -1;
+  background-image:
+    linear-gradient(rgba(203, 166, 247, 0.02) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(203, 166, 247, 0.02) 1px, transparent 1px);
+  background-size: 40px 40px;
+  pointer-events: none;
+}
+
+[data-theme='dark'] body::before {
+  background-image:
+    linear-gradient(rgba(203, 166, 247, 0.04) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(203, 166, 247, 0.04) 1px, transparent 1px);
 }
 
 #root {
@@ -14,21 +118,11 @@ body {
   margin: 0;
   padding: 0;
   overflow: hidden;
-  font-family:
-    'Inter',
-    -apple-system,
-    BlinkMacSystemFont,
-    'Segoe UI',
-    Roboto,
-    'Helvetica Neue',
-    Arial,
-    'Noto Sans',
-    sans-serif;
+  font-family: var(--body-font);
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
 }
 
-/* 禁用表格行的文本选择 */
 .no-text-select,
 .no-text-select * {
   user-select: none;
@@ -37,7 +131,6 @@ body {
   -ms-user-select: none;
 }
 
-/* 允许输入框和文本域的文本选择 */
 input,
 textarea {
   user-select: text !important;
@@ -46,7 +139,6 @@ textarea {
   -ms-user-select: text !important;
 }
 
-/* 自定义滚动条样式 - 现代风格 */
 ::-webkit-scrollbar {
   width: 8px;
   height: 8px;
@@ -57,48 +149,98 @@ textarea {
 }
 
 ::-webkit-scrollbar-thumb {
-  background: rgba(0, 0, 0, 0); /* 默认隐藏 */
+  background: rgba(137, 180, 250, 0);
   border-radius: 4px;
-  border: 2px solid transparent; /* 增加边距感 */
+  border: 2px solid transparent;
   background-clip: content-box;
-  transition: background-color 0.2s;
 }
 
-/* 鼠标悬停在容器上时显示滚动条 */
 *:hover::-webkit-scrollbar-thumb {
-  background-color: rgba(0, 0, 0, 0.2);
+  background-color: rgba(137, 180, 250, 0.3);
+}
+
+*:hover::-webkit-scrollbar-thumb:hover {
+  background-color: rgba(137, 180, 250, 0.5);
+  box-shadow: 0 0 8px rgba(137, 180, 250, 0.3);
 }
 
 ::-webkit-scrollbar-thumb:active {
-  background-color: rgba(0, 0, 0, 0.4);
+  background-color: rgba(137, 180, 250, 0.7);
 }
 
-/* 暗色模式滚动条 */
-[data-theme='dark'] ::-webkit-scrollbar-thumb:hover {
-  background-color: rgba(255, 255, 255, 0.2);
+[data-theme='dark'] *:hover::-webkit-scrollbar-thumb {
+  background-color: rgba(137, 180, 250, 0.4);
+}
+
+[data-theme='dark'] *:hover::-webkit-scrollbar-thumb:hover {
+  background-color: rgba(137, 180, 250, 0.6);
+  box-shadow: 0 0 12px rgba(137, 180, 250, 0.5);
 }
 
 [data-theme='dark'] ::-webkit-scrollbar-thumb:active {
-  background-color: rgba(255, 255, 255, 0.3);
+  background-color: rgba(137, 180, 250, 0.8);
 }
 
-/* Firefox 滚动条样式 */
 * {
   scrollbar-width: thin;
-  scrollbar-color: transparent transparent;
-  transition: scrollbar-color 0.3s;
+  scrollbar-color: rgba(137, 180, 250, 0) transparent;
 }
 
 *:hover {
-  scrollbar-color: rgba(0, 0, 0, 0.2) transparent;
+  scrollbar-color: rgba(137, 180, 250, 0.4) transparent;
 }
 
 [data-theme='dark'] *:hover {
-  scrollbar-color: rgba(255, 255, 255, 0.2) transparent;
+  scrollbar-color: rgba(137, 180, 250, 0.5) transparent;
 }
 
-/* 工具类：等宽字体 */
 .font-mono {
-  font-family:
-    'JetBrains Mono', 'Fira Code', Consolas, Monaco, 'Andale Mono', 'Ubuntu Mono', monospace;
+  font-family: var(--mono-font);
+}
+
+@keyframes slideUp {
+  from {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.menu-bar-stagger > * {
+  animation: slideUp 0.4s ease-out backwards;
+}
+
+.menu-bar-stagger > *:nth-child(1) {
+  animation-delay: 0ms;
+}
+.menu-bar-stagger > *:nth-child(2) {
+  animation-delay: 50ms;
+}
+.menu-bar-stagger > *:nth-child(3) {
+  animation-delay: 100ms;
+}
+.menu-bar-stagger > *:nth-child(4) {
+  animation-delay: 150ms;
+}
+.menu-bar-stagger > *:nth-child(5) {
+  animation-delay: 200ms;
+}
+.menu-bar-stagger > *:nth-child(6) {
+  animation-delay: 250ms;
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+.workspace-fade-in {
+  animation: fadeIn 0.6s ease-out 0.3s backwards;
 }

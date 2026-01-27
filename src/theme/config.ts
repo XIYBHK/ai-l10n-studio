@@ -1,187 +1,231 @@
 import { ThemeConfig } from 'antd';
 
-// 🎨 现代配色方案 (Tailwind Zinc/Slate/Blue 灵感)
 const palette = {
-  primary: '#3b82f6', // Blue 500
-  success: '#22c55e', // Green 500
-  warning: '#eab308', // Yellow 500
-  error: '#ef4444', // Red 500
-  info: '#3b82f6', // Blue 500
+  primary: '#cba6f7',
+  accent: '#89b4fa',
+  success: '#a6e3a1',
+  warning: '#f9e2af',
+  error: '#ed8796',
+  info: '#89b4fa',
 
-  // Light Mode Grays (Slate)
   light: {
-    bgBase: '#ffffff',
-    bgLayout: '#f8fafc', // Slate 50
-    bgContainer: '#ffffff',
-    border: '#e2e8f0', // Slate 200
-    borderSecondary: '#f1f5f9', // Slate 100
-    textPrimary: '#0f172a', // Slate 900
-    textSecondary: '#475569', // Slate 600
-    textTertiary: '#94a3b8', // Slate 400
+    bgBase: '#e6e9ef',
+    bgContainer: '#e6e9ef',
+    bgElevated: '#dce0e8',
+    border: '#ccd0da',
+    borderSecondary: '#dce0e8',
+    textPrimary: '#4c4f69',
+    textSecondary: '#5c5f77',
+    textTertiary: '#6c7086',
   },
 
-  // Dark Mode Grays (Zinc)
   dark: {
-    bgBase: '#18181b', // Zinc 950
-    bgLayout: '#09090b', // Zinc 950 (Darker)
-    bgContainer: '#18181b', // Zinc 900
-    bgElevated: '#27272a', // Zinc 800
-    border: '#27272a', // Zinc 800
-    borderSecondary: '#3f3f46', // Zinc 700
-    textPrimary: '#f4f4f5', // Zinc 100
-    textSecondary: '#a1a1aa', // Zinc 400
-    textTertiary: '#52525b', // Zinc 600
+    bgBase: '#1e1e2e',
+    bgContainer: '#313244',
+    bgElevated: '#45475a',
+    border: '#45475a',
+    borderSecondary: '#585b70',
+    textPrimary: '#cdd6f4',
+    textSecondary: '#bac2de',
+    textTertiary: '#a6adc8',
   },
 };
 
-// 通用 Token 配置
 const commonTokens = {
   colorPrimary: palette.primary,
   colorSuccess: palette.success,
   colorWarning: palette.warning,
   colorError: palette.error,
   colorInfo: palette.info,
-  borderRadius: 6, // 更现代的圆角
-  fontFamily:
-    "'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, 'Noto Sans', sans-serif",
+  borderRadius: 8,
+  fontFamily: "'Space Grotesk', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif",
   wireframe: false,
+  motionDurationFast: '0.1s',
+  motionDurationMid: '0.2s',
+  motionDurationSlow: '0.3s',
+  motionEaseInOut: 'cubic-bezier(0.645, 0.045, 0.355, 1)',
+  motionEaseOut: 'cubic-bezier(0.215, 0.61, 0.355, 1)',
 };
 
-// ☀️ 亮色主题配置
 export const lightTheme: ThemeConfig = {
   token: {
     ...commonTokens,
     colorBgBase: palette.light.bgBase,
     colorBgContainer: palette.light.bgContainer,
-    colorBgLayout: palette.light.bgLayout,
+    colorBgElevated: palette.light.bgElevated,
+    colorBgLayout: palette.light.bgBase,
     colorText: palette.light.textPrimary,
     colorTextSecondary: palette.light.textSecondary,
     colorTextTertiary: palette.light.textTertiary,
     colorBorder: palette.light.border,
     colorBorderSecondary: palette.light.borderSecondary,
-    // 阴影优化
-    boxShadow: '0 1px 2px 0 rgba(0, 0, 0, 0.05), 0 1px 3px 1px rgba(0, 0, 0, 0.1)',
-    boxShadowSecondary: '0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06)',
+    boxShadow: '0 2px 8px rgba(203, 166, 247, 0.08)',
+    boxShadowSecondary: '0 4px 16px rgba(203, 166, 247, 0.12)',
   },
   components: {
     Layout: {
       headerBg: palette.light.bgContainer,
-      bodyBg: palette.light.bgLayout,
-      siderBg: palette.light.bgLayout,
+      bodyBg: palette.light.bgBase,
+      siderBg: palette.light.bgBase,
     },
     Button: {
       controlHeight: 32,
-      borderRadius: 6,
-      defaultShadow: '0 1px 2px 0 rgba(0, 0, 0, 0.05)',
-      primaryShadow: '0 1px 2px 0 rgba(0, 0, 0, 0.05)',
+      borderRadius: 8,
+      defaultBg: palette.light.bgContainer,
+      defaultColor: palette.light.textPrimary,
+      defaultBorderColor: palette.light.border,
+      defaultHoverBg: palette.light.bgElevated,
+      defaultHoverColor: palette.light.textPrimary,
+      defaultHoverBorderColor: palette.light.border,
+      defaultActiveBg: palette.light.border,
+      defaultActiveColor: palette.light.textPrimary,
+      defaultActiveBorderColor: palette.light.border,
+      disabledBg: palette.light.bgContainer,
+      disabledBorderColor: palette.light.borderSecondary,
+      disabledColor: palette.light.textTertiary,
+      defaultShadow: '0 2px 4px rgba(0, 0, 0, 0.04)',
+      primaryShadow: '0 2px 8px rgba(203, 166, 247, 0.25)',
     },
     Input: {
-      activeShadow: '0 0 0 2px rgba(59, 130, 246, 0.1)', // 细腻的 Focus Ring
+      colorBgContainer: palette.light.bgContainer,
+      colorBorder: palette.light.border,
+      colorText: palette.light.textPrimary,
+      colorTextPlaceholder: palette.light.textTertiary,
+      activeShadow: '0 0 0 2px rgba(203, 166, 247, 0.15)',
+      hoverBg: palette.light.bgElevated,
+      hoverBorderColor: palette.light.border,
+    },
+    Select: {
+      colorBgContainer: palette.light.bgContainer,
+      colorBorder: palette.light.border,
+      optionSelectedBg: palette.light.bgElevated,
     },
     Table: {
-      headerBg: palette.light.bgLayout,
+      headerBg: palette.light.bgElevated,
       headerColor: palette.light.textSecondary,
       borderColor: palette.light.borderSecondary,
+      rowHoverBg: palette.light.bgElevated,
+      cellBg: palette.light.bgContainer,
+    },
+    Modal: {
+      contentBg: palette.light.bgContainer,
+      headerBg: palette.light.bgContainer,
+    },
+    Card: {
+      colorBgElevated: palette.light.bgElevated,
     },
   },
 };
 
-// 🌙 暗色主题配置
 export const darkTheme: ThemeConfig = {
   token: {
     ...commonTokens,
     colorBgBase: palette.dark.bgBase,
     colorBgContainer: palette.dark.bgContainer,
-    colorBgLayout: palette.dark.bgLayout,
     colorBgElevated: palette.dark.bgElevated,
+    colorBgLayout: palette.dark.bgBase,
     colorText: palette.dark.textPrimary,
     colorTextSecondary: palette.dark.textSecondary,
     colorTextTertiary: palette.dark.textTertiary,
     colorBorder: palette.dark.border,
     colorBorderSecondary: palette.dark.borderSecondary,
-    colorSplit: palette.dark.border, // 分割线颜色
+    colorSplit: palette.dark.border,
   },
   components: {
     Layout: {
       headerBg: palette.dark.bgBase,
-      bodyBg: palette.dark.bgLayout,
+      bodyBg: palette.dark.bgBase,
       siderBg: palette.dark.bgBase,
     },
-    Modal: {
-      contentBg: palette.dark.bgElevated,
-      headerBg: palette.dark.bgElevated,
+    Button: {
+      defaultBg: palette.dark.bgElevated,
+      defaultColor: palette.dark.textPrimary,
+      defaultBorderColor: palette.dark.borderSecondary,
+      defaultHoverBg: palette.dark.bgContainer,
+      defaultHoverColor: palette.dark.textPrimary,
+      defaultHoverBorderColor: palette.dark.border,
+      disabledBg: palette.dark.bgElevated,
+      disabledBorderColor: palette.dark.borderSecondary,
+      disabledColor: palette.dark.textTertiary,
+      primaryShadow: '0 2px 8px rgba(203, 166, 247, 0.3)',
+    },
+    Input: {
+      colorBgContainer: palette.dark.bgContainer,
+      colorBorder: palette.dark.borderSecondary,
+      activeBg: 'transparent',
+      activeShadow: '0 0 0 2px rgba(203, 166, 247, 0.2)',
     },
     Table: {
       headerBg: palette.dark.bgElevated,
       headerColor: palette.dark.textSecondary,
       borderColor: palette.dark.border,
-      rowHoverBg: palette.dark.bgElevated,
+      rowHoverBg: 'rgba(203, 166, 247, 0.08)',
+      cellBg: palette.dark.bgContainer,
     },
-    Input: {
-      activeBg: 'transparent',
-      activeShadow: '0 0 0 2px rgba(59, 130, 246, 0.2)',
+    Modal: {
+      contentBg: palette.dark.bgElevated,
+      headerBg: palette.dark.bgElevated,
     },
-    Button: {
-      defaultBg: palette.dark.bgElevated,
-      defaultBorderColor: palette.dark.borderSecondary,
+    Select: {
+      colorBgContainer: palette.dark.bgContainer,
+      colorBorder: palette.dark.borderSecondary,
+      optionSelectedBg: palette.dark.bgElevated,
     },
   },
 };
 
-// 🎨 语义化颜色系统 - 用于自定义组件样式
+const commonSourceColors = {
+  sourceTmBg: 'rgba(82, 196, 26, 0.1)',
+  sourceTmColor: '#52c41a',
+  sourceDedupBg: 'rgba(24, 144, 255, 0.1)',
+  sourceDedupColor: '#1890ff',
+  sourceAiBg: 'rgba(250, 173, 20, 0.1)',
+  sourceAiColor: '#faad14',
+  overlayBg: 'rgba(0, 0, 0, 0.6)',
+  overlayText: '#ffffff',
+};
+
 export const semanticColors = {
   light: {
-    // 背景色
     bgPrimary: palette.light.bgContainer,
-    bgSecondary: palette.light.bgLayout,
-    bgTertiary: '#f1f5f9', // Slate 100 - 用于表头、工具栏
-
-    // 文本色
+    bgSecondary: palette.light.bgBase,
+    bgTertiary: palette.light.bgElevated,
     textPrimary: palette.light.textPrimary,
     textSecondary: palette.light.textSecondary,
     textTertiary: palette.light.textTertiary,
-    textDisabled: '#cbd5e1', // Slate 300
-
-    // 边框色
+    textDisabled: palette.light.borderSecondary,
     borderPrimary: palette.light.border,
     borderSecondary: palette.light.borderSecondary,
-
-    // 状态色
-    statusUntranslated: '#3b82f6', // Blue 500
-    statusNeedsReview: '#f59e0b', // Amber 500 (更温和的橙色)
-    statusTranslated: '#10b981', // Emerald 500 (更鲜艳的绿色)
-
-    // 交互色
-    hoverBg: '#f8fafc', // Slate 50
-    activeBg: '#eff6ff', // Blue 50
-    selectedBg: '#eff6ff', // Blue 50
-    selectedBorder: '#3b82f6', // Blue 500
+    statusUntranslated: palette.primary,
+    statusNeedsReview: palette.accent,
+    statusTranslated: palette.success,
+    hoverBg: palette.light.bgElevated,
+    activeBg: 'rgba(203, 166, 247, 0.1)',
+    selectedBg: 'rgba(203, 166, 247, 0.12)',
+    selectedBorder: palette.primary,
+    brandPrimary: palette.primary,
+    brandSecondary: palette.accent,
+    ...commonSourceColors,
   },
   dark: {
-    // 背景色
     bgPrimary: palette.dark.bgBase,
-    bgSecondary: palette.dark.bgLayout,
-    bgTertiary: palette.dark.bgElevated, // 用于表头、工具栏
-
-    // 文本色
+    bgSecondary: palette.dark.bgBase,
+    bgTertiary: palette.dark.bgElevated,
     textPrimary: palette.dark.textPrimary,
     textSecondary: palette.dark.textSecondary,
     textTertiary: palette.dark.textTertiary,
-    textDisabled: '#52525b', // Zinc 600
-
-    // 边框色
+    textDisabled: palette.dark.borderSecondary,
     borderPrimary: palette.dark.border,
     borderSecondary: palette.dark.borderSecondary,
-
-    // 状态色
-    statusUntranslated: '#60a5fa', // Blue 400
-    statusNeedsReview: '#fbbf24', // Amber 400
-    statusTranslated: '#34d399', // Emerald 400
-
-    // 交互色
-    hoverBg: '#27272a', // Zinc 800
-    activeBg: 'rgba(59, 130, 246, 0.15)', // Blue with opacity
-    selectedBg: 'rgba(59, 130, 246, 0.15)',
-    selectedBorder: '#60a5fa', // Blue 400
+    statusUntranslated: palette.primary,
+    statusNeedsReview: palette.accent,
+    statusTranslated: palette.success,
+    hoverBg: 'rgba(203, 166, 247, 0.08)',
+    activeBg: 'rgba(203, 166, 247, 0.15)',
+    selectedBg: 'rgba(203, 166, 247, 0.18)',
+    selectedBorder: palette.primary,
+    brandPrimary: palette.primary,
+    brandSecondary: palette.accent,
+    ...commonSourceColors,
   },
 };

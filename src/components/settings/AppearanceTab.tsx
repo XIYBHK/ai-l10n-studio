@@ -17,7 +17,15 @@ export const AppearanceTab: React.FC<AppearanceTabProps> = () => {
   return (
     <Card
       title={
-        <span>
+        <span
+          style={{
+            display: 'flex',
+            alignItems: 'center',
+            gap: '8px',
+            fontSize: '14px',
+            fontWeight: 600,
+          }}
+        >
           <BgColorsOutlined /> 外观设置
         </span>
       }
@@ -26,8 +34,12 @@ export const AppearanceTab: React.FC<AppearanceTabProps> = () => {
       <Form form={form} layout="vertical">
         <Row gutter={16}>
           <Col span={12}>
-            <Form.Item label="应用语言" tooltip="更改界面语言后需要重启应用">
-              <Select value={language} onChange={handleLanguageChange}>
+            <Form.Item
+              label="应用语言"
+              tooltip="更改界面语言后需要重启应用"
+              style={{ marginBottom: 0 }}
+            >
+              <Select value={language} onChange={handleLanguageChange} style={{ minWidth: 0 }}>
                 <Select.Option value="zh-CN">简体中文</Select.Option>
                 <Select.Option value="en-US">English</Select.Option>
                 <Select.Option value="zh-TW">繁體中文</Select.Option>
@@ -38,8 +50,16 @@ export const AppearanceTab: React.FC<AppearanceTabProps> = () => {
           </Col>
 
           <Col span={12}>
-            <Form.Item label="主题模式">
-              <ThemeModeSwitch />
+            <Form.Item label="主题模式" style={{ marginBottom: 0 }}>
+              <div
+                style={{
+                  minWidth: 0,
+                  display: 'flex',
+                  alignItems: 'flex-start',
+                }}
+              >
+                <ThemeModeSwitch />
+              </div>
             </Form.Item>
           </Col>
         </Row>

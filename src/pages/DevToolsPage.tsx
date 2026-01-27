@@ -44,8 +44,8 @@ export const DevToolsPage: React.FC = () => {
   const logTextAreaStyle: React.CSSProperties = {
     fontFamily: 'Consolas, Monaco, "Courier New", monospace',
     fontSize: '12px',
-    backgroundColor: isDark ? '#1e1e1e' : '#f5f5f5',
-    color: isDark ? '#d4d4d4' : '#24292e',
+    backgroundColor: 'var(--color-bgPrimary)',
+    color: 'var(--color-textPrimary)',
     border: `1px solid ${colors.borderPrimary}`,
   };
 
@@ -253,12 +253,12 @@ export const DevToolsPage: React.FC = () => {
                 <div
                   style={{
                     fontSize: '12px',
-                    color: isDark ? '#d4d4d4' : '#666',
+                    color: 'var(--color-textPrimary)',
                     marginBottom: 12,
                     padding: '8px 12px',
-                    background: isDark ? 'rgba(59, 130, 246, 0.1)' : '#e6fffb',
+                    background: 'var(--color-bgSecondary)',
                     borderRadius: 4,
-                    border: `1px solid ${isDark ? 'rgba(59, 130, 246, 0.3)' : '#87e8de'}`,
+                    border: '1px solid var(--color-borderSecondary)',
                   }}
                 >
                   💡 捕获精翻（Contextual Refine）和批量翻译时发送给 AI 的提示词及响应

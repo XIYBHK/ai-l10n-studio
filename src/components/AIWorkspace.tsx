@@ -4,7 +4,7 @@ import { RobotOutlined, SettingOutlined, ReloadOutlined, BookOutlined } from '@a
 import { TranslationStats } from '../types/tauri';
 import { MemoryManager } from './MemoryManager';
 import { TermLibraryManager } from './TermLibraryManager';
-import { useTheme } from '../hooks/useTheme';
+import { useCssColors } from '../hooks/useCssColors';
 import { useStatsStore, useSessionStore } from '../store';
 import { createModuleLogger } from '../utils/logger';
 import { useTermLibrary } from '../hooks/useTermLibrary';
@@ -27,7 +27,7 @@ const AIWorkspace: React.FC<AIWorkspaceProps> = memo(({ isTranslating, onResetSt
   const [memoryManagerVisible, setMemoryManagerVisible] = useState(false);
   const [termLibraryVisible, setTermLibraryVisible] = useState(false);
   const { termLibrary } = useTermLibrary({ enabled: true });
-  const { colors } = useTheme();
+  const cssColors = useCssColors();
 
   const { cumulativeStats, resetCumulativeStats } = useStatsStore();
   const { sessionStats } = useSessionStore();
@@ -60,13 +60,10 @@ const AIWorkspace: React.FC<AIWorkspaceProps> = memo(({ isTranslating, onResetSt
     }
   }, [activeAIConfig?.providerId, activeAIConfig?.model]);
 
-  // ❌ 移除在视图层的累计累加，统一在 App.tsx 的聚合器处处理
-
+  // 重置统计数据
   const handleReset = () => {
     resetCumulativeStats();
-    if (onResetStats) {
-      onResetStats();
-    }
+    onResetStats?.();
   };
 
   // 📊 本次会话详细统计（记忆库、去重、AI调用等）
@@ -80,7 +77,7 @@ const AIWorkspace: React.FC<AIWorkspaceProps> = memo(({ isTranslating, onResetSt
           style={{
             padding: '12px',
             textAlign: 'center',
-            color: colors.textTertiary,
+            color: cssColors.textTertiary,
             fontSize: '12px',
           }}
         >
@@ -108,7 +105,7 @@ const AIWorkspace: React.FC<AIWorkspaceProps> = memo(({ isTranslating, onResetSt
         <div
           style={{
             fontSize: '12px',
-            color: colors.textSecondary,
+            color: cssColors.textSecondary,
             fontWeight: 600,
             marginBottom: 12,
           }}
@@ -130,12 +127,12 @@ const AIWorkspace: React.FC<AIWorkspaceProps> = memo(({ isTranslating, onResetSt
             style={{
               textAlign: 'center',
               padding: '8px',
-              background: colors.bgTertiary,
+              background: cssColors.bgTertiary,
               borderRadius: '4px',
             }}
           >
-            <div style={{ color: colors.textTertiary, marginBottom: '4px' }}>记忆库命中</div>
-            <div style={{ fontSize: '16px', fontWeight: 600, color: colors.statusTranslated }}>
+            <div style={{ color: cssColors.textTertiary, marginBottom: '4px' }}>记忆库命中</div>
+            <div style={{ fontSize: '16px', fontWeight: 600, color: cssColors.statusTranslated }}>
               {actualTotal > 0 ? formatPercentage(tmHits, actualTotal) : '0.0%'}
             </div>
           </div>
@@ -143,12 +140,12 @@ const AIWorkspace: React.FC<AIWorkspaceProps> = memo(({ isTranslating, onResetSt
             style={{
               textAlign: 'center',
               padding: '8px',
-              background: colors.bgTertiary,
+              background: cssColors.bgTertiary,
               borderRadius: '4px',
             }}
           >
-            <div style={{ color: colors.textTertiary, marginBottom: '4px' }}>去重节省</div>
-            <div style={{ fontSize: '16px', fontWeight: 600, color: colors.statusUntranslated }}>
+            <div style={{ color: cssColors.textTertiary, marginBottom: '4px' }}>去重节省</div>
+            <div style={{ fontSize: '16px', fontWeight: 600, color: cssColors.statusUntranslated }}>
               {actualTotal > 0 ? formatPercentage(deduplicated, actualTotal) : '0.0%'}
             </div>
           </div>
@@ -156,12 +153,12 @@ const AIWorkspace: React.FC<AIWorkspaceProps> = memo(({ isTranslating, onResetSt
             style={{
               textAlign: 'center',
               padding: '8px',
-              background: colors.bgTertiary,
+              background: cssColors.bgTertiary,
               borderRadius: '4px',
             }}
           >
-            <div style={{ color: colors.textTertiary, marginBottom: '4px' }}>AI调用</div>
-            <div style={{ fontSize: '16px', fontWeight: 600, color: colors.textPrimary }}>
+            <div style={{ color: cssColors.textTertiary, marginBottom: '4px' }}>AI调用</div>
+            <div style={{ fontSize: '16px', fontWeight: 600, color: cssColors.textPrimary }}>
               {actualTotal > 0 ? formatPercentage(aiTranslated, actualTotal) : '0.0%'}
             </div>
           </div>
@@ -169,12 +166,12 @@ const AIWorkspace: React.FC<AIWorkspaceProps> = memo(({ isTranslating, onResetSt
             style={{
               textAlign: 'center',
               padding: '8px',
-              background: colors.bgTertiary,
+              background: cssColors.bgTertiary,
               borderRadius: '4px',
             }}
           >
-            <div style={{ color: colors.textTertiary, marginBottom: '4px' }}>记忆库新增</div>
-            <div style={{ fontSize: '16px', fontWeight: 600, color: colors.statusTranslated }}>
+            <div style={{ color: cssColors.textTertiary, marginBottom: '4px' }}>记忆库新增</div>
+            <div style={{ fontSize: '16px', fontWeight: 600, color: cssColors.statusTranslated }}>
               {tmLearned}
             </div>
           </div>
@@ -194,33 +191,33 @@ const AIWorkspace: React.FC<AIWorkspaceProps> = memo(({ isTranslating, onResetSt
             style={{
               textAlign: 'center',
               padding: '6px',
-              background: colors.bgTertiary,
+              background: cssColors.bgTertiary,
               borderRadius: '4px',
             }}
           >
-            <div style={{ color: colors.textTertiary }}>输入</div>
+            <div style={{ color: cssColors.textTertiary }}>输入</div>
             <div style={{ fontSize: '14px', fontWeight: 600 }}>{formatTokens(inputTokens)}</div>
           </div>
           <div
             style={{
               textAlign: 'center',
               padding: '6px',
-              background: colors.bgTertiary,
+              background: cssColors.bgTertiary,
               borderRadius: '4px',
             }}
           >
-            <div style={{ color: colors.textTertiary }}>输出</div>
+            <div style={{ color: cssColors.textTertiary }}>输出</div>
             <div style={{ fontSize: '14px', fontWeight: 600 }}>{formatTokens(outputTokens)}</div>
           </div>
           <div
             style={{
               textAlign: 'center',
               padding: '6px',
-              background: colors.bgTertiary,
+              background: cssColors.bgTertiary,
               borderRadius: '4px',
             }}
           >
-            <div style={{ color: colors.textTertiary }}>总计</div>
+            <div style={{ color: cssColors.textTertiary }}>总计</div>
             <div style={{ fontSize: '14px', fontWeight: 600 }}>{formatTokens(totalTokens)}</div>
           </div>
         </div>
@@ -229,7 +226,7 @@ const AIWorkspace: React.FC<AIWorkspaceProps> = memo(({ isTranslating, onResetSt
         <div
           style={{
             padding: '8px',
-            background: colors.bgTertiary,
+            background: cssColors.bgTertiary,
             borderRadius: '4px',
             display: 'flex',
             justifyContent: 'space-between',
@@ -237,11 +234,11 @@ const AIWorkspace: React.FC<AIWorkspaceProps> = memo(({ isTranslating, onResetSt
             fontSize: '12px',
           }}
         >
-          <span style={{ color: colors.textSecondary }}>💰 预估成本</span>
+          <span style={{ color: cssColors.textSecondary }}>💰 预估成本</span>
           <span
             style={{
               fontWeight: 600,
-              color: colors.statusTranslated,
+              color: cssColors.statusTranslated,
               fontSize: '16px',
               fontFamily: 'monospace',
             }}
@@ -256,11 +253,11 @@ const AIWorkspace: React.FC<AIWorkspaceProps> = memo(({ isTranslating, onResetSt
             style={{
               marginTop: 8,
               padding: '8px 10px',
-              background: colors.bgTertiary,
-              border: `1px solid ${colors.borderPrimary}`,
+              background: cssColors.bgTertiary,
+              border: `1px solid ${cssColors.borderPrimary}`,
               borderRadius: '4px',
               fontSize: '11px',
-              color: colors.textSecondary,
+              color: cssColors.textSecondary,
               lineHeight: '1.5',
             }}
           >
@@ -279,10 +276,10 @@ const AIWorkspace: React.FC<AIWorkspaceProps> = memo(({ isTranslating, onResetSt
             style={{
               marginTop: 8,
               padding: '6px 8px',
-              background: colors.bgTertiary,
+              background: cssColors.bgTertiary,
               borderRadius: '4px',
               fontSize: '11px',
-              color: colors.statusTranslated,
+              color: cssColors.statusTranslated,
               textAlign: 'center',
             }}
           >
@@ -301,7 +298,7 @@ const AIWorkspace: React.FC<AIWorkspaceProps> = memo(({ isTranslating, onResetSt
           style={{
             padding: '12px',
             textAlign: 'center',
-            color: colors.textTertiary,
+            color: cssColors.textTertiary,
             fontSize: '12px',
           }}
         >
@@ -325,7 +322,7 @@ const AIWorkspace: React.FC<AIWorkspaceProps> = memo(({ isTranslating, onResetSt
             marginBottom: 8,
           }}
         >
-          <span style={{ fontSize: '12px', color: colors.textSecondary, fontWeight: 600 }}>
+          <span style={{ fontSize: '12px', color: cssColors.textSecondary, fontWeight: 600 }}>
             📊 累计统计
           </span>
           <Popconfirm
@@ -360,12 +357,12 @@ const AIWorkspace: React.FC<AIWorkspaceProps> = memo(({ isTranslating, onResetSt
             style={{
               textAlign: 'center',
               padding: '6px',
-              background: colors.bgTertiary,
+              background: cssColors.bgTertiary,
               borderRadius: '4px',
             }}
           >
-            <div style={{ color: colors.textTertiary }}>总计翻译</div>
-            <div style={{ fontSize: '16px', fontWeight: 600, color: colors.textPrimary }}>
+            <div style={{ color: cssColors.textTertiary }}>总计翻译</div>
+            <div style={{ fontSize: '16px', fontWeight: 600, color: cssColors.textPrimary }}>
               {cumulativeStats.total}
             </div>
           </div>
@@ -373,12 +370,12 @@ const AIWorkspace: React.FC<AIWorkspaceProps> = memo(({ isTranslating, onResetSt
             style={{
               textAlign: 'center',
               padding: '6px',
-              background: colors.bgTertiary,
+              background: cssColors.bgTertiary,
               borderRadius: '4px',
             }}
           >
-            <div style={{ color: colors.textTertiary }}>AI调用</div>
-            <div style={{ fontSize: '16px', fontWeight: 600, color: colors.textPrimary }}>
+            <div style={{ color: cssColors.textTertiary }}>AI调用</div>
+            <div style={{ fontSize: '16px', fontWeight: 600, color: cssColors.textPrimary }}>
               {cumulativeStats.ai_translated}
             </div>
           </div>
@@ -396,12 +393,12 @@ const AIWorkspace: React.FC<AIWorkspaceProps> = memo(({ isTranslating, onResetSt
             style={{
               textAlign: 'center',
               padding: '6px',
-              background: colors.bgTertiary,
+              background: cssColors.bgTertiary,
               borderRadius: '4px',
             }}
           >
-            <div style={{ color: colors.textTertiary }}>记忆命中</div>
-            <div style={{ fontSize: '16px', fontWeight: 600, color: colors.statusTranslated }}>
+            <div style={{ color: cssColors.textTertiary }}>记忆命中</div>
+            <div style={{ fontSize: '16px', fontWeight: 600, color: cssColors.statusTranslated }}>
               {cumulativeStats.tm_hits}
             </div>
           </div>
@@ -409,12 +406,12 @@ const AIWorkspace: React.FC<AIWorkspaceProps> = memo(({ isTranslating, onResetSt
             style={{
               textAlign: 'center',
               padding: '6px',
-              background: colors.bgTertiary,
+              background: cssColors.bgTertiary,
               borderRadius: '4px',
             }}
           >
-            <div style={{ color: colors.textTertiary }}>去重命中</div>
-            <div style={{ fontSize: '16px', fontWeight: 600, color: colors.statusUntranslated }}>
+            <div style={{ color: cssColors.textTertiary }}>去重命中</div>
+            <div style={{ fontSize: '16px', fontWeight: 600, color: cssColors.statusUntranslated }}>
               {cumulativeStats.deduplicated ?? 0}
             </div>
           </div>
@@ -431,12 +428,12 @@ const AIWorkspace: React.FC<AIWorkspaceProps> = memo(({ isTranslating, onResetSt
             style={{
               textAlign: 'center',
               padding: '6px',
-              background: colors.bgTertiary,
+              background: cssColors.bgTertiary,
               borderRadius: '4px',
             }}
           >
-            <div style={{ color: colors.textTertiary }}>记忆库新增</div>
-            <div style={{ fontSize: '16px', fontWeight: 600, color: colors.statusTranslated }}>
+            <div style={{ color: cssColors.textTertiary }}>记忆库新增</div>
+            <div style={{ fontSize: '16px', fontWeight: 600, color: cssColors.statusTranslated }}>
               {cumulativeTmLearned}
             </div>
           </div>
@@ -447,7 +444,7 @@ const AIWorkspace: React.FC<AIWorkspaceProps> = memo(({ isTranslating, onResetSt
           style={{
             marginTop: 8,
             padding: '6px 8px',
-            background: colors.bgTertiary,
+            background: cssColors.bgTertiary,
             borderRadius: '4px',
             display: 'flex',
             justifyContent: 'space-between',
@@ -455,9 +452,9 @@ const AIWorkspace: React.FC<AIWorkspaceProps> = memo(({ isTranslating, onResetSt
             fontSize: '11px',
           }}
         >
-          <span style={{ color: colors.textSecondary }}>Token: {formatTokens(totalTokens)}</span>
+          <span style={{ color: cssColors.textSecondary }}>Token: {formatTokens(totalTokens)}</span>
           <span
-            style={{ fontWeight: 600, color: colors.statusTranslated, fontFamily: 'monospace' }}
+            style={{ fontWeight: 600, color: cssColors.statusTranslated, fontFamily: 'monospace' }}
           >
             {formatCostByLocale(cost, language)}
           </span>
@@ -474,7 +471,7 @@ const AIWorkspace: React.FC<AIWorkspaceProps> = memo(({ isTranslating, onResetSt
         bordered={false}
         title={
           <span style={{ fontSize: '14px', fontWeight: 600 }}>
-            <RobotOutlined style={{ marginRight: 8, color: colors.statusUntranslated }} />
+            <RobotOutlined style={{ marginRight: 8, color: cssColors.statusUntranslated }} />
             AI 工作区
             {isTranslating && (
               <Tag color="processing" style={{ marginLeft: 8, border: 'none' }}>
@@ -489,7 +486,7 @@ const AIWorkspace: React.FC<AIWorkspaceProps> = memo(({ isTranslating, onResetSt
             size="small"
             icon={<SettingOutlined />}
             onClick={() => setMemoryManagerVisible(true)}
-            style={{ color: colors.textSecondary }}
+            style={{ color: cssColors.textSecondary }}
           >
             记忆库
           </Button>
@@ -498,19 +495,19 @@ const AIWorkspace: React.FC<AIWorkspaceProps> = memo(({ isTranslating, onResetSt
         style={{
           height: '100%',
           overflowY: 'auto',
-          background: colors.bgSecondary, // 使用稍深的背景色区分
+          background: cssColors.bgSecondary, // 使用稍深的背景色区分
           borderRadius: 0,
         }}
         // @ts-ignore - Ant Design 5.5+ styles 属性类型定义问题
         styles={{
           header: {
-            background: colors.bgSecondary,
-            borderBottom: `1px solid ${colors.borderSecondary}`,
+            background: cssColors.bgSecondary,
+            borderBottom: `1px solid ${cssColors.borderSecondary}`,
             minHeight: '46px',
           },
           body: {
             padding: '12px',
-            background: colors.bgSecondary,
+            background: cssColors.bgSecondary,
           },
         }}
       >
@@ -543,7 +540,7 @@ const AIWorkspace: React.FC<AIWorkspaceProps> = memo(({ isTranslating, onResetSt
                   marginBottom: 8,
                 }}
               >
-                <span style={{ fontSize: '12px', color: colors.textSecondary, fontWeight: 600 }}>
+                <span style={{ fontSize: '12px', color: cssColors.textSecondary, fontWeight: 600 }}>
                   <BookOutlined /> 术语库 ({termLibrary.metadata.total_terms}条)
                 </span>
                 <Button
@@ -563,14 +560,14 @@ const AIWorkspace: React.FC<AIWorkspaceProps> = memo(({ isTranslating, onResetSt
                 <div
                   style={{
                     padding: '8px 12px',
-                    background: colors.bgTertiary,
+                    background: cssColors.bgTertiary,
                     borderRadius: '4px',
                     fontSize: '12px',
                     lineHeight: '1.6',
-                    color: colors.textSecondary,
+                    color: cssColors.textSecondary,
                   }}
                 >
-                  <div style={{ fontWeight: 600, marginBottom: 4, color: colors.textPrimary }}>
+                  <div style={{ fontWeight: 600, marginBottom: 4, color: cssColors.textPrimary }}>
                     翻译风格提示 ({termLibrary.style_summary.based_on_terms}条术语)
                   </div>
                   <div style={{ whiteSpace: 'pre-line' }}>{termLibrary.style_summary.prompt}</div>
@@ -578,7 +575,7 @@ const AIWorkspace: React.FC<AIWorkspaceProps> = memo(({ isTranslating, onResetSt
                     style={{
                       marginTop: 8,
                       fontSize: '11px',
-                      color: colors.textTertiary,
+                      color: cssColors.textTertiary,
                     }}
                   >
                     v{termLibrary.style_summary.version} ·{' '}

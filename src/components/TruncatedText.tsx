@@ -23,15 +23,13 @@ interface TruncatedTextProps {
  */
 export const TruncatedText: React.FC<TruncatedTextProps> = React.memo(
   ({ text, maxWidth = 200, style = {}, className = '', showTooltip = true }) => {
-    const { colors } = useTheme();
-
     const truncatedStyle: React.CSSProperties = {
       overflow: 'hidden',
       textOverflow: 'ellipsis',
       whiteSpace: 'nowrap',
       maxWidth: typeof maxWidth === 'number' ? `${maxWidth}px` : maxWidth,
       display: 'block',
-      color: colors.textPrimary,
+      color: 'var(--color-textPrimary)',
       ...style,
     };
 

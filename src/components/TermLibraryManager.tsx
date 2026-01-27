@@ -9,7 +9,7 @@ import {
 } from '@ant-design/icons';
 import { TermEntry } from '../types/termLibrary';
 import { useTermLibrary } from '../hooks/useTermLibrary';
-import { useTheme } from '../hooks/useTheme';
+import { useCssColors } from '../hooks/useCssColors';
 import { useAppData } from '../hooks/useConfig';
 import { createModuleLogger } from '../utils/logger';
 import { termLibraryCommands } from '../services/commands'; // ✅ 迁移到统一命令层
@@ -20,7 +20,6 @@ const log = createModuleLogger('TermLibraryManager');
 interface TermLibraryManagerProps {
   visible: boolean;
   onClose: () => void;
-  // ⛔ 移除: apiKey (使用 useAppData 统一获取)
 }
 
 interface EditingTerm {
@@ -28,18 +27,13 @@ interface EditingTerm {
   user_translation: string;
 }
 
-export const TermLibraryManager: React.FC<TermLibraryManagerProps> = ({
-  visible,
-  onClose,
-  // ⛔ 移除: apiKey 参数
-}) => {
-  // ✅ 使用统一数据提供者获取AI配置
+export const TermLibraryManager: React.FC<TermLibraryManagerProps> = ({ visible, onClose }) => {
   const { activeAIConfig } = useAppData();
   const { termLibrary: library, refresh, mutate } = useTermLibrary({ enabled: visible });
   const [loading, setLoading] = useState(false);
   const [editingKey, setEditingKey] = useState<string>('');
   const [editingTerm, setEditingTerm] = useState<EditingTerm | null>(null);
-  const { colors } = useTheme();
+  const cssColors = useCssColors();
 
   useEffect(() => {
     if (visible) {
@@ -99,9 +93,7 @@ export const TermLibraryManager: React.FC<TermLibraryManagerProps> = ({
     setEditingTerm(null);
   };
 
-  // 生成风格总结
   const handleGenerateStyleSummary = async () => {
-    // ✅ 统一检查：是否有启用的AI配置
     if (!activeAIConfig) {
       message.error('请先设置并启用 AI 配置');
       return;
@@ -151,7 +143,7 @@ export const TermLibraryManager: React.FC<TermLibraryManagerProps> = ({
             style={{ fontSize: '13px' }}
           />
         ) : (
-          <span style={{ fontSize: '13px', color: colors.statusTranslated }}>{text}</span>
+          <span style={{ fontSize: '13px', color: cssColors.statusTranslated }}>{text}</span>
         );
       },
     },
@@ -163,7 +155,7 @@ export const TermLibraryManager: React.FC<TermLibraryManagerProps> = ({
       ellipsis: true,
       render: (text: string) => (
         <Tooltip title={text}>
-          <span style={{ fontSize: '13px', color: colors.textTertiary }}>{text}</span>
+          <span style={{ fontSize: '13px', color: cssColors.textTertiary }}>{text}</span>
         </Tooltip>
       ),
     },
@@ -248,13 +240,13 @@ export const TermLibraryManager: React.FC<TermLibraryManagerProps> = ({
         style={{
           marginBottom: 16,
           padding: '10px 12px',
-          background: colors.bgTertiary,
-          border: `1px solid ${colors.borderPrimary}`,
+          background: cssColors.bgTertiary,
+          border: `1px solid ${cssColors.borderPrimary}`,
           borderRadius: 4,
         }}
       >
-        <div style={{ fontSize: '12px', color: colors.textSecondary, lineHeight: '1.6' }}>
-          💡 <strong style={{ color: colors.textPrimary }}>风格提示词自动生成规则：</strong>
+        <div style={{ fontSize: '12px', color: cssColors.textSecondary, lineHeight: '1.6' }}>
+          💡 <strong style={{ color: cssColors.textPrimary }}>风格提示词自动生成规则：</strong>
           首次添加或每新增5条术语时自动生成，也可随时点击下方按钮手动生成
         </div>
       </div>
@@ -265,7 +257,7 @@ export const TermLibraryManager: React.FC<TermLibraryManagerProps> = ({
           style={{
             marginBottom: 16,
             padding: 12,
-            background: colors.bgTertiary,
+            background: cssColors.bgTertiary,
             borderRadius: 4,
           }}
         >
@@ -274,7 +266,7 @@ export const TermLibraryManager: React.FC<TermLibraryManagerProps> = ({
               fontSize: '12px',
               fontWeight: 600,
               marginBottom: 8,
-              color: colors.textPrimary,
+              color: cssColors.textPrimary,
             }}
           >
             📝 当前风格总结 (v{library.style_summary.version})
@@ -283,7 +275,7 @@ export const TermLibraryManager: React.FC<TermLibraryManagerProps> = ({
             style={{
               fontSize: '13px',
               lineHeight: '1.6',
-              color: colors.textSecondary,
+              color: cssColors.textSecondary,
             }}
           >
             {library.style_summary.prompt}
@@ -292,7 +284,7 @@ export const TermLibraryManager: React.FC<TermLibraryManagerProps> = ({
             style={{
               fontSize: '11px',
               marginTop: 8,
-              color: colors.textTertiary,
+              color: cssColors.textTertiary,
             }}
           >
             基于 {library.style_summary.based_on_terms} 条术语 · 最后更新:{' '}
@@ -324,7 +316,7 @@ export const TermLibraryManager: React.FC<TermLibraryManagerProps> = ({
           style={{
             textAlign: 'center',
             padding: '40px 20px',
-            color: colors.textTertiary,
+            color: cssColors.textTertiary,
           }}
         >
           <BookOutlined style={{ fontSize: 48, marginBottom: 16 }} />

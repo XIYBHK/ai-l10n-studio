@@ -14,7 +14,6 @@ interface DevToolsThemeProviderProps {
 export const DevToolsThemeProvider: React.FC<DevToolsThemeProviderProps> = ({ children }) => {
   const themeData = useTheme();
 
-  // 🔔 监听主窗口的主题变更事件
   useEffect(() => {
     let unlistenFn: (() => void) | null = null;
 
@@ -23,7 +22,6 @@ export const DevToolsThemeProvider: React.FC<DevToolsThemeProviderProps> = ({ ch
         'theme:changed',
         (event) => {
           console.log('[DevToolsThemeProvider] 收到主题变更事件:', event.payload);
-          // 更新主题
           themeData.setTheme(event.payload.theme);
         }
       );
@@ -48,7 +46,7 @@ export const DevToolsThemeProvider: React.FC<DevToolsThemeProviderProps> = ({ ch
         data-theme={themeData.isDark ? 'dark' : 'light'}
         style={{
           height: '100vh',
-          background: themeData.colors.bgPrimary,
+          background: 'var(--color-bgPrimary)',
           overflow: 'hidden',
         }}
       >

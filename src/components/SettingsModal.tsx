@@ -28,7 +28,14 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({ visible, onClose }
     {
       key: 'ai-config',
       label: (
-        <span>
+        <span
+          style={{
+            display: 'flex',
+            alignItems: 'center',
+            gap: '6px',
+            fontSize: '13px',
+          }}
+        >
           <ApiOutlined /> AI 配置
         </span>
       ),
@@ -37,7 +44,14 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({ visible, onClose }
     {
       key: 'system-prompt',
       label: (
-        <span>
+        <span
+          style={{
+            display: 'flex',
+            alignItems: 'center',
+            gap: '6px',
+            fontSize: '13px',
+          }}
+        >
           <FileTextOutlined /> 系统提示词
         </span>
       ),
@@ -46,7 +60,14 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({ visible, onClose }
     {
       key: 'appearance',
       label: (
-        <span>
+        <span
+          style={{
+            display: 'flex',
+            alignItems: 'center',
+            gap: '6px',
+            fontSize: '13px',
+          }}
+        >
           <BgColorsOutlined /> 外观
         </span>
       ),
@@ -55,7 +76,14 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({ visible, onClose }
     {
       key: 'notification',
       label: (
-        <span>
+        <span
+          style={{
+            display: 'flex',
+            alignItems: 'center',
+            gap: '6px',
+            fontSize: '13px',
+          }}
+        >
           <BellOutlined /> 通知
         </span>
       ),
@@ -64,7 +92,14 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({ visible, onClose }
     {
       key: 'logs',
       label: (
-        <span>
+        <span
+          style={{
+            display: 'flex',
+            alignItems: 'center',
+            gap: '6px',
+            fontSize: '13px',
+          }}
+        >
           <InfoCircleOutlined /> 日志
         </span>
       ),
@@ -73,7 +108,20 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({ visible, onClose }
   ];
 
   return (
-    <Modal title="设置" open={visible} onCancel={onClose} footer={null} width={800} destroyOnClose>
+    <Modal
+      title="设置"
+      open={visible}
+      onCancel={onClose}
+      footer={null}
+      width={800}
+      destroyOnClose
+      styles={{
+        body: {
+          maxHeight: '70vh',
+          overflowY: 'auto',
+        },
+      }}
+    >
       <Tabs items={tabItems} defaultActiveKey="ai-config" />
     </Modal>
   );

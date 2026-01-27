@@ -1,5 +1,10 @@
 :root {
-  font-family: Inter, system-ui, Avenir, Helvetica, Arial, sans-serif;
+  /* 字体系统 */
+  --display-font: 'Syne', sans-serif;
+  --body-font: 'Space Grotesk', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  --mono-font: 'Space Mono', 'JetBrains Mono', 'Fira Code', Consolas, monospace;
+
+  font-family: var(--body-font);
   line-height: 1.5;
   font-weight: 400;
 

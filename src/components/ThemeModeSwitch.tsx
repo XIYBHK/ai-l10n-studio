@@ -2,10 +2,6 @@ import React from 'react';
 import { Segmented } from 'antd';
 import { BulbOutlined, MoonOutlined, DesktopOutlined } from '@ant-design/icons';
 import { useTheme } from '../hooks/useTheme';
-import { useTranslation } from 'react-i18next';
-
-// 🚀 简化版主题切换组件 - 参考 cc-switch
-// 移除复杂逻辑，直接使用 useTheme
 
 interface ThemeModeSwitchProps {
   style?: React.CSSProperties;
@@ -15,7 +11,6 @@ interface ThemeModeSwitchProps {
 export const ThemeModeSwitch: React.FC<ThemeModeSwitchProps> = React.memo(
   ({ style, className }) => {
     const { themeMode, setTheme } = useTheme();
-    const { t } = useTranslation();
 
     const options = [
       {
@@ -25,10 +20,11 @@ export const ThemeModeSwitch: React.FC<ThemeModeSwitchProps> = React.memo(
               display: 'flex',
               alignItems: 'center',
               gap: '6px',
+              fontSize: '13px',
             }}
           >
             <BulbOutlined />
-            <span>{t('theme.light') || '浅色'}</span>
+            <span>浅色</span>
           </div>
         ),
         value: 'light',
@@ -40,10 +36,11 @@ export const ThemeModeSwitch: React.FC<ThemeModeSwitchProps> = React.memo(
               display: 'flex',
               alignItems: 'center',
               gap: '6px',
+              fontSize: '13px',
             }}
           >
             <MoonOutlined />
-            <span>{t('theme.dark') || '深色'}</span>
+            <span>深色</span>
           </div>
         ),
         value: 'dark',
@@ -55,10 +52,11 @@ export const ThemeModeSwitch: React.FC<ThemeModeSwitchProps> = React.memo(
               display: 'flex',
               alignItems: 'center',
               gap: '6px',
+              fontSize: '13px',
             }}
           >
             <DesktopOutlined />
-            <span>{t('theme.system') || '跟随系统'}</span>
+            <span>跟随系统</span>
           </div>
         ),
         value: 'system',

@@ -1,47 +1,44 @@
-import React, { useState, useEffect, useRef, memo, useCallback } from 'react';
+import React, { useState, useEffect, useRef, memo, useCallback, useMemo } from 'react';
 import { Progress, Button, Badge } from 'antd';
 import { CheckOutlined, ThunderboltOutlined } from '@ant-design/icons';
 import { useVirtualizer } from '@tanstack/react-virtual';
 import { POEntry } from '../types/tauri';
 import { useTranslationStore } from '../store';
 import { useTheme } from '../hooks/useTheme';
+import { useCssColors } from '../hooks/useCssColors';
 import { createModuleLogger } from '../utils/logger';
 import { TruncatedText } from './TruncatedText';
 
-// 💡 优化：使用 @tanstack/react-virtual（性能更好，API更现代）
 const log = createModuleLogger('EntryList');
 
-// 翻译来源样式映射
-const TRANSLATION_SOURCE_STYLES = {
-  tm: {
-    bg: 'rgba(82, 196, 26, 0.1)',
-    color: '#52c41a',
-    label: '记忆',
-  },
-  dedup: {
-    bg: 'rgba(24, 144, 255, 0.1)',
-    color: '#1890ff',
-    label: '去重',
-  },
-  ai: {
-    bg: 'rgba(250, 173, 20, 0.1)',
-    color: '#faad14',
-    label: 'AI',
-  },
-} as const;
-
-function getSourceStyle(source: 'tm' | 'dedup' | 'ai' | undefined) {
-  return TRANSLATION_SOURCE_STYLES[source || 'ai'];
+// 获取翻译来源样式（使用 CSS 变量）
+function getSourceStyle(
+  source: 'tm' | 'dedup' | 'ai' | undefined,
+  cssColors: {
+    sourceTmBg: string;
+    sourceTmColor: string;
+    sourceDedupBg: string;
+    sourceDedupColor: string;
+    sourceAiBg: string;
+    sourceAiColor: string;
+  }
+) {
+  const styles = {
+    tm: { bg: cssColors.sourceTmBg, color: cssColors.sourceTmColor, label: '记忆' },
+    dedup: { bg: cssColors.sourceDedupBg, color: cssColors.sourceDedupColor, label: '去重' },
+    ai: { bg: cssColors.sourceAiBg, color: cssColors.sourceAiColor, label: 'AI' },
+  };
+  return styles[source || 'ai'];
 }
 
 function getEntryBackground(
   isSelected: boolean,
   isCurrent: boolean,
-  colors: { selectedBg: string; hoverBg: string; bgPrimary: string }
+  cssColors: { selectedBg: string; hoverBg: string; bgPrimary: string }
 ): string {
-  if (isSelected) return colors.selectedBg;
-  if (isCurrent) return colors.hoverBg;
-  return colors.bgPrimary;
+  if (isSelected) return cssColors.selectedBg;
+  if (isCurrent) return cssColors.hoverBg;
+  return cssColors.bgPrimary;
 }
 
 interface EntryListProps {
@@ -51,7 +48,7 @@ interface EntryListProps {
   progress: number;
   onEntrySelect: (entry: POEntry) => void;
   onTranslateSelected?: (indices: number[]) => void;
-  onContextualRefine?: (indices: number[]) => void; // Phase 7: 精翻选中的条目
+  onContextualRefine?: (indices: number[]) => void;
 }
 
 // 渲染单个列表项（@tanstack/react-virtual）
@@ -61,7 +58,7 @@ const renderVirtualItem = (
   entries: POEntry[],
   selectedRowKeys: React.Key[],
   currentEntry: POEntry | null,
-  colors: any,
+  cssColors: any, // 使用 CSS 变量引用
   columnType: 'untranslated' | 'needsReview' | 'translated',
   onRowClick: (
     entry: POEntry,
@@ -89,10 +86,9 @@ const renderVirtualItem = (
         transform: `translateY(${virtualItem.start}px)`,
         padding: '8px 12px',
         cursor: 'pointer',
-        backgroundColor: getEntryBackground(isSelected, isCurrent, colors),
-        borderBottom: `1px solid ${colors.borderSecondary}`,
-        borderLeft: isSelected ? `3px solid ${colors.selectedBorder}` : '3px solid transparent',
-        transition: 'background-color 0.1s',
+        backgroundColor: getEntryBackground(isSelected, isCurrent, cssColors),
+        borderBottom: `1px solid ${cssColors.borderSecondary}`,
+        borderLeft: isSelected ? `3px solid ${cssColors.selectedBorder}` : '3px solid transparent',
         userSelect: 'none',
         boxSizing: 'border-box',
         overflow: 'hidden',
@@ -103,7 +99,7 @@ const renderVirtualItem = (
       <div
         style={{
           fontSize: '11px',
-          color: colors.textTertiary,
+          color: cssColors.textTertiary,
           marginBottom: 4,
           display: 'flex',
           justifyContent: 'space-between',
@@ -111,7 +107,13 @@ const renderVirtualItem = (
           height: '16px',
         }}
       >
-        <span style={{ fontFamily: 'monospace', opacity: 0.7, fontSize: '11px' }}>
+        <span
+          style={{
+            fontFamily: 'monospace',
+            opacity: 0.7,
+            fontSize: '11px',
+          }}
+        >
           #{globalIndex + 1}
         </span>
         {status === 'needs-review' && entry.translationSource && (
@@ -122,15 +124,15 @@ const renderVirtualItem = (
               borderRadius: '4px',
               whiteSpace: 'nowrap',
               fontWeight: 500,
-              backgroundColor: getSourceStyle(entry.translationSource).bg,
-              color: getSourceStyle(entry.translationSource).color,
+              backgroundColor: getSourceStyle(entry.translationSource, cssColors).bg,
+              color: getSourceStyle(entry.translationSource, cssColors).color,
               display: 'flex',
               alignItems: 'center',
               gap: '3px',
               lineHeight: '1.2',
             }}
           >
-            {getSourceStyle(entry.translationSource).label}
+            {getSourceStyle(entry.translationSource, cssColors).label}
           </span>
         )}
       </div>
@@ -141,7 +143,7 @@ const renderVirtualItem = (
           fontSize: '13px',
           lineHeight: '1.4',
           marginBottom: 4,
-          color: entry.msgid ? colors.textPrimary : colors.textDisabled,
+          color: entry.msgid ? cssColors.textPrimary : cssColors.textDisabled,
           fontWeight: 500,
         }}
       />
@@ -151,7 +153,7 @@ const renderVirtualItem = (
           maxWidth="100%"
           style={{
             fontSize: '12px',
-            color: colors.textSecondary,
+            color: cssColors.textSecondary,
           }}
         />
       )}
@@ -180,28 +182,26 @@ const EntryList: React.FC<EntryListProps> = memo(
     progress,
     onEntrySelect,
     onTranslateSelected,
-    onContextualRefine, // Phase 7
+    onContextualRefine,
   }) => {
     const { updateEntry } = useTranslationStore();
     const { colors } = useTheme();
+    const cssColors = useCssColors();
+
     const [selectedRowKeys, setSelectedRowKeys] = useState<React.Key[]>([]);
     const [lastClickedIndex, setLastClickedIndex] = useState<number | null>(null);
     const [lastClickedColumn, setLastClickedColumn] = useState<
       'untranslated' | 'needsReview' | 'translated' | null
-    >(null); // 记录上次点击的列
+    >(null);
     const containerRef = useRef<HTMLDivElement>(null);
-
-    // ⚡ 性能优化：使用 ref 直接操作 DOM 避免拖拽时频繁重渲染
     const col1Ref = useRef<HTMLDivElement>(null);
     const col2Ref = useRef<HTMLDivElement>(null);
     const col3Ref = useRef<HTMLDivElement>(null);
 
-    // 三列宽度状态
-    const [columnWidths, setColumnWidths] = useState([33.33, 33.33, 33.34]); // 百分比
-    const widthsRef = useRef(columnWidths); // 使用 ref 保持最新值，避免闭包问题
+    const [columnWidths, setColumnWidths] = useState([33.33, 33.33, 33.34]);
+    const widthsRef = useRef(columnWidths);
     const [resizingColumn, setResizingColumn] = useState<number | null>(null);
 
-    // 同步 ref
     useEffect(() => {
       widthsRef.current = columnWidths;
     }, [columnWidths]);
@@ -264,7 +264,7 @@ const EntryList: React.FC<EntryListProps> = memo(
       'untranslated' | 'needsReview' | 'translated' | null
     >(null);
 
-    // 按状态分组条目 - 使用 useMemo 优化
+    // 按状态分组条目
     const groupedEntries = React.useMemo(() => {
       const groups = {
         untranslated: entries.filter((e) => getEntryStatus(e) === 'untranslated'),
@@ -293,7 +293,7 @@ const EntryList: React.FC<EntryListProps> = memo(
       [entries, groupedEntries, updateEntry]
     );
 
-    // 列宽调整 - 性能优化版：直接操作 DOM
+    // 列宽调整
     useEffect(() => {
       if (resizingColumn === null) return;
 
@@ -302,7 +302,6 @@ const EntryList: React.FC<EntryListProps> = memo(
       const handleMouseMove = (e: MouseEvent) => {
         if (!containerRef.current) return;
 
-        // 使用 requestAnimationFrame 节流 DOM 操作
         cancelAnimationFrame(animationFrameId);
         animationFrameId = requestAnimationFrame(() => {
           if (!containerRef.current) return;
@@ -347,7 +346,6 @@ const EntryList: React.FC<EntryListProps> = memo(
       const handleMouseUp = () => {
         cancelAnimationFrame(animationFrameId);
         setResizingColumn(null);
-        // 拖拽结束后，同步最终状态到 React，触发一次重渲染以保持一致性
         setColumnWidths(widthsRef.current);
         document.body.style.cursor = '';
         document.body.style.userSelect = '';
@@ -356,7 +354,7 @@ const EntryList: React.FC<EntryListProps> = memo(
       document.addEventListener('mousemove', handleMouseMove);
       document.addEventListener('mouseup', handleMouseUp);
       document.body.style.cursor = 'col-resize';
-      document.body.style.userSelect = 'none'; // 防止拖拽时选中文字
+      document.body.style.userSelect = 'none';
 
       return () => {
         cancelAnimationFrame(animationFrameId);
@@ -365,9 +363,8 @@ const EntryList: React.FC<EntryListProps> = memo(
         document.body.style.cursor = '';
         document.body.style.userSelect = '';
       };
-    }, [resizingColumn]); // 依赖项只有 resizingColumn，拖拽过程中不重新绑定事件
+    }, [resizingColumn]);
 
-    // 键盘事件处理
     useEffect(() => {
       const handleKeyDown = (event: KeyboardEvent) => {
         // Ctrl+A 或 Cmd+A 全选当前列
@@ -410,7 +407,7 @@ const EntryList: React.FC<EntryListProps> = memo(
           event.preventDefault();
           setSelectedRowKeys([]);
         }
-        // Phase 7: Ctrl+Shift+R 精翻选中的待确认条目
+        // Ctrl+Shift+R 精翻选中的待确认条目
         else if ((event.ctrlKey || event.metaKey) && event.shiftKey && event.key === 'R') {
           event.preventDefault();
           if (selectedRowKeys.length > 0 && !isTranslating) {
@@ -431,7 +428,6 @@ const EntryList: React.FC<EntryListProps> = memo(
       const container = containerRef.current;
       if (container) {
         container.addEventListener('keydown', handleKeyDown);
-        // 设置 tabIndex 使 div 可聚焦
         container.setAttribute('tabIndex', '0');
       }
 
@@ -460,7 +456,6 @@ const EntryList: React.FC<EntryListProps> = memo(
         onEntrySelect(record);
 
         if (event.shiftKey && lastClickedIndex !== null && lastClickedColumn === columnType) {
-          // 🔧 Shift + 点击：只在同一列内选择范围
           const columnEntries = groupedEntries[columnType];
           const columnIndices = columnEntries.map((entry) => entries.indexOf(entry));
 
@@ -474,23 +469,20 @@ const EntryList: React.FC<EntryListProps> = memo(
             setSelectedRowKeys(rangeKeys);
           }
         } else if (event.ctrlKey || event.metaKey) {
-          // Ctrl/Cmd + 点击：切换选择状态
           if (selectedRowKeys.includes(index)) {
             setSelectedRowKeys(selectedRowKeys.filter((key) => key !== index));
           } else {
             setSelectedRowKeys([...selectedRowKeys, index]);
           }
         } else {
-          // 普通点击：单选
           setSelectedRowKeys([index]);
           setLastClickedIndex(index);
-          setLastClickedColumn(columnType); // 记录点击的列
+          setLastClickedColumn(columnType);
         }
       },
       [onEntrySelect, lastClickedIndex, lastClickedColumn, groupedEntries, entries, selectedRowKeys]
     );
 
-    // 虚拟列组件
     const VirtualColumn = memo(
       ({
         title,
@@ -521,11 +513,11 @@ const EntryList: React.FC<EntryListProps> = memo(
               display: 'flex',
               flexDirection: 'column',
               borderRight:
-                columnType !== 'translated' ? `1px solid ${colors.borderSecondary}` : 'none',
+                columnType !== 'translated' ? `1px solid ${cssColors.borderSecondary}` : 'none',
               minWidth: 0,
               minHeight: 0,
               overflow: 'hidden',
-              backgroundColor: colors.bgPrimary,
+              backgroundColor: cssColors.bgPrimary,
             }}
             onMouseEnter={() => setActiveColumn(columnType)}
             onMouseLeave={() => setActiveColumn(null)}
@@ -533,11 +525,11 @@ const EntryList: React.FC<EntryListProps> = memo(
             <div
               style={{
                 padding: '10px 12px',
-                background: colors.bgTertiary,
-                borderBottom: `1px solid ${colors.borderSecondary}`,
+                background: cssColors.bgTertiary,
+                borderBottom: `1px solid ${cssColors.borderSecondary}`,
                 fontSize: '13px',
                 fontWeight: 600,
-                color: colors.textPrimary,
+                color: cssColors.textPrimary,
                 display: 'flex',
                 justifyContent: 'space-between',
                 alignItems: 'center',
@@ -560,8 +552,8 @@ const EntryList: React.FC<EntryListProps> = memo(
                   style={{
                     fontSize: '12px',
                     fontWeight: 'normal',
-                    color: colors.textTertiary,
-                    backgroundColor: colors.bgSecondary,
+                    color: cssColors.textTertiary,
+                    backgroundColor: cssColors.bgSecondary,
                     padding: '1px 6px',
                     borderRadius: '10px',
                     flexShrink: 0,
@@ -623,15 +615,18 @@ const EntryList: React.FC<EntryListProps> = memo(
             </div>
             <div
               ref={parentRef}
+              className="virtual-scroll-optimized"
               style={{
                 flex: 1,
                 width: '100%',
                 overflow: 'auto',
                 position: 'relative',
+                contentVisibility: 'auto',
+                containIntrinsicSize: 'auto 500px',
               }}
             >
               {items.length === 0 ? (
-                <div style={{ padding: 20, color: colors.textTertiary }}>暂无数据</div>
+                <div style={{ padding: 20, color: cssColors.textTertiary }}>暂无数据</div>
               ) : (
                 <div
                   style={{
@@ -648,7 +643,7 @@ const EntryList: React.FC<EntryListProps> = memo(
                       entries,
                       selectedRowKeys,
                       currentEntry,
-                      colors,
+                      cssColors,
                       columnType,
                       handleRowClick,
                       handleConfirm,
@@ -671,14 +666,14 @@ const EntryList: React.FC<EntryListProps> = memo(
           display: 'flex',
           flexDirection: 'column',
           outline: 'none',
-          background: colors.bgPrimary,
+          background: cssColors.bgPrimary,
         }}
       >
         <div
           style={{
             padding: '8px 16px',
-            borderBottom: `1px solid ${colors.borderSecondary}`,
-            background: colors.bgTertiary,
+            borderBottom: `1px solid ${cssColors.borderSecondary}`,
+            background: cssColors.bgTertiary,
             display: 'flex',
             justifyContent: 'space-between',
             alignItems: 'center',
@@ -689,7 +684,7 @@ const EntryList: React.FC<EntryListProps> = memo(
             style={{
               fontSize: '13px',
               fontWeight: 500,
-              color: colors.textPrimary,
+              color: cssColors.textPrimary,
               whiteSpace: 'nowrap',
               flexShrink: 0,
             }}
@@ -756,7 +751,7 @@ const EntryList: React.FC<EntryListProps> = memo(
                 );
               })()}
             {selectedRowKeys.length > 0 && (
-              <span style={{ fontSize: '12px', color: colors.textTertiary }}>
+              <span style={{ fontSize: '12px', color: cssColors.textTertiary }}>
                 Ctrl+A 全选 | Ctrl+C 复制 | Esc 取消
               </span>
             )}
@@ -764,7 +759,7 @@ const EntryList: React.FC<EntryListProps> = memo(
         </div>
 
         {isTranslating && (
-          <div style={{ padding: '8px 16px', background: colors.bgPrimary, flexShrink: 0 }}>
+          <div style={{ padding: '8px 16px', background: cssColors.bgPrimary, flexShrink: 0 }}>
             <Progress percent={Math.round(progress)} size="small" status="active" />
           </div>
         )}
@@ -786,7 +781,7 @@ const EntryList: React.FC<EntryListProps> = memo(
             <VirtualColumn
               title="未翻译"
               items={groupedEntries.untranslated}
-              statusColor={colors.statusUntranslated}
+              statusColor={cssColors.statusUntranslated}
               columnType="untranslated"
             />
             <div
@@ -802,7 +797,7 @@ const EntryList: React.FC<EntryListProps> = memo(
                 zIndex: 10,
               }}
               onMouseEnter={(e) =>
-                (e.currentTarget.style.backgroundColor = colors.statusUntranslated)
+                (e.currentTarget.style.backgroundColor = cssColors.statusUntranslated)
               }
               onMouseLeave={(e) => (e.currentTarget.style.backgroundColor = 'transparent')}
             />
@@ -824,7 +819,7 @@ const EntryList: React.FC<EntryListProps> = memo(
             <VirtualColumn
               title="待确认"
               items={groupedEntries.needsReview}
-              statusColor={colors.statusNeedsReview}
+              statusColor={cssColors.statusNeedsReview}
               columnType="needsReview"
             />
             <div
@@ -840,7 +835,7 @@ const EntryList: React.FC<EntryListProps> = memo(
                 zIndex: 10,
               }}
               onMouseEnter={(e) =>
-                (e.currentTarget.style.backgroundColor = colors.statusNeedsReview)
+                (e.currentTarget.style.backgroundColor = cssColors.statusNeedsReview)
               }
               onMouseLeave={(e) => (e.currentTarget.style.backgroundColor = 'transparent')}
             />
@@ -861,7 +856,7 @@ const EntryList: React.FC<EntryListProps> = memo(
             <VirtualColumn
               title="已翻译"
               items={groupedEntries.translated}
-              statusColor={colors.statusTranslated}
+              statusColor={cssColors.statusTranslated}
               columnType="translated"
             />
           </div>

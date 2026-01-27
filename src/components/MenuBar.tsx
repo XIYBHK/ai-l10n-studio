@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useMemo } from 'react';
 import { Button, Tooltip, Divider, Space, Typography } from 'antd';
 import {
   FolderOpenOutlined,
@@ -11,6 +11,7 @@ import {
   GlobalOutlined,
 } from '@ant-design/icons';
 import { useTheme } from '../hooks/useTheme';
+import { useCssColors } from '../hooks/useCssColors';
 import { LanguageSelector } from './LanguageSelector';
 import type { LanguageInfo } from '../types/generated/LanguageInfo'; // ✅ 使用生成的类型
 import { useAppData } from '../hooks/useConfig';
@@ -25,12 +26,10 @@ interface MenuBarProps {
   onTranslateAll: () => void;
   onSettings: () => void;
   onDevTools?: () => void;
-  // ⛔ 移除: apiKey 和 onApiKeyChange (使用 useAppData 统一获取)
   isTranslating: boolean;
   hasEntries: boolean;
   isDarkMode?: boolean;
   onThemeToggle?: () => void;
-  // Phase 5: 语言选择
   sourceLanguage?: string;
   targetLanguage?: string;
   onTargetLanguageChange?: (langCode: string, langInfo: LanguageInfo | undefined) => void;
@@ -44,7 +43,6 @@ export const MenuBar: React.FC<MenuBarProps> = React.memo(
     onTranslateAll,
     onSettings,
     onDevTools,
-    // ⛔ 移除: apiKey 参数
     isTranslating,
     hasEntries,
     isDarkMode = false,
@@ -54,11 +52,9 @@ export const MenuBar: React.FC<MenuBarProps> = React.memo(
     onTargetLanguageChange,
   }) => {
     const { colors } = useTheme();
+    const cssColors = useCssColors();
 
-    // ✅ 使用统一数据提供者获取AI配置状态
     const { activeAIConfig } = useAppData();
-
-    // ✅ 获取支持的语言列表用于显示可读名称
     const { languages } = useSupportedLanguages();
 
     // 根据语言代码查找显示名称
@@ -70,12 +66,13 @@ export const MenuBar: React.FC<MenuBarProps> = React.memo(
 
     return (
       <div
+        className="menu-bar-stagger"
         style={{
           display: 'flex',
           alignItems: 'center',
           padding: '12px 20px',
-          background: colors.bgSecondary,
-          borderBottom: `1px solid ${colors.borderPrimary}`,
+          background: cssColors.bgSecondary,
+          borderBottom: `1px solid ${cssColors.borderPrimary}`,
           gap: '12px',
           height: '64px',
           boxShadow: isDarkMode ? 'none' : '0 1px 2px rgba(0,0,0,0.03)',
@@ -84,20 +81,31 @@ export const MenuBar: React.FC<MenuBarProps> = React.memo(
       >
         <div
           style={{
-            fontSize: '18px',
-            fontWeight: 700,
+            fontSize: '24px',
+            fontWeight: 800,
+            fontFamily: 'var(--display-font)',
+            background: `linear-gradient(135deg, ${cssColors.brandPrimary} 0%, ${cssColors.brandSecondary} 100%)`,
+            WebkitBackgroundClip: 'text',
+            WebkitTextFillColor: 'transparent',
+            backgroundClip: 'text',
             marginRight: '24px',
-            color: colors.statusUntranslated,
             display: 'flex',
             alignItems: 'center',
             gap: '8px',
-            letterSpacing: '-0.5px',
+            letterSpacing: '-1px',
             flexShrink: 0,
             whiteSpace: 'nowrap',
+            cursor: 'pointer',
+          }}
+          onMouseEnter={(e) => {
+            e.currentTarget.style.transform = 'scale(1.02)';
+          }}
+          onMouseLeave={(e) => {
+            e.currentTarget.style.transform = 'scale(1)';
           }}
         >
-          <GlobalOutlined style={{ fontSize: '24px', color: colors.statusUntranslated }} />
-          <span style={{ color: colors.textPrimary }}>AI L10n Studio</span>
+          <GlobalOutlined style={{ fontSize: '24px', color: cssColors.brandPrimary }} />
+          <span>AI L10n Studio</span>
         </div>
 
         <Space size="small" style={{ flexShrink: 0 }}>
@@ -122,7 +130,7 @@ export const MenuBar: React.FC<MenuBarProps> = React.memo(
 
         <Divider
           type="vertical"
-          style={{ height: '24px', margin: '0 12px', borderColor: colors.borderSecondary }}
+          style={{ height: '24px', margin: '0 12px', borderColor: cssColors.borderSecondary }}
         />
 
         <Tooltip title="翻译所有未翻译条目">
@@ -133,37 +141,46 @@ export const MenuBar: React.FC<MenuBarProps> = React.memo(
             loading={isTranslating}
             disabled={!activeAIConfig || !hasEntries}
             style={{
-              borderRadius: '6px',
-              fontWeight: 500,
+              borderRadius: '8px',
+              fontWeight: 600,
               padding: '4px 20px',
               height: '36px',
-              boxShadow: '0 2px 4px rgba(59, 130, 246, 0.2)',
+              background: `linear-gradient(135deg, ${cssColors.brandPrimary} 0%, #b48edb 100%)`,
+              border: 'none',
+              boxShadow: '0 2px 8px rgba(203, 166, 247, 0.25)',
+            }}
+            onMouseEnter={(e) => {
+              e.currentTarget.style.transform = 'translateY(-2px)';
+              e.currentTarget.style.boxShadow = '0 4px 12px rgba(203, 166, 247, 0.35)';
+            }}
+            onMouseLeave={(e) => {
+              e.currentTarget.style.transform = 'translateY(0)';
+              e.currentTarget.style.boxShadow = '0 2px 8px rgba(203, 166, 247, 0.25)';
             }}
           >
             {isTranslating ? '翻译中...' : '批量翻译'}
           </Button>
         </Tooltip>
 
-        {/* Phase 5: 语言选择器 */}
         {hasEntries && (
           <div
             style={{
               display: 'flex',
               alignItems: 'center',
-              background: colors.bgTertiary,
+              background: cssColors.bgTertiary,
               padding: '4px 12px',
               borderRadius: '6px',
-              border: `1px solid ${colors.borderSecondary}`,
+              border: `1px solid ${cssColors.borderSecondary}`,
               marginLeft: '12px',
               flexShrink: 0,
               whiteSpace: 'nowrap',
             }}
           >
             <GlobalOutlined
-              style={{ fontSize: '16px', color: colors.textSecondary, marginRight: 8 }}
+              style={{ fontSize: '16px', color: cssColors.textSecondary, marginRight: 8 }}
             />
             {sourceLanguage && (
-              <Text strong style={{ fontSize: '13px', color: colors.textSecondary }}>
+              <Text strong style={{ fontSize: '13px', color: cssColors.textSecondary }}>
                 {getLanguageDisplayName(sourceLanguage)}
               </Text>
             )}
@@ -187,11 +204,11 @@ export const MenuBar: React.FC<MenuBarProps> = React.memo(
             style={{
               padding: '6px 16px',
               background: isDarkMode ? 'rgba(250, 173, 20, 0.15)' : '#fff7e6',
-              border: `1px solid ${colors.statusNeedsReview}`,
+              border: `1px solid ${cssColors.statusNeedsReview}`,
               borderRadius: '20px',
               fontSize: '12px',
               fontWeight: 500,
-              color: colors.statusNeedsReview,
+              color: cssColors.statusNeedsReview,
               display: 'flex',
               alignItems: 'center',
               gap: '6px',
@@ -209,7 +226,7 @@ export const MenuBar: React.FC<MenuBarProps> = React.memo(
                 icon={isDarkMode ? <BulbFilled /> : <BulbOutlined />}
                 onClick={onThemeToggle}
                 type="text"
-                style={{ color: colors.textSecondary }}
+                style={{ color: cssColors.textSecondary }}
               />
             </Tooltip>
           )}
@@ -219,7 +236,7 @@ export const MenuBar: React.FC<MenuBarProps> = React.memo(
               icon={<SettingOutlined />}
               onClick={onSettings}
               type="text"
-              style={{ color: colors.textSecondary }}
+              style={{ color: cssColors.textSecondary }}
             />
           </Tooltip>
 
@@ -229,7 +246,7 @@ export const MenuBar: React.FC<MenuBarProps> = React.memo(
                 icon={<BugOutlined />}
                 onClick={onDevTools}
                 type="text"
-                style={{ color: colors.textTertiary }}
+                style={{ color: cssColors.textTertiary }}
               />
             </Tooltip>
           )}

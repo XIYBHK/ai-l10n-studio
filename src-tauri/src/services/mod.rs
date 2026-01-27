@@ -1,30 +1,49 @@
-pub mod ai; // 🆕 AI 供应商架构模块
+// ============================================================================
+// 模块声明
+// ============================================================================
+
+// 核心服务模块
 pub mod ai_translator;
-pub mod batch_progress_channel; // Tauri 2.x: IPC Channel 优化
 pub mod batch_translator;
-pub mod config_draft; // Phase 9: Draft 模式配置管理
+pub mod config_draft;
 pub mod config_manager;
-pub mod file_chunker; // Phase 8: 性能优化
-pub mod file_format; // Phase 4
-pub mod language_detector; // Phase 5
 pub mod po_parser;
-pub mod prompt_builder; // 🆕 提示词构建器
+pub mod translation_stats;
+
+// AI 和翻译相关
+pub mod ai;
+pub mod language_detector;
+pub mod prompt_builder;
+pub mod translation_memory;
+
+// 文件和数据处理
+pub mod batch_progress_channel;
+pub mod file_chunker;
+pub mod file_format;
 pub mod prompt_logger;
 pub mod term_library;
-pub mod translation_memory; // 提示词日志
-pub mod translation_stats; // 🆕 翻译统计
 
-// 重新导出核心模块 (精确导出，避免导出废弃类型)
+// ============================================================================
+// 公共 API 重新导出
+// ============================================================================
+
+// 核心类型
 pub use ai_translator::{AIConfig, AITranslator, ProxyConfig};
-pub use batch_progress_channel::*; // Tauri 2.x: IPC Channel 优化
-pub use batch_translator::*;
-pub use config_draft::*; // Phase 9: Draft 模式配置管理
-pub use config_manager::*;
-pub use po_parser::*;
-pub use prompt_builder::*; // 🆕 导出提示词构建器
-pub use prompt_logger::*;
-pub use term_library::*;
-pub use translation_memory::*; // 提示词日志
-pub use translation_stats::*; // 🆕 导出翻译统计
+pub use config_draft::ConfigDraft;
+pub use config_manager::{AppConfig, ConfigManager, ConfigVersionInfo};
+pub use translation_stats::TokenStats;
 
-// AI 架构、文件格式、语言检测等模块（在命令中直接使用 crate::services::ai::* 等访问）
+// 批量翻译
+pub use batch_progress_channel::{BatchProgressEvent, BatchStatsEvent, TokenStatsEvent};
+pub use batch_translator::{BatchTranslator, TranslationReport};
+
+// PO 解析（POEntry 在 commands 模块定义）
+pub use po_parser::POParser;
+
+// 翻译记忆和术语
+pub use prompt_logger::{
+    clear_prompt_logs, format_prompt_logs, get_prompt_logs, init_prompt_logger, log_prompt,
+    update_prompt_response,
+};
+pub use term_library::TermLibrary;
+pub use translation_memory::TranslationMemory;

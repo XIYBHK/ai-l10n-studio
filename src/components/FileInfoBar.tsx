@@ -10,7 +10,6 @@ interface FileInfoBarProps {
 export const FileInfoBar: React.FC<FileInfoBarProps> = React.memo(({ filePath }) => {
   const { format, isLoading: loadingFormat } = useFileFormat(filePath || null);
   const { metadata, isLoading: loadingMeta } = useFileMetadata(filePath || null);
-  const { colors } = useTheme();
 
   if (!filePath) {
     return null;
@@ -20,15 +19,15 @@ export const FileInfoBar: React.FC<FileInfoBarProps> = React.memo(({ filePath })
     <div
       style={{
         padding: '6px 16px',
-        borderTop: `1px solid ${colors.borderPrimary}`,
-        backgroundColor: colors.bgTertiary,
+        borderTop: '1px solid var(--color-borderPrimary)',
+        backgroundColor: 'var(--color-bgTertiary)',
         fontSize: 12,
-        color: colors.textSecondary,
+        color: 'var(--color-textSecondary)',
       }}
     >
       <Space size="small" wrap>
         <Tag color="blue">文件</Tag>
-        <span style={{ color: colors.textPrimary }}>{filePath.split(/[/\\]/).pop()}</span>
+        <span style={{ color: 'var(--color-textPrimary)' }}>{filePath.split(/[/\\]/).pop()}</span>
         {loadingFormat ? <Tag>格式加载中...</Tag> : format && <Tag color="geekblue">{format}</Tag>}
         {loadingMeta ? (
           <Tag>元数据加载中...</Tag>

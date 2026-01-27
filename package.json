@@ -19,11 +19,11 @@
   },
   "dependencies": {
     "@tauri-apps/api": "^2.9.1",
-    "@tauri-apps/plugin-dialog": "^2.4.2",
+    "@tauri-apps/plugin-dialog": "^2.6.0",
     "@tauri-apps/plugin-fs": "^2.4.4",
     "@tauri-apps/plugin-notification": "^2.3.3",
     "@tauri-apps/plugin-store": "^2.4.1",
-    "@tauri-apps/plugin-updater": "^2.8.0",
+    "@tauri-apps/plugin-updater": "^2.9.0",
     "@types/lodash": "^4.17.23",
     "@types/react-virtualized-auto-sizer": "^1.0.4",
     "@vitejs/plugin-react": "^5.1.2",

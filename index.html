@@ -5,13 +5,25 @@
     <link rel="icon" type="image/svg+xml" href="/vite.svg" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>PO翻译工具</title>
+    <!-- 字体系统 -->
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=Space+Mono:wght@400;700&family=Syne:wght@600;700;800&display=swap"
+      rel="stylesheet"
+    />
     <style>
       /* 初始加载样式 */
       body {
         margin: 0;
         padding: 0;
-        background: #f0f2f5;
-        font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', sans-serif;
+        background: #0a0a0c;
+        font-family:
+          'Space Grotesk',
+          -apple-system,
+          BlinkMacSystemFont,
+          'Segoe UI',
+          sans-serif;
       }
 
       #root {
@@ -19,14 +31,14 @@
         height: 100vh;
       }
 
-      /* 加载指示器 */
+      /* 加载指示器 - Catppuccin */
       .app-loader {
         display: flex;
         flex-direction: column;
         align-items: center;
         justify-content: center;
         height: 100vh;
-        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        background: linear-gradient(135deg, #1e1e2e 0%, #cba6f7 50%, #89b4fa 100%);
       }
 
       .app-loader-spinner {
@@ -53,7 +65,7 @@
 
       @media (prefers-color-scheme: dark) {
         body {
-          background: #141414;
+          background: #1e1e2e;
         }
       }
     </style>

@@ -1,8 +1,3 @@
-/**
- * AI L10N Studio 主应用
- * 简化架构，保持核心业务逻辑清晰
- */
-
 import { useState, useEffect, useRef } from 'react';
 import { ConfigProvider, App as AntApp } from 'antd';
 import { useTheme } from './hooks/useTheme';
@@ -23,11 +18,9 @@ const log = createModuleLogger('App');
 export default function App() {
   const { message: msg } = AntApp.useApp();
 
-  // UI 状态
   const [settingsVisible, setSettingsVisible] = useState(false);
   const hasCheckedAIConfig = useRef(false);
 
-  // 使用翻译流程 Hook
   const {
     entries,
     currentEntry,
@@ -49,26 +42,24 @@ export default function App() {
     resetTranslationStats,
   } = useTranslationFlow();
 
-  // 主题
   const themeData = useTheme();
 
-  // AI 配置
+  useEffect(() => {
+    const root = document.documentElement;
+    root.style.setProperty('--theme-transition-duration', '0.3s');
+    root.style.setProperty('--theme-transition-timing', 'cubic-bezier(0.645, 0.045, 0.355, 1)');
+  }, [themeData.appliedTheme]);
+
   const { active, loading: aiConfigLoading } = useAIConfigs();
 
-  // 🔧 启动时初始化 Store
   useEffect(() => {
     initializeStores()
-      .then(() => {
-        log.info('Store 初始化完成');
-      })
-      .catch((error) => {
-        log.error('Store 初始化失败', error);
-      });
+      .then(() => log.info('Store 初始化完成'))
+      .catch((error) => log.error('Store 初始化失败', error));
   }, []);
 
-  // 检查 AI 配置（等待加载完成后再判断）
   useEffect(() => {
-    if (aiConfigLoading) return; // 等待加载完成
+    if (aiConfigLoading) return;
     if (!hasCheckedAIConfig.current && !active) {
       hasCheckedAIConfig.current = true;
       setSettingsVisible(true);
@@ -79,7 +70,6 @@ export default function App() {
     }
   }, [active, aiConfigLoading]);
 
-  // 全局快捷键
   useEffect(() => {
     const handleKeyDown = (event: KeyboardEvent) => {
       if ((event.ctrlKey || event.metaKey) && event.key === 'o') {
@@ -94,35 +84,31 @@ export default function App() {
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, [currentFilePath, entries, openFile, saveFile]);
 
-  // 拦截翻译操作，检查 AI 配置
+  const checkAIConfig = (): boolean => {
+    if (!active) {
+      setSettingsVisible(true);
+      msg.warning('请先在设置中配置并启用 AI 服务！');
+      return false;
+    }
+    return true;
+  };
+
   const handleTranslateAll = async () => {
     if (isTranslating) {
       log.warn('翻译正在进行中，忽略重复请求');
       return;
     }
-    if (!active) {
-      setSettingsVisible(true);
-      msg.warning('请先设置并启用AI配置');
-      return;
-    }
+    if (!checkAIConfig()) return;
     await translateAll();
   };
 
   const handleTranslateSelectedWrapper = async (indices: number[]) => {
-    if (!active) {
-      setSettingsVisible(true);
-      msg.warning('请先在设置中配置并启用 AI 服务！');
-      return;
-    }
+    if (!checkAIConfig()) return;
     await handleTranslateSelected(indices);
   };
 
   const handleContextualRefineWrapper = async (indices: number[]) => {
-    if (!active) {
-      setSettingsVisible(true);
-      msg.warning('请先在设置中配置并启用 AI 服务！');
-      return;
-    }
+    if (!checkAIConfig()) return;
     await handleContextualRefine(indices);
   };
 
@@ -136,7 +122,6 @@ export default function App() {
       >
         <AntApp>
           <div data-theme={themeData.isDark ? 'dark' : 'light'} style={{ height: '100vh' }}>
-            {/* 顶部菜单栏 */}
             <MenuBar
               onOpenFile={openFile}
               onSaveFile={saveFile}
@@ -159,7 +144,6 @@ export default function App() {
               onTargetLanguageChange={handleTargetLanguageChange}
             />
 
-            {/* 翻译工作区 */}
             <TranslationWorkspace
               entries={entries}
               currentEntry={currentEntry}
@@ -174,7 +158,6 @@ export default function App() {
               onResetStats={resetTranslationStats}
             />
 
-            {/* 设置窗口 */}
             <SettingsModal visible={settingsVisible} onClose={() => setSettingsVisible(false)} />
           </div>
         </AntApp>
