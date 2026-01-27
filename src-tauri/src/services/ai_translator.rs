@@ -964,11 +964,13 @@ impl AITranslator {
     }
 
     /// 获取当前使用的系统提示词（用于日志记录）
+    #[inline]
     pub fn current_system_prompt(&self) -> &str {
         &self.system_prompt
     }
 
     /// 构建用户提示词（包装方法，用于向后兼容）
+    #[inline]
     pub fn build_user_prompt(&self, texts: &[String]) -> String {
         prompt_builder::build_translation_prompt(texts, self.target_language.as_deref())
     }
@@ -1114,12 +1116,7 @@ impl AITranslator {
     }
 
     pub fn reset_stats(&mut self) {
-        self.token_stats = TokenStats {
-            input_tokens: 0,
-            output_tokens: 0,
-            total_tokens: 0,
-            cost: 0.0,
-        };
+        self.token_stats = TokenStats::default();
     }
 
     pub fn clear_conversation_history(&mut self) {

@@ -8,17 +8,16 @@ const TM_KEY = 'translation_memory';
 export function useTranslationMemory() {
   const { data, error, isLoading, mutate } = useSWR(TM_KEY, () => translationMemoryCommands.get(), {
     keepPreviousData: true,
-    revalidateOnFocus: false, // 翻译记忆库不需要聚焦刷新
+    revalidateOnFocus: false,
     revalidateOnReconnect: false,
-    dedupingInterval: 2000, // 2秒内去重
+    dedupingInterval: 2000,
   });
 
-  // 监听翻译完成事件，自动刷新记忆库
   useEffect(() => {
     let unlisten: (() => void) | undefined;
 
     listen('translation:after', () => {
-      mutate(); // 翻译完成后刷新记忆库
+      mutate();
     }).then((fn) => {
       unlisten = fn;
     });

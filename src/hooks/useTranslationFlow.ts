@@ -54,13 +54,11 @@ export function useTranslationFlow() {
   const { execute: parsePOFile } = useAsync(poFileCommands.parse);
   const channelTranslation = useChannelTranslation();
 
-  // 🔧 启动时重置会话统计
   useEffect(() => {
     resetSessionStats();
     log.info('🔄 翻译流程初始化，会话统计已重置');
   }, []);
 
-  // ✅ 监听翻译完成事件，更新统计
   useEffect(() => {
     let unlisten: (() => void) | null = null;
 
@@ -69,10 +67,7 @@ export function useTranslationFlow() {
         const stats = event.payload.stats;
         log.info('📊 收到翻译统计', stats);
 
-        // 更新会话统计（当前会话累计）
         updateSessionStats(stats);
-
-        // 更新累计统计（跨会话持久化）
         updateCumulativeStats(stats);
       });
     };
@@ -115,7 +110,6 @@ export function useTranslationFlow() {
     };
   }, []);
 
-  // 语言检测
   const detectAndSetLanguages = async (entries: POEntry[]) => {
     try {
       const sampleTexts = entries
@@ -141,7 +135,6 @@ export function useTranslationFlow() {
     }
   };
 
-  // 打开文件
   const openFile = async () => {
     try {
       const filePath = await dialogCommands.openFile();
@@ -158,7 +151,6 @@ export function useTranslationFlow() {
     }
   };
 
-  // 保存文件
   const saveFile = async () => {
     if (!currentFilePath) {
       msg.warning('没有打开的文件，请使用"另存为"');
@@ -174,7 +166,6 @@ export function useTranslationFlow() {
     }
   };
 
-  // 另存为
   const saveAsFile = async () => {
     try {
       const filePath = await dialogCommands.saveFile();
@@ -190,7 +181,6 @@ export function useTranslationFlow() {
     }
   };
 
-  // 统一的翻译处理函数
   const executeTranslation = async (entriesToTranslate: POEntry[]) => {
     const texts = entriesToTranslate.map((e) => e.msgid);
     let completedCount = 0;
@@ -232,7 +222,6 @@ export function useTranslationFlow() {
         },
       });
 
-      // 使用最终结果更新所有条目
       entriesToTranslate.forEach((entry, localIndex) => {
         const entryIndex = entries.indexOf(entry);
         if (entryIndex >= 0 && localIndex < result.translations.length) {
@@ -253,7 +242,6 @@ export function useTranslationFlow() {
         }
       });
 
-      // 更新统计数据
       if (result.stats) {
         const finalStats: TranslationStats = {
           total: texts.length,
@@ -288,7 +276,6 @@ export function useTranslationFlow() {
     }
   };
 
-  // 翻译所有未翻译条目
   const translateAll = async () => {
     if (isTranslating) {
       log.warn('翻译正在进行中，忽略重复请求');
@@ -304,7 +291,6 @@ export function useTranslationFlow() {
     await executeTranslation(untranslatedEntries);
   };
 
-  // 翻译选中的条目
   const handleTranslateSelected = async (indices: number[]) => {
     const selectedEntries = indices
       .map((i) => entries[i])
@@ -318,7 +304,6 @@ export function useTranslationFlow() {
     await executeTranslation(selectedEntries);
   };
 
-  // 精翻选中的条目
   const handleContextualRefine = async (indices: number[]) => {
     const selectedEntries = indices
       .map((i) => ({ index: i, entry: entries[i] }))
@@ -363,7 +348,6 @@ export function useTranslationFlow() {
     }
   };
 
-  // 处理条目选择
   const handleEntrySelect = useCallback(
     (entry: POEntry) => {
       setCurrentEntry(entry);
@@ -371,7 +355,6 @@ export function useTranslationFlow() {
     [setCurrentEntry]
   );
 
-  // 处理条目更新
   const handleEntryUpdate = useCallback(
     (index: number, updates: Partial<POEntry>) => {
       updateEntry(index, updates);
@@ -379,7 +362,6 @@ export function useTranslationFlow() {
     [updateEntry]
   );
 
-  // 处理目标语言变更
   const handleTargetLanguageChange = useCallback(
     (langCode: string, langInfo: LanguageInfo | undefined) => {
       setTargetLanguage(langCode);
@@ -391,7 +373,6 @@ export function useTranslationFlow() {
   );
 
   return {
-    // 状态
     entries,
     currentEntry,
     currentFilePath,
@@ -400,25 +381,15 @@ export function useTranslationFlow() {
     translationStats,
     sourceLanguage,
     targetLanguage,
-
-    // 文件操作
     openFile,
     saveFile,
     saveAsFile,
-
-    // 翻译操作
     translateAll,
     handleTranslateSelected,
     handleContextualRefine,
-
-    // 条目操作
     handleEntrySelect,
     handleEntryUpdate,
-
-    // 语言设置
     handleTargetLanguageChange,
-
-    // 统计重置
     resetTranslationStats: () => setTranslationStats(null),
   };
 }

@@ -22,7 +22,11 @@ interface EditorPaneProps {
   aiTranslation?: string;
 }
 
-const EditorPane: React.FC<EditorPaneProps> = memo(({ entry, onEntryUpdate, aiTranslation }) => {
+export const EditorPane = memo(function EditorPane({
+  entry,
+  onEntryUpdate,
+  aiTranslation,
+}: EditorPaneProps) {
   const { activeAIConfig } = useAppData();
   const { refresh: refreshTermLibrary } = useTermLibrary();
 
@@ -466,5 +470,3 @@ const EditorPane: React.FC<EditorPaneProps> = memo(({ entry, onEntryUpdate, aiTr
     </div>
   );
 });
-
-export default EditorPane;

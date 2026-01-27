@@ -13,19 +13,11 @@ import { createModuleLogger } from '../utils/logger';
 
 const log = createModuleLogger('EventDispatcher.simple');
 
-// ========== 简化的事件缓存 ==========
-// 用于存储事件监听器，支持手动触发和 Tauri 事件
 type EventListener = (data?: any) => void | Promise<void>;
 const eventListeners = new Map<string, EventListener[]>();
 
-// 存储 Tauri 原生监听器
 const tauriUnlisteners: Map<string, UnlistenFn> = new Map();
 
-/**
- * 手动触发事件（兼容旧版 API）
- * @param eventName 事件名称
- * @param data 事件数据
- */
 export async function emit(eventName: string, data?: any): Promise<void> {
   const listeners = eventListeners.get(eventName) || [];
   log.debug('触发事件', { eventName, listeners: listeners.length });
@@ -40,12 +32,6 @@ export async function emit(eventName: string, data?: any): Promise<void> {
   }
 }
 
-/**
- * 订阅事件（兼容旧版 API）
- * @param eventName 事件名称
- * @param handler 事件处理函数
- * @returns 取消订阅函数
- */
 export function on(eventName: string, handler: EventListener): () => void {
   const listeners = eventListeners.get(eventName) || [];
   listeners.push(handler);
@@ -65,12 +51,6 @@ export function on(eventName: string, handler: EventListener): () => void {
   };
 }
 
-/**
- * 连接 Tauri 事件到事件总线
- * @param tauriEvent Tauri 事件名称
- * @param handler 处理函数
- * @returns 取消连接函数
- */
 export async function connectTauriEvent(
   tauriEvent: string,
   handler: EventListener
@@ -99,12 +79,7 @@ export async function connectTauriEvent(
   }
 }
 
-/**
- * 清理所有事件监听器
- * 用于组件卸载或应用关闭
- */
 export function cleanup(): void {
-  // 清理 Tauri 监听器
   for (const [eventName, unlisten] of tauriUnlisteners) {
     try {
       unlisten();
@@ -115,14 +90,10 @@ export function cleanup(): void {
   }
   tauriUnlisteners.clear();
 
-  // 清理事件监听器
   eventListeners.clear();
   log.info('事件系统已清理');
 }
 
-/**
- * 获取事件统计信息（调试用）
- */
 export function getStats(): { events: number; listeners: number; tauriEvents: number } {
   const eventCount = eventListeners.size;
   const listenerCount = Array.from(eventListeners.values()).reduce(

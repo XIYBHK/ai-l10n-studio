@@ -1,8 +1,5 @@
-// ========== Phase 4: 文件格式检测命令 ==========
-
 use crate::services::file_format::{FileFormat, FileMetadata};
 
-/// 检测文件格式
 #[tauri::command]
 pub fn detect_file_format(file_path: String) -> Result<FileFormat, String> {
     crate::services::file_format::detect_file_format(&file_path)
@@ -16,7 +13,6 @@ pub fn detect_file_format(file_path: String) -> Result<FileFormat, String> {
         })
 }
 
-/// 获取文件元数据
 #[tauri::command]
 pub fn get_file_metadata(file_path: String) -> Result<FileMetadata, String> {
     crate::services::file_format::get_file_metadata(&file_path).map_err(|e| {

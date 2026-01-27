@@ -1,4 +1,4 @@
-import React, { useRef, useEffect } from 'react';
+import { useEffect, useRef } from 'react';
 import { Modal, Input, Button, Space, Tabs, App } from 'antd';
 import {
   CopyOutlined,
@@ -10,8 +10,6 @@ import {
   PauseCircleOutlined,
 } from '@ant-design/icons';
 import Draggable from 'react-draggable';
-
-// ✅ 新的日志服务（参考 clash-verge-rev）
 import {
   useGlobalLogStore,
   toggleBackendLogEnabled,
@@ -30,50 +28,41 @@ interface DevToolsModalProps {
   onClose: () => void;
 }
 
-export const DevToolsModal: React.FC<DevToolsModalProps> = ({ visible, onClose }) => {
-  // ✅ 使用 App 提供的 message（避免静态方法警告）
+export function DevToolsModal({ visible, onClose }: DevToolsModalProps) {
   const { message } = App.useApp();
-
-  // ✅ 使用全局日志 Store（参考 clash-verge-rev）
   const { backendLogs, backendEnabled, promptLogs } = useGlobalLogStore();
 
-  // 格式化日志显示
   const backendLogText = backendLogs.join('\n');
   const promptLogText = promptLogs;
   const draggleRef = useRef<HTMLDivElement>(null);
-
-  // 📜 日志自动滚动 refs
   const backendLogRef = useRef<any>(null);
   const promptLogRef = useRef<any>(null);
 
-  // ⏸️ 暂停/继续日志收集（参考 clash-verge-rev）
-  const handleToggleBackendLog = () => {
+  function handleToggleBackendLog() {
     toggleBackendLogEnabled();
-    message.info(backendEnabled ? '⏸️ 后端日志已暂停' : '▶️ 后端日志已继续');
-  };
+    message.info(backendEnabled ? '后端日志已暂停' : '后端日志已继续');
+  }
 
-  // 🧹 清空日志（参考 clash-verge-rev）
-  const handleClearBackendLogs = async () => {
+  async function handleClearBackendLogs() {
     try {
       await clearBackendLogs();
-      message.success('🧹 后端日志已清空');
+      message.success('后端日志已清空');
     } catch (error) {
       console.error('[DevToolsModal] 清空后端日志失败:', error);
       message.error('清空失败');
     }
-  };
+  }
 
-  const handleClearPromptLogs = async () => {
+  async function handleClearPromptLogs() {
     try {
       await clearPromptLogs();
-      message.success('🧹 提示词日志已清空');
+      message.success('提示词日志已清空');
     } catch (error) {
       console.error('[DevToolsModal] 清空提示词日志失败:', error);
       message.error('清空失败');
     }
-  };
+  }
 
-  // 🎯 模态框打开时启动日志监控（参考 clash）
   useEffect(() => {
     if (visible) {
       startBackendLogMonitoring();
@@ -89,7 +78,6 @@ export const DevToolsModal: React.FC<DevToolsModalProps> = ({ visible, onClose }
     };
   }, [visible]);
 
-  // 📜 自动滚动到底部（显示最新日志）
   useEffect(() => {
     if (backendLogRef.current?.resizableTextArea?.textArea) {
       const textarea = backendLogRef.current.resizableTextArea.textArea;
@@ -104,9 +92,7 @@ export const DevToolsModal: React.FC<DevToolsModalProps> = ({ visible, onClose }
     }
   }, [promptLogs]);
 
-  // SWR 已处理日志加载与轮询
-
-  const handleCopy = () => {
+  function handleCopy() {
     navigator.clipboard
       .writeText(backendLogText)
       .then(() => {
@@ -115,9 +101,9 @@ export const DevToolsModal: React.FC<DevToolsModalProps> = ({ visible, onClose }
       .catch(() => {
         message.error('复制失败');
       });
-  };
+  }
 
-  const handleExportBackendLogs = () => {
+  function handleExportBackendLogs() {
     try {
       const timestamp = new Date().toISOString().replace(/[:.]/g, '-').slice(0, -5);
       const filename = `backend-logs-${timestamp}.txt`;
@@ -135,7 +121,7 @@ export const DevToolsModal: React.FC<DevToolsModalProps> = ({ visible, onClose }
       console.error('[DevToolsModal] 导出日志失败:', error);
       message.error('导出失败');
     }
-  };
+  }
 
   return (
     <Modal
@@ -146,14 +132,14 @@ export const DevToolsModal: React.FC<DevToolsModalProps> = ({ visible, onClose }
             cursor: 'move',
           }}
         >
-          🛠️ 开发者工具
+          开发者工具
         </div>
       }
       open={visible}
       onCancel={onClose}
       width={900}
       style={{ top: 20 }}
-      destroyOnClose={true}
+      destroyOnClose
       mask={false}
       footer={[
         <Button key="close" onClick={onClose}>
@@ -188,7 +174,7 @@ export const DevToolsModal: React.FC<DevToolsModalProps> = ({ visible, onClose }
                       onClick={handleToggleBackendLog}
                       type={backendEnabled ? 'primary' : 'default'}
                     >
-                      {backendEnabled ? '⏸️ 暂停' : '▶️ 继续'}
+                      {backendEnabled ? '暂停' : '继续'}
                     </Button>
                     <Button icon={<ClearOutlined />} onClick={handleClearBackendLogs}>
                       清空
@@ -286,11 +272,11 @@ export const DevToolsModal: React.FC<DevToolsModalProps> = ({ visible, onClose }
                     border: '1px solid #87e8de',
                   }}
                 >
-                  💡 捕获精翻（Contextual Refine）和批量翻译时发送给 AI 的提示词及响应
+                  捕获精翻（Contextual Refine）和批量翻译时发送给 AI 的提示词及响应
                   <br />
-                  📊 每个日志包含：时间、类型、完整提示词、AI响应、元数据
+                  每个日志包含：时间、类型、完整提示词、AI响应、元数据
                   <br />
-                  🔄 最多保留最近 100 条记录，可手动清空
+                  最多保留最近 100 条记录，可手动清空
                 </div>
 
                 <TextArea
@@ -299,7 +285,7 @@ export const DevToolsModal: React.FC<DevToolsModalProps> = ({ visible, onClose }
                   readOnly
                   rows={20}
                   placeholder="等待提示词日志输出...
-提示: 
+提示:
 - 执行精翻或批量翻译时会自动记录
 - 包含完整的输入提示词和AI响应
 - 便于调试和优化翻译质量"
@@ -332,4 +318,4 @@ export const DevToolsModal: React.FC<DevToolsModalProps> = ({ visible, onClose }
       />
     </Modal>
   );
-};
+}

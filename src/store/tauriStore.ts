@@ -2,12 +2,6 @@
  * Tauri Store 管理器
  *
  * 提供类型安全的持久化存储，替代 localStorage
- *
- * 特性：
- * - 类型安全
- * - 自动持久化
- * - 错误处理
- * - 性能优化
  */
 
 import { Store } from '@tauri-apps/plugin-store';
@@ -17,17 +11,16 @@ import { Store } from '@tauri-apps/plugin-store';
  */
 export interface AppStoreData {
   // 应用设置
-  theme: 'light' | 'dark' | 'system'; // Phase 9: 支持三种主题模式
+  theme: 'light' | 'dark' | 'system';
   language: string;
 
-  // 累计统计（完整的 TranslationStats 字段）
+  // 累计统计
   cumulativeStats: {
     totalTranslated: number;
     totalTokens: number;
     totalCost: number;
     sessionCount: number;
     lastUpdated: number;
-    // 🔧 新增：完整的统计字段
     tmHits: number;
     deduplicated: number;
     aiTranslated: number;
@@ -71,9 +64,6 @@ export interface AppStoreData {
   };
 }
 
-/**
- * Store 键类型
- */
 export type StoreKey = keyof AppStoreData;
 
 /**
@@ -84,23 +74,15 @@ class TauriStore {
   private initialized = false;
   private initPromise: Promise<void> | null = null;
 
-  /**
-   * 初始化 Store
-   */
   async init(): Promise<void> {
-    // 避免重复初始化
     if (this.initialized) return;
 
-    // 如果正在初始化，返回现有的 Promise
     if (this.initPromise) return this.initPromise;
 
     this.initPromise = (async () => {
       try {
         console.log('[TauriStore] 初始化...');
-
-        // Tauri v2: 使用静态方法 Store.load() 加载或创建 Store
         this.store = await Store.load('app-settings.json');
-
         this.initialized = true;
         console.log('[TauriStore] 初始化成功');
       } catch (error) {
@@ -112,9 +94,6 @@ class TauriStore {
     return this.initPromise;
   }
 
-  /**
-   * 确保 Store 已初始化
-   */
   private async ensureInitialized(): Promise<void> {
     if (!this.initialized) {
       await this.init();
@@ -125,9 +104,6 @@ class TauriStore {
     }
   }
 
-  /**
-   * 获取值
-   */
   async get<K extends StoreKey>(key: K): Promise<AppStoreData[K] | null> {
     try {
       await this.ensureInitialized();
@@ -140,9 +116,6 @@ class TauriStore {
     }
   }
 
-  /**
-   * 设置值
-   */
   async set<K extends StoreKey>(key: K, value: AppStoreData[K]): Promise<void> {
     try {
       await this.ensureInitialized();
@@ -154,9 +127,6 @@ class TauriStore {
     }
   }
 
-  /**
-   * 检查键是否存在
-   */
   async has(key: StoreKey): Promise<boolean> {
     try {
       await this.ensureInitialized();
@@ -167,9 +137,6 @@ class TauriStore {
     }
   }
 
-  /**
-   * 删除键
-   */
   async delete(key: StoreKey): Promise<void> {
     try {
       await this.ensureInitialized();
@@ -181,9 +148,6 @@ class TauriStore {
     }
   }
 
-  /**
-   * 清空所有数据
-   */
   async clear(): Promise<void> {
     try {
       await this.ensureInitialized();
@@ -195,9 +159,6 @@ class TauriStore {
     }
   }
 
-  /**
-   * 保存到磁盘
-   */
   async save(): Promise<void> {
     try {
       await this.ensureInitialized();
@@ -209,9 +170,6 @@ class TauriStore {
     }
   }
 
-  /**
-   * 获取所有键
-   */
   async keys(): Promise<string[]> {
     try {
       await this.ensureInitialized();
@@ -222,9 +180,6 @@ class TauriStore {
     }
   }
 
-  /**
-   * 获取所有值
-   */
   async values(): Promise<unknown[]> {
     try {
       await this.ensureInitialized();
@@ -235,9 +190,6 @@ class TauriStore {
     }
   }
 
-  /**
-   * 获取条目数量
-   */
   async length(): Promise<number> {
     try {
       await this.ensureInitialized();
@@ -250,41 +202,26 @@ class TauriStore {
 
   // ========== 便捷方法 ==========
 
-  /**
-   * 获取主题
-   */
   async getTheme(): Promise<'light' | 'dark' | 'system'> {
     const theme = await this.get('theme');
-    return theme ?? 'system'; // Phase 9: 默认跟随系统
+    return theme ?? 'system';
   }
 
-  /**
-   * 设置主题
-   */
   async setTheme(theme: 'light' | 'dark' | 'system'): Promise<void> {
     await this.set('theme', theme);
     await this.save();
   }
 
-  /**
-   * 获取语言
-   */
   async getLanguage(): Promise<string> {
     const lang = await this.get('language');
     return lang ?? 'zh';
   }
 
-  /**
-   * 设置语言
-   */
   async setLanguage(language: string): Promise<void> {
     await this.set('language', language);
     await this.save();
   }
 
-  /**
-   * 获取累计统计
-   */
   async getCumulativeStats(): Promise<AppStoreData['cumulativeStats']> {
     const stats = await this.get('cumulativeStats');
     return (
@@ -294,7 +231,6 @@ class TauriStore {
         totalCost: 0,
         sessionCount: 0,
         lastUpdated: Date.now(),
-        // 🔧 新增字段的默认值
         tmHits: 0,
         deduplicated: 0,
         aiTranslated: 0,
@@ -305,9 +241,6 @@ class TauriStore {
     );
   }
 
-  /**
-   * 更新累计统计
-   */
   async updateCumulativeStats(updates: Partial<AppStoreData['cumulativeStats']>): Promise<void> {
     const currentStats = await this.getCumulativeStats();
     const newStats = {
@@ -319,30 +252,18 @@ class TauriStore {
     await this.save();
   }
 
-  /**
-   * 获取最近文件列表
-   */
   async getRecentFiles(): Promise<string[]> {
     const files = await this.get('recentFiles');
     return files ?? [];
   }
 
-  /**
-   * 添加最近文件
-   */
   async addRecentFile(filePath: string): Promise<void> {
     const recentFiles = await this.getRecentFiles();
-
-    // 去重并添加到开头
-    const updated = [filePath, ...recentFiles.filter((f) => f !== filePath)].slice(0, 10); // 最多保留 10 个
-
+    const updated = [filePath, ...recentFiles.filter((f) => f !== filePath)].slice(0, 10);
     await this.set('recentFiles', updated);
     await this.save();
   }
 
-  /**
-   * 获取用户偏好
-   */
   async getPreferences(): Promise<AppStoreData['preferences']> {
     const prefs = await this.get('preferences');
     return (
@@ -360,15 +281,11 @@ class TauriStore {
     );
   }
 
-  /**
-   * 更新用户偏好
-   */
   async updatePreferences(updates: Partial<AppStoreData['preferences']>): Promise<void> {
     const currentPrefs = await this.getPreferences();
     const newPrefs = {
       ...currentPrefs,
       ...updates,
-      // 合并嵌套的 notifications 对象
       notifications: {
         ...currentPrefs.notifications,
         ...(updates.notifications || {}),
@@ -378,45 +295,28 @@ class TauriStore {
     await this.save();
   }
 
-  /**
-   * 添加翻译历史记录
-   */
   async addTranslationHistory(entry: AppStoreData['translationHistory'][0]): Promise<void> {
     const history = (await this.get('translationHistory')) ?? [];
-
-    // 最多保留 100 条记录
     const updated = [entry, ...history].slice(0, 100);
-
     await this.set('translationHistory', updated);
     await this.save();
   }
 
-  /**
-   * 获取翻译历史
-   */
   async getTranslationHistory(limit = 20): Promise<AppStoreData['translationHistory']> {
     const history = await this.get('translationHistory');
     return (history ?? []).slice(0, limit);
   }
 
-  /**
-   * 保存窗口状态
-   */
   async saveWindowState(state: AppStoreData['windowState']): Promise<void> {
     await this.set('windowState', state);
     await this.save();
   }
 
-  /**
-   * 获取窗口状态
-   */
   async getWindowState(): Promise<AppStoreData['windowState'] | null> {
     return await this.get('windowState');
   }
 }
 
-// 导出单例
 export const tauriStore = new TauriStore();
 
-// 默认导出
 export default tauriStore;

@@ -6,21 +6,20 @@ use tokio::sync::Mutex;
 
 pub type SharedWriter = Arc<Mutex<FileLogWriter>>;
 
-/// 日志模块类型（对应项目主要模块）
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum Type {
-    App,         // 应用主程序
-    Translator,  // AI翻译引擎
-    Parser,      // PO文件解析器
-    Config,      // 配置管理
-    TM,          // 翻译记忆库 (Translation Memory)
-    TermLibrary, // 术语库
-    FileFormat,  // 文件格式检测
-    Batch,       // 批量翻译
-    Frontend,    // 前端日志
-    FileOps,     // 文件操作
-    Init,        // 初始化
-    I18n,        // 国际化
+    App,
+    Translator,
+    Parser,
+    Config,
+    TM,
+    TermLibrary,
+    FileFormat,
+    Batch,
+    Frontend,
+    FileOps,
+    Init,
+    I18n,
 }
 
 impl fmt::Display for Type {
@@ -42,8 +41,6 @@ impl fmt::Display for Type {
     }
 }
 
-/// 简单错误日志（记录错误信息）
-/// 用法：`error!("Failed to load config")`
 #[macro_export]
 macro_rules! error {
     ($result: expr) => {
@@ -51,8 +48,6 @@ macro_rules! error {
     };
 }
 
-/// 记录 Result<T, E> 的错误（如果是 Err）
-/// 用法：`log_err!(some_result)` 或 `log_err!(some_result, "Custom error message")`
 #[macro_export]
 macro_rules! log_err {
     ($result: expr) => {
@@ -68,8 +63,6 @@ macro_rules! log_err {
     };
 }
 
-/// trace 级别的错误日志
-/// 用法：`trace_err!(some_result, "Custom trace message")`
 #[macro_export]
 macro_rules! trace_err {
     ($result: expr, $err_str: expr) => {
@@ -79,10 +72,6 @@ macro_rules! trace_err {
     }
 }
 
-/// 包装 Result<T, E>，记录错误并转换为 String
-/// 用法：
-/// - `wrap_err!(some_result)` - 同步 Result
-/// - `wrap_err!(some_async_result, async)` - 异步 Future<Result>
 #[macro_export]
 macro_rules! wrap_err {
     // Case 1: Future<Result<T, E>>
@@ -108,8 +97,6 @@ macro_rules! wrap_err {
     }};
 }
 
-/// 带模块类型的结构化日志
-/// 用法：`logging!(info, Type::Translator, "Translation completed: {}", count)`
 #[macro_export]
 macro_rules! logging {
     ($level:ident, $type:expr, $($arg:tt)*) => {
@@ -117,10 +104,6 @@ macro_rules! logging {
     };
 }
 
-/// 带模块类型的错误日志
-/// 用法：
-/// - `logging_error!(Type::Config, some_result)` - 记录 Result 错误
-/// - `logging_error!(Type::Config, "Error message: {}", detail)` - 格式化消息
 #[macro_export]
 macro_rules! logging_error {
     // Handle Result<T, E>
@@ -136,13 +119,11 @@ macro_rules! logging_error {
     };
 }
 
-/// 模块和消息过滤器（用于 flexi_logger，屏蔽噪音日志）
 pub struct NoModuleFilter<'a>(pub &'a [&'a str]);
 
 impl<'a> NoModuleFilter<'a> {
     #[inline]
     pub fn filter(&self, record: &log::Record) -> bool {
-        // 过滤特定模块
         if let Some(module) = record.module_path() {
             for blocked in self.0 {
                 if module.len() >= blocked.len()
@@ -153,7 +134,6 @@ impl<'a> NoModuleFilter<'a> {
             }
         }
 
-        // 过滤 tao 的特定警告消息（这些是无害的事件循环警告）
         let msg = format!("{}", record.args());
         if msg.contains("NewEvents emitted without explicit RedrawEventsCleared")
             || msg.contains("RedrawEventsCleared emitted without explicit MainEventsCleared")
@@ -178,8 +158,6 @@ impl<'a> LogLineFilter for NoModuleFilter<'a> {
         writer.write(now, record)
     }
 }
-
-// ========== 测试 ==========
 
 #[cfg(test)]
 #[allow(clippy::unwrap_used)]

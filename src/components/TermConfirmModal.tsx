@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useEffect } from 'react';
 import { Modal, Button, Alert, Space, Typography } from 'antd';
 import { BookOutlined, CheckCircleOutlined } from '@ant-design/icons';
 import { TermDifference } from '../types/termLibrary';
@@ -17,7 +17,7 @@ interface TermConfirmModalProps {
   onCancel: () => void;
 }
 
-export const TermConfirmModal: React.FC<TermConfirmModalProps> = ({
+export function TermConfirmModal({
   visible,
   original,
   aiTranslation,
@@ -25,9 +25,8 @@ export const TermConfirmModal: React.FC<TermConfirmModalProps> = ({
   difference,
   onConfirm,
   onCancel,
-}) => {
-  // 数据验证
-  React.useEffect(() => {
+}: TermConfirmModalProps) {
+  useEffect(() => {
     log.debug('TermConfirmModal 渲染', {
       visible,
       hasOriginal: !!original,
@@ -39,44 +38,39 @@ export const TermConfirmModal: React.FC<TermConfirmModalProps> = ({
     });
   }, [visible, original, aiTranslation, userTranslation, difference]);
 
-  // 防御性检查
   if (!difference) {
     log.error('TermConfirmModal: difference 为空');
     return null;
   }
 
-  const getDifferenceDescription = (): {
-    title: string;
-    description: string;
-    color: 'success' | 'info' | 'warning' | 'error';
-  } => {
+  function getDifferenceDescription() {
     switch (difference.type) {
       case 'exact_match':
         return {
-          title: '💡 检测到翻译修改',
+          title: '检测到翻译修改',
           description: '您的译文与AI翻译差异较大，可以作为精确匹配加入术语库。',
-          color: 'info',
+          color: 'info' as const,
         };
       case 'term_replacement':
         return {
-          title: '📝 发现术语偏好',
+          title: '发现术语偏好',
           description: `检测到术语偏好：${difference.ai_term} → ${difference.user_term}`,
-          color: 'success',
+          color: 'success' as const,
         };
       case 'style_refinement':
         return {
-          title: '✨ 检测到风格调整',
+          title: '检测到风格调整',
           description: '这似乎是一个风格上的微调，建议累积更多示例后再加入术语库。',
-          color: 'warning',
+          color: 'warning' as const,
         };
       default:
         return {
-          title: '❓ 检测到修改',
+          title: '检测到修改',
           description: '您修改了翻译，是否要记住这个偏好？',
-          color: 'info',
+          color: 'info' as const,
         };
     }
-  };
+  }
 
   const diffInfo = getDifferenceDescription();
   const shouldRecommendAdding = difference.confidence > 0.6;
@@ -91,24 +85,17 @@ export const TermConfirmModal: React.FC<TermConfirmModalProps> = ({
       }
       open={visible}
       onCancel={onCancel}
-      destroyOnClose={true}
+      destroyOnClose
       mask={false}
       footer={[
-        <Button
-          key="cancel"
-          onClick={() => {
-            onConfirm(false);
-          }}
-        >
+        <Button key="cancel" onClick={() => onConfirm(false)}>
           仅此一次
         </Button>,
         <Button
           key="add"
           type="primary"
           icon={<CheckCircleOutlined />}
-          onClick={() => {
-            onConfirm(true);
-          }}
+          onClick={() => onConfirm(true)}
         >
           加入术语库
         </Button>,
@@ -203,9 +190,9 @@ export const TermConfirmModal: React.FC<TermConfirmModalProps> = ({
         )}
 
         <div style={{ fontSize: 12, color: '#8c8c8c', marginTop: 8 }}>
-          💡 加入术语库后，相同原文将优先使用您的译法
+          加入术语库后，相同原文将优先使用您的译法
         </div>
       </Space>
     </Modal>
   );
-};
+}

@@ -1,25 +1,19 @@
-/// <reference types="react" />
-/// <reference types="react/jsx-runtime" />
-// ========== Phase 5: 语言选择器组件 ==========
-
-import React from 'react';
 import { Select } from 'antd';
-import { type LanguageInfo } from '../types/generated/LanguageInfo'; // ✅ 使用生成的类型
+import type { LanguageInfo } from '../types/generated/LanguageInfo';
 import { createModuleLogger } from '../utils/logger';
-import { useSupportedLanguages } from '../hooks/useLanguage'; // ✅ 已使用统一命令层
-import type { CSSProperties } from 'react';
+import { useSupportedLanguages } from '../hooks/useLanguage';
 
 const log = createModuleLogger('LanguageSelector');
 
 export interface LanguageSelectorProps {
-  value?: string; // 语言代码
+  value?: string;
   onChange?: (langCode: string, langInfo: LanguageInfo | undefined) => void;
   placeholder?: string;
   style?: CSSProperties;
   disabled?: boolean;
 }
 
-export const LanguageSelector = React.memo(function LanguageSelector({
+export function LanguageSelector({
   value,
   onChange,
   placeholder = '选择语言',
@@ -28,11 +22,11 @@ export const LanguageSelector = React.memo(function LanguageSelector({
 }: LanguageSelectorProps) {
   const { languages, isLoading } = useSupportedLanguages();
 
-  const handleChange = (langCode: string) => {
+  function handleChange(langCode: string): void {
     const langInfo = languages.find((lang) => lang.code === langCode);
     onChange?.(langCode, langInfo);
     log.info('选择语言', { code: langCode, name: langInfo?.display_name });
-  };
+  }
 
   return (
     <Select
@@ -44,7 +38,7 @@ export const LanguageSelector = React.memo(function LanguageSelector({
       disabled={disabled}
       showSearch
       optionFilterProp="children"
-      filterOption={(input: string, option?: any) =>
+      filterOption={(input, option) =>
         (option?.children?.toString() ?? '').toLowerCase().includes(input.toLowerCase())
       }
     >
@@ -55,4 +49,4 @@ export const LanguageSelector = React.memo(function LanguageSelector({
       ))}
     </Select>
   );
-});
+}

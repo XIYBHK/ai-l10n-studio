@@ -1,5 +1,6 @@
-// ========== Phase 1: 文件格式类型定义 ==========
-// 注：具体实现在 Phase 4，这里先定义类型接口
+/**
+ * 文件格式相关类型
+ */
 
 /**
  * 文件格式枚举
@@ -26,12 +27,12 @@ export interface FileMetadata {
  * 翻译条目（通用格式）
  */
 export interface TranslationEntry {
-  id: string; // 唯一标识
-  source: string; // 源文本
-  target: string; // 译文
-  context?: string; // 上下文/注释
-  location?: string; // 文件位置
-  flags?: string[]; // 标记
+  id: string;
+  source: string;
+  target: string;
+  context?: string;
+  location?: string;
+  flags?: string[];
 }
 
 /**
@@ -100,5 +101,5 @@ export function guessFormatFromExtension(filename: string): FileFormat {
     }
   }
 
-  return FileFormat.PO; // 默认
+  return FileFormat.PO;
 }

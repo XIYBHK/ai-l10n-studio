@@ -121,24 +121,7 @@ impl BatchTranslator {
                 }
                 Err(e) => {
                     eprintln!("翻译文件失败 {}: {}", file_path.display(), e);
-                    // 创建失败报告
-                    let failed_report = TranslationReport {
-                        file: file_path.to_string_lossy().to_string(),
-                        total_entries: 0,
-                        need_translation: 0,
-                        translated: 0,
-                        failed: 1,
-                        translations: Vec::new(),
-                        token_stats: TokenStats {
-                            input_tokens: 0,
-                            output_tokens: 0,
-                            total_tokens: 0,
-                            cost: 0.0,
-                        },
-                        deduplication: None,
-                        tm_stats: None,
-                    };
-                    reports.push(failed_report);
+                    reports.push(Self::create_failed_report(file_path));
                 }
             }
         }
@@ -169,22 +152,7 @@ impl BatchTranslator {
         let need_translation_count = need_translation.len();
 
         if need_translation_count == 0 {
-            return Ok(TranslationReport {
-                file: file_path.to_string_lossy().to_string(),
-                total_entries,
-                need_translation: 0,
-                translated: 0,
-                failed: 0,
-                translations: Vec::new(),
-                token_stats: TokenStats {
-                    input_tokens: 0,
-                    output_tokens: 0,
-                    total_tokens: 0,
-                    cost: 0.0,
-                },
-                deduplication: None,
-                tm_stats: None,
-            });
+            return Ok(Self::create_empty_report(file_path, total_entries));
         }
 
         // 去重处理
@@ -464,5 +432,35 @@ impl BatchTranslator {
 
     pub fn get_translation_memory(&self) -> &TranslationMemory {
         &self.translation_memory
+    }
+
+    /// 创建空的翻译报告
+    fn create_empty_report(file_path: &Path, total_entries: usize) -> TranslationReport {
+        TranslationReport {
+            file: file_path.to_string_lossy().to_string(),
+            total_entries,
+            need_translation: 0,
+            translated: 0,
+            failed: 0,
+            translations: Vec::new(),
+            token_stats: TokenStats::default(),
+            deduplication: None,
+            tm_stats: None,
+        }
+    }
+
+    /// 创建失败报告
+    fn create_failed_report(file_path: &Path) -> TranslationReport {
+        TranslationReport {
+            file: file_path.to_string_lossy().to_string(),
+            total_entries: 0,
+            need_translation: 0,
+            translated: 0,
+            failed: 1,
+            translations: Vec::new(),
+            token_stats: TokenStats::default(),
+            deduplication: None,
+            tm_stats: None,
+        }
     }
 }

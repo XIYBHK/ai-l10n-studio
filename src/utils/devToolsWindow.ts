@@ -7,33 +7,24 @@ import { WebviewWindow } from '@tauri-apps/api/webviewWindow';
 
 const DEV_TOOLS_WINDOW_LABEL = 'devtools';
 
-/**
- * 打开开发者工具窗口（独立窗口，可拖到主窗口外部）
- */
 export async function openDevToolsWindow(): Promise<void> {
   try {
     console.log('[DevTools] 尝试打开开发者工具窗口...');
 
-    // 检查窗口是否已存在（Tauri 2.0 中 getByLabel 是异步方法）
     const existingWindow = await WebviewWindow.getByLabel(DEV_TOOLS_WINDOW_LABEL);
 
     if (existingWindow) {
-      // 如果窗口已存在，只需要聚焦并显示
       console.log('[DevTools] 窗口已存在，尝试聚焦...');
       try {
-        // 先显示窗口
         await existingWindow.show();
         console.log('[DevTools] show() 调用成功');
 
-        // 再设置焦点
         await existingWindow.setFocus();
         console.log('[DevTools] setFocus() 调用成功');
 
-        // 临时置顶以确保窗口被带到前面
         await existingWindow.setAlwaysOnTop(true);
         console.log('[DevTools] setAlwaysOnTop(true) 调用成功');
 
-        // 100ms 后取消置顶
         setTimeout(async () => {
           try {
             await existingWindow.setAlwaysOnTop(false);
@@ -50,15 +41,11 @@ export async function openDevToolsWindow(): Promise<void> {
 
     console.log('[DevTools] 创建新窗口...');
 
-    // 根据环境确定 URL
-    // 开发模式：http://localhost:1420/devtools.html
-    // 生产模式：devtools.html (相对路径)
     const isDev = window.location.hostname === 'localhost';
     const url = isDev ? 'http://localhost:1420/devtools.html' : 'devtools.html';
 
     console.log('[DevTools] 窗口 URL:', url);
 
-    // 创建新窗口
     const devToolsWindow = new WebviewWindow(DEV_TOOLS_WINDOW_LABEL, {
       url,
       title: '🛠️ 开发者工具',
@@ -73,7 +60,6 @@ export async function openDevToolsWindow(): Promise<void> {
       skipTaskbar: false,
     });
 
-    // 监听窗口事件
     devToolsWindow.once('tauri://created', () => {
       console.log('[DevTools] 窗口已创建');
     });
@@ -89,9 +75,6 @@ export async function openDevToolsWindow(): Promise<void> {
   }
 }
 
-/**
- * 关闭开发者工具窗口
- */
 export async function closeDevToolsWindow(): Promise<void> {
   const window = await WebviewWindow.getByLabel(DEV_TOOLS_WINDOW_LABEL);
   if (window) {
@@ -99,9 +82,6 @@ export async function closeDevToolsWindow(): Promise<void> {
   }
 }
 
-/**
- * 切换开发者工具窗口显示/隐藏
- */
 export async function toggleDevToolsWindow(): Promise<void> {
   const window = await WebviewWindow.getByLabel(DEV_TOOLS_WINDOW_LABEL);
 

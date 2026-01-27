@@ -9,12 +9,10 @@ import { DevToolsPage } from './pages/DevToolsPage';
 import { DevToolsThemeProvider } from './components/DevToolsThemeProvider';
 import { loadPersistedState } from './store/useAppStore';
 
-// 🚀 初始化并渲染开发者工具窗口
 async function bootstrap() {
   const root = ReactDOM.createRoot(document.getElementById('devtools-root')!);
 
   try {
-    // 🔄 先加载主题设置，再渲染应用（确保主题正确）
     console.log('[DevTools] 加载持久化设置...');
     await loadPersistedState().catch((error) => {
       console.error('[DevTools] 加载主题失败:', error);
@@ -22,7 +20,6 @@ async function bootstrap() {
 
     console.log('[DevTools] 主题加载完成，开始渲染...');
 
-    // 然后渲染应用
     root.render(
       <React.StrictMode>
         <DevToolsThemeProvider>

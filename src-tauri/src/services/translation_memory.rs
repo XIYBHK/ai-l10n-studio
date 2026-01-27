@@ -150,7 +150,6 @@ impl TranslationMemory {
     /// 根据源文本和目标语言查询翻译
     /// target_lang: 目标语言代码（如 "zh-CN", "ja", "en"）
     pub fn get_translation(&mut self, source: &str, target_lang: Option<&str>) -> Option<String> {
-        // 🔧 修复：支持多语言记忆库
         // 标准化语言代码映射
         fn normalize_lang_code(lang: &str) -> &str {
             match lang {
@@ -172,15 +171,14 @@ impl TranslationMemory {
         }
 
         // 降级：尝试不带语言的查询（兼容旧数据）
-        if let Some(translation) = self.memory.get(source) {
+        self.memory.get(source).map(|translation| {
             self.stats.hits += 1;
             crate::app_log!("[TM] 命中翻译（无语言标识）: {} -> {}", source, translation);
-            return Some(translation.clone());
-        }
-
-        // 未命中
-        self.stats.misses += 1;
-        None
+            translation.clone()
+        }).or_else(|| {
+            self.stats.misses += 1;
+            None
+        })
     }
 
     /// 添加翻译到记忆库
@@ -238,13 +236,7 @@ impl TranslationMemory {
     }
 
     pub fn clear(&mut self) {
-        self.memory.clear();
-        self.stats = MemoryStats {
-            total_entries: 0,
-            hits: 0,
-            misses: 0,
-        };
-        self.last_updated = Utc::now();
+        *self = Self::new();
     }
 
     pub fn get_stats(&self) -> &MemoryStats {

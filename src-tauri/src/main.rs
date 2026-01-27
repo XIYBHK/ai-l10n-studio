@@ -1,4 +1,7 @@
-// Prevents additional console window on Windows in release, DO NOT REMOVE!!
+//! AI L10n Studio - Tauri Application
+//!
+//! 基于 Tauri 2.x 的桌面应用，提供 AI 驱动的 PO 文件翻译功能。
+
 #![cfg_attr(not(debug_assertions), windows_subsystem = "windows")]
 #![allow(clippy::expect_used)]
 
@@ -10,10 +13,6 @@ mod utils;
 use commands::*;
 
 fn main() {
-    // Phase 9: 使用新的初始化流程
-    // 1. 初始化便携模式标志
-    // 2. 创建目录结构
-    // 3. 初始化 flexi_logger 日志系统（从配置读取轮转参数）
     let runtime = tokio::runtime::Runtime::new().expect("Failed to create tokio runtime");
     if let Err(e) = runtime.block_on(utils::init::init_app()) {
         eprintln!("❌ Failed to initialize application: {}", e);
@@ -22,7 +21,6 @@ fn main() {
 
     log::info!("🚀 PO Translator GUI starting...");
 
-    // 初始化提示词日志
     services::init_prompt_logger();
 
     tauri::Builder::default()

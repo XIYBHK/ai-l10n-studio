@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import { useEffect, useState, useMemo } from 'react';
 import {
   Form,
   Input,
@@ -34,16 +34,18 @@ type ProviderConfig = {
   defaultModel?: string;
 };
 
-const mapProviderInfoToConfig = (provider: ProviderInfo): ProviderConfig => ({
-  value: provider.id,
-  label: provider.display_name,
-  defaultUrl: provider.default_url,
-  defaultModel: provider.default_model,
-});
+function mapProviderInfoToConfig(provider: ProviderInfo): ProviderConfig {
+  return {
+    value: provider.id,
+    label: provider.display_name,
+    defaultUrl: provider.default_url,
+    defaultModel: provider.default_model,
+  };
+}
 
 interface AIConfigTabProps {}
 
-export const AIConfigTab: React.FC<AIConfigTabProps> = () => {
+export function AIConfigTab() {
   const [form] = Form.useForm();
   const { configs, active, mutateAll, mutateActive } = useAIConfigs();
   const [activeIndex, setActiveIndex] = useState<number | null>(null);
@@ -57,7 +59,6 @@ export const AIConfigTab: React.FC<AIConfigTabProps> = () => {
     return dynamicProviders.map(mapProviderInfoToConfig);
   }, [dynamicProviders]);
 
-  // 加载动态供应商列表
   useEffect(() => {
     setProvidersLoading(true);
     aiProviderCommands
@@ -74,7 +75,6 @@ export const AIConfigTab: React.FC<AIConfigTabProps> = () => {
       });
   }, []);
 
-  // 计算当前 activeIndex
   useEffect(() => {
     if (active) {
       const idx = configs.findIndex(
@@ -86,12 +86,12 @@ export const AIConfigTab: React.FC<AIConfigTabProps> = () => {
     }
   }, [active, configs]);
 
-  const getProviderLabel = (providerId: string): string => {
+  function getProviderLabel(providerId: string): string {
     const provider = providerConfigs.find((p) => p.value === providerId);
     return provider ? provider.label : providerId;
-  };
+  }
 
-  const handleProviderChange = async (providerId: string) => {
+  async function handleProviderChange(providerId: string) {
     const providerConfig = providerConfigs.find((p) => p.value === providerId);
     if (providerConfig) {
       form.setFieldsValue({
@@ -106,9 +106,9 @@ export const AIConfigTab: React.FC<AIConfigTabProps> = () => {
     } catch (error) {
       log.error('加载模型列表失败:', error);
     }
-  };
+  }
 
-  const handleTestConnection = async (values: any) => {
+  async function handleTestConnection(values: any) {
     setTesting(true);
     try {
       const testConfig: AIConfig = {
@@ -138,22 +138,22 @@ export const AIConfigTab: React.FC<AIConfigTabProps> = () => {
     } finally {
       setTesting(false);
     }
-  };
+  }
 
-  const handleAddNew = () => {
+  function handleAddNew() {
     setIsAddingNew(true);
     setEditingIndex(null);
     form.resetFields();
-  };
+  }
 
-  const handleEdit = (index: number) => {
+  function handleEdit(index: number) {
     const config = configs[index];
     setEditingIndex(index);
     setIsAddingNew(false);
     form.setFieldsValue(config);
-  };
+  }
 
-  const handleDelete = async (index: number) => {
+  async function handleDelete(index: number) {
     try {
       await aiConfigCommands.delete(String(index));
       message.success('配置已删除');
@@ -165,9 +165,9 @@ export const AIConfigTab: React.FC<AIConfigTabProps> = () => {
       message.error(errorMsg);
       log.error('删除配置失败', { error });
     }
-  };
+  }
 
-  const handleSetActive = async (index: number) => {
+  async function handleSetActive(index: number) {
     try {
       await aiConfigCommands.setActive(String(index));
       message.success('配置已启用');
@@ -178,9 +178,9 @@ export const AIConfigTab: React.FC<AIConfigTabProps> = () => {
       message.error(errorMsg);
       log.error('启用配置失败', { error });
     }
-  };
+  }
 
-  const handleSave = async (values: any) => {
+  async function handleSave(values: any) {
     try {
       const config: AIConfig = {
         providerId: values.providerId,
@@ -214,13 +214,13 @@ export const AIConfigTab: React.FC<AIConfigTabProps> = () => {
       message.error(errorMsg);
       log.error('保存配置失败', { error });
     }
-  };
+  }
 
-  const handleCancel = () => {
+  function handleCancel() {
     setIsAddingNew(false);
     setEditingIndex(null);
     form.resetFields();
-  };
+  }
 
   return (
     <Col span={24}>
@@ -358,6 +358,6 @@ export const AIConfigTab: React.FC<AIConfigTabProps> = () => {
       )}
     </Col>
   );
-};
+}
 
 export default AIConfigTab;

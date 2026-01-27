@@ -1,21 +1,7 @@
 /**
  * 统一格式化工具
- *
- * 所有数据展示格式化逻辑集中在此，确保全局一致性
  */
 
-/**
- * 提取错误消息
- * 统一处理 Error 对象和其他类型的错误
- *
- * @param error - 错误对象
- * @returns 错误消息字符串
- *
- * @example
- * getErrorMessage(new Error('test'))  // "test"
- * getErrorMessage('string error')     // "string error"
- * getErrorMessage(123)                // "123"
- */
 export function getErrorMessage(error: unknown): string {
   if (error instanceof Error) {
     return error.message;
@@ -23,53 +9,16 @@ export function getErrorMessage(error: unknown): string {
   return String(error);
 }
 
-/**
- * 汇率配置（USD to CNY）
- * TODO: 后续可以从配置文件或 API 获取实时汇率
- */
-const USD_TO_CNY = 7.2; // 1 USD = 7.2 CNY（示例汇率，建议定期更新）
+const USD_TO_CNY = 7.2;
 
-/**
- * 格式化成本显示（USD）
- *
- * @param cost - 成本（美元）
- * @returns 格式化后的字符串
- *
- * 显示规则：
- * - < $1: 美元 + 4位小数（如 $0.0023, $0.0142）
- * - >= $1: 美元 + 2位小数（如 $12.35）
- *
- * @example
- * formatCost(0.0023)  // "$0.0023"
- * formatCost(0.0142)  // "$0.0142"
- * formatCost(1.2345)  // "$1.23"
- */
 export function formatCost(cost: number): string {
   if (cost < 1) {
-    // 小于 1 美元，显示 4 位小数
     return `$${cost.toFixed(4)}`;
   } else {
-    // 大于等于 1 美元，显示 2 位小数
     return `$${cost.toFixed(2)}`;
   }
 }
 
-/**
- * 根据语言设置格式化成本显示（多货币支持）
- *
- * @param cost - 成本（美元）
- * @param locale - 语言/地区代码（如 'zh-CN', 'en-US'），可选，后续从应用配置自动获取
- * @returns 格式化后的字符串（根据语言显示对应货币）
- *
- * 显示规则：
- * - 中文（zh-CN, zh-TW, zh-Hans, zh-Hant）→ 人民币（¥）+ 汇率转换
- * - 其他语言 → 美元（$）
- *
- * @example
- * formatCostByLocale(0.0023, 'en-US')  // "$0.0023"
- * formatCostByLocale(0.0023, 'zh-CN')  // "¥0.0166" (0.0023 * 7.2)
- * formatCostByLocale(1.5, 'zh-CN')     // "¥10.80" (1.5 * 7.2)
- */
 export function formatCostByLocale(
   cost: number,
   locale?: string // 占位参数，后续从应用配置中自动获取

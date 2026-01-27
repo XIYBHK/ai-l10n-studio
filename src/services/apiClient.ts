@@ -53,7 +53,6 @@ class APIClient {
       showErrorMessage = true,
     } = options;
 
-    // 请求去重
     if (dedup) {
       const key = this.getRequestKey(command, params);
       const pending = this.pendingRequests.get(key);
@@ -67,7 +66,6 @@ class APIClient {
     const controller = new AbortController();
     const requestKey = this.getRequestKey(command, params);
 
-    // 记录请求
     this.incrementRequestCount(command);
 
     const promise = this.executeWithRetry<T>(
@@ -81,7 +79,6 @@ class APIClient {
       errorMessage
     );
 
-    // 存储待处理的请求
     if (dedup) {
       this.pendingRequests.set(requestKey, {
         promise,
@@ -94,9 +91,8 @@ class APIClient {
       const result = await promise;
       return result;
     } catch (error) {
-      // 统一错误处理
       const errMsg = error instanceof Error ? error.message : String(error);
-      const displayMsg = errorMessage || `${command} 调用失败: ${errMsg}`;
+      const displayMsg = errorMessage || errMsg;
 
       log.logError(error, `API调用失败: ${command}`);
 
@@ -106,7 +102,6 @@ class APIClient {
 
       throw error;
     } finally {
-      // 清理
       if (dedup) {
         this.pendingRequests.delete(requestKey);
       }
@@ -173,9 +168,6 @@ class APIClient {
     throw finalError;
   }
 
-  /**
-   * 带超时的执行
-   */
   private async executeWithTimeout<T>(
     command: string,
     params: Record<string, any>,
@@ -183,7 +175,6 @@ class APIClient {
     controller: AbortController,
     silent: boolean
   ): Promise<T> {
-    // 设置超时
     const timeoutId = setTimeout(() => {
       controller.abort();
     }, timeout);
@@ -202,9 +193,6 @@ class APIClient {
     }
   }
 
-  /**
-   * 取消指定命令的所有请求
-   */
   cancelCommand(command: string) {
     let cancelled = 0;
 
@@ -221,9 +209,6 @@ class APIClient {
     }
   }
 
-  /**
-   * 取消所有待处理的请求
-   */
   cancelAll() {
     const count = this.pendingRequests.size;
 
@@ -238,9 +223,6 @@ class APIClient {
     }
   }
 
-  /**
-   * 获取请求统计
-   */
   getStats() {
     return {
       pending: this.pendingRequests.size,
@@ -248,9 +230,6 @@ class APIClient {
     };
   }
 
-  /**
-   * 清理过期的待处理请求（超过5分钟）
-   */
   cleanup() {
     const now = Date.now();
     const maxAge = 5 * 60 * 1000; // 5分钟
@@ -263,8 +242,6 @@ class APIClient {
       }
     });
   }
-
-  // ========== 私有辅助方法 ==========
 
   private getRequestKey(command: string, params: Record<string, any>): string {
     return `${command}:${JSON.stringify(params)}`;
@@ -282,7 +259,6 @@ class APIClient {
 // 单例
 export const apiClient = new APIClient();
 
-// 定期清理
 setInterval(() => {
   apiClient.cleanup();
 }, 60000); // 每分钟清理一次

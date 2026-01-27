@@ -1,4 +1,3 @@
-import React from 'react';
 import { Tooltip } from 'antd';
 import { useTheme } from '@/hooks/useTheme';
 
@@ -21,35 +20,39 @@ interface TruncatedTextProps {
  * 用法示例:
  * <TruncatedText text="Very long text that needs truncation" maxWidth={200} />
  */
-export const TruncatedText: React.FC<TruncatedTextProps> = React.memo(
-  ({ text, maxWidth = 200, style = {}, className = '', showTooltip = true }) => {
-    const truncatedStyle: React.CSSProperties = {
-      overflow: 'hidden',
-      textOverflow: 'ellipsis',
-      whiteSpace: 'nowrap',
-      maxWidth: typeof maxWidth === 'number' ? `${maxWidth}px` : maxWidth,
-      display: 'block',
-      color: 'var(--color-textPrimary)',
-      ...style,
-    };
+export const TruncatedText = memo(function TruncatedText({
+  text,
+  maxWidth = 200,
+  style = {},
+  className = '',
+  showTooltip = true,
+}: TruncatedTextProps) {
+  const truncatedStyle: React.CSSProperties = {
+    overflow: 'hidden',
+    textOverflow: 'ellipsis',
+    whiteSpace: 'nowrap',
+    maxWidth: typeof maxWidth === 'number' ? `${maxWidth}px` : maxWidth,
+    display: 'block',
+    color: 'var(--color-textPrimary)',
+    ...style,
+  };
 
-    const content = (
-      <div style={truncatedStyle} className={className}>
-        {text}
-      </div>
+  const content = (
+    <div style={truncatedStyle} className={className}>
+      {text}
+    </div>
+  );
+
+  // 如果启用 Tooltip 且文本不为空，则包装 Tooltip
+  if (showTooltip && text) {
+    return (
+      <Tooltip title={text} placement="top">
+        {content}
+      </Tooltip>
     );
-
-    // 如果启用 Tooltip 且文本不为空，则包装 Tooltip
-    if (showTooltip && text) {
-      return (
-        <Tooltip title={text} placement="top">
-          {content}
-        </Tooltip>
-      );
-    }
-
-    return content;
   }
-);
+
+  return content;
+});
 
 TruncatedText.displayName = 'TruncatedText';

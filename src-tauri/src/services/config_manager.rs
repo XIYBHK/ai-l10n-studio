@@ -316,62 +316,52 @@ impl ConfigManager {
 
     pub fn set_api_key(&mut self, api_key: String) -> Result<()> {
         self.config.api_key = api_key;
-        self.save()?;
-        Ok(())
+        self.save()
     }
 
     pub fn set_provider(&mut self, provider: String) -> Result<()> {
         self.config.provider = provider;
-        self.save()?;
-        Ok(())
+        self.save()
     }
 
     pub fn set_model(&mut self, model: String) -> Result<()> {
         self.config.model = model;
-        self.save()?;
-        Ok(())
+        self.save()
     }
 
     pub fn set_base_url(&mut self, base_url: Option<String>) -> Result<()> {
         self.config.base_url = base_url;
-        self.save()?;
-        Ok(())
+        self.save()
     }
 
     pub fn set_batch_size(&mut self, batch_size: usize) -> Result<()> {
         self.config.batch_size = batch_size;
-        self.save()?;
-        Ok(())
+        self.save()
     }
 
     pub fn set_max_concurrent(&mut self, max_concurrent: usize) -> Result<()> {
         self.config.max_concurrent = max_concurrent;
-        self.save()?;
-        Ok(())
+        self.save()
     }
 
     pub fn set_timeout(&mut self, timeout_seconds: u64) -> Result<()> {
         self.config.timeout_seconds = timeout_seconds;
-        self.save()?;
-        Ok(())
+        self.save()
     }
 
     pub fn toggle_translation_memory(&mut self) -> Result<()> {
         self.config.use_translation_memory = !self.config.use_translation_memory;
-        self.save()?;
-        Ok(())
+        self.save()
     }
 
     pub fn toggle_auto_save(&mut self) -> Result<()> {
         self.config.auto_save = !self.config.auto_save;
-        self.save()?;
-        Ok(())
+        self.save()
     }
 
     pub fn reset_to_default(&mut self) -> Result<()> {
         self.config = AppConfig::default();
-        self.save()?;
-        Ok(())
+        self.save()
     }
 
     pub fn get_config_path(&self) -> &Path {

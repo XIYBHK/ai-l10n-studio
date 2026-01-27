@@ -37,7 +37,7 @@ interface MemoryManagerProps {
   onClose: () => void;
 }
 
-export const MemoryManager: React.FC<MemoryManagerProps> = ({ visible, onClose }) => {
+export function MemoryManager({ visible, onClose }: MemoryManagerProps) {
   const [memories, setMemories] = useState<MemoryEntry[]>([]);
   const [loading, setLoading] = useState(false);
   const { tm, isLoading: loadingTM, mutate } = useTranslationMemory();
@@ -499,4 +499,4 @@ export const MemoryManager: React.FC<MemoryManagerProps> = ({ visible, onClose }
       />
     </Modal>
   );
-};
+}

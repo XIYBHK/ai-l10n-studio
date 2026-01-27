@@ -11,12 +11,8 @@
 import { create } from 'zustand';
 import { logCommands } from './commands';
 
-// 日志上限（参考 clash）
 const MAX_LOG_NUM = 1000;
 
-/**
- * 日志级别（对齐后端）
- */
 export type LogLevel = 'DEBUG' | 'INFO' | 'WARN' | 'ERROR';
 
 /**
@@ -57,9 +53,6 @@ interface GlobalLogStore {
   clearPromptLogs: () => void;
 }
 
-/**
- * 创建全局日志 Store（参考 clash-verge-rev）
- */
 export const useGlobalLogStore = create<GlobalLogStore>((set) => ({
   // 初始状态
   backendLogs: [],
@@ -90,15 +83,9 @@ export const useGlobalLogStore = create<GlobalLogStore>((set) => ({
   clearPromptLogs: () => set({ promptLogs: '' }),
 }));
 
-/**
- * 全局日志轮询器（参考 clash IPC 模式）
- */
 let backendPollingInterval: NodeJS.Timeout | null = null;
 let promptPollingInterval: NodeJS.Timeout | null = null;
 
-/**
- * 获取后端日志（通过 IPC）
- */
 export const fetchBackendLogs = async () => {
   try {
     const logs = await logCommands.get();
@@ -108,9 +95,6 @@ export const fetchBackendLogs = async () => {
   }
 };
 
-/**
- * 获取提示词日志（通过 IPC）
- */
 export const fetchPromptLogs = async () => {
   try {
     const logs = await logCommands.getPromptLogs();
@@ -120,17 +104,12 @@ export const fetchPromptLogs = async () => {
   }
 };
 
-/**
- * 启动后端日志监控（参考 clash）
- */
 export const startBackendLogMonitoring = () => {
   const { setBackendEnabled } = useGlobalLogStore.getState();
   setBackendEnabled(true);
 
-  // 立即获取一次
   fetchBackendLogs();
 
-  // 启动定期轮询（2 秒）
   if (backendPollingInterval) {
     clearInterval(backendPollingInterval);
   }
@@ -139,9 +118,6 @@ export const startBackendLogMonitoring = () => {
   console.log('[LogService] 后端日志监控已启动（每2秒）');
 };
 
-/**
- * 停止后端日志监控
- */
 export const stopBackendLogMonitoring = () => {
   const { setBackendEnabled } = useGlobalLogStore.getState();
   setBackendEnabled(false);
@@ -154,14 +130,9 @@ export const stopBackendLogMonitoring = () => {
   console.log('[LogService] 后端日志监控已停止');
 };
 
-/**
- * 启动提示词日志监控
- */
 export const startPromptLogMonitoring = () => {
-  // 立即获取一次
   fetchPromptLogs();
 
-  // 启动定期轮询（2 秒）
   if (promptPollingInterval) {
     clearInterval(promptPollingInterval);
   }
@@ -170,9 +141,6 @@ export const startPromptLogMonitoring = () => {
   console.log('[LogService] 提示词日志监控已启动（每2秒）');
 };
 
-/**
- * 停止提示词日志监控
- */
 export const stopPromptLogMonitoring = () => {
   if (promptPollingInterval) {
     clearInterval(promptPollingInterval);
@@ -182,9 +150,6 @@ export const stopPromptLogMonitoring = () => {
   console.log('[LogService] 提示词日志监控已停止');
 };
 
-/**
- * 切换后端日志启用状态（参考 clash toggleLogEnabled）
- */
 export const toggleBackendLogEnabled = () => {
   const { backendEnabled } = useGlobalLogStore.getState();
 
@@ -195,19 +160,12 @@ export const toggleBackendLogEnabled = () => {
   }
 };
 
-/**
- * 清空后端日志（前端状态 + 后端文件，继续监控显示增量日志）
- * 参考 clash-verge-rev：清空后继续监控，后续显示的是增量日志
- */
 export const clearBackendLogs = async () => {
   try {
-    // 1. 清空前端显示（立即生效）
     useGlobalLogStore.getState().clearBackendLogs();
 
-    // 2. 清空后端文件（后台操作）
     await logCommands.clear();
 
-    // 3. 继续监控（不停止），后续显示的是清空后的增量日志
     console.log('[LogService] 后端日志已清空（继续监控，显示增量日志）');
   } catch (error) {
     console.error('[LogService] 清空后端日志失败:', error);
@@ -215,15 +173,10 @@ export const clearBackendLogs = async () => {
   }
 };
 
-/**
- * 清空提示词日志
- */
 export const clearPromptLogs = async () => {
   try {
-    // 1. 先清空前端显示（立即生效）
     useGlobalLogStore.getState().clearPromptLogs();
 
-    // 2. 再清空后端文件（后台操作）
     await logCommands.clearPromptLogs();
 
     console.log('[LogService] 提示词日志已清空');
@@ -233,17 +186,11 @@ export const clearPromptLogs = async () => {
   }
 };
 
-/**
- * 清空前端日志
- */
 export const clearFrontendLogs = () => {
   useGlobalLogStore.getState().clearFrontendLogs();
   console.log('[LogService] 前端日志已清空');
 };
 
-/**
- * 添加前端日志（供 logger 使用）
- */
 export const appendFrontendLog = (log: LogItem) => {
   const { frontendEnabled } = useGlobalLogStore.getState();
   if (frontendEnabled) {
@@ -251,18 +198,12 @@ export const appendFrontendLog = (log: LogItem) => {
   }
 };
 
-/**
- * 切换前端日志启用状态
- */
 export const toggleFrontendLogEnabled = () => {
   const { frontendEnabled, setFrontendEnabled } = useGlobalLogStore.getState();
   setFrontendEnabled(!frontendEnabled);
   console.log(`[LogService] 前端日志已${!frontendEnabled ? '启用' : '禁用'}`);
 };
 
-/**
- * 获取前端日志启用状态（用于 simpleFrontendLogger 条件拦截）
- */
 export const isFrontendLogEnabled = () => {
   return useGlobalLogStore.getState().frontendEnabled;
 };

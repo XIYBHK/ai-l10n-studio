@@ -17,13 +17,15 @@ import type { ModelInfo } from '../types/generated/ModelInfo';
 const log = createModuleLogger('AIWorkspace');
 
 interface AIWorkspaceProps {
-  stats: TranslationStats | null; // ❌ 已废弃，改用 sessionStats
+  stats: TranslationStats | null; // 已废弃，改用 sessionStats
   isTranslating: boolean;
   onResetStats?: () => void;
-  // ⛔ 移除: apiKey (TermLibraryManager内部使用useAppData获取)
 }
 
-const AIWorkspace: React.FC<AIWorkspaceProps> = memo(({ isTranslating, onResetStats }) => {
+export const AIWorkspace = memo(function AIWorkspace({
+  isTranslating,
+  onResetStats,
+}: AIWorkspaceProps) {
   const [memoryManagerVisible, setMemoryManagerVisible] = useState(false);
   const [termLibraryVisible, setTermLibraryVisible] = useState(false);
   const { termLibrary } = useTermLibrary({ enabled: true });
@@ -603,5 +605,3 @@ const AIWorkspace: React.FC<AIWorkspaceProps> = memo(({ isTranslating, onResetSt
     </>
   );
 });
-
-export default AIWorkspace;

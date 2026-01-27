@@ -11,7 +11,6 @@ export enum LogLevel {
 }
 
 interface LogConfig {
-  level: LogLevel;
   enableTimestamp: boolean;
   enableModule: boolean;
 }
@@ -19,7 +18,7 @@ interface LogConfig {
 class Logger {
   private config: LogConfig = {
     level: LogLevel.DEBUG,
-    enableTimestamp: true, // 显示准确的本地时间戳（与后端一致）
+    enableTimestamp: true,
     enableModule: true,
   };
 
@@ -59,33 +58,28 @@ class Logger {
 
   debug(module: string, message: string, ...args: any[]) {
     if (this.config.level <= LogLevel.DEBUG) {
-      // 💡 优化：直接调用 console，避免 setTimeout(0) 的宏任务开销
       console.log(this.formatMessage('DEBUG', module, message), ...args);
     }
   }
 
   info(module: string, message: string, ...args: any[]) {
     if (this.config.level <= LogLevel.INFO) {
-      // 💡 优化：直接调用 console，避免 setTimeout(0) 的宏任务开销
       console.log(this.formatMessage('INFO', module, message), ...args);
     }
   }
 
   warn(module: string, message: string, ...args: any[]) {
     if (this.config.level <= LogLevel.WARN) {
-      // 💡 优化：直接调用 console，避免 setTimeout(0) 的宏任务开销
       console.warn(this.formatMessage('WARN', module, message), ...args);
     }
   }
 
   error(module: string, message: string, ...args: any[]) {
     if (this.config.level <= LogLevel.ERROR) {
-      // 💡 优化：直接调用 console，避免 setTimeout(0) 的宏任务开销
       console.error(this.formatMessage('ERROR', module, message), ...args);
     }
   }
 
-  // 专门用于捕获和记录错误
   logError(module: string, error: unknown, context?: string) {
     const errorMessage = error instanceof Error ? error.message : String(error);
     const stack = error instanceof Error ? error.stack : undefined;
@@ -94,10 +88,8 @@ class Logger {
   }
 }
 
-// 导出单例
 export const logger = new Logger();
 
-// 导出便捷方法
 export const createModuleLogger = (moduleName: string) => ({
   debug: (message: string, ...args: any[]) => logger.debug(moduleName, message, ...args),
   info: (message: string, ...args: any[]) => logger.info(moduleName, message, ...args),

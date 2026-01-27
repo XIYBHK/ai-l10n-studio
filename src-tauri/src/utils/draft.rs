@@ -2,9 +2,9 @@
  * Draft 配置管理模式
  *
  * 参考 clash-verge-rev 的设计，提供：
- * 1. 原子性配置更新（要么全部成功，要么全部回滚）
- * 2. 草稿模式（修改不会立即生效）
- * 3. 并发安全（多个请求同时修改不会冲突）
+ * - 原子性配置更新（要么全部成功，要么全部回滚）
+ * - 草稿模式（修改不会立即生效）
+ * - 并发安全（多个请求同时修改不会冲突）
  *
  * 设计原理：
  * - 使用 RwLock 保证线程安全
@@ -20,8 +20,6 @@ use std::sync::Arc;
 #[derive(Debug, Clone)]
 pub struct Draft<T: Clone> {
     /// 内部数据：(committed_data, draft_data)
-    /// - committed_data: 已提交的正式数据
-    /// - draft_data: 草稿数据（None 表示没有草稿）
     inner: Arc<RwLock<(T, Option<T>)>>,
 }
 
@@ -53,17 +51,13 @@ impl<T: Clone> Draft<Box<T>> {
     pub fn draft_mut(&self) -> MappedRwLockWriteGuard<'_, Box<T>> {
         let guard = self.inner.upgradable_read();
 
-        // 如果草稿不存在，创建草稿
         if guard.1.is_none() {
             let mut guard = RwLockUpgradableReadGuard::upgrade(guard);
             guard.1 = Some(guard.0.clone());
-            // 逻辑保证：第59行已设置 Some，此处 unwrap 安全
             #[allow(clippy::unwrap_used)]
             return RwLockWriteGuard::map(guard, |inner| inner.1.as_mut().unwrap());
         }
 
-        // 草稿已存在，直接返回
-        // 逻辑保证：上面条件不成立时，guard.1 必为 Some
         #[allow(clippy::unwrap_used)]
         RwLockWriteGuard::map(RwLockUpgradableReadGuard::upgrade(guard), |inner| {
             inner.1.as_mut().unwrap()

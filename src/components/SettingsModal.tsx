@@ -3,7 +3,6 @@
  * 已拆解为多个独立的 Tab 组件
  */
 
-import React from 'react';
 import { Modal, Tabs } from 'antd';
 import {
   ApiOutlined,
@@ -23,7 +22,7 @@ interface SettingsModalProps {
   onClose: () => void;
 }
 
-export const SettingsModal: React.FC<SettingsModalProps> = ({ visible, onClose }) => {
+export function SettingsModal({ visible, onClose }: SettingsModalProps) {
   const tabItems = [
     {
       key: 'ai-config',
@@ -125,4 +124,4 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({ visible, onClose }
       <Tabs items={tabItems} defaultActiveKey="ai-config" />
     </Modal>
   );
-};
+}

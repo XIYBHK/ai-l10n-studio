@@ -29,7 +29,7 @@ import {
 
 const { TextArea } = Input;
 
-export const DevToolsPage: React.FC = () => {
+export function DevToolsPage() {
   const { message } = App.useApp();
   const { colors, isDark } = useTheme();
 
@@ -304,4 +304,4 @@ export const DevToolsPage: React.FC = () => {
       />
     </div>
   );
-};
+}

@@ -3,19 +3,14 @@ use once_cell::sync::Lazy;
 use serde_json::Value;
 use std::{fs, path::PathBuf, sync::RwLock};
 
-/// 默认语言（简体中文）
 const DEFAULT_LANGUAGE: &str = "zh-CN";
 
-/// 获取语言文件目录
-/// 路径：resources/locales/
 fn get_locales_dir() -> Option<PathBuf> {
     paths::app_resources_dir()
         .map(|resource_path| resource_path.join("locales"))
         .ok()
 }
 
-/// 获取支持的语言列表
-/// 扫描 resources/locales/ 目录下的 .json 文件
 pub fn get_supported_languages() -> Vec<String> {
     let mut languages = Vec::new();
 
@@ -44,7 +39,6 @@ static TRANSLATIONS: Lazy<RwLock<(String, Value)>> = Lazy::new(|| {
     RwLock::new((lang, json))
 });
 
-/// 加载语言文件
 fn load_lang_file(lang: &str) -> Option<Value> {
     let locales_dir = get_locales_dir()?;
     let file_path = locales_dir.join(format!("{lang}.json"));
@@ -53,26 +47,22 @@ fn load_lang_file(lang: &str) -> Option<Value> {
         .and_then(|content| serde_json::from_str(&content).ok())
 }
 
-/// 获取系统语言
-/// 使用 sys-locale crate 检测，返回两位语言代码（如 "zh-CN", "en"）
+/// 获取系统语言（使用 sys-locale 检测）
 pub fn get_system_language() -> String {
     sys_locale::get_locale()
         .map(|locale| locale.to_lowercase())
-        // 支持的语言格式
         .and_then(|locale| {
-            // 尝试完整语言代码（如 zh-cn）
-            if get_supported_languages().contains(&locale) {
+            let supported = get_supported_languages();
+            if supported.contains(&locale) {
                 return Some(locale);
             }
-            // 尝试两位代码（如 zh）
             if let Some(short) = locale.split(['_', '-']).next() {
                 let short = short.to_string();
-                if get_supported_languages().contains(&short) {
+                if supported.contains(&short) {
                     return Some(short);
                 }
-                // 尝试带区域的代码（如 zh-CN）
                 let with_region = format!("{}-{}", short, short.to_uppercase());
-                if get_supported_languages().contains(&with_region) {
+                if supported.contains(&with_region) {
                     return Some(with_region);
                 }
             }
@@ -82,7 +72,6 @@ pub fn get_system_language() -> String {
 }
 
 /// 异步翻译函数（简化版，不依赖配置）
-/// 用法：`let text = t("key.path.to.translation").await;`
 #[allow(clippy::unused_async)]
 pub async fn t(key: &str) -> String {
     t_with_lang(key, None)
@@ -92,7 +81,6 @@ pub async fn t(key: &str) -> String {
 pub fn t_with_lang(key: &str, lang: Option<&str>) -> String {
     let current_lang = lang.map(String::from).unwrap_or_else(get_system_language);
 
-    // 1. 尝试从缓存读取
     if let Ok(cache) = TRANSLATIONS.read()
         && cache.0 == current_lang
         && let Some(text) = cache.1.get(key).and_then(|val| val.as_str())
@@ -100,7 +88,6 @@ pub fn t_with_lang(key: &str, lang: Option<&str>) -> String {
         return text.to_string();
     }
 
-    // 2. 加载当前语言文件
     if let Some(new_json) = load_lang_file(&current_lang)
         && let Ok(mut cache) = TRANSLATIONS.write()
     {
@@ -111,7 +98,6 @@ pub fn t_with_lang(key: &str, lang: Option<&str>) -> String {
         }
     }
 
-    // 3. 降级到默认语言
     if current_lang != DEFAULT_LANGUAGE
         && let Some(default_json) = load_lang_file(DEFAULT_LANGUAGE)
         && let Ok(mut cache) = TRANSLATIONS.write()
@@ -123,24 +109,18 @@ pub fn t_with_lang(key: &str, lang: Option<&str>) -> String {
         }
     }
 
-    // 4. 返回原始 key
     key.to_string()
 }
 
-// ========== Tauri Commands ==========
-
-/// Tauri Command: 获取系统语言
 #[tauri::command]
 pub fn get_system_locale() -> String {
     get_system_language()
 }
-/// Tauri Command: 获取支持的语言列表
+
 #[tauri::command]
 pub fn get_available_languages() -> Vec<String> {
     get_supported_languages()
 }
-
-// ========== 测试 ==========
 
 #[cfg(test)]
 #[allow(clippy::unwrap_used)]

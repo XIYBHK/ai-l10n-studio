@@ -1,22 +1,3 @@
-/**
- * Channel Translation Hook - 使用 Tauri 2.x Channel API 的高性能批量翻译
- *
- * 相比传统 Event API:
- * - 性能提升 ~40%
- * - 内存占用降低 ~30%
- * - 更适合大文件处理 (>1000 条目)
- *
- * @example
- * ```tsx
- * const { translateBatch, progress, stats, isTranslating } = useChannelTranslation();
- *
- * await translateBatch(texts, 'zh-CN', {
- *   onProgress: (current, total, percentage) => console.log(`${percentage}%`),
- *   onStats: (stats) => console.log('统计:', stats),
- * });
- * ```
- */
-
 import { useState, useCallback, useRef } from 'react';
 import { Channel } from '@tauri-apps/api/core';
 import { invoke } from '../services/tauriInvoke';
@@ -26,9 +7,6 @@ const log = createModuleLogger('useChannelTranslation');
 
 // ========== 类型定义 ==========
 
-/**
- * 批量进度事件
- */
 export interface BatchProgressEvent {
   current: number;
   total: number;
@@ -36,9 +14,6 @@ export interface BatchProgressEvent {
   text?: string;
 }
 
-/**
- * 批量统计事件
- */
 export interface BatchStatsEvent {
   total: number;
   tm_hits: number;
@@ -48,9 +23,6 @@ export interface BatchStatsEvent {
   tm_learned: number;
 }
 
-/**
- * Token 统计事件（Channel 事件使用）
- */
 export interface TokenStatsEvent {
   total_tokens: number;
   prompt_tokens: number;
@@ -58,9 +30,6 @@ export interface TokenStatsEvent {
   cost: number;
 }
 
-/**
- * Token 统计（最终结果使用）
- */
 export interface TokenStats {
   input_tokens: number;
   output_tokens: number;
@@ -68,9 +37,6 @@ export interface TokenStats {
   cost: number;
 }
 
-/**
- * 翻译统计（最终结果使用）
- */
 export interface TranslationStats {
   total: number;
   tm_hits: number;
@@ -80,25 +46,17 @@ export interface TranslationStats {
   tm_learned: number;
 }
 
-/**
- * 批量翻译结果
- */
 export interface BatchResult {
-  translations: string[]; // 🔧 修复：后端返回数组，而非对象
-  translation_sources: string[]; // 每个翻译的来源：'tm', 'dedup', 'ai'
+  translations: string[];
+  translation_sources: string[];
   stats: TranslationStats;
 }
 
-/**
- * 翻译回调选项
- */
 export interface TranslationCallbacks {
   onProgress?: (current: number, total: number, percentage: number) => void;
   onStats?: (stats: BatchStatsEvent) => void;
   onItem?: (index: number, translation: string) => void;
 }
-
-// ========== Hook ==========
 
 export const useChannelTranslation = () => {
   const [isTranslating, setIsTranslating] = useState(false);
@@ -109,12 +67,8 @@ export const useChannelTranslation = () => {
   });
   const [stats, setStats] = useState<BatchStatsEvent | null>(null);
 
-  // 使用 ref 存储回调，避免闭包问题
   const callbacksRef = useRef<TranslationCallbacks>({});
 
-  /**
-   * 批量翻译
-   */
   const translateBatch = useCallback(
     async (
       texts: string[],
@@ -136,20 +90,16 @@ export const useChannelTranslation = () => {
       });
 
       try {
-        // 创建 Channel 通道
         const progressChannel = new Channel<BatchProgressEvent>();
         const statsChannel = new Channel<BatchStatsEvent>();
 
-        // 监听进度更新
         progressChannel.onmessage = (progressEvent: any) => {
-          // 兼容后端字段：processed/current、current_item/text
           const currentRaw = (progressEvent.current ?? progressEvent.processed ?? 0) as number;
           const total = (progressEvent.total ?? 0) as number;
           const percentage = (progressEvent.percentage ?? 0) as number;
           const text = (progressEvent.text ?? progressEvent.current_item) as string | undefined;
           const index = (progressEvent.index ?? null) as number | null;
 
-          // 进度单调递增，避免回退
           const monotonicCurrent = Math.max(progress.current ?? 0, currentRaw);
           const normalized = { current: monotonicCurrent, total, percentage, text } as any;
           log.debug('📊 进度更新:', normalized);
@@ -164,7 +114,6 @@ export const useChannelTranslation = () => {
           }
         };
 
-        // 监听统计更新
         statsChannel.onmessage = (statsEvent) => {
           log.debug('📈 统计更新:', statsEvent);
           setStats(statsEvent);
@@ -174,7 +123,6 @@ export const useChannelTranslation = () => {
           }
         };
 
-        // 调用后端 Channel API
         const result = await invoke<BatchResult>(
           'translate_batch_with_channel',
           {
@@ -204,9 +152,6 @@ export const useChannelTranslation = () => {
     []
   );
 
-  /**
-   * 重置状态
-   */
   const reset = useCallback(() => {
     setProgress({ current: 0, total: 0, percentage: 0 });
     setStats(null);
@@ -215,12 +160,9 @@ export const useChannelTranslation = () => {
   }, []);
 
   return {
-    // 状态
     isTranslating,
     progress,
     stats,
-
-    // 方法
     translateBatch,
     reset,
   };

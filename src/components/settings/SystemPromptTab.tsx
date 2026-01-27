@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { Card, Form, Input, Button, Space, message } from 'antd';
 import { FileTextOutlined, UndoOutlined } from '@ant-design/icons';
 import { systemPromptCommands } from '../../services/commands';
@@ -10,7 +10,7 @@ const log = createModuleLogger('SystemPromptTab');
 
 interface SystemPromptTabProps {}
 
-export const SystemPromptTab: React.FC<SystemPromptTabProps> = () => {
+export function SystemPromptTab() {
   const [form] = Form.useForm();
   const { prompt, mutate } = useSystemPrompt();
   const { execute: savePrompt, loading: saving } = useAsync(systemPromptCommands.set);
@@ -19,7 +19,6 @@ export const SystemPromptTab: React.FC<SystemPromptTabProps> = () => {
   const [promptText, setPromptText] = useState<string>('');
   const [isModified, setIsModified] = useState(false);
 
-  // 同步SWR数据到本地表单状态
   useEffect(() => {
     const promptValue = prompt || '';
     setPromptText(promptValue);
@@ -27,7 +26,7 @@ export const SystemPromptTab: React.FC<SystemPromptTabProps> = () => {
     setIsModified(false);
   }, [prompt, form]);
 
-  const handleSave = async (values: { prompt: string }) => {
+  async function handleSave(values: { prompt: string }) {
     try {
       await savePrompt(values.prompt);
       message.success('系统提示词已保存');
@@ -39,9 +38,9 @@ export const SystemPromptTab: React.FC<SystemPromptTabProps> = () => {
       message.error(errorMsg);
       log.error('保存系统提示词失败', { error });
     }
-  };
+  }
 
-  const handleReset = async () => {
+  async function handleReset() {
     try {
       await resetPrompt();
       message.success('系统提示词已重置为默认值');
@@ -53,13 +52,13 @@ export const SystemPromptTab: React.FC<SystemPromptTabProps> = () => {
       message.error(errorMsg);
       log.error('重置系统提示词失败', { error });
     }
-  };
+  }
 
-  const handlePromptChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
+  function handlePromptChange(e: React.ChangeEvent<HTMLTextAreaElement>) {
     const value = e.target.value;
     setPromptText(value);
     setIsModified(value !== (prompt || ''));
-  };
+  }
 
   return (
     <Card
@@ -98,6 +97,6 @@ export const SystemPromptTab: React.FC<SystemPromptTabProps> = () => {
       </Form>
     </Card>
   );
-};
+}
 
 export default SystemPromptTab;

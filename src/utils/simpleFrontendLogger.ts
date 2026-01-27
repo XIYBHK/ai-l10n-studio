@@ -42,19 +42,17 @@ class SimpleFrontendLogger {
   }
 
   private extractModuleName(message: string): string | undefined {
-    // 提取 [模块名] 格式的模块名
     const match = message.match(/\[([A-Za-z0-9\-_]+)\]/);
     return match ? match[1] : undefined;
   }
 
   private shouldIgnore(message: string): boolean {
-    // 忽略规则（参考 clash 的简洁方式）
     const ignorePatterns = [
       /^\[DEBUG\]/, // 忽略 DEBUG 日志（太多）
-      /Warning:.*\[antd:/, // 忽略 Ant Design 警告
-      /Warning:.*Static function/, // 忽略 Ant Design context 警告
-      /Download the React DevTools/, // 忽略 React DevTools 提示
-      /at http:\/\/localhost/, // 忽略堆栈跟踪
+      /Warning:.*\[antd:/,
+      /Warning:.*Static function/,
+      /Download the React DevTools/,
+      /at http:\/\/localhost/,
     ];
 
     return ignorePatterns.some((pattern) => pattern.test(message));
@@ -65,7 +63,6 @@ class SimpleFrontendLogger {
       .map((arg) => (typeof arg === 'object' ? JSON.stringify(arg) : String(arg)))
       .join(' ');
 
-    // 应用忽略规则
     if (this.shouldIgnore(message)) {
       return;
     }
@@ -77,7 +74,6 @@ class SimpleFrontendLogger {
       message,
     };
 
-    // 添加到全局 store
     appendFrontendLog(log);
   }
 
@@ -85,7 +81,6 @@ class SimpleFrontendLogger {
     const self = this;
 
     console.log = function (...args: any[]) {
-      // ✅ 只在启用时记录，避免污染后端日志
       if (isFrontendLogEnabled()) {
         const message = args.join(' ');
         if (
@@ -102,7 +97,6 @@ class SimpleFrontendLogger {
           }
         }
       }
-      // ✅ 始终输出到控制台（开发调试）
       self.originalConsole.log.apply(console, args);
     };
 
@@ -129,5 +123,4 @@ class SimpleFrontendLogger {
   }
 }
 
-// 导出单例
 export const simpleFrontendLogger = new SimpleFrontendLogger();

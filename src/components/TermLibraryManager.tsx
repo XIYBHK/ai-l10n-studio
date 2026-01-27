@@ -27,7 +27,7 @@ interface EditingTerm {
   user_translation: string;
 }
 
-export const TermLibraryManager: React.FC<TermLibraryManagerProps> = ({ visible, onClose }) => {
+export function TermLibraryManager({ visible, onClose }: TermLibraryManagerProps) {
   const { activeAIConfig } = useAppData();
   const { termLibrary: library, refresh, mutate } = useTermLibrary({ enabled: visible });
   const [loading, setLoading] = useState(false);
@@ -328,4 +328,4 @@ export const TermLibraryManager: React.FC<TermLibraryManagerProps> = ({ visible,
       )}
     </Modal>
   );
-};
+}

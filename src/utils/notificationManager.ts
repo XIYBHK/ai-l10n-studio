@@ -33,9 +33,6 @@ class NotificationManager {
   private hasPermission: boolean = false;
   private initialized: boolean = false;
 
-  /**
-   * 初始化通知管理器
-   */
   async init(): Promise<void> {
     if (this.initialized) return;
 
@@ -45,7 +42,7 @@ class NotificationManager {
       if (!this.hasPermission) {
         log.warn('通知权限未授予，将在首次使用时请求');
       } else {
-        log.info('✅ 通知权限已授予');
+        log.info('通知权限已授予');
       }
 
       this.initialized = true;
@@ -54,18 +51,15 @@ class NotificationManager {
     }
   }
 
-  /**
-   * 请求通知权限
-   */
   async requestPermission(): Promise<boolean> {
     try {
       const permission = await requestPermission();
       this.hasPermission = permission === 'granted';
 
       if (this.hasPermission) {
-        log.info('✅ 通知权限已授予');
+        log.info('通知权限已授予');
       } else {
-        log.warn('⚠️ 通知权限被拒绝');
+        log.warn('通知权限被拒绝');
       }
 
       return this.hasPermission;
@@ -75,9 +69,6 @@ class NotificationManager {
     }
   }
 
-  /**
-   * 发送通知
-   */
   async send(options: NotificationOptions): Promise<void> {
     if (!this.enabled) {
       log.debug('通知已禁用，跳过发送');
@@ -106,55 +97,40 @@ class NotificationManager {
         sound: options.sound,
       });
 
-      log.info('📬 通知已发送:', options.title);
+      log.info('通知已发送:', options.title);
     } catch (error) {
       log.error('发送通知失败:', error);
     }
   }
 
-  /**
-   * 发送成功通知
-   */
   async success(title: string, body: string): Promise<void> {
     await this.send({
-      title: `✅ ${title}`,
+      title,
       body,
     });
-  }
+  },
 
-  /**
-   * 发送错误通知
-   */
   async error(title: string, body: string): Promise<void> {
     await this.send({
-      title: `❌ ${title}`,
+      title,
       body,
     });
-  }
+  },
 
-  /**
-   * 发送信息通知
-   */
   async info(title: string, body: string): Promise<void> {
     await this.send({
-      title: `ℹ️ ${title}`,
+      title: `${title}`,
       body,
     });
-  }
+  },
 
-  /**
-   * 发送警告通知
-   */
   async warning(title: string, body: string): Promise<void> {
     await this.send({
-      title: `⚠️ ${title}`,
+      title: `${title}`,
       body,
     });
-  }
+  },
 
-  /**
-   * 批量翻译完成通知
-   */
   async batchTranslationComplete(total: number, success: number, failed: number): Promise<void> {
     const successRate = Math.round((success / total) * 100);
 
@@ -168,47 +144,30 @@ class NotificationManager {
     }
   }
 
-  /**
-   * 文件保存成功通知
-   */
   async fileSaved(filename: string, count: number): Promise<void> {
     await this.success('文件已保存', `${filename} - ${count} 条翻译`);
-  }
+  },
 
-  /**
-   * 导出成功通知
-   */
   async exportComplete(filename: string): Promise<void> {
     await this.success('导出成功', `文件已导出: ${filename}`);
-  }
+  },
 
-  /**
-   * 启用/禁用通知
-   */
   setEnabled(enabled: boolean): void {
     this.enabled = enabled;
     log.info(`通知${enabled ? '已启用' : '已禁用'}`);
-  }
+  },
 
-  /**
-   * 检查通知是否启用
-   */
   isEnabled(): boolean {
     return this.enabled;
-  }
+  },
 
-  /**
-   * 切换通知开关
-   */
   toggle(): void {
     this.setEnabled(!this.enabled);
   }
 }
 
-// 导出单例
 export const notificationManager = new NotificationManager();
 
-// 自动初始化
 notificationManager.init().catch((error) => {
   log.error('自动初始化通知管理器失败:', error);
 });

@@ -15,11 +15,7 @@ export interface TestResult {
   data?: any;
 }
 
-/**
- * 测试获取所有供应商
- */
 export async function testGetAllProviders(): Promise<TestResult> {
-  try {
     log.info('🧪 测试获取所有供应商...');
     const providers = await aiProviderCommands.getAll();
 
@@ -39,7 +35,6 @@ export async function testGetAllProviders(): Promise<TestResult> {
       };
     }
 
-    // 验证每个供应商的结构
     for (const provider of providers) {
       if (
         !provider.id ||
@@ -56,7 +51,7 @@ export async function testGetAllProviders(): Promise<TestResult> {
     }
 
     log.info(
-      `✅ 成功获取 ${providers.length} 个供应商:`,
+      `成功获取 ${providers.length} 个供应商:`,
       providers.map((p) => p.id)
     );
     return {
@@ -65,7 +60,7 @@ export async function testGetAllProviders(): Promise<TestResult> {
       data: providers,
     };
   } catch (error) {
-    log.error('❌ 获取供应商失败:', error);
+    log.error('获取供应商失败:', error);
     return {
       success: false,
       message: `API调用失败: ${error}`,
@@ -73,12 +68,9 @@ export async function testGetAllProviders(): Promise<TestResult> {
   }
 }
 
-/**
- * 测试获取所有模型
- */
 export async function testGetAllModels(): Promise<TestResult> {
   try {
-    log.info('🧪 测试获取所有模型...');
+    log.info('测试获取所有模型...');
     const models = await aiProviderCommands.getAllModels();
 
     if (!Array.isArray(models)) {
@@ -97,14 +89,14 @@ export async function testGetAllModels(): Promise<TestResult> {
       };
     }
 
-    log.info(`✅ 成功获取 ${models.length} 个模型`);
+    log.info(`成功获取 ${models.length} 个模型`);
     return {
       success: true,
       message: `成功获取 ${models.length} 个模型`,
       data: models,
     };
   } catch (error) {
-    log.error('❌ 获取模型失败:', error);
+    log.error('获取模型失败:', error);
     return {
       success: false,
       message: `API调用失败: ${error}`,
@@ -112,12 +104,9 @@ export async function testGetAllModels(): Promise<TestResult> {
   }
 }
 
-/**
- * 测试根据模型查找供应商
- */
 export async function testFindProviderForModel(modelId: string): Promise<TestResult> {
   try {
-    log.info(`🧪 测试查找模型 "${modelId}" 的供应商...`);
+    log.info(`测试查找模型 "${modelId}" 的供应商...`);
     const provider = await aiProviderCommands.findProviderForModel(modelId);
 
     if (!provider) {
@@ -127,14 +116,14 @@ export async function testFindProviderForModel(modelId: string): Promise<TestRes
       };
     }
 
-    log.info(`✅ 找到模型 "${modelId}" 对应的供应商: ${provider.id}`);
+    log.info(`找到模型 "${modelId}" 对应的供应商: ${provider.id}`);
     return {
       success: true,
       message: `成功找到供应商: ${provider.display_name}`,
       data: provider,
     };
   } catch (error) {
-    log.error(`❌ 查找模型 "${modelId}" 的供应商失败:`, error);
+    log.error(`查找模型 "${modelId}" 的供应商失败:`, error);
     return {
       success: false,
       message: `API调用失败: ${error}`,
@@ -142,27 +131,21 @@ export async function testFindProviderForModel(modelId: string): Promise<TestRes
   }
 }
 
-/**
- * 运行完整的动态供应商测试套件
- */
 export async function runDynamicProviderTests(): Promise<{
   passed: number;
   failed: number;
   results: TestResult[];
 }> {
-  log.info('🚀 开始运行动态供应商测试套件...');
+  log.info('开始运行动态供应商测试套件...');
 
   const results: TestResult[] = [];
 
-  // 测试 1: 获取所有供应商
   const providersTest = await testGetAllProviders();
   results.push(providersTest);
 
-  // 测试 2: 获取所有模型
   const modelsTest = await testGetAllModels();
   results.push(modelsTest);
 
-  // 测试 3: 查找特定模型的供应商（使用已知模型）
   const findTest1 = await testFindProviderForModel('deepseek-chat');
   results.push(findTest1);
 
@@ -175,16 +158,12 @@ export async function runDynamicProviderTests(): Promise<{
   const passed = results.filter((r) => r.success).length;
   const failed = results.filter((r) => !r.success).length;
 
-  log.info(`📊 测试完成: ${passed} 通过, ${failed} 失败`);
+  log.info(`测试完成: ${passed} 通过, ${failed} 失败`);
 
   return { passed, failed, results };
 }
 
-/**
- * 在浏览器控制台中运行测试
- */
 export function runTestsInConsole() {
-  // 将测试函数挂载到 window 对象，方便在控制台调用
   if (typeof window !== 'undefined') {
     (window as any).testDynamicProviders = {
       testGetAllProviders,
@@ -193,7 +172,7 @@ export function runTestsInConsole() {
       runDynamicProviderTests,
     };
 
-    console.log('🧪 动态供应商测试工具已加载到控制台！');
+    console.log('动态供应商测试工具已加载到控制台！');
     console.log('使用方法:');
     console.log('  window.testDynamicProviders.runDynamicProviderTests()');
     console.log('  window.testDynamicProviders.testGetAllProviders()');

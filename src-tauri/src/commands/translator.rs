@@ -1,23 +1,16 @@
 use serde::{Deserialize, Serialize};
 use tauri::Emitter;
-// use std::collections::HashMap;
-// use std::sync::Mutex;
-// use tauri::State;
 
 use crate::services::{
     AITranslator, BatchTranslator, ConfigDraft, POParser, TermLibrary, TranslationMemory,
     TranslationReport,
 };
 use crate::utils::path_validator::SafePathValidator;
-use crate::utils::paths::get_translation_memory_path; // Tauri 2.x: 路径安全验证
+use crate::utils::paths::get_translation_memory_path;
 
 #[cfg(feature = "ts-rs")]
 use ts_rs::TS;
 
-// ========== Phase 3: 辅助函数 - 获取自定义系统提示词 ==========
-
-/// 从配置中获取自定义系统提示词
-#[allow(dead_code)]
 async fn get_custom_system_prompt() -> Option<String> {
     let draft = ConfigDraft::global().await;
     let config = draft.data();
@@ -70,9 +63,6 @@ pub struct ContextualRefineRequest {
 
 // TokenStats 已从 services 模块导入
 
-// TranslationMemory 结构体已移至 services/translation_memory.rs
-
-// 辅助函数：自动保存翻译记忆库（内部使用）
 fn auto_save_translation_memory(translator: &AITranslator) {
     if let Some(tm) = translator.get_translation_memory() {
         let tm_path = get_translation_memory_path().to_string_lossy().to_string();
@@ -85,15 +75,12 @@ fn auto_save_translation_memory(translator: &AITranslator) {
     }
 }
 
-// 🔧 辅助函数：保存术语库
 fn save_term_library(library: &TermLibrary, path: &std::path::PathBuf) -> Result<(), String> {
     library.save_to_file(path).map_err(|e| e.to_string())
 }
 
-// Tauri 命令
 #[tauri::command]
 pub fn parse_po_file(file_path: String) -> Result<Vec<POEntry>, String> {
-    // Tauri 2.x: 路径安全验证
     let validator = SafePathValidator::new();
     let safe_path = validator
         .validate_file_path(&file_path)
@@ -115,7 +102,6 @@ pub async fn translate_entry(
     text: String,
     target_language: Option<String>,
 ) -> Result<String, String> {
-    // 从配置管理器获取启用的AI配置
     let mut translator = {
         let draft = ConfigDraft::global().await;
         let config = draft.data();
@@ -134,10 +120,8 @@ pub async fn translate_entry(
         .await
         .map_err(|e| e.to_string())?;
 
-    // 保存TM到文件
     auto_save_translation_memory(&translator);
 
-    // 🔧 发送统计事件（单条翻译）- 使用 translation:after 而不是 translation-stats-update
     let batch_stats = &translator.batch_stats;
     let token_stats = translator.get_token_stats();
     let stats_payload = serde_json::json!({
@@ -182,10 +166,6 @@ pub struct BatchResult {
 #[tauri::command]
 pub fn get_translation_memory() -> Result<TranslationMemory, String> {
     let memory_path = get_translation_memory_path().to_string_lossy().to_string();
-
-    // 使用 new_from_file 加载记忆库
-    // 注意：这里不合并内置词库，保持与翻译时一致的行为
-    // 用户清空后，UI 也不显示内置词库
     TranslationMemory::new_from_file(memory_path).map_err(|e| {
         println!("[TM] 加载记忆库失败: {}", e);
         format!("加载记忆库失败: {}", e)
@@ -196,29 +176,21 @@ pub fn get_translation_memory() -> Result<TranslationMemory, String> {
 pub fn get_builtin_phrases() -> Result<serde_json::Value, String> {
     let builtin = crate::services::translation_memory::get_builtin_memory();
     let memory_map: std::collections::HashMap<String, String> = builtin.into_iter().collect();
-
-    Ok(serde_json::json!({
-        "memory": memory_map
-    }))
+    Ok(serde_json::json!({ "memory": memory_map }))
 }
 
-/// 合并内置词库到当前翻译记忆库并保存
 #[tauri::command]
 pub fn merge_builtin_phrases() -> Result<usize, String> {
     use crate::services::translation_memory::{TranslationMemory, get_builtin_memory};
     use crate::utils::paths::get_translation_memory_path;
 
     let memory_path = get_translation_memory_path();
-
-    // 加载当前记忆库
     let mut tm = TranslationMemory::new_from_file(&memory_path)
         .map_err(|e| format!("加载记忆库失败: {}", e))?;
 
-    // 获取内置词库
     let builtin = get_builtin_memory();
     let builtin_count = builtin.len();
 
-    // 合并：内置词库优先级低，不覆盖用户已有的翻译
     let mut added_count = 0;
     for (source, target) in builtin {
         if !tm.memory.contains_key(&source) {
@@ -227,10 +199,7 @@ pub fn merge_builtin_phrases() -> Result<usize, String> {
         }
     }
 
-    // 更新统计
     tm.stats.total_entries = tm.memory.len();
-
-    // 保存到文件（使用 save_all 保存完整内容，不过滤内置词库）
     tm.save_all(&memory_path)
         .map_err(|e| format!("保存记忆库失败: {}", e))?;
 
@@ -247,7 +216,6 @@ pub fn merge_builtin_phrases() -> Result<usize, String> {
 pub fn save_translation_memory(memory: TranslationMemory) -> Result<(), String> {
     let memory_path = get_translation_memory_path().to_string_lossy().to_string();
 
-    // 确保 data 目录存在
     if let Some(parent) = std::path::Path::new(&memory_path).parent() {
         std::fs::create_dir_all(parent).map_err(|e| e.to_string())?;
     }
@@ -255,7 +223,6 @@ pub fn save_translation_memory(memory: TranslationMemory) -> Result<(), String> 
     memory.save_to_file(memory_path).map_err(|e| e.to_string())
 }
 
-// 文件操作命令
 #[tauri::command]
 pub fn open_file_dialog(app: tauri::AppHandle) -> Result<Option<String>, String> {
     use std::sync::mpsc;
@@ -302,7 +269,6 @@ pub fn save_file_dialog(app: tauri::AppHandle) -> Result<Option<String>, String>
 
 #[tauri::command]
 pub fn save_po_file(file_path: String, entries: Vec<POEntry>) -> Result<(), String> {
-    // Tauri 2.x: 路径安全验证
     let validator = SafePathValidator::new();
     let safe_path = validator
         .validate_file_path(&file_path)
@@ -319,7 +285,6 @@ pub fn save_po_file(file_path: String, entries: Vec<POEntry>) -> Result<(), Stri
         .map_err(|e| e.to_string())
 }
 
-// 批量翻译命令
 #[tauri::command]
 pub async fn translate_directory(
     directory_path: String,
@@ -334,7 +299,6 @@ pub async fn translate_directory(
         .map_err(|e| e.to_string())
 }
 
-// 配置管理命令
 #[tauri::command]
 pub async fn get_app_config() -> Result<serde_json::Value, String> {
     let draft = ConfigDraft::global().await;
@@ -348,14 +312,8 @@ pub async fn update_app_config(config: serde_json::Value) -> Result<(), String> 
         serde_json::from_value(config).map_err(|e| e.to_string())?;
 
     let draft = ConfigDraft::global().await;
-
-    // 在草稿上替换整个配置
-    {
-        let mut draft_config = draft.draft();
-        **draft_config = app_config;
-    }
-
-    // 原子提交并保存
+    let mut draft_config = draft.draft();
+    **draft_config = app_config;
     draft.apply().map_err(|e| e.to_string())
 }
 
@@ -364,7 +322,6 @@ pub fn validate_config(config: serde_json::Value) -> Result<bool, String> {
     let app_config: crate::services::AppConfig =
         serde_json::from_value(config).map_err(|e| e.to_string())?;
 
-    // 验证配置：检查 AI 配置的必要字段
     if app_config.ai_configs.is_empty() {
         return Err("配置中至少需要一个 AI 配置".to_string());
     }

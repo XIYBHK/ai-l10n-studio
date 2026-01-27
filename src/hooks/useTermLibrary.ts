@@ -7,30 +7,29 @@ import { termLibraryCommands } from '../services/commands';
 const KEY = 'term_library';
 
 interface UseTermLibraryOptions {
-  enabled?: boolean; // 是否启用请求
+  enabled?: boolean;
 }
 
 export function useTermLibrary(options?: UseTermLibraryOptions) {
   const { enabled = true } = options || {};
 
   const { data, error, isLoading, mutate } = useSWR(
-    enabled ? KEY : null, // enabled=false 时不请求
+    enabled ? KEY : null,
     () => termLibraryCommands.get() as Promise<TermLibrary>,
     {
-      revalidateOnFocus: false, // 术语库不需要聚焦刷新
+      revalidateOnFocus: false,
       revalidateOnReconnect: false,
-      dedupingInterval: 2000, // 2秒内去重
+      dedupingInterval: 2000,
     }
   );
 
-  // 监听翻译完成事件，自动刷新术语库（术语库在翻译后可能更新）
   useEffect(() => {
     if (!enabled) return;
 
     let unlisten: (() => void) | undefined;
 
     listen('translation:after', () => {
-      mutate(); // 翻译完成后刷新术语库
+      mutate();
     }).then((fn) => {
       unlisten = fn;
     });

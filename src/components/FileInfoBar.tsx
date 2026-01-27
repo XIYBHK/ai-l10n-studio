@@ -1,4 +1,3 @@
-import React from 'react';
 import { Tag, Space } from 'antd';
 import { useFileFormat, useFileMetadata } from '../hooks/useFileFormat';
 import { useTheme } from '../hooks/useTheme';
@@ -7,7 +6,7 @@ interface FileInfoBarProps {
   filePath?: string | null;
 }
 
-export const FileInfoBar: React.FC<FileInfoBarProps> = React.memo(({ filePath }) => {
+export const FileInfoBar = memo(function FileInfoBar({ filePath }: FileInfoBarProps) {
   const { format, isLoading: loadingFormat } = useFileFormat(filePath || null);
   const { metadata, isLoading: loadingMeta } = useFileMetadata(filePath || null);
 

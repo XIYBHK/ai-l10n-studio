@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { Card, Form, Select, InputNumber, Button, message } from 'antd';
 import { InfoCircleOutlined } from '@ant-design/icons';
 import { configCommands } from '../../services/commands';
@@ -8,7 +8,7 @@ const log = createModuleLogger('LogsTab');
 
 interface LogsTabProps {}
 
-export const LogsTab: React.FC<LogsTabProps> = () => {
+export function LogsTab() {
   const [form] = Form.useForm();
   const [loading, setLoading] = useState(false);
 
@@ -16,19 +16,16 @@ export const LogsTab: React.FC<LogsTabProps> = () => {
     configCommands
       .get()
       .then((config) => {
-        // 设置表单默认值
         form.setFieldsValue({
           log_level: config.log_level || 'info',
-          log_retention_days:
-            config.log_retention_days !== undefined ? config.log_retention_days : 7,
-          log_max_size: config.log_max_size !== undefined ? config.log_max_size : 128,
-          log_max_count: config.log_max_count !== undefined ? config.log_max_count : 8,
+          log_retention_days: config.log_retention_days ?? 7,
+          log_max_size: config.log_max_size ?? 128,
+          log_max_count: config.log_max_count ?? 8,
         });
         log.debug('日志配置已加载', config);
       })
       .catch((err) => {
         log.error('加载日志配置失败:', err);
-        // 设置默认值
         form.setFieldsValue({
           log_level: 'info',
           log_retention_days: 7,
@@ -38,7 +35,7 @@ export const LogsTab: React.FC<LogsTabProps> = () => {
       });
   }, [form]);
 
-  const handleSave = async (values: any) => {
+  async function handleSave(values: any) {
     setLoading(true);
     try {
       await configCommands.update({
@@ -56,7 +53,7 @@ export const LogsTab: React.FC<LogsTabProps> = () => {
     } finally {
       setLoading(false);
     }
-  };
+  }
 
   return (
     <Card
@@ -114,6 +111,6 @@ export const LogsTab: React.FC<LogsTabProps> = () => {
       </Form>
     </Card>
   );
-};
+}
 
 export default LogsTab;

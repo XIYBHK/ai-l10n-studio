@@ -1,4 +1,3 @@
-import React from 'react';
 import { Card, Form, Select, Row, Col } from 'antd';
 import { BgColorsOutlined } from '@ant-design/icons';
 import { useAppStore } from '../../store/useAppStore';
@@ -6,7 +5,7 @@ import { ThemeModeSwitch } from '../ThemeModeSwitch';
 
 interface AppearanceTabProps {}
 
-export const AppearanceTab: React.FC<AppearanceTabProps> = () => {
+export function AppearanceTab({}: AppearanceTabProps) {
   const { language, setLanguage } = useAppStore();
   const [form] = Form.useForm();
 
@@ -66,6 +65,6 @@ export const AppearanceTab: React.FC<AppearanceTabProps> = () => {
       </Form>
     </Card>
   );
-};
+}
 
 export default AppearanceTab;

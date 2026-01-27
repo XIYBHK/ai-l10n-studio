@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import { useState } from 'react';
 import { Card, Form, Switch, Button, message } from 'antd';
 import { BellOutlined } from '@ant-design/icons';
 import { notificationManager } from '../../utils/notificationManager';
@@ -8,11 +8,11 @@ const log = createModuleLogger('NotificationTab');
 
 interface NotificationTabProps {}
 
-export const NotificationTab: React.FC<NotificationTabProps> = () => {
+export function NotificationTab() {
   const [notificationEnabled, setNotificationEnabled] = useState(notificationManager.isEnabled());
   const [form] = Form.useForm();
 
-  const handleNotificationToggle = (checked: boolean) => {
+  function handleNotificationToggle(checked: boolean) {
     try {
       notificationManager.setEnabled(checked);
       message.success(`通知已${checked ? '启用' : '禁用'}`);
@@ -21,9 +21,9 @@ export const NotificationTab: React.FC<NotificationTabProps> = () => {
     } catch (error) {
       log.error('设置通知失败', { error });
     }
-  };
+  }
 
-  const handleRequestPermission = async () => {
+  async function handleRequestPermission() {
     try {
       const granted = await notificationManager.requestPermission();
       if (granted) {
@@ -36,7 +36,7 @@ export const NotificationTab: React.FC<NotificationTabProps> = () => {
     } catch (error) {
       log.error('请求通知权限失败', { error });
     }
-  };
+  }
 
   return (
     <Card
@@ -62,6 +62,6 @@ export const NotificationTab: React.FC<NotificationTabProps> = () => {
       </Form>
     </Card>
   );
-};
+}
 
 export default NotificationTab;

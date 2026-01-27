@@ -11,7 +11,7 @@ interface DevToolsThemeProviderProps {
   children: React.ReactNode;
 }
 
-export const DevToolsThemeProvider: React.FC<DevToolsThemeProviderProps> = ({ children }) => {
+export function DevToolsThemeProvider({ children }: DevToolsThemeProviderProps) {
   const themeData = useTheme();
 
   useEffect(() => {
@@ -54,4 +54,4 @@ export const DevToolsThemeProvider: React.FC<DevToolsThemeProviderProps> = ({ ch
       </div>
     </ConfigProvider>
   );
-};
+}
