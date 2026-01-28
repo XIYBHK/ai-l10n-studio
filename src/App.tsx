@@ -20,6 +20,7 @@ export default function App() {
 
   const [settingsVisible, setSettingsVisible] = useState(false);
   const hasCheckedAIConfig = useRef(false);
+  const [initError, setInitError] = useState<string | null>(null);
 
   const {
     entries,
@@ -50,13 +51,23 @@ export default function App() {
     root.style.setProperty('--theme-transition-timing', 'cubic-bezier(0.645, 0.045, 0.355, 1)');
   }, [themeData.appliedTheme]);
 
-  const { active, loading: aiConfigLoading } = useAIConfigs();
+  const { active, loading: aiConfigLoading, error: aiConfigError } = useAIConfigs();
 
   useEffect(() => {
     initializeStores()
       .then(() => log.info('Store 初始化完成'))
-      .catch((error) => log.error('Store 初始化失败', error));
+      .catch((error) => {
+        log.error('Store 初始化失败', error);
+        setInitError('Store 初始化失败: ' + String(error));
+      });
   }, []);
+
+  // 调试：显示加载状态
+  useEffect(() => {
+    console.log('[App] AI Config Loading:', aiConfigLoading);
+    console.log('[App] AI Config Active:', active);
+    console.log('[App] AI Config Error:', aiConfigError);
+  }, [aiConfigLoading, active, aiConfigError]);
 
   useEffect(() => {
     if (aiConfigLoading) return;
@@ -114,6 +125,24 @@ export default function App() {
 
   return (
     <ErrorBoundary>
+      {initError && (
+        <div style={{
+          position: 'fixed',
+          top: 0,
+          left: 0,
+          right: 0,
+          background: '#ff4d4f',
+          color: 'white',
+          padding: '16px',
+          zIndex: 9999,
+          textAlign: 'center'
+        }}>
+          ⚠️ {initError}
+          <button onClick={() => window.location.reload()} style={{ marginLeft: '16px' }}>
+            重新加载
+          </button>
+        </div>
+      )}
       <ConfigProvider
         theme={{
           ...themeData.themeConfig,

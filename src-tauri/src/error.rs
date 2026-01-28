@@ -154,7 +154,7 @@ mod tests {
 
     #[test]
     fn test_error_display() {
-        let err = AppError::Config("配置文件不存在");
+        let err = AppError::Config("配置文件不存在".to_string());
         assert_eq!(err.to_string(), "配置错误: 配置文件不存在");
 
         let err = AppError::translation("API 密钥无效", false);
@@ -202,7 +202,7 @@ mod tests {
         let err = AppError::network("连接失败");
         assert!(err.is_retryable());
 
-        let err = AppError::Config("配置文件损坏");
+        let err = AppError::Config("配置文件损坏".to_string());
         assert!(!err.is_retryable());
     }
 }
