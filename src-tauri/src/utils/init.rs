@@ -71,11 +71,7 @@ fn init_ai_providers() -> Result<()> {
             );
         }
         Err(e) => {
-            logging_error!(
-                LogType::Init,
-                "⚠️ 插件加载失败: {}",
-                e
-            );
+            logging_error!(LogType::Init, "⚠️ 插件加载失败: {}", e);
         }
     }
 

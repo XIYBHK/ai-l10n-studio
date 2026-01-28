@@ -341,10 +341,18 @@ export function AIConfigTab({ onProviderChange }: AIConfigTabProps) {
               label="模型"
               name="model"
               rules={[{ required: true, message: '请输入或选择模型' }]}
-              extra={availableModels.length > 0 ? `该供应商支持 ${availableModels.length} 个模型，可从下拉列表选择或手动输入` : '请输入模型名称'}
+              extra={
+                availableModels.length > 0
+                  ? `该供应商支持 ${availableModels.length} 个模型，可从下拉列表选择或手动输入`
+                  : '请输入模型名称'
+              }
             >
               <AutoComplete
-                placeholder={availableModels.length > 0 ? '从列表选择或手动输入模型名称' : '例如：gpt-3.5-turbo'}
+                placeholder={
+                  availableModels.length > 0
+                    ? '从列表选择或手动输入模型名称'
+                    : '例如：gpt-3.5-turbo'
+                }
                 options={availableModels.map((model) => ({ value: model, label: model }))}
                 filterOption={(inputValue, option) =>
                   option?.value.toLowerCase().includes(inputValue.toLowerCase()) ?? false

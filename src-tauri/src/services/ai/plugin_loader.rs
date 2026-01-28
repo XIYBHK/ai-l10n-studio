@@ -175,10 +175,7 @@ impl PluginLoader {
 
             // 检查是否已存在
             if registry.get_provider(&provider_id).is_some() {
-                tracing::warn!(
-                    "⚠️ 供应商 '{}' 已存在，插件版本将覆盖内置版本",
-                    provider_id
-                );
+                tracing::warn!("⚠️ 供应商 '{}' 已存在，插件版本将覆盖内置版本", provider_id);
             }
 
             // 直接注册（可能覆盖内置版本）
