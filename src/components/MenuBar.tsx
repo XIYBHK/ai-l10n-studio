@@ -1,4 +1,4 @@
-import React, { useMemo } from 'react';
+import React, { useMemo, memo } from 'react';
 import { Button, Tooltip, Divider, Space, Typography } from 'antd';
 import {
   FolderOpenOutlined,
@@ -128,7 +128,7 @@ export const MenuBar = memo(function MenuBar({
       </Space>
 
       <Divider
-        type="vertical"
+        orientation="vertical"
         style={{ height: '24px', margin: '0 12px', borderColor: cssColors.borderSecondary }}
       />
 

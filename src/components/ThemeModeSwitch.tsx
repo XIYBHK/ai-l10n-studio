@@ -1,3 +1,4 @@
+import { memo } from 'react';
 import { Segmented } from 'antd';
 import { BulbOutlined, MoonOutlined, DesktopOutlined } from '@ant-design/icons';
 import { useTheme } from '../hooks/useTheme';

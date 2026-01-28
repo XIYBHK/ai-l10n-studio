@@ -1,3 +1,4 @@
+import { memo } from 'react';
 import { Tag, Space } from 'antd';
 import { useFileFormat, useFileMetadata } from '../hooks/useFileFormat';
 import { useTheme } from '../hooks/useTheme';

@@ -6,9 +6,9 @@ import { useState, useRef, useEffect } from 'react';
 import { Layout } from 'antd';
 import { POEntry, TranslationStats } from '../types/tauri';
 import { useCssColors } from '../hooks/useCssColors';
-import EntryList from './EntryList';
-import EditorPane from './EditorPane';
-import AIWorkspace from './AIWorkspace';
+import { EntryList } from './EntryList';
+import { EditorPane } from './EditorPane';
+import { AIWorkspace } from './AIWorkspace';
 import { FileInfoBar } from './FileInfoBar';
 
 interface TranslationWorkspaceProps {

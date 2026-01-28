@@ -1,3 +1,4 @@
+import { memo } from 'react';
 import { Tooltip } from 'antd';
 import { useTheme } from '@/hooks/useTheme';
 

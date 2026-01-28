@@ -470,7 +470,7 @@ export const AIWorkspace = memo(function AIWorkspace({
   return (
     <>
       <Card
-        bordered={false}
+        variant="borderless"
         title={
           <span style={{ fontSize: '14px', fontWeight: 600 }}>
             <RobotOutlined style={{ marginRight: 8, color: cssColors.statusUntranslated }} />
