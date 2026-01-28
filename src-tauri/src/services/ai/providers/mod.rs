@@ -4,13 +4,17 @@
 // 添加新供应商时只需在此目录创建新文件即可
 
 pub mod deepseek;
+pub mod minimax;
 pub mod moonshot;
 pub mod openai;
+pub mod zhipuai;
 
 // 重新导出供应商创建函数
 pub use deepseek::create_deepseek_provider;
+pub use minimax::create_minimax_provider;
 pub use moonshot::create_moonshot_provider;
 pub use openai::create_openai_provider;
+pub use zhipuai::create_zhipuai_provider;
 
 use super::provider::with_global_registry_mut;
 use anyhow::Result;
@@ -22,8 +26,10 @@ pub fn register_all_providers() -> Result<()> {
     with_global_registry_mut(|registry| {
         // 注册所有内置供应商
         registry.register(create_deepseek_provider())?;
+        registry.register(create_minimax_provider())?;
         registry.register(create_moonshot_provider())?;
         registry.register(create_openai_provider())?;
+        registry.register(create_zhipuai_provider())?;
         Ok(())
     })
 }
@@ -41,11 +47,13 @@ mod tests {
         with_global_registry(|registry| {
             // 验证所有供应商都已注册
             assert!(registry.get_provider("deepseek").is_some());
+            assert!(registry.get_provider("minimax").is_some());
             assert!(registry.get_provider("moonshot").is_some());
             assert!(registry.get_provider("openai").is_some());
+            assert!(registry.get_provider("zhipuai").is_some());
 
-            // 验证至少有3个供应商（可能更多，如果插件也加载了）
-            assert!(registry.get_provider_ids().len() >= 3);
+            // 验证至少有5个供应商（可能更多，如果插件也加载了）
+            assert!(registry.get_provider_ids().len() >= 5);
         });
     }
 }
