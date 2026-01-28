@@ -261,16 +261,9 @@ impl PluginScanner {
             anyhow::bail!("缺少插件配置文件: plugin.toml");
         }
 
-        let provider_file = plugin_dir.join("provider.rs");
-        if !provider_file.exists() {
-            anyhow::bail!("缺少供应商实现文件: provider.rs");
-        }
-
-        // models.rs 是可选的，但如果存在应该是有效的 Rust 文件
-        let models_file = plugin_dir.join("models.rs");
-        if models_file.exists() {
-            // 这里可以添加 Rust 文件语法检查
-        }
+        // provider.rs 和 models.rs 都是可选的
+        // DynamicAIProvider 会从 plugin.toml 动态创建供应商实现
+        // 这些文件只在需要自定义行为时才需要
 
         Ok(())
     }

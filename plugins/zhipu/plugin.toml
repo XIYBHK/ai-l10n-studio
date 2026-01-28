@@ -1,12 +1,12 @@
 # 智谱AI (GLM) 供应商插件配置
-# 基于智谱AI平台的 GLM 系列模型
+# 基于官方文档 (2025-01)
 
 [plugin]
 name = "智谱AI (GLM)"
 id = "zhipu"
-version = "4.0.0"
+version = "5.0.0"
 api_version = "1.0"
-description = "智谱AI GLM大模型，中英双语能力优秀，支持多模态和长文本处理"
+description = "智谱AI GLM-4.7 系列，200K上下文，支持缓存"
 author = "AI L10n Studio"
 homepage = "https://www.zhipuai.cn"
 license = "MIT"
@@ -14,136 +14,71 @@ license = "MIT"
 [provider]
 display_name = "智谱AI"
 default_url = "https://open.bigmodel.cn/api/paas/v4/chat/completions"
-default_model = "glm-4-plus"
-supports_cache = false
+default_model = "glm-4.7-flash"
+supports_cache = true
 supports_images = true
 
-# GLM-4-Plus (最强版本)
+# GLM-4.7-Flash (免费版，推荐)
 [[provider.models]]
-id = "glm-4-plus"
-name = "GLM-4 Plus"
-context_window = 128000
-max_output_tokens = 4096
-input_price = 3.33  # 基于智谱AI官方定价结构估算
-output_price = 10.00
+id = "glm-4.7-flash"
+name = "GLM-4.7 Flash"
+context_window = 200000
+max_output_tokens = 128000
+input_price = 0.0
+output_price = 0.0
 cache_reads_price = 0.0
 cache_writes_price = 0.0
 recommended = true
-description = "GLM-4最强版本，128K上下文，顶级推理与创作能力"
+description = "GLM-4.7 Flash 免费版，200K上下文，完全免费"
 
-# GLM-4-0520 (稳定版)
+# GLM-4.7-FlashX (高速低价)
 [[provider.models]]
-id = "glm-4-0520"
-name = "GLM-4-0520"
-context_window = 128000
-max_output_tokens = 4096
-input_price = 3.33
-output_price = 10.00
-cache_reads_price = 0.0
+id = "glm-4.7-flashx"
+name = "GLM-4.7 FlashX"
+context_window = 200000
+max_output_tokens = 128000
+input_price = 0.07
+output_price = 0.42
+cache_reads_price = 0.014
 cache_writes_price = 0.0
 recommended = true
-description = "GLM-4稳定版本，2024年5月发布，128K上下文"
+description = "GLM-4.7 FlashX 高速版，200K上下文，性价比极高"
 
-# GLM-4 (标准版)
+# GLM-4.5-Air (高性价比)
 [[provider.models]]
-id = "glm-4"
-name = "GLM-4"
+id = "glm-4.5-air"
+name = "GLM-4.5 Air"
 context_window = 128000
-max_output_tokens = 4096
-input_price = 3.33
-output_price = 10.00
-cache_reads_price = 0.0
+max_output_tokens = 96000
+input_price = 0.11
+output_price = 0.28
+cache_reads_price = 0.022
 cache_writes_price = 0.0
 recommended = false
-description = "GLM-4标准版本，128K上下文，综合能力强"
+description = "GLM-4.5 Air 轻量版，128K上下文，高性价比"
 
-# GLM-4V (视觉多模态)
+# GLM-4.6 (旗舰版)
 [[provider.models]]
-id = "glm-4v"
-name = "GLM-4V"
-context_window = 2048
-max_output_tokens = 1024
-input_price = 10.00
-output_price = 30.00
-cache_reads_price = 0.0
+id = "glm-4.6"
+name = "GLM-4.6"
+context_window = 200000
+max_output_tokens = 128000
+input_price = 0.28
+output_price = 1.12
+cache_reads_price = 0.056
 cache_writes_price = 0.0
 recommended = false
-description = "GLM-4视觉版本，支持图像理解和分析，多模态能力强"
+description = "GLM-4.6 旗舰版，200K上下文，强大推理与编码能力"
 
-# GLM-4-Air (高性价比)
+# GLM-4.7 (最新旗舰)
 [[provider.models]]
-id = "glm-4-air"
-name = "GLM-4 Air"
-context_window = 128000
-max_output_tokens = 4096
-input_price = 0.33
-output_price = 1.00
-cache_reads_price = 0.0
-cache_writes_price = 0.0
-recommended = true
-description = "GLM-4轻量版，128K上下文，高性价比，快速响应"
-
-# GLM-4-AirX (超高性价比)
-[[provider.models]]
-id = "glm-4-airx"
-name = "GLM-4 AirX"
-context_window = 8192
-max_output_tokens = 2048
-input_price = 0.17
-output_price = 0.50
-cache_reads_price = 0.0
+id = "glm-4.7"
+name = "GLM-4.7"
+context_window = 200000
+max_output_tokens = 128000
+input_price = 0.28
+output_price = 1.12
+cache_reads_price = 0.056
 cache_writes_price = 0.0
 recommended = false
-description = "GLM-4超轻量版，8K上下文，超高性价比"
-
-# GLM-4-Flash (极速版)
-[[provider.models]]
-id = "glm-4-flash"
-name = "GLM-4 Flash"
-context_window = 128000
-max_output_tokens = 4096
-input_price = 0.33
-output_price = 1.00
-cache_reads_price = 0.0
-cache_writes_price = 0.0
-recommended = false
-description = "GLM-4极速版，128K上下文，极低延迟，适合实时对话"
-
-# GLM-3-Turbo (经典版)
-[[provider.models]]
-id = "glm-3-turbo"
-name = "GLM-3 Turbo"
-context_window = 128000
-max_output_tokens = 4096
-input_price = 0.17
-output_price = 0.50
-cache_reads_price = 0.0
-cache_writes_price = 0.0
-recommended = false
-description = "GLM-3 Turbo版本，128K上下文，性能稳定，成本较低"
-
-# CharacterGLM (角色扮演专用)
-[[provider.models]]
-id = "charglm-3"
-name = "CharacterGLM-3"
-context_window = 32000
-max_output_tokens = 2048
-input_price = 0.50
-output_price = 1.50
-cache_reads_price = 0.0
-cache_writes_price = 0.0
-recommended = false
-description = "智谱角色扮演专用模型，32K上下文，适合对话和创作"
-
-# CogView-3 (图像生成，仅作参考)
-[[provider.models]]
-id = "cogview-3"
-name = "CogView-3"
-context_window = 1024
-max_output_tokens = 1024
-input_price = 5.00
-output_price = 5.00
-cache_reads_price = 0.0
-cache_writes_price = 0.0
-recommended = false
-description = "智谱图像生成模型，支持文本到图像生成（非文本模型）"
+description = "GLM-4.7 最新旗舰，200K上下文，编程更强更稳"

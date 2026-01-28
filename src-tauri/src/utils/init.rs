@@ -1,6 +1,5 @@
 use crate::services::ConfigDraft;
 use crate::services::ai::plugin_loader;
-use crate::services::ai::providers::register_all_providers;
 use crate::utils::logging::Type as LogType;
 use crate::utils::paths;
 use crate::{logging, logging_error};
@@ -41,34 +40,24 @@ pub async fn init_app() -> Result<()> {
 }
 
 fn init_ai_providers() -> Result<()> {
-    logging!(info, LogType::Init, "🔧 开始注册内置AI供应商...");
+    logging!(info, LogType::Init, "🔧 初始化 AI 供应商系统...");
 
-    register_all_providers()?;
+    // 不再注册内置供应商，全部使用插件系统
 
-    use crate::services::ai::provider::with_global_registry;
-    let registered_count = with_global_registry(|registry| {
-        let ids = registry.get_provider_ids();
-        logging!(info, LogType::Init, "✅ 已注册供应商: {:?}", ids);
-        ids.len()
-    });
-
-    logging!(
-        info,
-        LogType::Init,
-        "✅ 内置供应商注册完成，共 {} 个",
-        registered_count
-    );
-
-    #[cfg(debug_assertions)]
-    let plugins_dir = {
-        let current_dir = std::env::current_dir().unwrap_or_else(|_| std::path::PathBuf::from("."));
-        current_dir.parent().unwrap_or(&current_dir).join("plugins")
-    };
-
-    #[cfg(not(debug_assertions))]
-    let plugins_dir = paths::app_home_dir()?.join("plugins");
+    // 确定插件目录路径
+    let plugins_dir = get_plugins_dir()?;
 
     logging!(info, LogType::Init, "🔧 插件目录路径: {:?}", plugins_dir);
+
+    // 如果插件目录不存在，记录警告但不中断启动
+    if !plugins_dir.exists() {
+        logging!(
+            info,
+            LogType::Init,
+            "⚠️ 插件目录不存在，请确保 plugins 目录已正确部署"
+        );
+        return Ok(());
+    }
 
     plugin_loader::init_global_plugin_loader(&plugins_dir)?;
 
@@ -77,20 +66,66 @@ fn init_ai_providers() -> Result<()> {
             logging!(
                 info,
                 LogType::Init,
-                "🔌 插件系统初始化完成，加载了 {} 个插件供应商",
+                "✅ 插件系统初始化完成，加载了 {} 个 AI 供应商",
                 count
             );
         }
         Err(e) => {
             logging_error!(
                 LogType::Init,
-                "⚠️ 插件加载部分失败: {}，将继续使用内置供应商",
+                "⚠️ 插件加载失败: {}",
                 e
             );
         }
     }
 
     Ok(())
+}
+
+/// 获取插件目录路径
+///
+/// - 开发环境: 项目根目录的 plugins/
+/// - 生产环境: 应用资源目录的 plugins/（由 Tauri bundle.resources 打包）
+fn get_plugins_dir() -> anyhow::Result<std::path::PathBuf> {
+    #[cfg(debug_assertions)]
+    {
+        // 开发环境：项目根目录的 plugins/
+        let current_dir = std::env::current_dir().unwrap_or_else(|_| std::path::PathBuf::from("."));
+        Ok(current_dir.parent().unwrap_or(&current_dir).join("plugins"))
+    }
+
+    #[cfg(not(debug_assertions))]
+    {
+        // 生产环境：从资源目录加载
+        // Tauri bundle.resources 会将整个 plugins 目录打包到特定位置
+        let exe_path = std::env::current_exe().context("获取可执行文件路径失败")?;
+
+        // Windows: 可执行文件旁边的 plugins/
+        // macOS: .app/Contents/Resources/plugins/
+        // Linux: 可执行文件旁边的 plugins/
+        #[cfg(target_os = "windows")]
+        let plugins_dir = exe_path
+            .parent()
+            .map(|p| p.join("plugins"))
+            .unwrap_or_else(|| exe_path.join("plugins"));
+
+        #[cfg(target_os = "macos")]
+        let plugins_dir = exe_path
+            .parent()
+            .and_then(|p| p.parent())
+            .and_then(|p| p.parent())
+            .and_then(|p| p.parent())
+            .map(|p| p.join("Resources").join("plugins"))
+            .unwrap_or_else(|| exe_path.join("plugins"));
+
+        #[cfg(target_os = "linux")]
+        let plugins_dir = exe_path
+            .parent()
+            .map(|p| p.join("plugins"))
+            .unwrap_or_else(|| exe_path.join("plugins"));
+
+        Ok(plugins_dir)
+    }
 }
 
 async fn load_log_config() -> (usize, usize) {

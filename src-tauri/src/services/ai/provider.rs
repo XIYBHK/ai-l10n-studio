@@ -75,11 +75,13 @@ impl ProviderRegistry {
     }
 
     /// 注册新的供应商
+    ///
+    /// 如果供应商已存在，将被覆盖（用于插件系统更新内置供应商）
     pub fn register<T: AIProvider + 'static>(&mut self, provider: T) -> Result<()> {
         let id = provider.id().to_string();
 
         if self.providers.contains_key(&id) {
-            return Err(anyhow::anyhow!("Provider '{}' already registered", id));
+            tracing::debug!("供应商 '{}' 已存在，将被覆盖", id);
         }
 
         self.providers.insert(id, Box::new(provider));
@@ -252,7 +254,11 @@ mod tests {
         // 第一次注册应该成功
         assert!(registry.register(provider1).is_ok());
 
-        // 重复注册应该失败
-        assert!(registry.register(provider2).is_err());
+        // 重复注册现在也应该成功（覆盖模式）
+        assert!(registry.register(provider2).is_ok());
+
+        // 验证被覆盖了
+        let provider = registry.get_provider("test").unwrap();
+        assert_eq!(provider.display_name(), "Test 2");
     }
 }

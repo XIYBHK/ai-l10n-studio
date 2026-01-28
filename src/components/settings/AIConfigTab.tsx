@@ -11,6 +11,7 @@ import {
   Popconfirm,
   message,
   Space,
+  AutoComplete,
 } from 'antd';
 import {
   PlusOutlined,
@@ -43,9 +44,11 @@ function mapProviderInfoToConfig(provider: ProviderInfo): ProviderConfig {
   };
 }
 
-interface AIConfigTabProps {}
+interface AIConfigTabProps {
+  onProviderChange?: (providerId: string) => void;
+}
 
-export function AIConfigTab() {
+export function AIConfigTab({ onProviderChange }: AIConfigTabProps) {
   const [form] = Form.useForm();
   const { configs, active, mutateAll, mutateActive } = useAIConfigs();
   const [activeIndex, setActiveIndex] = useState<number | null>(null);
@@ -54,6 +57,7 @@ export function AIConfigTab() {
   const [testing, setTesting] = useState(false);
   const [dynamicProviders, setDynamicProviders] = useState<ProviderInfo[]>([]);
   const [providersLoading, setProvidersLoading] = useState(false);
+  const [availableModels, setAvailableModels] = useState<string[]>([]);
 
   const providerConfigs: ProviderConfig[] = useMemo(() => {
     return dynamicProviders.map(mapProviderInfoToConfig);
@@ -100,11 +104,18 @@ export function AIConfigTab() {
       });
     }
 
+    // 加载该供应商的所有模型
     try {
       const models = await aiModelCommands.getProviderModels(providerId);
-      log.info('已加载模型列表', { providerId, count: models.length });
+      const modelIds = models.map((m) => m.id);
+      setAvailableModels(modelIds);
+      log.info('已加载模型列表', { providerId, count: modelIds.length });
+
+      // 触发回调
+      onProviderChange?.(providerId);
     } catch (error) {
       log.error('加载模型列表失败:', error);
+      setAvailableModels([]);
     }
   }
 
@@ -114,7 +125,7 @@ export function AIConfigTab() {
       const testConfig: AIConfig = {
         providerId: values.providerId,
         apiKey: values.apiKey,
-        baseUrl: values.baseUrl,
+        baseUrl: values.baseUrl || undefined,
         model: values.model,
         proxy: values.proxy?.enabled
           ? {
@@ -122,12 +133,12 @@ export function AIConfigTab() {
               host: values.proxy.host,
               port: values.proxy.port,
             }
-          : undefined,
+          : null,
       };
       await aiConfigCommands.testConnection(
         testConfig.providerId,
         testConfig.apiKey,
-        testConfig.baseUrl
+        testConfig.baseUrl || undefined
       );
       message.success('连接测试成功！');
       log.info('连接测试成功', { providerId: values.providerId });
@@ -185,7 +196,7 @@ export function AIConfigTab() {
       const config: AIConfig = {
         providerId: values.providerId,
         apiKey: values.apiKey,
-        baseUrl: values.baseUrl,
+        baseUrl: values.baseUrl || undefined,
         model: values.model,
         proxy: values.proxy?.enabled
           ? {
@@ -193,7 +204,7 @@ export function AIConfigTab() {
               host: values.proxy.host,
               port: values.proxy.port,
             }
-          : undefined,
+          : null,
       };
 
       if (isAddingNew) {
@@ -326,8 +337,20 @@ export function AIConfigTab() {
               <Input placeholder="可选，留空则使用默认值" />
             </Form.Item>
 
-            <Form.Item label="模型" name="model">
-              <Input placeholder="例如：gpt-3.5-turbo" />
+            <Form.Item
+              label="模型"
+              name="model"
+              rules={[{ required: true, message: '请输入或选择模型' }]}
+              extra={availableModels.length > 0 ? `该供应商支持 ${availableModels.length} 个模型，可从下拉列表选择或手动输入` : '请输入模型名称'}
+            >
+              <AutoComplete
+                placeholder={availableModels.length > 0 ? '从列表选择或手动输入模型名称' : '例如：gpt-3.5-turbo'}
+                options={availableModels.map((model) => ({ value: model, label: model }))}
+                filterOption={(inputValue, option) =>
+                  option?.value.toLowerCase().includes(inputValue.toLowerCase()) ?? false
+                }
+                allowClear
+              />
             </Form.Item>
 
             <Form.Item>

@@ -1,0 +1,45 @@
+# MiniMax 供应商插件配置
+# 基于官方文档 (2025-01)
+
+[plugin]
+name = "MiniMax"
+id = "minimax"
+version = "2.2.0"
+api_version = "1.0"
+description = "MiniMax M2 系列，200K+上下文，支持缓存"
+author = "AI L10n Studio"
+homepage = "https://www.minimaxi.com"
+license = "MIT"
+
+[provider]
+display_name = "MiniMax"
+default_url = "https://api.minimax.io/v1/text/chatcompletion_v2"
+default_model = "MiniMax-M2.1"
+supports_cache = true
+supports_images = true
+
+# MiniMax M2.1 (最新版，推荐)
+[[provider.models]]
+id = "MiniMax-M2.1"
+name = "MiniMax M2.1"
+context_window = 200000
+max_output_tokens = 8192
+input_price = 0.30
+output_price = 1.18
+cache_reads_price = 0.03
+cache_writes_price = 0.37
+recommended = true
+description = "MiniMax M2.1 最新版，200K上下文，中文优秀，支持缓存"
+
+# MiniMax M2 (标准版)
+[[provider.models]]
+id = "MiniMax-M2"
+name = "MiniMax M2"
+context_window = 200000
+max_output_tokens = 8192
+input_price = 0.30
+output_price = 1.18
+cache_reads_price = 0.03
+cache_writes_price = 0.37
+recommended = false
+description = "MiniMax M2 标准版，200K上下文"

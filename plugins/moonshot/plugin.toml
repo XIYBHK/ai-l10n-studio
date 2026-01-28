@@ -1,12 +1,12 @@
 # Moonshot AI (Kimi) 供应商插件配置
-# 基于现有 Moonshot 模型配置生成
+# 基于官方定价文档 (2025-01)
 
 [plugin]
 name = "Moonshot AI (Kimi)"
 id = "moonshot"
-version = "1.5.0"
+version = "2.1.0"
 api_version = "1.0"
-description = "Moonshot AI Kimi 智能助手，超长上下文，支持视觉理解和上下文缓存"
+description = "Moonshot AI Kimi K2 系列，262K超长上下文，支持缓存"
 author = "AI L10n Studio"
 homepage = "https://platform.moonshot.cn"
 license = "MIT"
@@ -14,48 +14,45 @@ license = "MIT"
 [provider]
 display_name = "Moonshot AI"
 default_url = "https://api.moonshot.cn/v1"
-default_model = "kimi-latest"
-supports_cache = true   # 支持 Context Caching，节省约90%成本
-supports_images = true  # 部分模型支持视觉理解
+default_model = "kimi-k2-0905-preview"
+supports_cache = true
+supports_images = true
 
-# 额外配置选项
-[provider.extra_config]
-max_retries = 3
-timeout_seconds = 90
-# Moonshot 特有配置
-context_caching = true
-auto_model_selection = true
-vision_support = true
+# Kimi K2.5 (多模态)
+[[provider.models]]
+id = "kimi-k2.5"
+name = "Kimi K2.5"
+context_window = 262144
+max_output_tokens = 8192
+input_price = 0.57
+output_price = 3.00
+cache_reads_price = 0.10
+cache_writes_price = 0.0
+recommended = false
+description = "Kimi K2.5 多模态版，262K上下文，支持视觉，最强模型"
 
-[models]
-# 推荐的默认模型
-recommended_model = "kimi-latest"
-
-# 禁用的模型（如果有的话）
-disabled_models = []
-
-# 模型配置覆盖
-[models.overrides."kimi-latest"]
-name = "Kimi Latest (推荐)"
-description = "最新模型，自动缓存，支持视觉理解，智能选择最优计费模型"
+# Kimi K2 0905 Preview (稳定版，推荐)
+[[provider.models]]
+id = "kimi-k2-0905-preview"
+name = "Kimi K2 0905"
+context_window = 262144
+max_output_tokens = 8192
+input_price = 0.57
+output_price = 2.29
+cache_reads_price = 0.14
+cache_writes_price = 0.0
 recommended = true
+description = "Kimi K2 稳定版，262K上下文，代码能力强"
 
-[models.overrides."moonshot-v1-auto"]
-name = "Kimi (自动选择)"
-description = "智能选择最优模型，128K上下文，支持上下文缓存"
-recommended = true
-
-[models.overrides."moonshot-v1-8k"]
-name = "Kimi (8K上下文)"
-description = "8K上下文窗口，适合短文本翻译"
+# Kimi K2 Turbo (高速版)
+[[provider.models]]
+id = "kimi-k2-turbo-preview"
+name = "Kimi K2 Turbo"
+context_window = 262144
+max_output_tokens = 8192
+input_price = 1.14
+output_price = 8.29
+cache_reads_price = 0.14
+cache_writes_price = 0.0
 recommended = false
-
-[models.overrides."moonshot-v1-32k"]
-name = "Kimi (32K上下文)"
-description = "32K上下文窗口，适合中等长度文档"
-recommended = false
-
-[models.overrides."moonshot-v1-128k"]
-name = "Kimi (128K上下文)"
-description = "128K超长上下文窗口，适合长文档处理"
-recommended = false
+description = "Kimi K2 Turbo 高速版，262K上下文，60-100 tokens/s"

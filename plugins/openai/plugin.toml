@@ -1,0 +1,71 @@
+# OpenAI 供应商插件配置
+# GPT 系列模型，基于 models.dev 数据（2025-01）
+
+[plugin]
+name = "OpenAI"
+id = "openai"
+version = "2.1.0"
+api_version = "1.0"
+description = "OpenAI GPT 系列模型，包括 GPT-4o、GPT-4.1 系列"
+author = "AI L10n Studio"
+homepage = "https://openai.com"
+license = "MIT"
+
+[provider]
+display_name = "OpenAI"
+default_url = "https://api.openai.com/v1/chat/completions"
+default_model = "gpt-4o-mini"
+supports_cache = true
+supports_images = true
+
+# GPT-4o Mini (高性价比，推荐用于翻译)
+[[provider.models]]
+id = "gpt-4o-mini"
+name = "GPT-4o Mini"
+context_window = 128000
+max_output_tokens = 16384
+input_price = 0.15
+output_price = 0.60
+cache_reads_price = 0.08
+cache_writes_price = 0.1875
+recommended = true
+description = "性价比最高的小模型，适合大批量翻译，128K上下文"
+
+# GPT-4o (多模态，长文本)
+[[provider.models]]
+id = "gpt-4o"
+name = "GPT-4o"
+context_window = 128000
+max_output_tokens = 16384
+input_price = 2.50
+output_price = 10.00
+cache_reads_price = 1.25
+cache_writes_price = 3.125
+recommended = false
+description = "强大的多模态模型，支持视觉和文本"
+
+# GPT-4.1 (最新标准版，1M上下文)
+[[provider.models]]
+id = "gpt-4.1"
+name = "GPT-4.1"
+context_window = 1047576
+max_output_tokens = 16384
+input_price = 2.00
+output_price = 8.00
+cache_reads_price = 1.00
+cache_writes_price = 2.50
+recommended = true
+description = "GPT-4.1 标准版，1M 超长上下文，性价比优秀"
+
+# GPT-4.1 Mini (轻量版，1M上下文)
+[[provider.models]]
+id = "gpt-4.1-mini"
+name = "GPT-4.1 Mini"
+context_window = 1047576
+max_output_tokens = 16384
+input_price = 0.40
+output_price = 1.60
+cache_reads_price = 0.20
+cache_writes_price = 0.50
+recommended = false
+description = "GPT-4.1 轻量版，1M 超长上下文，超高性价比"

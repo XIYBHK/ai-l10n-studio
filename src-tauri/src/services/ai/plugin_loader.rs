@@ -159,8 +159,8 @@ impl PluginLoader {
 
     /// 注册插件供应商到全局注册表
     ///
-    /// 注意：这是一个简化实现。在完整的插件系统中，
-    /// 这里需要动态加载和实例化插件的 AIProvider 实现
+    /// 注意：如果供应商已存在（内置或之前加载的插件），将覆盖它
+    /// 这样插件可以优先于内置供应商，提供更新的配置
     fn register_plugin_provider(
         &self,
         config: &PluginConfig,
@@ -169,9 +169,22 @@ impl PluginLoader {
         // 创建一个动态的 AIProvider 实现
         let dynamic_provider = DynamicAIProvider::new(config.clone());
 
-        // 注册到全局注册表
-        with_global_registry_mut(|registry| registry.register(dynamic_provider))
-            .with_context(|| format!("注册供应商到全局注册表失败: {}", config.plugin.id))
+        // 注册到全局注册表，如果已存在则覆盖
+        with_global_registry_mut(|registry| {
+            let provider_id = config.plugin.id.clone();
+
+            // 检查是否已存在
+            if registry.get_provider(&provider_id).is_some() {
+                tracing::warn!(
+                    "⚠️ 供应商 '{}' 已存在，插件版本将覆盖内置版本",
+                    provider_id
+                );
+            }
+
+            // 直接注册（可能覆盖内置版本）
+            registry.register(dynamic_provider)
+        })
+        .with_context(|| format!("注册供应商到全局注册表失败: {}", config.plugin.id))
     }
 
     /// 获取所有已加载的插件信息
