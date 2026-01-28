@@ -43,15 +43,20 @@ pub fn is_simple_phrase(text: &str) -> bool {
 
     let text_lower = text.to_lowercase();
     let preposition_phrases = [
-        "for ", "of ", "in the ", "on the ", "at the ", "by the ", "with the ",
+        "for ",
+        "of ",
+        "in the ",
+        "on the ",
+        "at the ",
+        "by the ",
+        "with the ",
     ];
     if preposition_phrases.iter().any(|&p| text_lower.contains(p)) {
         return false;
     }
 
     let descriptive_words = [
-        "duration", "spacing", "radius", "distance", "example", "tips", "mappings",
-        "examples",
+        "duration", "spacing", "radius", "distance", "example", "tips", "mappings", "examples",
     ];
     if descriptive_words.iter().any(|&w| text_lower.contains(w)) {
         return false;

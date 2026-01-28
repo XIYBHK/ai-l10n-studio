@@ -18,7 +18,7 @@ pub fn get_moonshot_models() -> Vec<ModelInfo> {
             // 💰 USD per 1M tokens
             input_price: 0.6,
             output_price: 2.5,
-            cache_reads_price: Some(0.15), // 90% 节省
+            cache_reads_price: Some(0.15),  // 90% 节省
             cache_writes_price: Some(0.75), // 估算 25% 溢价
             supports_cache: true,
             supports_images: false,
@@ -34,7 +34,7 @@ pub fn get_moonshot_models() -> Vec<ModelInfo> {
             // 💰 USD per 1M tokens
             input_price: 0.6,
             output_price: 2.5,
-            cache_reads_price: Some(0.15), // 90% 节省
+            cache_reads_price: Some(0.15),  // 90% 节省
             cache_writes_price: Some(0.75), // 估算 25% 溢价
             supports_cache: true,
             supports_images: false,
@@ -105,14 +105,20 @@ mod tests {
         assert!(models.len() >= 5);
 
         // 检查 kimi-k2-0711 模型（默认推荐）
-        let k2_0711 = models.iter().find(|m| m.id == "kimi-k2-0711-preview").unwrap();
+        let k2_0711 = models
+            .iter()
+            .find(|m| m.id == "kimi-k2-0711-preview")
+            .unwrap();
         assert_eq!(k2_0711.provider, "Moonshot AI");
         assert!(k2_0711.recommended);
         assert!(k2_0711.supports_cache);
         assert_eq!(k2_0711.context_window, 131072); // 128K
 
         // 检查 kimi-k2-0905 模型
-        let k2_0905 = models.iter().find(|m| m.id == "kimi-k2-0905-preview").unwrap();
+        let k2_0905 = models
+            .iter()
+            .find(|m| m.id == "kimi-k2-0905-preview")
+            .unwrap();
         assert_eq!(k2_0905.provider, "Moonshot AI");
         assert!(!k2_0905.recommended); // 不推荐
         assert!(k2_0905.supports_cache);

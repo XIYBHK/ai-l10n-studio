@@ -20,8 +20,8 @@ pub fn get_openai_models() -> Vec<ModelInfo> {
             // 价格：$2.00/1M input, $8.00/1M output
             input_price: 2.0,
             output_price: 8.0,
-            cache_reads_price: Some(0.5),   // 75% off
-            cache_writes_price: Some(2.5),  // 25% more
+            cache_reads_price: Some(0.5),  // 75% off
+            cache_writes_price: Some(2.5), // 25% more
             supports_cache: true,
             supports_images: true,
             description: Some("2025年最新模型，百万级上下文".to_string()),

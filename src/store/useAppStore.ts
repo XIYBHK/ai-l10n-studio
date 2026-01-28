@@ -64,112 +64,113 @@ export interface AppState {
 export const useAppStore = create<AppState>()(
   devtools(
     (set, get) => ({
-  // 初始状态
-  config: null,
-  theme: 'system', // Phase 9: 默认跟随系统
-  language: 'zh-CN',
+      // 初始状态
+      config: null,
+      theme: 'system', // Phase 9: 默认跟随系统
+      language: 'zh-CN',
 
-  // 系统主题状态（运行时检测，不持久化）
-  systemTheme: getInitialSystemTheme(),
-  cumulativeStats: INITIAL_STATS,
+      // 系统主题状态（运行时检测，不持久化）
+      systemTheme: getInitialSystemTheme(),
+      cumulativeStats: INITIAL_STATS,
 
-  // Actions - 配置
-  setConfig: (config) => set({ config }),
+      // Actions - 配置
+      setConfig: (config) => set({ config }),
 
-  // 主题和语言（持久化）
-  setTheme: (theme) => {
-    const currentTheme = get().theme;
-    if (currentTheme === theme) {
-      log.debug('跳过重复主题设置', {
-        theme,
-        reason: '主题相同',
-        timestamp: new Date().toLocaleTimeString(),
-      });
-      return;
-    }
+      // 主题和语言（持久化）
+      setTheme: (theme) => {
+        const currentTheme = get().theme;
+        if (currentTheme === theme) {
+          log.debug('跳过重复主题设置', {
+            theme,
+            reason: '主题相同',
+            timestamp: new Date().toLocaleTimeString(),
+          });
+          return;
+        }
 
-    set({ theme });
-    tauriStore.setTheme(theme).catch((err) => log.error('保存主题失败', err));
-  },
-  setLanguage: (language) => {
-    const current = get().language;
-    if (current === language) {
-      return;
-    }
-
-    set({ language });
-    tauriStore.setLanguage(language).catch((err) => log.error('保存语言失败', err));
-  },
-
-  // 系统主题管理（全局单例，不持久化）
-  setSystemTheme: (systemTheme) => {
-    const current = get().systemTheme;
-    if (current === systemTheme) {
-      log.debug('跳过重复系统主题设置', { systemTheme, reason: '系统主题相同' });
-      return;
-    }
-
-    log.debug('更新全局系统主题', { from: current, to: systemTheme });
-    set({ systemTheme });
-  },
-
-  // 累计统计（持久化到 TauriStore）
-  updateCumulativeStats: (stats) => {
-    const prev = get().cumulativeStats;
-    const newStats = {
-      total: prev.total + stats.total,
-      tm_hits: prev.tm_hits + stats.tm_hits,
-      deduplicated: prev.deduplicated + stats.deduplicated,
-      ai_translated: prev.ai_translated + stats.ai_translated,
-      token_stats: {
-        input_tokens: prev.token_stats.input_tokens + stats.token_stats.input_tokens,
-        output_tokens: prev.token_stats.output_tokens + stats.token_stats.output_tokens,
-        total_tokens: prev.token_stats.total_tokens + stats.token_stats.total_tokens,
-        cost: prev.token_stats.cost + stats.token_stats.cost,
+        set({ theme });
+        tauriStore.setTheme(theme).catch((err) => log.error('保存主题失败', err));
       },
-      tm_learned: prev.tm_learned + stats.tm_learned,
-    };
-    set({ cumulativeStats: newStats });
+      setLanguage: (language) => {
+        const current = get().language;
+        if (current === language) {
+          return;
+        }
 
-    tauriStore
-      .updateCumulativeStats({
-        totalTranslated: newStats.total,
-        totalTokens: newStats.token_stats.total_tokens,
-        totalCost: newStats.token_stats.cost,
-        sessionCount: prev.total > 0 ? 1 : 0,
-        lastUpdated: Date.now(),
-        tmHits: newStats.tm_hits,
-        deduplicated: newStats.deduplicated,
-        aiTranslated: newStats.ai_translated,
-        tmLearned: newStats.tm_learned,
-        inputTokens: newStats.token_stats.input_tokens,
-        outputTokens: newStats.token_stats.output_tokens,
-      })
-      .catch((err) => log.error('保存累计统计失败', err));
-  },
+        set({ language });
+        tauriStore.setLanguage(language).catch((err) => log.error('保存语言失败', err));
+      },
 
-  resetCumulativeStats: () => {
-    set({ cumulativeStats: INITIAL_STATS });
+      // 系统主题管理（全局单例，不持久化）
+      setSystemTheme: (systemTheme) => {
+        const current = get().systemTheme;
+        if (current === systemTheme) {
+          log.debug('跳过重复系统主题设置', { systemTheme, reason: '系统主题相同' });
+          return;
+        }
 
-    tauriStore
-      .updateCumulativeStats({
-        totalTranslated: 0,
-        totalTokens: 0,
-        totalCost: 0,
-        sessionCount: 0,
-        lastUpdated: Date.now(),
-        tmHits: 0,
-        deduplicated: 0,
-        aiTranslated: 0,
-        tmLearned: 0,
-        inputTokens: 0,
-        outputTokens: 0,
-      })
-      .catch((err) => log.error('重置累计统计失败', err));
-  },
-  }),
-  { name: 'AppStore' }
-));
+        log.debug('更新全局系统主题', { from: current, to: systemTheme });
+        set({ systemTheme });
+      },
+
+      // 累计统计（持久化到 TauriStore）
+      updateCumulativeStats: (stats) => {
+        const prev = get().cumulativeStats;
+        const newStats = {
+          total: prev.total + stats.total,
+          tm_hits: prev.tm_hits + stats.tm_hits,
+          deduplicated: prev.deduplicated + stats.deduplicated,
+          ai_translated: prev.ai_translated + stats.ai_translated,
+          token_stats: {
+            input_tokens: prev.token_stats.input_tokens + stats.token_stats.input_tokens,
+            output_tokens: prev.token_stats.output_tokens + stats.token_stats.output_tokens,
+            total_tokens: prev.token_stats.total_tokens + stats.token_stats.total_tokens,
+            cost: prev.token_stats.cost + stats.token_stats.cost,
+          },
+          tm_learned: prev.tm_learned + stats.tm_learned,
+        };
+        set({ cumulativeStats: newStats });
+
+        tauriStore
+          .updateCumulativeStats({
+            totalTranslated: newStats.total,
+            totalTokens: newStats.token_stats.total_tokens,
+            totalCost: newStats.token_stats.cost,
+            sessionCount: prev.total > 0 ? 1 : 0,
+            lastUpdated: Date.now(),
+            tmHits: newStats.tm_hits,
+            deduplicated: newStats.deduplicated,
+            aiTranslated: newStats.ai_translated,
+            tmLearned: newStats.tm_learned,
+            inputTokens: newStats.token_stats.input_tokens,
+            outputTokens: newStats.token_stats.output_tokens,
+          })
+          .catch((err) => log.error('保存累计统计失败', err));
+      },
+
+      resetCumulativeStats: () => {
+        set({ cumulativeStats: INITIAL_STATS });
+
+        tauriStore
+          .updateCumulativeStats({
+            totalTranslated: 0,
+            totalTokens: 0,
+            totalCost: 0,
+            sessionCount: 0,
+            lastUpdated: Date.now(),
+            tmHits: 0,
+            deduplicated: 0,
+            aiTranslated: 0,
+            tmLearned: 0,
+            inputTokens: 0,
+            outputTokens: 0,
+          })
+          .catch((err) => log.error('重置累计统计失败', err));
+      },
+    }),
+    { name: 'AppStore' }
+  )
+);
 
 /**
  * 从 TauriStore 加载初始状态

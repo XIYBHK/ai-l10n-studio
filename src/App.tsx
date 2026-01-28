@@ -126,17 +126,19 @@ export default function App() {
   return (
     <ErrorBoundary>
       {initError && (
-        <div style={{
-          position: 'fixed',
-          top: 0,
-          left: 0,
-          right: 0,
-          background: '#ff4d4f',
-          color: 'white',
-          padding: '16px',
-          zIndex: 9999,
-          textAlign: 'center'
-        }}>
+        <div
+          style={{
+            position: 'fixed',
+            top: 0,
+            left: 0,
+            right: 0,
+            background: '#ff4d4f',
+            color: 'white',
+            padding: '16px',
+            zIndex: 9999,
+            textAlign: 'center',
+          }}
+        >
           ⚠️ {initError}
           <button onClick={() => window.location.reload()} style={{ marginLeft: '16px' }}>
             重新加载

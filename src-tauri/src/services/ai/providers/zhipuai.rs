@@ -45,7 +45,10 @@ mod tests {
 
         assert_eq!(provider.id(), "zhipuai");
         assert_eq!(provider.display_name(), "智谱AI");
-        assert_eq!(provider.default_url(), "https://open.bigmodel.cn/api/paas/v4");
+        assert_eq!(
+            provider.default_url(),
+            "https://open.bigmodel.cn/api/paas/v4"
+        );
         assert_eq!(provider.default_model(), "glm-4.7-flash");
     }
 

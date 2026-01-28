@@ -171,14 +171,17 @@ impl TranslationMemory {
         }
 
         // 降级：尝试不带语言的查询（兼容旧数据）
-        self.memory.get(source).map(|translation| {
-            self.stats.hits += 1;
-            crate::app_log!("[TM] 命中翻译（无语言标识）: {} -> {}", source, translation);
-            translation.clone()
-        }).or_else(|| {
-            self.stats.misses += 1;
-            None
-        })
+        self.memory
+            .get(source)
+            .map(|translation| {
+                self.stats.hits += 1;
+                crate::app_log!("[TM] 命中翻译（无语言标识）: {} -> {}", source, translation);
+                translation.clone()
+            })
+            .or_else(|| {
+                self.stats.misses += 1;
+                None
+            })
     }
 
     /// 添加翻译到记忆库

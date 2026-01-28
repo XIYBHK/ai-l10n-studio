@@ -45,7 +45,10 @@ mod tests {
 
         assert_eq!(provider.id(), "minimax");
         assert_eq!(provider.display_name(), "MiniMax");
-        assert_eq!(provider.default_url(), "https://api.minimax.io/anthropic/v1");
+        assert_eq!(
+            provider.default_url(),
+            "https://api.minimax.io/anthropic/v1"
+        );
         assert_eq!(provider.default_model(), "MiniMax-M2.1");
     }
 
