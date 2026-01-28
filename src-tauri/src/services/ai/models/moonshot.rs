@@ -2,91 +2,93 @@ use crate::services::ai::model_info::ModelInfo;
 
 /// Moonshot AI 模型列表
 ///
-/// 数据来源：https://platform.moonshot.cn/docs/pricing
-/// 更新时间：2025-10-21
-/// Context Caching：2024-06 支持，可节省约 90% 调用成本
+/// 数据来源：https://models.dev (anomalyco/models.dev)
+/// 更新时间：2025-01-28
+/// 全新 Kimi K2 系列替代旧的 moonshot-v1 系列
+/// Context Caching：可节省约 90% 调用成本
 pub fn get_moonshot_models() -> Vec<ModelInfo> {
     vec![
         // ========== 推荐模型 ==========
         ModelInfo {
-            id: "kimi-latest".to_string(),
-            name: "Kimi Latest".to_string(),
+            id: "kimi-k2-0711-preview".to_string(),
+            name: "Kimi K2 0711".to_string(),
             provider: "Moonshot AI".to_string(),
-            context_window: 128000,
-            max_output_tokens: 4096,
+            context_window: 131072, // 128K 上下文
+            max_output_tokens: 16384,
             // 💰 USD per 1M tokens
-            input_price: 1.67, // 估算，自动根据上下文选择模型计费
-            output_price: 1.67,
-            cache_reads_price: Some(0.14), // ￥1/M ≈ $0.14/1M (90% 节省)
-            cache_writes_price: Some(2.09), // 估算 25% 溢价
-            supports_cache: true,          // 支持自动缓存
-            supports_images: true,         // 支持视觉理解
-            description: Some("最新模型，自动缓存，支持视觉 (2025-02发布)".to_string()),
+            input_price: 0.6,
+            output_price: 2.5,
+            cache_reads_price: Some(0.15), // 90% 节省
+            cache_writes_price: Some(0.75), // 估算 25% 溢价
+            supports_cache: true,
+            supports_images: false,
+            description: Some("Kimi K2 标准版，128K上下文，稳定可靠".to_string()),
             recommended: true,
         },
         ModelInfo {
-            id: "moonshot-v1-auto".to_string(),
-            name: "Kimi (自动选择)".to_string(),
+            id: "kimi-k2-0905-preview".to_string(),
+            name: "Kimi K2 0905".to_string(),
             provider: "Moonshot AI".to_string(),
-            context_window: 128000,
-            max_output_tokens: 4096,
+            context_window: 262144, // 256K 上下文
+            max_output_tokens: 262144,
             // 💰 USD per 1M tokens
-            input_price: 1.67,              // $1.67/1M tokens
-            output_price: 1.67,             // $1.67/1M tokens
-            cache_reads_price: Some(0.17),  // 估算 90% 节省
-            cache_writes_price: Some(2.09), // 估算 25% 溢价
-            supports_cache: true,           // Context Caching 支持
-            supports_images: false,
-            description: Some("智能选择最优模型，128K上下文".to_string()),
-            recommended: true,
-        },
-        // ========== 其他模型 ==========
-        ModelInfo {
-            id: "moonshot-v1-8k".to_string(),
-            name: "Kimi (8K)".to_string(),
-            provider: "Moonshot AI".to_string(),
-            context_window: 8000,
-            max_output_tokens: 4096,
-            // 💰 USD per 1M tokens
-            input_price: 1.67,  // $1.67/1M tokens
-            output_price: 1.67, // $1.67/1M tokens
-            cache_reads_price: Some(0.17),
-            cache_writes_price: Some(2.09),
+            input_price: 0.6,
+            output_price: 2.5,
+            cache_reads_price: Some(0.15), // 90% 节省
+            cache_writes_price: Some(0.75), // 估算 25% 溢价
             supports_cache: true,
             supports_images: false,
-            description: Some("标准8K上下文，性价比高".to_string()),
+            description: Some("最新 Kimi K2 模型，256K上下文，超长输出".to_string()),
+            recommended: false,
+        },
+        // ========== 思考模型 ==========
+        ModelInfo {
+            id: "kimi-k2-thinking".to_string(),
+            name: "Kimi K2 Thinking".to_string(),
+            provider: "Moonshot AI".to_string(),
+            context_window: 262144,
+            max_output_tokens: 262144,
+            // 💰 USD per 1M tokens
+            input_price: 0.6,
+            output_price: 2.5,
+            cache_reads_price: Some(0.15),
+            cache_writes_price: Some(0.75),
+            supports_cache: true,
+            supports_images: false,
+            description: Some("Kimi K2 思考模式，深度推理".to_string()),
             recommended: false,
         },
         ModelInfo {
-            id: "moonshot-v1-32k".to_string(),
-            name: "Kimi (32K)".to_string(),
+            id: "kimi-k2-thinking-turbo".to_string(),
+            name: "Kimi K2 Thinking Turbo".to_string(),
             provider: "Moonshot AI".to_string(),
-            context_window: 32000,
-            max_output_tokens: 4096,
+            context_window: 262144,
+            max_output_tokens: 262144,
             // 💰 USD per 1M tokens
-            input_price: 3.33,  // $3.33/1M tokens (24 CNY)
-            output_price: 3.33, // $3.33/1M tokens
-            cache_reads_price: Some(0.33),
-            cache_writes_price: Some(4.16),
+            input_price: 1.15,
+            output_price: 8.0,
+            cache_reads_price: Some(0.15),
+            cache_writes_price: Some(1.44), // 估算 25% 溢价
             supports_cache: true,
             supports_images: false,
-            description: Some("32K上下文，适合中型文件".to_string()),
+            description: Some("Kimi K2 思考加速模式".to_string()),
             recommended: false,
         },
+        // ========== Turbo 模型 ==========
         ModelInfo {
-            id: "moonshot-v1-128k".to_string(),
-            name: "Kimi (128K)".to_string(),
+            id: "kimi-k2-turbo-preview".to_string(),
+            name: "Kimi K2 Turbo".to_string(),
             provider: "Moonshot AI".to_string(),
-            context_window: 128000,
-            max_output_tokens: 4096,
+            context_window: 262144,
+            max_output_tokens: 262144,
             // 💰 USD per 1M tokens
-            input_price: 8.33,  // $8.33/1M tokens (60 CNY)
-            output_price: 8.33, // $8.33/1M tokens
-            cache_reads_price: Some(0.83),
-            cache_writes_price: Some(10.41),
+            input_price: 2.4,
+            output_price: 10.0,
+            cache_reads_price: Some(0.6),
+            cache_writes_price: Some(3.0), // 估算 25% 溢价
             supports_cache: true,
             supports_images: false,
-            description: Some("超长128K上下文，处理大型PO文件".to_string()),
+            description: Some("Kimi K2 Turbo 高速模式".to_string()),
             recommended: false,
         },
     ]
@@ -102,18 +104,19 @@ mod tests {
         let models = get_moonshot_models();
         assert!(models.len() >= 5);
 
-        // 检查 kimi-latest 模型
-        let latest = models.iter().find(|m| m.id == "kimi-latest").unwrap();
-        assert_eq!(latest.provider, "Moonshot AI");
-        assert!(latest.recommended);
-        assert!(latest.supports_cache);
-        assert!(latest.supports_images);
+        // 检查 kimi-k2-0711 模型（默认推荐）
+        let k2_0711 = models.iter().find(|m| m.id == "kimi-k2-0711-preview").unwrap();
+        assert_eq!(k2_0711.provider, "Moonshot AI");
+        assert!(k2_0711.recommended);
+        assert!(k2_0711.supports_cache);
+        assert_eq!(k2_0711.context_window, 131072); // 128K
 
-        // 检查 auto 模型
-        let auto = models.iter().find(|m| m.id == "moonshot-v1-auto").unwrap();
-        assert_eq!(auto.provider, "Moonshot AI");
-        assert!(auto.recommended);
-        assert!(auto.supports_cache);
+        // 检查 kimi-k2-0905 模型
+        let k2_0905 = models.iter().find(|m| m.id == "kimi-k2-0905-preview").unwrap();
+        assert_eq!(k2_0905.provider, "Moonshot AI");
+        assert!(!k2_0905.recommended); // 不推荐
+        assert!(k2_0905.supports_cache);
+        assert_eq!(k2_0905.context_window, 262144); // 256K
     }
 
     #[test]

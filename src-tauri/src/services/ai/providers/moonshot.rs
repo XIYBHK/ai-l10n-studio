@@ -21,7 +21,7 @@ impl AIProvider for MoonshotProvider {
     }
 
     fn default_model(&self) -> &'static str {
-        "moonshot-v1-auto"
+        "kimi-k2-0711-preview"
     }
 
     fn get_models(&self) -> Vec<ModelInfo> {
@@ -46,7 +46,7 @@ mod tests {
         assert_eq!(provider.id(), "moonshot");
         assert_eq!(provider.display_name(), "Moonshot AI");
         assert_eq!(provider.default_url(), "https://api.moonshot.cn/v1");
-        assert_eq!(provider.default_model(), "moonshot-v1-auto");
+        assert_eq!(provider.default_model(), "kimi-k2-0711-preview");
     }
 
     #[test]
@@ -58,14 +58,14 @@ mod tests {
         assert!(!models.is_empty());
 
         // 验证包含默认模型
-        assert!(provider.supports_model("moonshot-v1-auto"));
+        assert!(provider.supports_model("kimi-k2-0711-preview"));
 
-        // 验证kimi-latest模型
-        assert!(provider.supports_model("kimi-latest"));
+        // 验证kimi-k2-0711模型
+        assert!(provider.supports_model("kimi-k2-0711-preview"));
 
         // 验证模型信息
-        let auto_model = provider.get_model_info("moonshot-v1-auto").unwrap();
-        assert_eq!(auto_model.provider, "Moonshot AI");
-        assert!(auto_model.supports_cache);
+        let k2_model = provider.get_model_info("kimi-k2-0905-preview").unwrap();
+        assert_eq!(k2_model.provider, "Moonshot AI");
+        assert!(k2_model.supports_cache);
     }
 }

@@ -5,10 +5,28 @@ use crate::services::ai::model_info::ModelInfo;
 /// 数据来源：
 /// - https://openai.com/api/pricing/
 /// - https://platform.openai.com/docs/models
+/// - https://models.dev (anomalyco/models.dev)
 ///
-/// 更新时间：2025-01-10
+/// 更新时间：2025-01-28
 pub fn get_openai_models() -> Vec<ModelInfo> {
     vec![
+        // ========== GPT-4.1 系列（2025最新）==========
+        ModelInfo {
+            id: "gpt-4.1".to_string(),
+            name: "GPT-4.1".to_string(),
+            provider: "OpenAI".to_string(),
+            context_window: 1047576, // ~1M 上下文
+            max_output_tokens: 32768,
+            // 价格：$2.00/1M input, $8.00/1M output
+            input_price: 2.0,
+            output_price: 8.0,
+            cache_reads_price: Some(0.5),   // 75% off
+            cache_writes_price: Some(2.5),  // 25% more
+            supports_cache: true,
+            supports_images: true,
+            description: Some("2025年最新模型，百万级上下文".to_string()),
+            recommended: true,
+        },
         // ========== GPT-4o 系列（多模态）==========
         ModelInfo {
             id: "gpt-4o".to_string(),
@@ -35,7 +53,7 @@ pub fn get_openai_models() -> Vec<ModelInfo> {
             // 价格：$0.15/1M input, $0.60/1M output
             input_price: 0.15,
             output_price: 0.60,
-            cache_reads_price: Some(0.075),   // 50% off
+            cache_reads_price: Some(0.08),    // 更新：2025-01-28
             cache_writes_price: Some(0.1875), // 25% more
             supports_cache: true,
             supports_images: true,
@@ -57,6 +75,39 @@ pub fn get_openai_models() -> Vec<ModelInfo> {
             supports_cache: false,
             supports_images: true,
             description: Some("GPT-4 Turbo 模型，稳定高质量".to_string()),
+            recommended: false,
+        },
+        // ========== O1 系列推理模型 ==========
+        ModelInfo {
+            id: "o1-mini".to_string(),
+            name: "o1-mini".to_string(),
+            provider: "OpenAI".to_string(),
+            context_window: 128000,
+            max_output_tokens: 65536,
+            // 价格：$1.10/1M input, $4.40/1M output
+            input_price: 1.1,
+            output_price: 4.4,
+            cache_reads_price: Some(0.55),   // 50% off
+            cache_writes_price: Some(1.375), // 25% more
+            supports_cache: true,
+            supports_images: false,
+            description: Some("推理模型，快速思考模式".to_string()),
+            recommended: false,
+        },
+        ModelInfo {
+            id: "o1-preview".to_string(),
+            name: "o1-preview".to_string(),
+            provider: "OpenAI".to_string(),
+            context_window: 128000,
+            max_output_tokens: 32768,
+            // 价格：$15.00/1M input, $60.00/1M output
+            input_price: 15.0,
+            output_price: 60.0,
+            cache_reads_price: Some(7.5),    // 50% off
+            cache_writes_price: Some(18.75), // 25% more
+            supports_cache: true,
+            supports_images: false,
+            description: Some("推理模型，深度思考模式".to_string()),
             recommended: false,
         },
         // ========== GPT-3.5 Turbo（经济实惠）==========

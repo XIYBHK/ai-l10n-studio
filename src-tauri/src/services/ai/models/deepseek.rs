@@ -2,9 +2,9 @@ use crate::services::ai::model_info::ModelInfo;
 
 /// DeepSeek 模型列表
 ///
-/// 数据来源：https://api-docs.deepseek.com/zh-cn/quick_start/pricing/
-/// 特点：中文优化，性价比极高，支持硬盘缓存（2024-08上线）
-/// 更新时间：2025-10-21
+/// 数据来源：https://models.dev (anomalyco/models.dev)
+/// 特点：中文优化，性价比极高，支持硬盘缓存
+/// 更新时间：2025-01-28
 /// 最新版本：DeepSeek-V3.2-Exp（2025-09-29发布）
 pub fn get_deepseek_models() -> Vec<ModelInfo> {
     vec![
@@ -14,7 +14,7 @@ pub fn get_deepseek_models() -> Vec<ModelInfo> {
             name: "DeepSeek V3.2-Exp".to_string(),
             provider: "DeepSeek".to_string(),
             context_window: 128000,
-            max_output_tokens: 8192, // 默认4K，最大8K
+            max_output_tokens: 8192,
             // 💰 USD per 1M tokens (基于 1 USD = 7.15 CNY)
             // 性价比之王！官方价格：输入2元，输出3元，缓存0.2元
             input_price: 0.28,              // 2 CNY ≈ $0.28/1M tokens
@@ -31,7 +31,7 @@ pub fn get_deepseek_models() -> Vec<ModelInfo> {
             name: "DeepSeek Reasoner".to_string(),
             provider: "DeepSeek".to_string(),
             context_window: 128000,
-            max_output_tokens: 65536, // 默认32K，最大64K
+            max_output_tokens: 128000, // 更新：2025-01-28 (原65536)
             // 💰 USD per 1M tokens (思考模式，价格同 deepseek-chat)
             input_price: 0.28,              // 2 CNY ≈ $0.28/1M tokens
             output_price: 0.42,             // 3 CNY ≈ $0.42/1M tokens
@@ -39,25 +39,8 @@ pub fn get_deepseek_models() -> Vec<ModelInfo> {
             cache_writes_price: Some(0.35), // 估算25%溢价
             supports_cache: true,
             supports_images: false,
-            description: Some("DeepSeek-V3.2-Exp 思考模式，深度推理，长输出".to_string()),
+            description: Some("DeepSeek-V3.2-Exp 思考模式，深度推理，超长输出".to_string()),
             recommended: true,
-        },
-        // ========== 兼容模型 ==========
-        ModelInfo {
-            id: "deepseek-coder".to_string(),
-            name: "DeepSeek Coder".to_string(),
-            provider: "DeepSeek".to_string(),
-            context_window: 128000,
-            max_output_tokens: 4096,
-            // 💰 USD per 1M tokens (兼容旧版本，可能已停用)
-            input_price: 0.28,
-            output_price: 0.42,
-            cache_reads_price: Some(0.028),
-            cache_writes_price: Some(0.35),
-            supports_cache: true,
-            supports_images: false,
-            description: Some("代码专用模型（兼容），推荐使用 deepseek-chat".to_string()),
-            recommended: false,
         },
     ]
 }
@@ -70,7 +53,7 @@ mod tests {
     #[test]
     fn test_get_deepseek_models() {
         let models = get_deepseek_models();
-        assert!(models.len() >= 3);
+        assert!(models.len() >= 2);
 
         // 检查 DeepSeek V3.2-Exp
         let chat = models.iter().find(|m| m.id == "deepseek-chat").unwrap();
@@ -85,7 +68,7 @@ mod tests {
         assert_eq!(reasoner.provider, "DeepSeek");
         assert!(reasoner.recommended);
         assert!(reasoner.supports_cache);
-        assert_eq!(reasoner.max_output_tokens, 65536); // 长输出
+        assert_eq!(reasoner.max_output_tokens, 128000); // 更新：超长输出
     }
 
     #[test]
