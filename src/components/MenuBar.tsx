@@ -166,7 +166,7 @@ export const MenuBar = memo(function MenuBar({
           style={{
             display: 'flex',
             alignItems: 'center',
-            background: cssColors.bgTertiary,
+            backgroundColor: cssColors.bgTertiary,
             padding: '4px 12px',
             borderRadius: '6px',
             border: `1px solid ${cssColors.borderSecondary}`,

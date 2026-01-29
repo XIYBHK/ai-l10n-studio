@@ -1,0 +1,231 @@
+.emptyContainer {
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  background-color: var(--color-bgPrimary);
+  color: var(--color-textTertiary);
+}
+
+.emptyIcon {
+  font-size: 48px;
+  margin-bottom: 16px;
+}
+
+.emptyText {
+  font-size: 16px;
+  color: var(--color-textSecondary);
+}
+
+.emptySubtext {
+  font-size: 12px;
+  margin-top: 8px;
+  color: var(--color-textTertiary);
+}
+
+.container {
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+}
+
+.toolbar {
+  padding: 8px 16px;
+  border-bottom: 1px solid var(--color-borderSecondary);
+  background: var(--color-bgTertiary);
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 8px;
+}
+
+.toolbarStatus {
+  font-size: 12px;
+  color: var(--color-textTertiary);
+}
+
+.unsavedText {
+  color: var(--color-statusUntranslated);
+}
+
+.toolbarActions {
+  display: flex;
+  gap: 8px;
+}
+
+.splitView {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  background-color: var(--color-bgPrimary);
+}
+
+.sourceArea {
+  flex: 0 0 40%;
+  border-bottom: 1px solid var(--color-borderSecondary);
+  display: flex;
+  flex-direction: column;
+}
+
+.sectionHeader {
+  padding: 8px 16px;
+  background: var(--color-bgTertiary);
+  border-bottom: 1px solid var(--color-borderSecondary);
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--color-textSecondary);
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.sourceContent {
+  flex: 1;
+  padding: 16px;
+  background: var(--color-bgPrimary);
+  font-size: 14px;
+  line-height: 1.6;
+  color: var(--color-textPrimary);
+  overflow-y: auto;
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
+.emptyContent {
+  color: var(--color-textDisabled);
+}
+
+.contextBox {
+  margin-top: 20px;
+  padding: 12px;
+  background: var(--color-bgSecondary);
+  border-radius: 6px;
+  border: 1px solid var(--color-borderSecondary);
+}
+
+.contextItem {
+  font-size: 12px;
+  color: var(--color-textSecondary);
+  font-family: sans-serif;
+}
+
+.contextLabel {
+  font-weight: 600;
+  margin-bottom: 4px;
+}
+
+.contextValue {
+  font-family: monospace;
+  background: var(--color-bgPrimary);
+  padding: 2px 6px;
+  border-radius: 4px;
+  display: inline-block;
+}
+
+.commentItem {
+  color: var(--color-textTertiary);
+}
+
+.targetArea {
+  flex: 1 1 60%;
+  display: flex;
+  flex-direction: column;
+}
+
+.targetContentContainer {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  position: relative;
+  /* 将背景色移至容器，并应用过渡，解决 AntD 组件闪烁问题 */
+  background-color: var(--color-bgPrimary);
+}
+
+.textArea {
+  flex: 1;
+  font-size: 14px;
+  line-height: 1.6;
+  padding: 16px;
+  resize: none;
+  /* AntD 组件设为透明，透出容器背景 */
+  background-color: transparent !important;
+  /* Ant Design TextArea override */
+  border: none !important;
+  outline: none !important;
+  box-shadow: none !important;
+}
+
+.textArea textarea {
+  background-color: transparent !important;
+  color: var(--color-textPrimary) !important;
+  transition:
+    background-color var(--theme-transition-duration) var(--theme-transition-timing),
+    color var(--theme-transition-duration) var(--theme-transition-timing) !important;
+}
+
+.textArea:focus {
+  box-shadow: none !important;
+}
+
+.unsavedBadge {
+  position: absolute;
+  bottom: 16px;
+  right: 16px;
+  padding: 4px 12px;
+  background: var(--color-overlayBg);
+  color: var(--color-overlayText);
+  border-radius: 20px;
+  font-size: 12px;
+  pointer-events: none;
+  backdrop-filter: blur(4px);
+}
+
+.statusBar {
+  padding: 6px 16px;
+  border-top: 1px solid var(--color-borderSecondary);
+  background: var(--color-bgTertiary);
+  font-size: 12px;
+  color: var(--color-textTertiary);
+  display: flex;
+  gap: 16px;
+}
+
+/* 
+ * 显式添加过渡动画，确保在主题切换时平滑过渡
+ * 即使 App.css 中有全局规则，这里显式声明可以避免 CSS Modules 隔离导致的潜在问题
+ */
+.emptyContainer,
+.toolbar,
+.splitView,
+.sourceArea,
+.sectionHeader,
+.sourceContent,
+.contextBox,
+.contextValue,
+.targetArea,
+.textArea,
+.statusBar,
+.unsavedBadge,
+.emptyText,
+.emptySubtext,
+.toolbarStatus,
+.unsavedText,
+.emptyContent,
+.contextItem,
+.commentItem {
+  transition:
+    background-color var(--theme-transition-duration) var(--theme-transition-timing),
+    color var(--theme-transition-duration) var(--theme-transition-timing),
+    border-color var(--theme-transition-duration) var(--theme-transition-timing),
+    box-shadow var(--theme-transition-duration) var(--theme-transition-timing);
+}
+
+.targetContentContainer {
+  transition:
+    background-color var(--theme-transition-duration) var(--theme-transition-timing),
+    color var(--theme-transition-duration) var(--theme-transition-timing),
+    border-color var(--theme-transition-duration) var(--theme-transition-timing),
+    box-shadow var(--theme-transition-duration) var(--theme-transition-timing);
+}

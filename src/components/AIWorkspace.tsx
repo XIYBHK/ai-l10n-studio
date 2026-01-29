@@ -129,7 +129,7 @@ export const AIWorkspace = memo(function AIWorkspace({
             style={{
               textAlign: 'center',
               padding: '8px',
-              background: cssColors.bgTertiary,
+              backgroundColor: cssColors.bgTertiary,
               borderRadius: '4px',
             }}
           >
@@ -142,7 +142,7 @@ export const AIWorkspace = memo(function AIWorkspace({
             style={{
               textAlign: 'center',
               padding: '8px',
-              background: cssColors.bgTertiary,
+              backgroundColor: cssColors.bgTertiary,
               borderRadius: '4px',
             }}
           >
@@ -155,7 +155,7 @@ export const AIWorkspace = memo(function AIWorkspace({
             style={{
               textAlign: 'center',
               padding: '8px',
-              background: cssColors.bgTertiary,
+              backgroundColor: cssColors.bgTertiary,
               borderRadius: '4px',
             }}
           >
@@ -168,7 +168,7 @@ export const AIWorkspace = memo(function AIWorkspace({
             style={{
               textAlign: 'center',
               padding: '8px',
-              background: cssColors.bgTertiary,
+              backgroundColor: cssColors.bgTertiary,
               borderRadius: '4px',
             }}
           >
@@ -193,7 +193,7 @@ export const AIWorkspace = memo(function AIWorkspace({
             style={{
               textAlign: 'center',
               padding: '6px',
-              background: cssColors.bgTertiary,
+              backgroundColor: cssColors.bgTertiary,
               borderRadius: '4px',
             }}
           >
@@ -204,7 +204,7 @@ export const AIWorkspace = memo(function AIWorkspace({
             style={{
               textAlign: 'center',
               padding: '6px',
-              background: cssColors.bgTertiary,
+              backgroundColor: cssColors.bgTertiary,
               borderRadius: '4px',
             }}
           >
@@ -215,7 +215,7 @@ export const AIWorkspace = memo(function AIWorkspace({
             style={{
               textAlign: 'center',
               padding: '6px',
-              background: cssColors.bgTertiary,
+              backgroundColor: cssColors.bgTertiary,
               borderRadius: '4px',
             }}
           >
@@ -228,7 +228,7 @@ export const AIWorkspace = memo(function AIWorkspace({
         <div
           style={{
             padding: '8px',
-            background: cssColors.bgTertiary,
+            backgroundColor: cssColors.bgTertiary,
             borderRadius: '4px',
             display: 'flex',
             justifyContent: 'space-between',
@@ -255,7 +255,7 @@ export const AIWorkspace = memo(function AIWorkspace({
             style={{
               marginTop: 8,
               padding: '8px 10px',
-              background: cssColors.bgTertiary,
+              backgroundColor: cssColors.bgTertiary,
               border: `1px solid ${cssColors.borderPrimary}`,
               borderRadius: '4px',
               fontSize: '11px',
@@ -278,7 +278,7 @@ export const AIWorkspace = memo(function AIWorkspace({
             style={{
               marginTop: 8,
               padding: '6px 8px',
-              background: cssColors.bgTertiary,
+              backgroundColor: cssColors.bgTertiary,
               borderRadius: '4px',
               fontSize: '11px',
               color: cssColors.statusTranslated,
@@ -359,7 +359,7 @@ export const AIWorkspace = memo(function AIWorkspace({
             style={{
               textAlign: 'center',
               padding: '6px',
-              background: cssColors.bgTertiary,
+              backgroundColor: cssColors.bgTertiary,
               borderRadius: '4px',
             }}
           >
@@ -372,7 +372,7 @@ export const AIWorkspace = memo(function AIWorkspace({
             style={{
               textAlign: 'center',
               padding: '6px',
-              background: cssColors.bgTertiary,
+              backgroundColor: cssColors.bgTertiary,
               borderRadius: '4px',
             }}
           >
@@ -395,7 +395,7 @@ export const AIWorkspace = memo(function AIWorkspace({
             style={{
               textAlign: 'center',
               padding: '6px',
-              background: cssColors.bgTertiary,
+              backgroundColor: cssColors.bgTertiary,
               borderRadius: '4px',
             }}
           >
@@ -408,7 +408,7 @@ export const AIWorkspace = memo(function AIWorkspace({
             style={{
               textAlign: 'center',
               padding: '6px',
-              background: cssColors.bgTertiary,
+              backgroundColor: cssColors.bgTertiary,
               borderRadius: '4px',
             }}
           >
@@ -430,7 +430,7 @@ export const AIWorkspace = memo(function AIWorkspace({
             style={{
               textAlign: 'center',
               padding: '6px',
-              background: cssColors.bgTertiary,
+              backgroundColor: cssColors.bgTertiary,
               borderRadius: '4px',
             }}
           >
@@ -446,7 +446,7 @@ export const AIWorkspace = memo(function AIWorkspace({
           style={{
             marginTop: 8,
             padding: '6px 8px',
-            background: cssColors.bgTertiary,
+            backgroundColor: cssColors.bgTertiary,
             borderRadius: '4px',
             display: 'flex',
             justifyContent: 'space-between',
@@ -497,19 +497,19 @@ export const AIWorkspace = memo(function AIWorkspace({
         style={{
           height: '100%',
           overflowY: 'auto',
-          background: cssColors.bgSecondary, // 使用稍深的背景色区分
+          backgroundColor: cssColors.bgSecondary, // 使用稍深的背景色区分
           borderRadius: 0,
         }}
         // @ts-ignore - Ant Design 5.5+ styles 属性类型定义问题
         styles={{
           header: {
-            background: cssColors.bgSecondary,
+            backgroundColor: cssColors.bgSecondary,
             borderBottom: `1px solid ${cssColors.borderSecondary}`,
             minHeight: '46px',
           },
           body: {
             padding: '12px',
-            background: cssColors.bgSecondary,
+            backgroundColor: cssColors.bgSecondary,
           },
         }}
       >
@@ -562,7 +562,7 @@ export const AIWorkspace = memo(function AIWorkspace({
                 <div
                   style={{
                     padding: '8px 12px',
-                    background: cssColors.bgTertiary,
+                    backgroundColor: cssColors.bgTertiary,
                     borderRadius: '4px',
                     fontSize: '12px',
                     lineHeight: '1.6',

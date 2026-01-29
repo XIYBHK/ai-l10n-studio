@@ -9,7 +9,12 @@ import App from './App';
 import { initializeStores } from './store';
 import './index.css';
 
-const appWindow = getCurrentWindow();
+let appWindow: ReturnType<typeof getCurrentWindow> | null = null;
+try {
+  appWindow = getCurrentWindow();
+} catch {
+  appWindow = null;
+}
 
 // 并行初始化和渲染，提升启动速度
 async function bootstrap() {
@@ -34,12 +39,16 @@ async function bootstrap() {
     ]);
 
     // 渲染完成后显示窗口
-    await appWindow.show();
-    console.log('[App] 窗口已显示');
+    if (appWindow) {
+      await appWindow.show();
+      console.log('[App] 窗口已显示');
+    }
   } catch (error) {
     console.error('[App] 启动失败:', error);
     // 即使出错也显示窗口
-    await appWindow.show();
+    if (appWindow) {
+      await appWindow.show();
+    }
   }
 }
 

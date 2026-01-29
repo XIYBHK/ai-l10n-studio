@@ -1,10 +1,8 @@
-import React, { useState, useEffect, memo, useMemo } from 'react';
+import { useState, useEffect, memo } from 'react';
 import { Input, Button, message } from 'antd';
 import { CopyOutlined, SaveOutlined, GlobalOutlined, TranslationOutlined } from '@ant-design/icons';
 import { POEntry } from '../types/tauri';
 import { useTranslationStore } from '../store';
-import { useTheme } from '../hooks/useTheme';
-import { useCssColors } from '../hooks/useCssColors';
 import { analyzeTranslationDifference } from '../utils/termAnalyzer';
 import { TermConfirmModal } from './TermConfirmModal';
 import { ErrorBoundary } from './ErrorBoundary';
@@ -12,6 +10,7 @@ import { createModuleLogger } from '../utils/logger';
 import { termLibraryCommands } from '../services/commands';
 import { useAppData } from '../hooks/useConfig';
 import { useTermLibrary } from '../hooks/useTermLibrary';
+import styles from './EditorPane.module.css';
 
 const { TextArea } = Input;
 const log = createModuleLogger('EditorPane');
@@ -39,8 +38,6 @@ export const EditorPane = memo(function EditorPane({
     userTranslation: string;
     difference: any;
   } | null>(null);
-  const { colors } = useTheme();
-  const cssColors = useCssColors();
 
   useEffect(() => {
     if (entry) {
@@ -163,48 +160,22 @@ export const EditorPane = memo(function EditorPane({
 
   if (!entry) {
     return (
-      <div
-        style={{
-          height: '100%',
-          display: 'flex',
-          flexDirection: 'column',
-          alignItems: 'center',
-          justifyContent: 'center',
-          backgroundColor: cssColors.bgPrimary,
-          color: cssColors.textTertiary,
-        }}
-      >
-        <div style={{ fontSize: '48px', marginBottom: '16px' }}>📝</div>
-        <div style={{ fontSize: '16px', color: cssColors.textSecondary }}>
-          请从左侧列表选择一个条目进行编辑
-        </div>
-        <div style={{ fontSize: '12px', marginTop: '8px', color: cssColors.textTertiary }}>
-          或者点击工具栏的"打开"按钮导入 PO 文件
-        </div>
+      <div className={styles.emptyContainer}>
+        <div className={styles.emptyIcon}>📝</div>
+        <div className={styles.emptyText}>请从左侧列表选择一个条目进行编辑</div>
+        <div className={styles.emptySubtext}>或者点击工具栏的"打开"按钮导入 PO 文件</div>
       </div>
     );
   }
 
   return (
-    <div style={{ height: '100%', display: 'flex', flexDirection: 'column' }}>
+    <div className={styles.container}>
       {/* 工具栏 */}
-      <div
-        style={{
-          padding: '8px 16px',
-          borderBottom: `1px solid ${cssColors.borderSecondary}`,
-          background: cssColors.bgTertiary,
-          display: 'flex',
-          justifyContent: 'space-between',
-          alignItems: 'center',
-          gap: '8px',
-        }}
-      >
-        <div style={{ fontSize: '12px', color: cssColors.textTertiary }}>
-          {hasUnsavedChanges && (
-            <span style={{ color: cssColors.statusUntranslated }}>● 有未保存的修改</span>
-          )}
+      <div className={styles.toolbar}>
+        <div className={styles.toolbarStatus}>
+          {hasUnsavedChanges && <span className={styles.unsavedText}>● 有未保存的修改</span>}
         </div>
-        <div style={{ display: 'flex', gap: '8px' }}>
+        <div className={styles.toolbarActions}>
           <Button size="small" icon={<CopyOutlined />} onClick={handleCopyOriginal}>
             复制原文
           </Button>
@@ -221,100 +192,29 @@ export const EditorPane = memo(function EditorPane({
       </div>
 
       {/* 双栏编辑区域 - Poedit 风格 */}
-      <div
-        style={{
-          flex: 1,
-          display: 'flex',
-          flexDirection: 'column',
-          overflow: 'hidden',
-          backgroundColor: cssColors.bgPrimary,
-        }}
-      >
+      <div className={styles.splitView}>
         {/* 原文区域 */}
-        <div
-          style={{
-            flex: '0 0 40%',
-            borderBottom: `1px solid ${cssColors.borderSecondary}`,
-            display: 'flex',
-            flexDirection: 'column',
-          }}
-        >
-          <div
-            style={{
-              padding: '8px 16px',
-              background: cssColors.bgTertiary,
-              borderBottom: `1px solid ${cssColors.borderSecondary}`,
-              fontSize: '12px',
-              fontWeight: 600,
-              color: cssColors.textSecondary,
-              display: 'flex',
-              alignItems: 'center',
-              gap: '8px',
-            }}
-          >
+        <div className={styles.sourceArea}>
+          <div className={styles.sectionHeader}>
             <GlobalOutlined /> 原文 (Source)
           </div>
-          <div
-            className="font-mono"
-            style={{
-              flex: 1,
-              padding: '16px',
-              background: cssColors.bgPrimary,
-              fontSize: '14px',
-              lineHeight: '1.6',
-              color: cssColors.textPrimary,
-              overflowY: 'auto',
-              whiteSpace: 'pre-wrap',
-              wordBreak: 'break-word',
-            }}
-          >
-            {entry.msgid || <span style={{ color: cssColors.textDisabled }}>(空)</span>}
+          <div className={`${styles.sourceContent} font-mono`}>
+            {entry.msgid || <span className={styles.emptyContent}>(空)</span>}
 
             {/* 上下文和注释 */}
             {(entry.msgctxt || (entry.comments && entry.comments.length > 0)) && (
-              <div
-                style={{
-                  marginTop: 20,
-                  padding: '12px',
-                  background: cssColors.bgSecondary,
-                  borderRadius: '6px',
-                  border: `1px solid ${cssColors.borderSecondary}`,
-                }}
-              >
+              <div className={styles.contextBox}>
                 {entry.msgctxt && (
-                  <div
-                    style={{
-                      fontSize: '12px',
-                      color: cssColors.textSecondary,
-                      marginBottom: entry.comments?.length ? 8 : 0,
-                      fontFamily: 'sans-serif',
-                    }}
-                  >
-                    <div style={{ fontWeight: 600, marginBottom: 4 }}>上下文:</div>
-                    <div
-                      style={{
-                        fontFamily: 'monospace',
-                        background: cssColors.bgPrimary,
-                        padding: '2px 6px',
-                        borderRadius: '4px',
-                        display: 'inline-block',
-                      }}
-                    >
-                      {entry.msgctxt}
-                    </div>
+                  <div className={styles.contextItem} style={{ marginBottom: entry.comments?.length ? 8 : 0 }}>
+                    <div className={styles.contextLabel}>上下文:</div>
+                    <div className={styles.contextValue}>{entry.msgctxt}</div>
                   </div>
                 )}
                 {entry.comments && entry.comments.length > 0 && (
-                  <div
-                    style={{
-                      fontSize: '12px',
-                      color: cssColors.textSecondary,
-                      fontFamily: 'sans-serif',
-                    }}
-                  >
-                    <div style={{ fontWeight: 600, marginBottom: 4 }}>注释:</div>
+                  <div className={styles.contextItem}>
+                    <div className={styles.contextLabel}>注释:</div>
                     {entry.comments.map((comment, index) => (
-                      <div key={index} style={{ color: cssColors.textTertiary }}>
+                      <div key={index} className={styles.commentItem}>
                         {comment}
                       </div>
                     ))}
@@ -326,80 +226,27 @@ export const EditorPane = memo(function EditorPane({
         </div>
 
         {/* 译文区域 */}
-        <div
-          style={{
-            flex: '1 1 60%',
-            display: 'flex',
-            flexDirection: 'column',
-          }}
-        >
-          <div
-            style={{
-              padding: '8px 16px',
-              background: cssColors.bgTertiary,
-              borderBottom: `1px solid ${cssColors.borderSecondary}`,
-              fontSize: '12px',
-              fontWeight: 600,
-              color: cssColors.textSecondary,
-              display: 'flex',
-              alignItems: 'center',
-              gap: '8px',
-            }}
-          >
+        <div className={styles.targetArea}>
+          <div className={styles.sectionHeader}>
             <TranslationOutlined /> 译文 (Translation)
           </div>
-          <div style={{ flex: 1, display: 'flex', flexDirection: 'column', position: 'relative' }}>
+          <div className={styles.targetContentContainer}>
             <TextArea
-              className="font-mono"
+              className={`${styles.textArea} font-mono`}
               value={translation}
               onChange={(e) => handleTranslationChange(e.target.value)}
               onBlur={handleBlur}
               placeholder="在此输入翻译内容..."
               bordered={false}
-              style={{
-                flex: 1,
-                fontSize: '14px',
-                lineHeight: '1.6',
-                padding: '16px',
-                resize: 'none',
-                backgroundColor: cssColors.bgPrimary,
-              }}
             />
             {/* 悬浮保存提示 */}
-            {hasUnsavedChanges && (
-              <div
-                style={{
-                  position: 'absolute',
-                  bottom: '16px',
-                  right: '16px',
-                  padding: '4px 12px',
-                  background: cssColors.overlayBg,
-                  color: cssColors.overlayText,
-                  borderRadius: '20px',
-                  fontSize: '12px',
-                  pointerEvents: 'none',
-                  backdropFilter: 'blur(4px)',
-                }}
-              >
-                按 Ctrl+Enter 保存
-              </div>
-            )}
+            {hasUnsavedChanges && <div className={styles.unsavedBadge}>按 Ctrl+Enter 保存</div>}
           </div>
         </div>
       </div>
 
       {/* 状态栏 */}
-      <div
-        style={{
-          padding: '6px 16px',
-          borderTop: `1px solid ${cssColors.borderSecondary}`,
-          background: cssColors.bgTertiary,
-          fontSize: '12px',
-          color: cssColors.textTertiary,
-          display: 'flex',
-          gap: '16px',
-        }}
-      >
+      <div className={styles.statusBar}>
         <span>行: {entry.line_start}</span>
         <span>字符: {translation.length}</span>
         <span>{translation ? '✓ 已翻译' : '○ 未翻译'}</span>
@@ -451,9 +298,7 @@ export const EditorPane = memo(function EditorPane({
                 }
               } catch (error) {
                 log.logError(error, '添加术语失败');
-                message.error(
-                  `添加术语失败: ${error instanceof Error ? error.message : '未知错误'}`
-                );
+                message.error(`添加术语失败: ${error instanceof Error ? error.message : '未知错误'}`);
               } finally {
                 setTermModalVisible(false);
                 setDetectedDifference(null);

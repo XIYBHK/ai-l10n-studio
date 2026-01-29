@@ -44,6 +44,13 @@ export default defineConfig(async () => ({
         main: resolve(__dirname, 'index.html'),
         devtools: resolve(__dirname, 'devtools.html'),
       },
+      output: {
+        manualChunks: {
+          'react-vendor': ['react', 'react-dom'],
+          'antd-vendor': ['antd', '@ant-design/icons'],
+          'utils-vendor': ['lodash', 'i18next', 'react-i18next', 'dayjs'],
+        },
+      },
     },
   },
 }));

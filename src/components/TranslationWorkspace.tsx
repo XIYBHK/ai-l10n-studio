@@ -108,7 +108,7 @@ export function TranslationWorkspace({
           style={{
             width: `${leftWidth}%`,
             height: '100%',
-            background: cssColors.bgPrimary,
+            backgroundColor: cssColors.bgPrimary,
             borderRight: `1px solid ${cssColors.borderPrimary}`,
             overflow: 'hidden',
             position: 'relative',
@@ -156,7 +156,7 @@ export function TranslationWorkspace({
 
         <Layout.Content
           style={{
-            background: cssColors.bgPrimary,
+            backgroundColor: cssColors.bgPrimary,
             overflow: 'hidden',
             flex: 1,
             contain: 'layout style',
@@ -168,7 +168,7 @@ export function TranslationWorkspace({
         <Layout.Sider
           width={320}
           style={{
-            background: cssColors.bgPrimary,
+            backgroundColor: cssColors.bgPrimary,
             borderLeft: `1px solid ${cssColors.borderPrimary}`,
             overflow: 'auto',
             contain: 'strict',

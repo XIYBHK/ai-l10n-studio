@@ -161,6 +161,9 @@ typings/
 # Yarn Integrity file
 .yarn-integrity
 
+# Trae IDE
+.trae/
+
 # dotenv environment variables file
 .env.test
 

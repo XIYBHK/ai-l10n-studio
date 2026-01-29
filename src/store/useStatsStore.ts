@@ -35,6 +35,7 @@ interface StatsState {
 
   // Actions
   setCumulativeStats: (stats: TranslationStats) => void;
+  updateCumulativeStats: (stats: TranslationStats) => void;
   resetCumulativeStats: () => void;
 }
 
@@ -64,6 +65,43 @@ export const useStatsStore = create<StatsState>()(
             outputTokens: stats.token_stats.output_tokens,
           })
           .catch((err) => log.error('保存累计统计失败', err));
+      },
+
+      updateCumulativeStats: (stats) => {
+        set((state) => {
+          const prev = state.cumulativeStats;
+          const next: TranslationStats = {
+            total: prev.total + stats.total,
+            tm_hits: prev.tm_hits + stats.tm_hits,
+            deduplicated: prev.deduplicated + stats.deduplicated,
+            ai_translated: prev.ai_translated + stats.ai_translated,
+            token_stats: {
+              input_tokens: prev.token_stats.input_tokens + stats.token_stats.input_tokens,
+              output_tokens: prev.token_stats.output_tokens + stats.token_stats.output_tokens,
+              total_tokens: prev.token_stats.total_tokens + stats.token_stats.total_tokens,
+              cost: prev.token_stats.cost + stats.token_stats.cost,
+            },
+            tm_learned: prev.tm_learned + stats.tm_learned,
+          };
+
+          tauriStore
+            .updateCumulativeStats({
+              totalTranslated: next.total,
+              totalTokens: next.token_stats.total_tokens,
+              totalCost: next.token_stats.cost,
+              sessionCount: next.total > 0 ? 1 : 0,
+              lastUpdated: Date.now(),
+              tmHits: next.tm_hits,
+              deduplicated: next.deduplicated,
+              aiTranslated: next.ai_translated,
+              tmLearned: next.tm_learned,
+              inputTokens: next.token_stats.input_tokens,
+              outputTokens: next.token_stats.output_tokens,
+            })
+            .catch((err) => log.error('保存累计统计失败', err));
+
+          return { cumulativeStats: next };
+        });
       },
 
       resetCumulativeStats: () => {
