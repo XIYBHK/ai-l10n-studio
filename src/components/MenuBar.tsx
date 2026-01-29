@@ -70,7 +70,7 @@ export const MenuBar = memo(function MenuBar({
         display: 'flex',
         alignItems: 'center',
         padding: '12px 20px',
-        background: cssColors.bgSecondary,
+        backgroundColor: cssColors.bgSecondary,
         borderBottom: `1px solid ${cssColors.borderPrimary}`,
         gap: '12px',
         height: '64px',
@@ -95,6 +95,8 @@ export const MenuBar = memo(function MenuBar({
           flexShrink: 0,
           whiteSpace: 'nowrap',
           cursor: 'pointer',
+          transition: `transform var(--theme-transition-duration) var(--theme-transition-timing)`,
+          willChange: 'transform',
         }}
         onMouseEnter={(e) => {
           e.currentTarget.style.transform = 'scale(1.02)';
@@ -147,6 +149,8 @@ export const MenuBar = memo(function MenuBar({
             background: `linear-gradient(135deg, ${cssColors.brandPrimary} 0%, #b48edb 100%)`,
             border: 'none',
             boxShadow: '0 2px 8px rgba(203, 166, 247, 0.25)',
+            transition: `transform var(--theme-transition-duration) var(--theme-transition-timing), box-shadow var(--theme-transition-duration) var(--theme-transition-timing)`,
+            willChange: 'transform',
           }}
           onMouseEnter={(e) => {
             e.currentTarget.style.transform = 'translateY(-2px)';
