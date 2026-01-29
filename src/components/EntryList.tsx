@@ -179,7 +179,8 @@ const VirtualColumn = memo(function VirtualColumn({
     <div
       className={styles.virtualColumnContainer}
       style={{
-        borderRight: columnType !== 'translated' ? `1px solid ${cssColors.borderSecondary}` : 'none',
+        borderRight:
+          columnType !== 'translated' ? `1px solid ${cssColors.borderSecondary}` : 'none',
       }}
       onMouseEnter={() => setActiveColumn(columnType)}
       onMouseLeave={() => setActiveColumn(null)}
@@ -554,12 +555,7 @@ export const EntryList = memo(function EntryList({
   ]);
 
   const handleRowClick = useCallback(
-    (
-      record: POEntry,
-      index: number,
-      event: React.MouseEvent,
-      columnType: ColumnType
-    ) => {
+    (record: POEntry, index: number, event: React.MouseEvent, columnType: ColumnType) => {
       onEntrySelect(record);
 
       if (event.shiftKey && lastClickedIndex !== null && lastClickedColumn === columnType) {
@@ -660,11 +656,7 @@ export const EntryList = memo(function EntryList({
 
       <div className={styles.columnsContainer}>
         {/* 第一列 */}
-        <div
-          ref={col1Ref}
-          className={styles.column}
-          style={{ width: `${columnWidths[0]}%` }}
-        >
+        <div ref={col1Ref} className={styles.column} style={{ width: `${columnWidths[0]}%` }}>
           <VirtualColumn
             title="未翻译"
             items={groupedEntries.untranslated}
@@ -691,11 +683,7 @@ export const EntryList = memo(function EntryList({
         </div>
 
         {/* 第二列 */}
-        <div
-          ref={col2Ref}
-          className={styles.column}
-          style={{ width: `${columnWidths[1]}%` }}
-        >
+        <div ref={col2Ref} className={styles.column} style={{ width: `${columnWidths[1]}%` }}>
           <VirtualColumn
             title="待确认"
             items={groupedEntries.needsReview}
@@ -722,11 +710,7 @@ export const EntryList = memo(function EntryList({
         </div>
 
         {/* 第三列 */}
-        <div
-          ref={col3Ref}
-          className={styles.column}
-          style={{ width: `${columnWidths[2]}%` }}
-        >
+        <div ref={col3Ref} className={styles.column} style={{ width: `${columnWidths[2]}%` }}>
           <VirtualColumn
             title="已翻译"
             items={groupedEntries.translated}

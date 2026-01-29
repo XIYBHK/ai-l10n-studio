@@ -205,7 +205,10 @@ export const EditorPane = memo(function EditorPane({
             {(entry.msgctxt || (entry.comments && entry.comments.length > 0)) && (
               <div className={styles.contextBox}>
                 {entry.msgctxt && (
-                  <div className={styles.contextItem} style={{ marginBottom: entry.comments?.length ? 8 : 0 }}>
+                  <div
+                    className={styles.contextItem}
+                    style={{ marginBottom: entry.comments?.length ? 8 : 0 }}
+                  >
                     <div className={styles.contextLabel}>上下文:</div>
                     <div className={styles.contextValue}>{entry.msgctxt}</div>
                   </div>
@@ -298,7 +301,9 @@ export const EditorPane = memo(function EditorPane({
                 }
               } catch (error) {
                 log.logError(error, '添加术语失败');
-                message.error(`添加术语失败: ${error instanceof Error ? error.message : '未知错误'}`);
+                message.error(
+                  `添加术语失败: ${error instanceof Error ? error.message : '未知错误'}`
+                );
               } finally {
                 setTermModalVisible(false);
                 setDetectedDifference(null);

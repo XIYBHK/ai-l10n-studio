@@ -1,28 +1,12 @@
 :root {
   /* 字体系统 */
   --display-font:
-    system-ui,
-    -apple-system,
-    BlinkMacSystemFont,
-    'Segoe UI Variable',
-    'Segoe UI',
-    'Microsoft YaHei UI',
-    'PingFang SC',
-    'Hiragino Sans GB',
-    'Noto Sans CJK SC',
-    'Noto Sans SC',
+    system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI Variable', 'Segoe UI',
+    'Microsoft YaHei UI', 'PingFang SC', 'Hiragino Sans GB', 'Noto Sans CJK SC', 'Noto Sans SC',
     sans-serif;
   --body-font:
-    system-ui,
-    -apple-system,
-    BlinkMacSystemFont,
-    'Segoe UI Variable',
-    'Segoe UI',
-    'Microsoft YaHei UI',
-    'PingFang SC',
-    'Hiragino Sans GB',
-    'Noto Sans CJK SC',
-    'Noto Sans SC',
+    system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI Variable', 'Segoe UI',
+    'Microsoft YaHei UI', 'PingFang SC', 'Hiragino Sans GB', 'Noto Sans CJK SC', 'Noto Sans SC',
     sans-serif;
   --mono-font: 'Space Mono', 'JetBrains Mono', 'Fira Code', Consolas, monospace;
 
