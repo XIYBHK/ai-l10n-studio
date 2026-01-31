@@ -48,7 +48,13 @@ export function NotificationTab() {
       }
       size="small"
     >
-      <p style={{ marginBottom: 'var(--space-4)', color: CSS_COLORS.textSecondary, fontSize: 'var(--font-size-base)' }}>
+      <p
+        style={{
+          marginBottom: 'var(--space-4)',
+          color: CSS_COLORS.textSecondary,
+          fontSize: 'var(--font-size-base)',
+        }}
+      >
         配置翻译完成、系统更新等事件的通知提醒。
       </p>
 

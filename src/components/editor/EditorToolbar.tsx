@@ -115,9 +115,7 @@ export const EditorToolbar: React.FC<EditorToolbarProps> = ({
 
   return (
     <div style={toolbarStyles} role="toolbar" aria-label="编辑器工具栏">
-      <div style={leftSectionStyles}>
-        {getStatusIndicator()}
-      </div>
+      <div style={leftSectionStyles}>{getStatusIndicator()}</div>
 
       <div style={rightSectionStyles}>
         {/* 导航按钮组 */}
@@ -128,7 +126,7 @@ export const EditorToolbar: React.FC<EditorToolbarProps> = ({
               icon={<UpOutlined />}
               onClick={onNavigatePrev}
               disabled={!canNavigatePrev}
-              aria-label={canNavigatePrev ? "上一项 (Ctrl+上箭头)" : "没有上一项了"}
+              aria-label={canNavigatePrev ? '上一项 (Ctrl+上箭头)' : '没有上一项了'}
               title="上一项 (Ctrl+↑)"
             />
             <Button
@@ -136,7 +134,7 @@ export const EditorToolbar: React.FC<EditorToolbarProps> = ({
               icon={<DownOutlined />}
               onClick={onNavigateNext}
               disabled={!canNavigateNext}
-              aria-label={canNavigateNext ? "下一项 (Ctrl+下箭头)" : "没有下一项了"}
+              aria-label={canNavigateNext ? '下一项 (Ctrl+下箭头)' : '没有下一项了'}
               title="下一项 (Ctrl+↓)"
             />
           </div>
@@ -171,10 +169,14 @@ export const EditorToolbar: React.FC<EditorToolbarProps> = ({
           onClick={onSave}
           disabled={!hasUnsavedChanges}
           aria-label="保存译文 (Ctrl+Enter)"
-          style={hasUnsavedChanges ? {
-            backgroundColor: CSS_COLORS.brandPrimary,
-            borderColor: CSS_COLORS.brandPrimary,
-          } : undefined}
+          style={
+            hasUnsavedChanges
+              ? {
+                  backgroundColor: CSS_COLORS.brandPrimary,
+                  borderColor: CSS_COLORS.brandPrimary,
+                }
+              : undefined
+          }
         >
           保存 (Ctrl+Enter)
         </Button>

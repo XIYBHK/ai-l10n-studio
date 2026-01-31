@@ -8,10 +8,7 @@ import { POEntry } from '../../types/tauri';
 const { TextArea } = Input;
 
 // 获取翻译来源样式
-function getSourceStyle(
-  source: 'tm' | 'dedup' | 'ai' | undefined,
-  colors: typeof CSS_COLORS
-) {
+function getSourceStyle(source: 'tm' | 'dedup' | 'ai' | undefined, colors: typeof CSS_COLORS) {
   const styles = {
     tm: { bg: colors.sourceTmBg, color: colors.sourceTmColor, label: '记忆库' },
     dedup: { bg: colors.sourceDedupBg, color: colors.sourceDedupColor, label: '去重' },
@@ -64,7 +61,9 @@ export const TargetSection: React.FC<TargetSectionProps> = ({
     backgroundColor: CSS_COLORS.bgSecondary,
     border: `1px solid ${hasUnsavedChanges ? CSS_COLORS.statusUntranslated : CSS_COLORS.borderSecondary}`,
     borderRadius: 'var(--radius-md)',
-    boxShadow: hasUnsavedChanges ? `0 0 0 2px ${CSS_COLORS.statusUntranslated}20` : 'var(--shadow-sm)',
+    boxShadow: hasUnsavedChanges
+      ? `0 0 0 2px ${CSS_COLORS.statusUntranslated}20`
+      : 'var(--shadow-sm)',
     transition: 'all var(--duration-base) var(--ease-out)',
     fontFamily: 'var(--mono-font)',
   };
@@ -143,7 +142,7 @@ export const TargetSection: React.FC<TargetSectionProps> = ({
           aria-describedby={saveStatusId}
           aria-multiline="true"
         />
-        
+
         {/* 字符计数器 */}
         <div style={charCountStyles} aria-label={`${translation.length} 个字符`}>
           {translation.length} 字符
@@ -151,19 +150,17 @@ export const TargetSection: React.FC<TargetSectionProps> = ({
 
         {/* 未保存提示 */}
         {hasUnsavedChanges && (
-          <div 
-            style={unsavedBadgeStyles}
-            role="status"
-            aria-live="polite"
-            id={saveStatusId}
-          >
-            <span style={{
-              width: 6,
-              height: 6,
-              borderRadius: '50%',
-              backgroundColor: '#ffffff',
-              display: 'inline-block',
-            }} aria-hidden="true" />
+          <div style={unsavedBadgeStyles} role="status" aria-live="polite" id={saveStatusId}>
+            <span
+              style={{
+                width: 6,
+                height: 6,
+                borderRadius: '50%',
+                backgroundColor: '#ffffff',
+                display: 'inline-block',
+              }}
+              aria-hidden="true"
+            />
             <span>未保存</span>
           </div>
         )}

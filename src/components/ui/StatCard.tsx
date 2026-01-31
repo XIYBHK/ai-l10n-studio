@@ -25,10 +25,10 @@ export interface StatCardProps {
 
 /**
  * 统计卡片组件
- * 
+ *
  * 用于展示关键统计数据，支持多种主题色、图标和底部内容。
  * 悬停时有轻微上浮效果。
- * 
+ *
  * @example
  * ```tsx
  * <StatCard
@@ -121,21 +121,17 @@ export const StatCard: React.FC<StatCardProps> = ({
   };
 
   return (
-    <div
-      style={cardStyles}
-      onClick={onClick}
-      className="stat-card-hover"
-    >
+    <div style={cardStyles} onClick={onClick} className="stat-card-hover">
       <div style={headerStyles}>
         <span style={titleStyles}>{title}</span>
         {icon && <div style={iconStyles}>{icon}</div>}
       </div>
-      
+
       <div style={valueContainerStyles}>
         <span style={valueStyles}>{value}</span>
         {suffix && <span style={suffixStyles}>{suffix}</span>}
       </div>
-      
+
       {footer && <div style={footerStyles}>{footer}</div>}
 
       <style>{`

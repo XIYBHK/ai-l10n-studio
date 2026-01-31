@@ -1,6 +1,6 @@
 /**
  * Tauri 事件监听 Hook
- * 
+ *
  * 优化点：
  * 1. 防止竞态条件 - 使用 isActive 标志
  * 2. 自动清理 - 组件卸载时移除监听
@@ -22,7 +22,7 @@ interface UseTauriEventOptions<T> {
 
 /**
  * 基础 Tauri 事件监听 Hook
- * 
+ *
  * @example
  * useTauriEvent<TranslationStats>({
  *   event: 'translation:after',
@@ -67,7 +67,7 @@ export function useTauriEvent<T>({ event, handler, enabled = true }: UseTauriEve
 /**
  * 一次性 Tauri 事件监听 Hook
  * 事件触发一次后自动移除监听
- * 
+ *
  * @example
  * useTauriEventOnce<ProgressEvent>({
  *   event: 'translation:progress',
@@ -107,7 +107,7 @@ export function useTauriEventOnce<T>({ event, handler, enabled = true }: UseTaur
 /**
  * 带状态管理的 Tauri 事件 Hook
  * 自动将事件数据同步到 React 状态
- * 
+ *
  * @example
  * const stats = useTauriEventState<TranslationStats>({
  *   event: 'translation:after',

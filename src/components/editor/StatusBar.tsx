@@ -10,11 +10,7 @@ interface StatusBarProps {
 /**
  * 底部状态栏组件
  */
-export const StatusBar: React.FC<StatusBarProps> = ({
-  lineNumber,
-  charCount,
-  isTranslated,
-}) => {
+export const StatusBar: React.FC<StatusBarProps> = ({ lineNumber, charCount, isTranslated }) => {
   const containerStyles: CSSProperties = {
     padding: 'var(--space-2) var(--space-4)',
     borderTop: `1px solid ${CSS_COLORS.borderSecondary}`,
@@ -60,13 +56,9 @@ export const StatusBar: React.FC<StatusBarProps> = ({
   return (
     <div style={containerStyles}>
       <div style={leftSectionStyles}>
-        {lineNumber !== undefined && (
-          <span>行: {lineNumber}</span>
-        )}
+        {lineNumber !== undefined && <span>行: {lineNumber}</span>}
         <span>字符: {charCount}</span>
-        <span style={statusStyles}>
-          {isTranslated ? '✓ 已翻译' : '○ 未翻译'}
-        </span>
+        <span style={statusStyles}>{isTranslated ? '✓ 已翻译' : '○ 未翻译'}</span>
       </div>
 
       <div style={rightSectionStyles}>

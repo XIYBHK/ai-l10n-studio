@@ -69,10 +69,13 @@ export const EditorPane = memo(function EditorPane({
     }
   }, [entry]);
 
-  const handleTranslationChange = useCallback((value: string) => {
-    setTranslation(value);
-    setHasUnsavedChanges(entry ? entry.msgstr !== value : false);
-  }, [entry]);
+  const handleTranslationChange = useCallback(
+    (value: string) => {
+      setTranslation(value);
+      setHasUnsavedChanges(entry ? entry.msgstr !== value : false);
+    },
+    [entry]
+  );
 
   const handleBlur = useCallback(() => {
     if (hasUnsavedChanges && entry) {
@@ -220,12 +223,7 @@ export const EditorPane = memo(function EditorPane({
   const saveStatusId = 'save-status';
 
   return (
-    <div 
-      className={styles.container}
-      role="region"
-      aria-label="翻译编辑器"
-      id="main-editor"
-    >
+    <div className={styles.container} role="region" aria-label="翻译编辑器" id="main-editor">
       {/* 工具栏 */}
       <EditorToolbar
         hasUnsavedChanges={hasUnsavedChanges}
@@ -241,10 +239,7 @@ export const EditorPane = memo(function EditorPane({
       {/* 双栏编辑区域 */}
       <div className={styles.splitView} role="form" aria-label="翻译编辑表单">
         {/* 原文区域 */}
-        <SourceSection
-          entry={entry}
-          onCopyOriginal={handleCopyOriginal}
-        />
+        <SourceSection entry={entry} onCopyOriginal={handleCopyOriginal} />
 
         {/* 译文区域 */}
         <TargetSection

@@ -1,7 +1,7 @@
 /**
  * 翻译流程 Hook
  * 封装文件操作、翻译执行、条目管理等核心业务逻辑
- * 
+ *
  * 优化点：
  * 1. 使用原子化 selectors，避免不必要重渲染
  * 2. 使用 O(1) 索引查找替代 O(n) indexOf
@@ -13,9 +13,9 @@ import { useState, useEffect, useCallback } from 'react';
 import { listen } from '@tauri-apps/api/event';
 import { message as msg } from 'antd';
 import { useChannelTranslation } from './useChannelTranslation';
-import { 
-  useEntries, 
-  useCurrentEntry, 
+import {
+  useEntries,
+  useCurrentEntry,
   useCurrentFilePath,
   useSetEntries,
   useSetCurrentEntry,
@@ -48,7 +48,7 @@ export function useTranslationFlow() {
   const currentEntry = useCurrentEntry();
   const currentFilePath = useCurrentFilePath();
   const isTranslating = useIsTranslating();
-  
+
   // Actions
   const setEntries = useSetEntries();
   const setCurrentEntry = useSetCurrentEntry();
@@ -89,7 +89,7 @@ export function useTranslationFlow() {
         updateSessionStats(stats);
         updateCumulativeStats(stats);
       });
-      
+
       if (isActive) {
         unlistenFn = unlisten;
       } else {
@@ -113,7 +113,7 @@ export function useTranslationFlow() {
     const setupListener = async () => {
       const unlisten = await listen<string[]>('tauri://file-drop', async (event) => {
         if (!isActive) return;
-        
+
         const files = event.payload;
         if (files && files.length > 0) {
           const filePath = files[0];
@@ -132,7 +132,7 @@ export function useTranslationFlow() {
           }
         }
       });
-      
+
       if (isActive) {
         unlistenFn = unlisten;
       } else {
@@ -141,7 +141,7 @@ export function useTranslationFlow() {
     };
 
     setupListener();
-    
+
     return () => {
       isActive = false;
       unlistenFn?.();

@@ -1,5 +1,11 @@
 import React, { CSSProperties, useState } from 'react';
-import { InfoCircleOutlined, CheckCircleOutlined, ExclamationCircleOutlined, CloseCircleOutlined, CloseOutlined } from '@ant-design/icons';
+import {
+  InfoCircleOutlined,
+  CheckCircleOutlined,
+  ExclamationCircleOutlined,
+  CloseCircleOutlined,
+  CloseOutlined,
+} from '@ant-design/icons';
 import { CSS_COLORS } from '../hooks/useCssColors';
 
 /**
@@ -31,10 +37,10 @@ export interface InfoCardProps {
 
 /**
  * 信息提示卡片组件
- * 
+ *
  * 用于展示各类提示信息，包括 info、warning、success、error 四种类型。
  * 支持图标、标题、描述文字，并可关闭。
- * 
+ *
  * @example
  * ```tsx
  * <InfoCard
@@ -60,7 +66,10 @@ export const InfoCard: React.FC<InfoCardProps> = ({
   if (!visible) return null;
 
   // 类型配置
-  const typeConfig: Record<InfoCardType, { icon: React.ReactNode; color: string; bgColor: string }> = {
+  const typeConfig: Record<
+    InfoCardType,
+    { icon: React.ReactNode; color: string; bgColor: string }
+  > = {
     info: {
       icon: <InfoCircleOutlined />,
       color: '#1890ff',
@@ -154,11 +163,7 @@ export const InfoCard: React.FC<InfoCardProps> = ({
         )}
       </div>
       {closable && (
-        <div 
-          style={closeBtnStyles} 
-          onClick={handleClose}
-          className="info-card-close-btn"
-        >
+        <div style={closeBtnStyles} onClick={handleClose} className="info-card-close-btn">
           <CloseOutlined />
         </div>
       )}

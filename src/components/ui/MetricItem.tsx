@@ -29,10 +29,10 @@ export interface MetricItemProps {
 
 /**
  * 指标项组件
- * 
+ *
  * 用于列表中展示单个指标，支持标签、数值、趋势指示和颜色编码。
  * 常用于统计面板、数据列表等场景。
- * 
+ *
  * @example
  * ```tsx
  * <MetricItem
@@ -116,11 +116,7 @@ export const MetricItem: React.FC<MetricItemProps> = ({
   };
 
   return (
-    <div 
-      style={containerStyles} 
-      onClick={onClick}
-      className="metric-item-hover"
-    >
+    <div style={containerStyles} onClick={onClick} className="metric-item-hover">
       <span style={labelStyles}>{label}</span>
       <div style={valueSectionStyles}>
         <span style={valueStyles}>{value}</span>

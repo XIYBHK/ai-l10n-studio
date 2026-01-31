@@ -31,14 +31,14 @@ export const useTheme = () => {
 
     const root = window.document.documentElement;
     const body = window.document.body;
-    
+
     // 确定实际应用的主题
     const effectiveTheme = themeMode === 'system' ? getSystemTheme() : themeMode;
-    
+
     // 使用 data-theme 属性触发 CSS 变量切换（性能优化）
     root.setAttribute('data-theme', effectiveTheme);
     body.setAttribute('data-theme', effectiveTheme);
-    
+
     // 为兼容性保留 class（某些组件可能依赖）
     root.classList.remove('light', 'dark');
     root.classList.add(effectiveTheme);
@@ -50,7 +50,7 @@ export const useTheme = () => {
     emit('theme:changed', { theme: themeMode }).catch((err) => {
       console.error('[useTheme] 发送主题变更事件失败:', err);
     });
-    
+
     log.debug('主题已切换', { themeMode, effectiveTheme });
   }, [themeMode, appliedTheme]);
 

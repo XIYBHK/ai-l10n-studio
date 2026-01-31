@@ -157,24 +157,24 @@
 
 .textArea:hover {
   border-color: var(--color-brandPrimary) !important;
-  box-shadow: 0 0 0 2px var(--color-brandPrimary)20 !important;
+  box-shadow: 0 0 0 2px var(--color-brandPrimary) 20 !important;
 }
 
 .textArea:focus {
   border-color: var(--color-brandPrimary) !important;
-  box-shadow: 0 0 0 3px var(--color-brandPrimary)30 !important;
+  box-shadow: 0 0 0 3px var(--color-brandPrimary) 30 !important;
   outline: none !important;
 }
 
 /* 未保存状态样式 */
 .textArea.unsaved {
   border-color: var(--color-statusUntranslated) !important;
-  box-shadow: 0 0 0 2px var(--color-statusUntranslated)20 !important;
+  box-shadow: 0 0 0 2px var(--color-statusUntranslated) 20 !important;
 }
 
 .textArea.unsaved:focus {
   border-color: var(--color-statusUntranslated) !important;
-  box-shadow: 0 0 0 3px var(--color-statusUntranslated)30 !important;
+  box-shadow: 0 0 0 3px var(--color-statusUntranslated) 30 !important;
 }
 
 .textArea textarea {
@@ -366,7 +366,8 @@
 }
 
 @keyframes pulse-badge {
-  0%, 100% {
+  0%,
+  100% {
     opacity: 1;
     transform: scale(1);
   }
@@ -377,7 +378,8 @@
 }
 
 @keyframes pulse-dot {
-  0%, 100% {
+  0%,
+  100% {
     opacity: 1;
     box-shadow: 0 0 0 0 currentColor;
   }
@@ -416,7 +418,7 @@
   .unsavedIndicator::before {
     animation: none !important;
   }
-  
+
   .emptyContainer {
     animation: none !important;
   }

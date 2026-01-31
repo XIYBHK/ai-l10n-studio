@@ -65,7 +65,13 @@ export function LogsTab() {
       }
       size="small"
     >
-      <p style={{ marginBottom: 'var(--space-4)', color: CSS_COLORS.textSecondary, fontSize: 'var(--font-size-base)' }}>
+      <p
+        style={{
+          marginBottom: 'var(--space-4)',
+          color: CSS_COLORS.textSecondary,
+          fontSize: 'var(--font-size-base)',
+        }}
+      >
         配置应用日志的输出级别、保留时间、文件大小和数量。建议在开发和调试时使用
         DEBUG级别，生产环境使用 INFO 级别。
       </p>

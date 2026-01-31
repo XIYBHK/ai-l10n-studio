@@ -91,7 +91,7 @@ export const useTranslationStore = create<TranslationState>()(
       // 设置当前条目
       setCurrentEntry: (entry) => {
         const { entryIndexMap } = get();
-        const index = entry ? entryIndexMap.get(entry) ?? -1 : -1;
+        const index = entry ? (entryIndexMap.get(entry) ?? -1) : -1;
         log.debug('设置当前条目', { index, msgid: entry?.msgid });
         set({ currentEntry: entry, currentIndex: index });
       },

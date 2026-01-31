@@ -31,21 +31,21 @@
 }
 
 /* 列表项焦点样式 */
-[role="listitem"]:focus-visible {
+[role='listitem']:focus-visible {
   outline: 2px solid var(--color-brandPrimary);
   outline-offset: -2px;
 }
 
 /* 按钮焦点样式 - 确保与背景有足够对比 */
 button:focus-visible,
-[role="button"]:focus-visible {
+[role='button']:focus-visible {
   outline: 2px solid var(--color-brandPrimary);
   outline-offset: 2px;
 }
 
 /* 文本区域焦点样式 */
 textarea:focus-visible,
-[role="textbox"]:focus-visible {
+[role='textbox']:focus-visible {
   outline: 2px solid var(--color-brandPrimary);
   outline-offset: 2px;
   box-shadow: 0 0 0 4px rgba(139, 92, 246, 0.15);
@@ -91,11 +91,11 @@ a:focus-visible {
 }
 
 /* 进度条无障碍样式 */
-[role="progressbar"] {
+[role='progressbar'] {
   position: relative;
 }
 
-[role="progressbar"]::after {
+[role='progressbar']::after {
   content: attr(aria-valuenow) '%';
   position: absolute;
   right: 0;

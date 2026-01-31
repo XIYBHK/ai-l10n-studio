@@ -30,10 +30,10 @@ export interface ActionButtonProps extends Omit<ButtonProps, 'size' | 'type'> {
 
 /**
  * 统一的操作按钮组件
- * 
+ *
  * 基于 Ant Design Button 封装，提供统一的尺寸、圆角和悬停效果。
  * 支持多种变体样式，适用于各种操作场景。
- * 
+ *
  * @example
  * ```tsx
  * <ActionButton variant="primary" size="medium" icon={<SaveOutlined />}>

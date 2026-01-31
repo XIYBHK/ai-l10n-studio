@@ -116,8 +116,12 @@ export function TranslationWorkspace({
           fontWeight: 500,
           transition: 'top 0.3s',
         }}
-        onFocus={(e) => { e.currentTarget.style.top = '0'; }}
-        onBlur={(e) => { e.currentTarget.style.top = '-40px'; }}
+        onFocus={(e) => {
+          e.currentTarget.style.top = '0';
+        }}
+        onBlur={(e) => {
+          e.currentTarget.style.top = '-40px';
+        }}
         onClick={(e) => {
           e.preventDefault();
           const target = document.getElementById('main-editor');

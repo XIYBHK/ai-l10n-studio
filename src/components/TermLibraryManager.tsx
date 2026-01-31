@@ -143,7 +143,9 @@ export function TermLibraryManager({ visible, onClose }: TermLibraryManagerProps
             style={{ fontSize: 'var(--font-size-base)' }}
           />
         ) : (
-          <span style={{ fontSize: 'var(--font-size-base)', color: cssColors.statusTranslated }}>{text}</span>
+          <span style={{ fontSize: 'var(--font-size-base)', color: cssColors.statusTranslated }}>
+            {text}
+          </span>
         );
       },
     },
@@ -155,7 +157,9 @@ export function TermLibraryManager({ visible, onClose }: TermLibraryManagerProps
       ellipsis: true,
       render: (text: string) => (
         <Tooltip title={text}>
-          <span style={{ fontSize: 'var(--font-size-base)', color: cssColors.textTertiary }}>{text}</span>
+          <span style={{ fontSize: 'var(--font-size-base)', color: cssColors.textTertiary }}>
+            {text}
+          </span>
         </Tooltip>
       ),
     },
@@ -245,7 +249,13 @@ export function TermLibraryManager({ visible, onClose }: TermLibraryManagerProps
           borderRadius: 'var(--radius-sm)',
         }}
       >
-        <div style={{ fontSize: 'var(--font-size-sm)', color: cssColors.textSecondary, lineHeight: '1.6' }}>
+        <div
+          style={{
+            fontSize: 'var(--font-size-sm)',
+            color: cssColors.textSecondary,
+            lineHeight: '1.6',
+          }}
+        >
           💡 <strong style={{ color: cssColors.textPrimary }}>风格提示词自动生成规则：</strong>
           首次添加或每新增5条术语时自动生成，也可随时点击下方按钮手动生成
         </div>
@@ -319,7 +329,9 @@ export function TermLibraryManager({ visible, onClose }: TermLibraryManagerProps
             color: cssColors.textTertiary,
           }}
         >
-          <BookOutlined style={{ fontSize: 'var(--font-size-2xl)', marginBottom: 'var(--space-4)' }} />
+          <BookOutlined
+            style={{ fontSize: 'var(--font-size-2xl)', marginBottom: 'var(--space-4)' }}
+          />
           <div>术语库为空</div>
           <div style={{ fontSize: 'var(--font-size-sm)', marginTop: 'var(--space-2)' }}>
             在编辑器中修改AI翻译后，系统会自动检测并建议加入术语库

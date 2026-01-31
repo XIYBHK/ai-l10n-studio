@@ -105,7 +105,9 @@ const LogoSection = memo(function LogoSection({ compact }: LogoSectionProps) {
         transition: 'opacity var(--duration-base) ease',
       }}
     >
-      <GlobalOutlined style={{ fontSize: compact ? '20px' : '22px', color: CSS_COLORS.brandPrimary }} />
+      <GlobalOutlined
+        style={{ fontSize: compact ? '20px' : '22px', color: CSS_COLORS.brandPrimary }}
+      />
       <span>{compact ? 'AI L10n' : 'AI L10n Studio'}</span>
     </div>
   );
@@ -122,7 +124,11 @@ const FileActions = memo(function FileActions({
   compact,
 }: FileActionsProps) {
   return (
-    <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-2)' }} role="group" aria-label="文件操作">
+    <div
+      style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-2)' }}
+      role="group"
+      aria-label="文件操作"
+    >
       <Tooltip title="打开 PO 文件 (Ctrl+O)">
         <ActionButton
           variant="ghost"
@@ -142,7 +148,7 @@ const FileActions = memo(function FileActions({
           icon={<SaveOutlined />}
           onClick={onSaveFile}
           disabled={!hasEntries}
-          aria-label={hasEntries ? "保存到原文件 (Ctrl+S)" : "保存（请先打开文件）"}
+          aria-label={hasEntries ? '保存到原文件 (Ctrl+S)' : '保存（请先打开文件）'}
           aria-disabled={!hasEntries}
         >
           {!compact && '保存'}
@@ -155,7 +161,7 @@ const FileActions = memo(function FileActions({
           size="small"
           onClick={onSaveAsFile}
           disabled={!hasEntries}
-          aria-label={hasEntries ? "另存为新文件" : "另存为（请先打开文件）"}
+          aria-label={hasEntries ? '另存为新文件' : '另存为（请先打开文件）'}
           aria-disabled={!hasEntries}
         >
           {!compact && '另存为'}
@@ -246,14 +252,14 @@ const LanguageSelectorSection = memo(function LanguageSelectorSection({
           {compact ? sourceLanguage : getLanguageDisplayName(sourceLanguage)}
         </Text>
       )}
-      
-      <ArrowRightOutlined 
-        style={{ 
-          fontSize: 'var(--font-size-sm)', 
+
+      <ArrowRightOutlined
+        style={{
+          fontSize: 'var(--font-size-sm)',
           color: CSS_COLORS.textTertiary,
-        }} 
+        }}
       />
-      
+
       <LanguageSelector
         value={targetLanguage}
         onChange={onTargetLanguageChange}
@@ -275,7 +281,11 @@ const SystemActions = memo(function SystemActions({
   onDevTools,
 }: SystemActionsProps) {
   return (
-    <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-1)' }} role="group" aria-label="系统操作">
+    <div
+      style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-1)' }}
+      role="group"
+      aria-label="系统操作"
+    >
       {onThemeToggle && (
         <Tooltip title={isDarkMode ? '切换到亮色模式' : '切换到暗色模式'}>
           <ActionButton
@@ -283,7 +293,7 @@ const SystemActions = memo(function SystemActions({
             size="small"
             icon={isDarkMode ? <BulbFilled /> : <BulbOutlined />}
             onClick={onThemeToggle}
-            aria-label={isDarkMode ? "切换到亮色模式" : "切换到暗色模式"}
+            aria-label={isDarkMode ? '切换到亮色模式' : '切换到暗色模式'}
             aria-pressed={isDarkMode}
             style={{ color: CSS_COLORS.textSecondary }}
           />
@@ -371,7 +381,7 @@ export const MenuBar = memo(function MenuBar({
 }: MenuBarProps) {
   const { activeAIConfig } = useAppData();
   const windowWidth = useWindowWidth();
-  
+
   // 响应式断点
   const isCompact = windowWidth < 1024;
   const isMinimal = windowWidth < 768;
@@ -393,8 +403,12 @@ export const MenuBar = memo(function MenuBar({
     return (
       <nav style={containerStyles} aria-label="主菜单">
         <LogoSection compact />
-        
-        <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-2)' }} role="group" aria-label="文件操作">
+
+        <div
+          style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-2)' }}
+          role="group"
+          aria-label="文件操作"
+        >
           <Tooltip title="打开 PO 文件 (Ctrl+O)">
             <ActionButton
               variant="ghost"
@@ -404,7 +418,7 @@ export const MenuBar = memo(function MenuBar({
               aria-label="打开 PO 文件 (Ctrl+O)"
             />
           </Tooltip>
-          
+
           <Tooltip title="保存 (Ctrl+S)">
             <ActionButton
               variant="ghost"
@@ -412,7 +426,7 @@ export const MenuBar = memo(function MenuBar({
               icon={<SaveOutlined />}
               onClick={onSaveFile}
               disabled={!hasEntries}
-              aria-label={hasEntries ? "保存 (Ctrl+S)" : "保存（请先打开文件）"}
+              aria-label={hasEntries ? '保存 (Ctrl+S)' : '保存（请先打开文件）'}
               aria-disabled={!hasEntries}
             />
           </Tooltip>
@@ -426,7 +440,15 @@ export const MenuBar = memo(function MenuBar({
             onClick={onTranslateAll}
             loading={isTranslating}
             disabled={!activeAIConfig || !hasEntries}
-            aria-label={!activeAIConfig ? '批量翻译（请先配置 AI 服务）' : !hasEntries ? '批量翻译（请先打开文件）' : isTranslating ? '翻译进行中...' : '批量翻译所有未翻译条目'}
+            aria-label={
+              !activeAIConfig
+                ? '批量翻译（请先配置 AI 服务）'
+                : !hasEntries
+                  ? '批量翻译（请先打开文件）'
+                  : isTranslating
+                    ? '翻译进行中...'
+                    : '批量翻译所有未翻译条目'
+            }
             aria-disabled={!activeAIConfig || !hasEntries}
             aria-busy={isTranslating}
           />
@@ -435,7 +457,10 @@ export const MenuBar = memo(function MenuBar({
         <div style={{ flex: 1 }} />
 
         {!activeAIConfig && (
-          <BulbFilled style={{ color: CSS_COLORS.statusNeedsReview }} aria-label="请先配置 AI 服务" />
+          <BulbFilled
+            style={{ color: CSS_COLORS.statusNeedsReview }}
+            aria-label="请先配置 AI 服务"
+          />
         )}
 
         <SystemActions
@@ -465,9 +490,9 @@ export const MenuBar = memo(function MenuBar({
       {/* 分隔线 */}
       <Divider
         type="vertical"
-        style={{ 
-          height: '20px', 
-          margin: '0', 
+        style={{
+          height: '20px',
+          margin: '0',
           borderColor: CSS_COLORS.borderSecondary,
         }}
       />

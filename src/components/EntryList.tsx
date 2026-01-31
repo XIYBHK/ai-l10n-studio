@@ -6,7 +6,11 @@ import { POEntry } from '../types/tauri';
 import { useUpdateEntry } from '../store';
 import { CSS_COLORS } from '../hooks/useCssColors';
 import { createModuleLogger } from '../utils/logger';
-import { announceToScreenReader, getBatchActionAriaLabel, getEntryStatusDescription } from '../utils/accessibility';
+import {
+  announceToScreenReader,
+  getBatchActionAriaLabel,
+  getEntryStatusDescription,
+} from '../utils/accessibility';
 import { TruncatedText } from './TruncatedText';
 import { EmptyState } from './EmptyState';
 import styles from './EntryList.module.css';
@@ -45,10 +49,7 @@ function getStatusClassName(entry: POEntry): string {
 }
 
 // 获取条目背景色（用于内联样式）
-function getEntryBackground(
-  isSelected: boolean,
-  isCurrent: boolean,
-): string {
+function getEntryBackground(isSelected: boolean, isCurrent: boolean): string {
   if (isSelected) return CSS_COLORS.selectedBg;
   if (isCurrent) return CSS_COLORS.hoverBg;
   return CSS_COLORS.bgPrimary;
@@ -135,9 +136,9 @@ const renderVirtualItem = (
         }}
       />
       {entry.msgstr && (
-        <TruncatedText 
-          text={entry.msgstr} 
-          maxWidth="100%" 
+        <TruncatedText
+          text={entry.msgstr}
+          maxWidth="100%"
           className={styles.msgstrText}
           style={{ color: CSS_COLORS.textSecondary }}
         />
@@ -150,10 +151,10 @@ const renderVirtualItem = (
             icon={<CheckOutlined />}
             onClick={(e) => onConfirm(globalIndex, e)}
             aria-label={`确认第 ${globalIndex + 1} 条翻译`}
-            style={{ 
-              fontSize: 'var(--font-size-xs)', 
-              height: '20px', 
-              padding: '0 6px' 
+            style={{
+              fontSize: 'var(--font-size-xs)',
+              height: '20px',
+              padding: '0 6px',
             }}
           >
             确认
@@ -223,7 +224,9 @@ const VirtualColumn = memo(function VirtualColumn({
         <div className={styles.columnHeaderLeft}>
           <Badge color={statusColor} />
           <span style={{ flexShrink: 0 }}>{title}</span>
-          <span className={styles.countBadge} aria-label={`${items.length}项`}>{items.length}</span>
+          <span className={styles.countBadge} aria-label={`${items.length}项`}>
+            {items.length}
+          </span>
         </div>
 
         {columnType === 'needsReview' && items.length > 0 && (
@@ -265,7 +268,12 @@ const VirtualColumn = memo(function VirtualColumn({
         )}
       </div>
 
-      <div ref={parentRef} className={`${styles.scrollContainer} virtual-scroll-optimized`} role="list" aria-label={`${title}条目`}>
+      <div
+        ref={parentRef}
+        className={`${styles.scrollContainer} virtual-scroll-optimized`}
+        role="list"
+        aria-label={`${title}条目`}
+      >
         {items.length === 0 ? (
           <EmptyState type="column-empty" columnType={columnType} />
         ) : (
@@ -653,8 +661,8 @@ export const EntryList = memo(function EntryList({
   });
 
   return (
-    <div 
-      ref={containerRef} 
+    <div
+      ref={containerRef}
       className={styles.container}
       role="main"
       aria-label="翻译条目列表"
@@ -668,14 +676,23 @@ export const EntryList = memo(function EntryList({
           {selectedRowKeys.length > 0 && (
             <>
               <SelectionActions />
-              <span className={styles.shortcutHint} aria-label="键盘快捷键">Ctrl+A 全选 | Ctrl+C 复制 | Esc 取消</span>
+              <span className={styles.shortcutHint} aria-label="键盘快捷键">
+                Ctrl+A 全选 | Ctrl+C 复制 | Esc 取消
+              </span>
             </>
           )}
         </div>
       </div>
 
       {isTranslating && (
-        <div className={styles.progressContainer} role="progressbar" aria-valuenow={Math.round(progress)} aria-valuemin={0} aria-valuemax={100} aria-label="翻译进度">
+        <div
+          className={styles.progressContainer}
+          role="progressbar"
+          aria-valuenow={Math.round(progress)}
+          aria-valuemin={0}
+          aria-valuemax={100}
+          aria-label="翻译进度"
+        >
           <Progress percent={Math.round(progress)} size="small" status="active" />
         </div>
       )}

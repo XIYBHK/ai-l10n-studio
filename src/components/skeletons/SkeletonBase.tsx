@@ -36,12 +36,7 @@ const SkeletonBase: React.FC<SkeletonBaseProps> = ({
     ...style,
   };
 
-  return (
-    <div
-      className={`skeleton-base ${variant} ${className}`}
-      style={skeletonStyle}
-    />
-  );
+  return <div className={`skeleton-base ${variant} ${className}`} style={skeletonStyle} />;
 };
 
 export default SkeletonBase;

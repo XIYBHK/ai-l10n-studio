@@ -1,9 +1,9 @@
 /**
  * CSS 颜色常量
- * 
+ *
  * 优化：改为静态常量导出，避免 Hook 开销
  * 所有颜色值都是 CSS 变量引用字符串
- * 
+ *
  * @example
  * import { CSS_COLORS } from './useCssColors';
  * <div style={{ backgroundColor: CSS_COLORS.bgPrimary }}>
@@ -41,7 +41,7 @@ export type CssColors = {
 /**
  * CSS 颜色变量常量
  * 直接在组件中使用，无需 Hook 调用
- * 
+ *
  * 性能优势：
  * 1. 没有 Hook 调用开销
  * 2. 对象引用稳定，不会触发子组件重渲染

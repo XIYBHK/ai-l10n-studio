@@ -23,10 +23,10 @@ export interface SectionHeaderProps {
 
 /**
  * 区块标题组件
- * 
+ *
  * 统一的区块标题样式，支持图标、标题、副标题和操作按钮。
  * 用于页面各个功能区块的标题展示。
- * 
+ *
  * @example
  * ```tsx
  * <SectionHeader

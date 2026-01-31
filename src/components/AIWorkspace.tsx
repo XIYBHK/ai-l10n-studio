@@ -104,13 +104,31 @@ const StatCard = memo(function StatCard({ title, value, suffix, icon, color }: S
 
   return (
     <div style={containerStyle} onMouseEnter={handleMouseEnter} onMouseLeave={handleMouseLeave}>
-      {icon && <div style={{ marginBottom: 'var(--space-1)', color: CSS_COLORS.textTertiary }}>{icon}</div>}
-      <div style={{ color: CSS_COLORS.textTertiary, fontSize: 'var(--font-size-xs)', marginBottom: 'var(--space-1)' }}>
+      {icon && (
+        <div style={{ marginBottom: 'var(--space-1)', color: CSS_COLORS.textTertiary }}>{icon}</div>
+      )}
+      <div
+        style={{
+          color: CSS_COLORS.textTertiary,
+          fontSize: 'var(--font-size-xs)',
+          marginBottom: 'var(--space-1)',
+        }}
+      >
         {title}
       </div>
-      <div style={{ fontSize: 'var(--font-size-lg)', fontWeight: 600, color: color ? CSS_COLORS[color as keyof typeof CSS_COLORS] : CSS_COLORS.textPrimary }}>
+      <div
+        style={{
+          fontSize: 'var(--font-size-lg)',
+          fontWeight: 600,
+          color: color ? CSS_COLORS[color as keyof typeof CSS_COLORS] : CSS_COLORS.textPrimary,
+        }}
+      >
         {value}
-        {suffix && <span style={{ fontSize: 'var(--font-size-sm)', marginLeft: 'var(--space-1)' }}>{suffix}</span>}
+        {suffix && (
+          <span style={{ fontSize: 'var(--font-size-sm)', marginLeft: 'var(--space-1)' }}>
+            {suffix}
+          </span>
+        )}
       </div>
     </div>
   );
@@ -128,7 +146,15 @@ const TokenCard = memo(function TokenCard({ label, value }: { label: string; val
   return (
     <div style={containerStyle}>
       <div style={{ color: CSS_COLORS.textTertiary, fontSize: 'var(--font-size-xs)' }}>{label}</div>
-      <div style={{ fontSize: 'var(--font-size-base)', fontWeight: 600, color: CSS_COLORS.textPrimary }}>{value}</div>
+      <div
+        style={{
+          fontSize: 'var(--font-size-base)',
+          fontWeight: 600,
+          color: CSS_COLORS.textPrimary,
+        }}
+      >
+        {value}
+      </div>
     </div>
   );
 });
@@ -147,11 +173,25 @@ const CostBreakdown = memo(function CostBreakdown({ cost, language }: CostBreakd
 
   return (
     <div style={containerStyle}>
-      <span style={{ color: CSS_COLORS.textSecondary, display: 'flex', alignItems: 'center', gap: 'var(--space-1)' }}>
+      <span
+        style={{
+          color: CSS_COLORS.textSecondary,
+          display: 'flex',
+          alignItems: 'center',
+          gap: 'var(--space-1)',
+        }}
+      >
         <DollarOutlined />
         预估成本
       </span>
-      <span style={{ fontWeight: 600, color: CSS_COLORS.statusTranslated, fontSize: 'var(--font-size-lg)', fontFamily: 'monospace' }}>
+      <span
+        style={{
+          fontWeight: 600,
+          color: CSS_COLORS.statusTranslated,
+          fontSize: 'var(--font-size-lg)',
+          fontFamily: 'monospace',
+        }}
+      >
         {formatCostByLocale(cost, language)}
       </span>
     </div>
@@ -162,7 +202,10 @@ const CostBreakdown = memo(function CostBreakdown({ cost, language }: CostBreakd
 const CacheInfo = memo(function CacheInfo({ modelInfo }: { modelInfo: ModelInfo }) {
   if (!modelInfo.supports_cache || !modelInfo.cache_reads_price) return null;
 
-  const savings = (((modelInfo.input_price - modelInfo.cache_reads_price) / modelInfo.input_price) * 100).toFixed(0);
+  const savings = (
+    ((modelInfo.input_price - modelInfo.cache_reads_price) / modelInfo.input_price) *
+    100
+  ).toFixed(0);
 
   const containerStyle: React.CSSProperties = {
     marginTop: 'var(--space-2)',
@@ -181,9 +224,7 @@ const CacheInfo = memo(function CacheInfo({ modelInfo }: { modelInfo: ModelInfo 
   return (
     <div style={containerStyle}>
       <InfoCircleOutlined style={{ marginTop: '2px', flexShrink: 0 }} />
-      <span>
-        当前模型支持缓存功能，重复请求可节省约 {savings}% 输入成本
-      </span>
+      <span>当前模型支持缓存功能，重复请求可节省约 {savings}% 输入成本</span>
     </div>
   );
 });
@@ -247,7 +288,7 @@ const SessionStatsSection = memo(function SessionStatsSection({
   const tmLearned = sessionStats.tm_learned ?? 0;
   const actualTotal = tmHits + deduplicated + aiTranslated;
 
-  const getStatValue = (key: typeof SESSION_CARD_DATA[number]['key']) => {
+  const getStatValue = (key: (typeof SESSION_CARD_DATA)[number]['key']) => {
     const value = sessionStats[key] ?? 0;
     if (key === 'tm_learned') return value;
     return actualTotal > 0 ? formatPercentage(value, actualTotal) : '0.0%';
@@ -386,18 +427,18 @@ const CumulativeStatsSection = memo(function CumulativeStatsSection({
           <BarChartOutlined aria-hidden="true" />
           累计统计
         </span>
-        <Popconfirm 
-          title="确认重置累计统计数据？" 
-          onConfirm={onReset} 
-          okText="确认" 
+        <Popconfirm
+          title="确认重置累计统计数据？"
+          onConfirm={onReset}
+          okText="确认"
           cancelText="取消"
           aria-label="确认重置累计统计数据对话框"
         >
-          <Button 
-            type="text" 
-            size="small" 
-            icon={<ReloadOutlined />} 
-            danger 
+          <Button
+            type="text"
+            size="small"
+            icon={<ReloadOutlined />}
+            danger
             style={{ fontSize: 'var(--font-size-xs)', height: '22px' }}
             aria-label="重置累计统计数据"
           >
@@ -409,22 +450,38 @@ const CumulativeStatsSection = memo(function CumulativeStatsSection({
       {/* 统计卡片网格 */}
       <div style={gridStyle}>
         {CUMULATIVE_CARDS.slice(0, 2).map((item) => (
-          <StatCard key={item.key} title={item.label} value={cumulativeStats[item.key] ?? 0} color={item.color} />
+          <StatCard
+            key={item.key}
+            title={item.label}
+            value={cumulativeStats[item.key] ?? 0}
+            color={item.color}
+          />
         ))}
       </div>
       <div style={gridStyle}>
         {CUMULATIVE_CARDS.slice(2, 4).map((item) => (
-          <StatCard key={item.key} title={item.label} value={cumulativeStats[item.key] ?? 0} color={item.color} />
+          <StatCard
+            key={item.key}
+            title={item.label}
+            value={cumulativeStats[item.key] ?? 0}
+            color={item.color}
+          />
         ))}
       </div>
       <div style={fullWidthGridStyle}>
-        <StatCard title={CUMULATIVE_CARDS[4].label} value={cumulativeStats.tm_learned ?? 0} color={CUMULATIVE_CARDS[4].color} />
+        <StatCard
+          title={CUMULATIVE_CARDS[4].label}
+          value={cumulativeStats.tm_learned ?? 0}
+          color={CUMULATIVE_CARDS[4].color}
+        />
       </div>
 
       {/* Token和费用 */}
       <div style={costContainerStyle}>
         <span style={{ color: CSS_COLORS.textSecondary }}>Token: {formatTokens(totalTokens)}</span>
-        <span style={{ fontWeight: 600, color: CSS_COLORS.statusTranslated, fontFamily: 'monospace' }}>
+        <span
+          style={{ fontWeight: 600, color: CSS_COLORS.statusTranslated, fontFamily: 'monospace' }}
+        >
           {formatCostByLocale(cost, language)}
         </span>
       </div>
@@ -433,7 +490,9 @@ const CumulativeStatsSection = memo(function CumulativeStatsSection({
 });
 
 // 术语库区块
-const TermLibrarySection = memo(function TermLibrarySection({ onManageClick }: TermLibrarySectionProps) {
+const TermLibrarySection = memo(function TermLibrarySection({
+  onManageClick,
+}: TermLibrarySectionProps) {
   const { termLibrary } = useTermLibrary({ enabled: true });
 
   if (!termLibrary || termLibrary.metadata.total_terms === 0) return null;
@@ -482,7 +541,12 @@ const TermLibrarySection = memo(function TermLibrarySection({ onManageClick }: T
           <BookOutlined />
           术语库 ({termLibrary.metadata.total_terms}条)
         </span>
-        <Button type="link" size="small" onClick={onManageClick} style={{ fontSize: 'var(--font-size-xs)', height: '22px' }}>
+        <Button
+          type="link"
+          size="small"
+          onClick={onManageClick}
+          style={{ fontSize: 'var(--font-size-xs)', height: '22px' }}
+        >
           管理
         </Button>
       </div>
@@ -494,7 +558,8 @@ const TermLibrarySection = memo(function TermLibrarySection({ onManageClick }: T
           </div>
           <div style={{ whiteSpace: 'pre-line' }}>{termLibrary.style_summary.prompt}</div>
           <div style={styleMetaStyle}>
-            v{termLibrary.style_summary.version} · {new Date(termLibrary.style_summary.generated_at).toLocaleString('zh-CN')}
+            v{termLibrary.style_summary.version} ·{' '}
+            {new Date(termLibrary.style_summary.generated_at).toLocaleString('zh-CN')}
           </div>
         </div>
       )}
@@ -502,7 +567,10 @@ const TermLibrarySection = memo(function TermLibrarySection({ onManageClick }: T
   );
 });
 
-export const AIWorkspace = memo(function AIWorkspace({ isTranslating, onResetStats }: AIWorkspaceProps) {
+export const AIWorkspace = memo(function AIWorkspace({
+  isTranslating,
+  onResetStats,
+}: AIWorkspaceProps) {
   const [memoryManagerVisible, setMemoryManagerVisible] = useState(false);
   const [termLibraryVisible, setTermLibraryVisible] = useState(false);
 
@@ -565,10 +633,17 @@ export const AIWorkspace = memo(function AIWorkspace({ isTranslating, onResetSta
         variant="borderless"
         title={
           <span style={cardTitleStyle}>
-            <RobotOutlined style={{ marginRight: 'var(--space-2)', color: CSS_COLORS.statusUntranslated }} aria-hidden="true" />
+            <RobotOutlined
+              style={{ marginRight: 'var(--space-2)', color: CSS_COLORS.statusUntranslated }}
+              aria-hidden="true"
+            />
             AI 工作区
             {isTranslating && (
-              <Tag color="processing" style={{ marginLeft: 'var(--space-2)', border: 'none' }} aria-label="翻译进行中">
+              <Tag
+                color="processing"
+                style={{ marginLeft: 'var(--space-2)', border: 'none' }}
+                aria-label="翻译进行中"
+              >
                 翻译中...
               </Tag>
             )}
@@ -599,12 +674,20 @@ export const AIWorkspace = memo(function AIWorkspace({ isTranslating, onResetSta
         aria-label="AI工作区统计信息"
       >
         {/* 累计统计 */}
-        <CumulativeStatsSection cumulativeStats={cumulativeStats} language={language} onReset={handleReset} />
+        <CumulativeStatsSection
+          cumulativeStats={cumulativeStats}
+          language={language}
+          onReset={handleReset}
+        />
 
         <Divider style={{ margin: 'var(--space-3) 0' }} />
 
         {/* 本次会话统计 */}
-        <SessionStatsSection sessionStats={sessionStats} modelInfo={modelInfo} language={language} />
+        <SessionStatsSection
+          sessionStats={sessionStats}
+          modelInfo={modelInfo}
+          language={language}
+        />
 
         <Divider style={{ margin: 'var(--space-3) 0' }} />
 
@@ -612,8 +695,14 @@ export const AIWorkspace = memo(function AIWorkspace({ isTranslating, onResetSta
         <TermLibrarySection onManageClick={() => setTermLibraryVisible(true)} />
       </Card>
 
-      <MemoryManager visible={memoryManagerVisible} onClose={() => setMemoryManagerVisible(false)} />
-      <TermLibraryManager visible={termLibraryVisible} onClose={() => setTermLibraryVisible(false)} />
+      <MemoryManager
+        visible={memoryManagerVisible}
+        onClose={() => setMemoryManagerVisible(false)}
+      />
+      <TermLibraryManager
+        visible={termLibraryVisible}
+        onClose={() => setTermLibraryVisible(false)}
+      />
     </>
   );
 });

@@ -70,7 +70,13 @@ export function SystemPromptTab() {
       }
       size="small"
     >
-      <p style={{ marginBottom: 'var(--space-4)', color: CSS_COLORS.textSecondary, fontSize: 'var(--font-size-base)' }}>
+      <p
+        style={{
+          marginBottom: 'var(--space-4)',
+          color: CSS_COLORS.textSecondary,
+          fontSize: 'var(--font-size-base)',
+        }}
+      >
         定义 AI 翻译时的系统行为和风格要求。这些提示词将作为翻译任务的前置上下文，影响所有翻译结果。
       </p>
 

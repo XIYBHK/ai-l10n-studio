@@ -12,10 +12,7 @@ interface SourceSectionProps {
 /**
  * 源码展示区域组件
  */
-export const SourceSection: React.FC<SourceSectionProps> = ({
-  entry,
-  onCopyOriginal,
-}) => {
+export const SourceSection: React.FC<SourceSectionProps> = ({ entry, onCopyOriginal }) => {
   const hasContext = entry.msgctxt || (entry.comments && entry.comments.length > 0);
 
   const containerStyles: CSSProperties = {
@@ -65,24 +62,18 @@ export const SourceSection: React.FC<SourceSectionProps> = ({
         }}
       />
       <div style={contentStyles}>
-        <div 
-          style={sourceTextStyles} 
-          role="textbox" 
-          aria-label="原文内容" 
+        <div
+          style={sourceTextStyles}
+          role="textbox"
+          aria-label="原文内容"
           aria-readonly="true"
           tabIndex={0}
         >
-          {entry.msgid ? (
-            entry.msgid
-          ) : (
-            <span style={emptyTextStyles}>(空)</span>
-          )}
+          {entry.msgid ? entry.msgid : <span style={emptyTextStyles}>(空)</span>}
         </div>
 
         {/* 上下文和注释 */}
-        {hasContext && (
-          <ContextInfo msgctxt={entry.msgctxt} comments={entry.comments} />
-        )}
+        {hasContext && <ContextInfo msgctxt={entry.msgctxt} comments={entry.comments} />}
       </div>
     </div>
   );
@@ -143,13 +134,19 @@ export const ContextInfo: React.FC<ContextInfoProps> = ({ msgctxt, comments }) =
     <div style={containerStyles} role="complementary" aria-label="上下文和注释">
       {msgctxt && (
         <div style={{ ...itemStyles, marginBottom: comments?.length ? 'var(--space-3)' : 0 }}>
-          <div style={labelStyles} id="context-label">上下文 (Context)</div>
-          <div style={valueStyles} aria-labelledby="context-label">{msgctxt}</div>
+          <div style={labelStyles} id="context-label">
+            上下文 (Context)
+          </div>
+          <div style={valueStyles} aria-labelledby="context-label">
+            {msgctxt}
+          </div>
         </div>
       )}
       {comments && comments.length > 0 && (
         <div style={itemStyles}>
-          <div style={labelStyles} id="comments-label">注释 (Comments)</div>
+          <div style={labelStyles} id="comments-label">
+            注释 (Comments)
+          </div>
           <div role="list" aria-labelledby="comments-label">
             {comments.map((comment, index) => (
               <div key={index} style={commentStyles} role="listitem">

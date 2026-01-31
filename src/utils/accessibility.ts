@@ -8,10 +8,13 @@
  * @param message 要播报的消息
  * @param priority 优先级：'polite' 等待当前朗读完成，'assertive' 立即打断
  */
-export function announceToScreenReader(message: string, priority: 'polite' | 'assertive' = 'polite') {
+export function announceToScreenReader(
+  message: string,
+  priority: 'polite' | 'assertive' = 'polite'
+) {
   // 查找或创建 aria-live 区域
   let liveRegion = document.getElementById(`a11y-live-region-${priority}`);
-  
+
   if (!liveRegion) {
     liveRegion = document.createElement('div');
     liveRegion.id = `a11y-live-region-${priority}`;
@@ -29,7 +32,7 @@ export function announceToScreenReader(message: string, priority: 'polite' | 'as
 
   // 清空后设置新内容，触发屏幕阅读器播报
   liveRegion.textContent = '';
-  
+
   // 使用 setTimeout 确保 DOM 更新
   setTimeout(() => {
     liveRegion!.textContent = message;
@@ -42,7 +45,10 @@ export function announceToScreenReader(message: string, priority: 'polite' | 'as
  * @param count 选中条目数
  * @returns 格式化的 aria-label
  */
-export function getBatchActionAriaLabel(action: 'translate' | 'confirm' | 'refine', count: number): string {
+export function getBatchActionAriaLabel(
+  action: 'translate' | 'confirm' | 'refine',
+  count: number
+): string {
   const actionLabels = {
     translate: '翻译',
     confirm: '确认',
@@ -83,12 +89,12 @@ export function getEntryStatusDescription(
     translated: '已翻译',
     empty: '空条目',
   };
-  
+
   const parts = [`第 ${index + 1} 条`, statusLabels[status]];
   if (isSelected) {
     parts.push('已选中');
   }
-  
+
   return parts.join('，');
 }
 
@@ -136,7 +142,7 @@ export class FocusTrap {
   activate(container: HTMLElement) {
     this.container = container;
     this.previouslyFocused = document.activeElement;
-    
+
     // 将焦点设置到容器内的第一个可聚焦元素
     const focusable = this.getFocusableElements();
     if (focusable.length > 0) {
@@ -154,12 +160,12 @@ export class FocusTrap {
     if (this.container) {
       this.container.removeEventListener('keydown', this.handleKeyDown);
     }
-    
+
     // 恢复之前的焦点
     if (this.previouslyFocused && this.previouslyFocused instanceof HTMLElement) {
       this.previouslyFocused.focus();
     }
-    
+
     this.container = null;
     this.previouslyFocused = null;
   }

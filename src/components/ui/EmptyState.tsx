@@ -1,5 +1,11 @@
 import React, { CSSProperties } from 'react';
-import { FileTextOutlined, InboxOutlined, DatabaseOutlined, FileSearchOutlined, KeyboardOutlined } from '@ant-design/icons';
+import {
+  FileTextOutlined,
+  InboxOutlined,
+  DatabaseOutlined,
+  FileSearchOutlined,
+  KeyboardOutlined,
+} from '@ant-design/icons';
 import { CSS_COLORS } from '../hooks/useCssColors';
 
 /**
@@ -52,7 +58,10 @@ const defaultShortcuts: ShortcutItem[] = [
 /**
  * 预定义的空状态配置
  */
-const emptyStateConfig: Record<EmptyStateType, { icon: React.ReactNode; title: string; description: string }> = {
+const emptyStateConfig: Record<
+  EmptyStateType,
+  { icon: React.ReactNode; title: string; description: string }
+> = {
   'no-file': {
     icon: <FileTextOutlined />,
     title: '未选择文件',
@@ -68,7 +77,7 @@ const emptyStateConfig: Record<EmptyStateType, { icon: React.ReactNode; title: s
     title: '该列暂无数据',
     description: '选择其他列或添加新的翻译内容',
   },
-  'default': {
+  default: {
     icon: <FileSearchOutlined />,
     title: '暂无数据',
     description: '当前没有可显示的内容',
@@ -77,10 +86,10 @@ const emptyStateConfig: Record<EmptyStateType, { icon: React.ReactNode; title: s
 
 /**
  * 空状态组件（增强版）
- * 
+ *
  * 用于展示空状态界面，支持多种预设类型、自定义图标、标题、描述和操作按钮。
  * 可选显示快捷键指南面板。
- * 
+ *
  * @example
  * ```tsx
  * <EmptyState
@@ -188,7 +197,7 @@ export const EmptyState: React.FC<EmptyStateProps> = ({
       <div style={titleStyles}>{displayTitle}</div>
       <div style={descriptionStyles}>{displayDescription}</div>
       {action && <div>{action}</div>}
-      
+
       {showShortcuts && (
         <div style={shortcutsContainerStyles}>
           <div style={shortcutsHeaderStyles}>
