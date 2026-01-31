@@ -99,9 +99,42 @@ export function TranslationWorkspace({
 
   return (
     <>
+      {/* 跳转到主要内容链接 - 无障碍支持 */}
+      <a
+        href="#main-editor"
+        style={{
+          position: 'absolute',
+          top: '-40px',
+          left: '0',
+          background: cssColors.brandPrimary,
+          color: '#ffffff',
+          padding: '8px 16px',
+          textDecoration: 'none',
+          zIndex: 1000,
+          borderRadius: '0 0 4px 0',
+          fontSize: '14px',
+          fontWeight: 500,
+          transition: 'top 0.3s',
+        }}
+        onFocus={(e) => { e.currentTarget.style.top = '0'; }}
+        onBlur={(e) => { e.currentTarget.style.top = '-40px'; }}
+        onClick={(e) => {
+          e.preventDefault();
+          const target = document.getElementById('main-editor');
+          if (target) {
+            target.focus();
+            target.setAttribute('tabIndex', '-1');
+          }
+        }}
+      >
+        跳转到主要内容
+      </a>
+
       <Layout
         className="workspace-fade-in"
         style={{ height: 'calc(100vh - 48px - 28px)', position: 'relative' }}
+        role="main"
+        aria-label="翻译工作区"
       >
         <div
           ref={sidebarRef}
@@ -112,7 +145,7 @@ export function TranslationWorkspace({
             borderRight: `1px solid ${cssColors.borderPrimary}`,
             overflow: 'hidden',
             position: 'relative',
-            minWidth: '300px',
+            minWidth: '320px',
             transition: isResizing
               ? 'none'
               : 'width 0.1s ease, background-color 0.3s cubic-bezier(0.645, 0.045, 0.355, 1), border-color 0.3s cubic-bezier(0.645, 0.045, 0.355, 1)',
