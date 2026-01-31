@@ -178,7 +178,7 @@ async fn init_logger() -> Result<()> {
                 current_infix: Some("latest"),
                 format: "%Y-%m-%d_%H-%M-%S",
             },
-            Cleanup::KeepLogFiles(log_max_count as usize),
+            Cleanup::KeepLogFiles(log_max_count),
         )
         .filter(Box::new(NoModuleFilter(filters)));
 

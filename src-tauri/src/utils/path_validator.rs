@@ -1,5 +1,5 @@
 use anyhow::{Result, bail};
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
 
 pub struct SafePathValidator {
     allowed_extensions: Vec<String>,
@@ -28,22 +28,20 @@ impl SafePathValidator {
             path_buf
                 .canonicalize()
                 .map_err(|e| anyhow::anyhow!("无法规范化路径: {}", e))?
-        } else {
-            if let Some(parent) = path_buf.parent() {
-                if !parent.exists() {
-                    bail!("父目录不存在: {:?}", parent);
-                }
-                parent
-                    .canonicalize()
-                    .map_err(|e| anyhow::anyhow!("无法规范化父目录: {}", e))?
-                    .join(
-                        path_buf
-                            .file_name()
-                            .ok_or_else(|| anyhow::anyhow!("Invalid file path: no file name"))?,
-                    )
-            } else {
-                path_buf
+        } else if let Some(parent) = path_buf.parent() {
+            if !parent.exists() {
+                bail!("父目录不存在: {:?}", parent);
             }
+            parent
+                .canonicalize()
+                .map_err(|e| anyhow::anyhow!("无法规范化父目录: {}", e))?
+                .join(
+                    path_buf
+                        .file_name()
+                        .ok_or_else(|| anyhow::anyhow!("Invalid file path: no file name"))?,
+                )
+        } else {
+            path_buf
         };
 
         if let Some(ext) = canonical.extension() {
@@ -78,7 +76,7 @@ impl SafePathValidator {
         Ok(canonical)
     }
 
-    fn check_forbidden_directories(&self, path: &PathBuf) -> Result<()> {
+    fn check_forbidden_directories(&self, path: &Path) -> Result<()> {
         let forbidden_patterns = [
             "system32",
             "windows",
