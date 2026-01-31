@@ -418,7 +418,7 @@ export function MemoryManager({ visible, onClose }: MemoryManagerProps) {
       okText="保存"
       cancelText="取消"
       confirmLoading={loading}
-      destroyOnHidden={true}
+      destroyOnClose
       mask={false}
       style={{ top: 20 }}
       styles={{
