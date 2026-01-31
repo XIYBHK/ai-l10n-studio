@@ -3,6 +3,9 @@ import { theme as antTheme } from 'antd';
 import { useAppStore } from '../store/useAppStore';
 import { lightTheme, darkTheme, semanticColors } from '../theme/config';
 import { emit } from '@tauri-apps/api/event';
+import { createModuleLogger } from '../utils/logger';
+
+const log = createModuleLogger('useTheme');
 
 type Theme = 'light' | 'dark' | 'system';
 
@@ -27,25 +30,28 @@ export const useTheme = () => {
     }
 
     const root = window.document.documentElement;
+    const body = window.document.body;
+    
+    // 确定实际应用的主题
+    const effectiveTheme = themeMode === 'system' ? getSystemTheme() : themeMode;
+    
+    // 使用 data-theme 属性触发 CSS 变量切换（性能优化）
+    root.setAttribute('data-theme', effectiveTheme);
+    body.setAttribute('data-theme', effectiveTheme);
+    
+    // 为兼容性保留 class（某些组件可能依赖）
     root.classList.remove('light', 'dark');
+    root.classList.add(effectiveTheme);
 
-    if (themeMode === 'system') {
-      const isDark = getSystemTheme() === 'dark';
-      root.classList.add(isDark ? 'dark' : 'light');
-    } else {
-      root.classList.add(themeMode);
-    }
-
-    const currentColors = appliedTheme === 'dark' ? semanticColors.dark : semanticColors.light;
-    Object.entries(currentColors).forEach(([key, value]) => {
-      root.style.setProperty(`--color-${key}`, value as string);
-    });
-
+    // 本地存储
     window.localStorage.setItem('theme', themeMode);
 
+    // 发送事件通知
     emit('theme:changed', { theme: themeMode }).catch((err) => {
       console.error('[useTheme] 发送主题变更事件失败:', err);
     });
+    
+    log.debug('主题已切换', { themeMode, effectiveTheme });
   }, [themeMode, appliedTheme]);
 
   useEffect(() => {

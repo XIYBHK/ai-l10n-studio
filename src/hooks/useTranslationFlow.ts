@@ -1,13 +1,34 @@
 /**
  * 翻译流程 Hook
  * 封装文件操作、翻译执行、条目管理等核心业务逻辑
+ * 
+ * 优化点：
+ * 1. 使用原子化 selectors，避免不必要重渲染
+ * 2. 使用 O(1) 索引查找替代 O(n) indexOf
+ * 3. 移除不必要的 useCallback
+ * 4. 修复 Tauri 事件监听的竞态条件
  */
 
 import { useState, useEffect, useCallback } from 'react';
 import { listen } from '@tauri-apps/api/event';
 import { message as msg } from 'antd';
 import { useChannelTranslation } from './useChannelTranslation';
-import { useTranslationStore, useSessionStore, useStatsStore } from '../store';
+import { 
+  useEntries, 
+  useCurrentEntry, 
+  useCurrentFilePath,
+  useSetEntries,
+  useSetCurrentEntry,
+  useSetCurrentFilePath,
+  useUpdateEntry,
+  useGetEntryIndex,
+  useIsTranslating,
+  useSetTranslating,
+  useSetProgress,
+  useResetSessionStats,
+  useUpdateSessionStats,
+  useUpdateCumulativeStatsAction,
+} from '../store';
 import { useAsync } from './useAsync';
 import { POEntry, TranslationStats } from '../types/tauri';
 import type { LanguageInfo } from '../types/generated/LanguageInfo';
@@ -22,28 +43,23 @@ import { createModuleLogger } from '../utils/logger';
 const log = createModuleLogger('useTranslationFlow');
 
 export function useTranslationFlow() {
-  // Store 状态
-  const {
-    entries,
-    currentEntry,
-    currentFilePath,
-    setEntries,
-    setCurrentEntry,
-    setCurrentFilePath,
-    updateEntry,
-  } = useTranslationStore();
-
-  const {
-    isTranslating,
-    progress,
-    setTranslating,
-    setProgress,
-    resetSessionStats,
-    updateSessionStats,
-  } = useSessionStore();
-
-  // 统计状态
-  const { updateCumulativeStats } = useStatsStore();
+  // Store 状态 - 使用原子化 hooks
+  const entries = useEntries();
+  const currentEntry = useCurrentEntry();
+  const currentFilePath = useCurrentFilePath();
+  const isTranslating = useIsTranslating();
+  
+  // Actions
+  const setEntries = useSetEntries();
+  const setCurrentEntry = useSetCurrentEntry();
+  const setCurrentFilePath = useSetCurrentFilePath();
+  const updateEntry = useUpdateEntry();
+  const getEntryIndex = useGetEntryIndex();
+  const setTranslating = useSetTranslating();
+  const setProgress = useSetProgress();
+  const resetSessionStats = useResetSessionStats();
+  const updateSessionStats = useUpdateSessionStats();
+  const updateCumulativeStats = useUpdateCumulativeStatsAction();
 
   // UI 状态
   const [translationStats, setTranslationStats] = useState<TranslationStats | null>(null);
@@ -57,43 +73,57 @@ export function useTranslationFlow() {
   useEffect(() => {
     resetSessionStats();
     log.info('🔄 翻译流程初始化，会话统计已重置');
-  }, []);
+  }, [resetSessionStats]);
 
+  // 翻译统计事件监听 - 修复竞态条件
   useEffect(() => {
-    let unlisten: (() => void) | null = null;
+    let unlistenFn: (() => void) | null = null;
+    let isActive = true;
 
     const setupListener = async () => {
-      unlisten = await listen<{ stats: TranslationStats }>('translation:after', (event) => {
+      const unlisten = await listen<{ stats: TranslationStats }>('translation:after', (event) => {
+        if (!isActive) return;
         const stats = event.payload.stats;
         log.info('📊 收到翻译统计', stats);
 
         updateSessionStats(stats);
         updateCumulativeStats(stats);
       });
+      
+      if (isActive) {
+        unlistenFn = unlisten;
+      } else {
+        unlisten();
+      }
     };
 
     setupListener();
 
     return () => {
-      if (unlisten) unlisten();
+      isActive = false;
+      unlistenFn?.();
     };
   }, [updateSessionStats, updateCumulativeStats]);
 
-  // 文件拖放监听
+  // 文件拖放监听 - 修复竞态条件和依赖
   useEffect(() => {
     let unlistenFn: (() => void) | null = null;
+    let isActive = true;
 
     const setupListener = async () => {
-      unlistenFn = await listen<string[]>('tauri://file-drop', async (event) => {
+      const unlisten = await listen<string[]>('tauri://file-drop', async (event) => {
+        if (!isActive) return;
+        
         const files = event.payload;
         if (files && files.length > 0) {
           const filePath = files[0];
           if (filePath.toLowerCase().endsWith('.po')) {
             try {
-              const entries = (await parsePOFile(filePath)) as POEntry[];
-              setEntries(entries);
+              const newEntries = (await parsePOFile(filePath)) as POEntry[];
+              // 使用 getState 获取最新状态
+              setEntries(newEntries);
               setCurrentFilePath(filePath);
-              await detectAndSetLanguages(entries);
+              await detectAndSetLanguages(newEntries);
               log.info('通过拖放导入文件成功', { filePath });
             } catch (error) {
               log.logError(error, '解析拖放文件失败');
@@ -102,17 +132,25 @@ export function useTranslationFlow() {
           }
         }
       });
+      
+      if (isActive) {
+        unlistenFn = unlisten;
+      } else {
+        unlisten();
+      }
     };
 
     setupListener();
+    
     return () => {
-      if (unlistenFn) unlistenFn();
+      isActive = false;
+      unlistenFn?.();
     };
-  }, []);
+  }, [parsePOFile, setEntries, setCurrentFilePath]);
 
-  const detectAndSetLanguages = async (entries: POEntry[]) => {
+  const detectAndSetLanguages = async (entriesToDetect: POEntry[]) => {
     try {
-      const sampleTexts = entries
+      const sampleTexts = entriesToDetect
         .filter((e) => e.msgid && e.msgid.trim())
         .slice(0, 5)
         .map((e) => e.msgid)
@@ -139,11 +177,11 @@ export function useTranslationFlow() {
     try {
       const filePath = await dialogCommands.openFile();
       if (filePath) {
-        const entries = (await parsePOFile(filePath)) as POEntry[];
-        setEntries(entries);
+        const newEntries = (await parsePOFile(filePath)) as POEntry[];
+        setEntries(newEntries);
         setCurrentFilePath(filePath);
-        await detectAndSetLanguages(entries);
-        log.info('文件加载成功', { filePath, entryCount: entries.length });
+        await detectAndSetLanguages(newEntries);
+        log.info('文件加载成功', { filePath, entryCount: newEntries.length });
       }
     } catch (error) {
       log.logError(error, '打开文件失败');
@@ -212,7 +250,8 @@ export function useTranslationFlow() {
         },
         onItem: (index, translation) => {
           const entry = entriesToTranslate[index];
-          const entryIndex = entries.indexOf(entry);
+          // ✅ 使用 O(1) 查找替代 O(n) indexOf
+          const entryIndex = getEntryIndex(entry);
           if (entryIndex >= 0) {
             updateEntry(entryIndex, {
               msgstr: translation,
@@ -223,7 +262,8 @@ export function useTranslationFlow() {
       });
 
       entriesToTranslate.forEach((entry, localIndex) => {
-        const entryIndex = entries.indexOf(entry);
+        // ✅ 使用 O(1) 查找替代 O(n) indexOf
+        const entryIndex = getEntryIndex(entry);
         if (entryIndex >= 0 && localIndex < result.translations.length) {
           const translation = result.translations[localIndex];
           const source = (result.translation_sources && result.translation_sources[localIndex]) as
@@ -348,29 +388,23 @@ export function useTranslationFlow() {
     }
   };
 
-  const handleEntrySelect = useCallback(
-    (entry: POEntry) => {
-      setCurrentEntry(entry);
-    },
-    [setCurrentEntry]
-  );
+  // ✅ 移除不必要的 useCallback
+  const handleEntrySelect = (entry: POEntry) => {
+    setCurrentEntry(entry);
+  };
 
-  const handleEntryUpdate = useCallback(
-    (index: number, updates: Partial<POEntry>) => {
-      updateEntry(index, updates);
-    },
-    [updateEntry]
-  );
+  // ✅ 移除不必要的 useCallback
+  const handleEntryUpdate = (index: number, updates: Partial<POEntry>) => {
+    updateEntry(index, updates);
+  };
 
-  const handleTargetLanguageChange = useCallback(
-    (langCode: string, langInfo: LanguageInfo | undefined) => {
-      setTargetLanguage(langCode);
-      if (langInfo) {
-        log.info('切换目标语言', { code: langInfo.code, name: langInfo.display_name });
-      }
-    },
-    []
-  );
+  // ✅ 移除不必要的 useCallback
+  const handleTargetLanguageChange = (langCode: string, langInfo: LanguageInfo | undefined) => {
+    setTargetLanguage(langCode);
+    if (langInfo) {
+      log.info('切换目标语言', { code: langInfo.code, name: langInfo.display_name });
+    }
+  };
 
   return {
     entries,

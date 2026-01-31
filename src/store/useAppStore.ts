@@ -172,6 +172,32 @@ export const useAppStore = create<AppState>()(
   )
 );
 
+// ============================================
+// 原子化 Selectors
+// ============================================
+
+// 状态 Selectors
+export const selectTheme = (state: AppState) => state.theme;
+export const selectLanguage = (state: AppState) => state.language;
+export const selectSystemTheme = (state: AppState) => state.systemTheme;
+export const selectConfig = (state: AppState) => state.config;
+export const selectCumulativeStatsApp = (state: AppState) => state.cumulativeStats;
+
+// Actions Selectors
+export const selectSetTheme = (state: AppState) => state.setTheme;
+export const selectSetLanguage = (state: AppState) => state.setLanguage;
+export const selectSetSystemTheme = (state: AppState) => state.setSystemTheme;
+export const selectSetConfig = (state: AppState) => state.setConfig;
+export const selectUpdateCumulativeStatsApp = (state: AppState) => state.updateCumulativeStats;
+export const selectResetCumulativeStatsApp = (state: AppState) => state.resetCumulativeStats;
+
+// 便捷 Hooks
+export const useThemeMode = () => useAppStore(selectTheme);
+export const useLanguage = () => useAppStore(selectLanguage);
+export const useSystemTheme = () => useAppStore(selectSystemTheme);
+export const useSetThemeAction = () => useAppStore(selectSetTheme);
+export const useSetLanguageAction = () => useAppStore(selectSetLanguage);
+
 /**
  * 从 TauriStore 加载初始状态
  * 应该在应用启动时调用

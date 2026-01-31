@@ -129,6 +129,20 @@ export const useStatsStore = create<StatsState>()(
   )
 );
 
+// ============================================
+// 原子化 Selectors
+// ============================================
+
+export const selectCumulativeStats = (state: StatsState) => state.cumulativeStats;
+export const selectSetCumulativeStats = (state: StatsState) => state.setCumulativeStats;
+export const selectUpdateCumulativeStats = (state: StatsState) => state.updateCumulativeStats;
+export const selectResetCumulativeStats = (state: StatsState) => state.resetCumulativeStats;
+
+// 便捷 Hooks
+export const useCumulativeStats = () => useStatsStore(selectCumulativeStats);
+export const useUpdateCumulativeStatsAction = () => useStatsStore(selectUpdateCumulativeStats);
+export const useResetCumulativeStatsAction = () => useStatsStore(selectResetCumulativeStats);
+
 /**
  * 从 TauriStore 加载统计数据
  */

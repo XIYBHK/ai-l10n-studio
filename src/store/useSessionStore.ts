@@ -90,3 +90,32 @@ export const useSessionStore = create<SessionState>()(
     { name: 'SessionStore' }
   )
 );
+
+// ============================================
+// 原子化 Selectors
+// ============================================
+
+// 基础状态 Selectors
+export const selectIsTranslating = (state: SessionState) => state.isTranslating;
+export const selectProgress = (state: SessionState) => state.progress;
+export const selectReport = (state: SessionState) => state.report;
+export const selectSessionStats = (state: SessionState) => state.sessionStats;
+
+// Actions Selectors
+export const selectSetTranslating = (state: SessionState) => state.setTranslating;
+export const selectSetProgress = (state: SessionState) => state.setProgress;
+export const selectSetReport = (state: SessionState) => state.setReport;
+export const selectUpdateSessionStats = (state: SessionState) => state.updateSessionStats;
+export const selectSetSessionStats = (state: SessionState) => state.setSessionStats;
+export const selectResetSessionStats = (state: SessionState) => state.resetSessionStats;
+
+// 便捷 Hooks
+export const useIsTranslating = () => useSessionStore(selectIsTranslating);
+export const useProgress = () => useSessionStore(selectProgress);
+export const useReport = () => useSessionStore(selectReport);
+export const useSessionStats = () => useSessionStore(selectSessionStats);
+
+// Actions Hooks
+export const useSetTranslating = () => useSessionStore(selectSetTranslating);
+export const useSetProgress = () => useSessionStore(selectSetProgress);
+export const useUpdateSessionStats = () => useSessionStore(selectUpdateSessionStats);
