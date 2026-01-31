@@ -6,7 +6,7 @@ import {
   CloseCircleOutlined,
   CloseOutlined,
 } from '@ant-design/icons';
-import { CSS_COLORS } from '../hooks/useCssColors';
+import { CSS_COLORS } from '../../hooks/useCssColors';
 
 /**
  * InfoCard 类型

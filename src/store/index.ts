@@ -33,6 +33,7 @@ export {
   useHasEntries,
   useSetEntries,
   useSetCurrentEntry,
+  useSetCurrentFilePath,
   useUpdateEntry,
   useGetEntryIndex,
 } from './useTranslationStore';
@@ -44,6 +45,7 @@ export {
   useSessionStats,
   useSetTranslating,
   useSetProgress,
+  useResetSessionStats,
   useUpdateSessionStats,
 } from './useSessionStore';
 export {

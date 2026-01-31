@@ -1,6 +1,6 @@
 import React, { CSSProperties } from 'react';
 import { ArrowUpOutlined, ArrowDownOutlined, MinusOutlined } from '@ant-design/icons';
-import { CSS_COLORS } from '../hooks/useCssColors';
+import { CSS_COLORS } from '../../hooks/useCssColors';
 
 /**
  * 趋势类型

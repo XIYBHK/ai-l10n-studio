@@ -7,7 +7,7 @@ import {
   CloseOutlined,
 } from '@ant-design/icons';
 import { Button, Badge } from 'antd';
-import { CSS_COLORS } from '../hooks/useCssColors';
+import { CSS_COLORS } from '../../hooks/useCssColors';
 import { SectionHeader } from '../ui/SectionHeader';
 
 interface EditorToolbarProps {

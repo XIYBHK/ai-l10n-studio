@@ -1,8 +1,8 @@
 import React, { CSSProperties } from 'react';
 import { GlobalOutlined } from '@ant-design/icons';
-import { CSS_COLORS } from '../hooks/useCssColors';
-import { SectionHeader } from './ui/SectionHeader';
-import { POEntry } from '../types/tauri';
+import { CSS_COLORS } from '../../hooks/useCssColors';
+import { SectionHeader } from '../ui/SectionHeader';
+import { POEntry } from '../../types/tauri';
 
 interface SourceSectionProps {
   entry: POEntry;

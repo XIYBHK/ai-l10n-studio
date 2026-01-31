@@ -4,9 +4,9 @@ import {
   InboxOutlined,
   DatabaseOutlined,
   FileSearchOutlined,
-  KeyboardOutlined,
+  KeyOutlined,
 } from '@ant-design/icons';
-import { CSS_COLORS } from '../hooks/useCssColors';
+import { CSS_COLORS } from '../../hooks/useCssColors';
 
 /**
  * 空状态类型
@@ -201,7 +201,7 @@ export const EmptyState: React.FC<EmptyStateProps> = ({
       {showShortcuts && (
         <div style={shortcutsContainerStyles}>
           <div style={shortcutsHeaderStyles}>
-            <KeyboardOutlined />
+            <KeyOutlined />
             <span>快捷键指南</span>
           </div>
           <div style={shortcutsListStyles}>

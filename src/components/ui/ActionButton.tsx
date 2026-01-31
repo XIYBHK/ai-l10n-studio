@@ -1,6 +1,6 @@
 import React, { CSSProperties } from 'react';
 import { Button, ButtonProps } from 'antd';
-import { CSS_COLORS } from '../hooks/useCssColors';
+import { CSS_COLORS } from '../../hooks/useCssColors';
 
 /**
  * ActionButton 尺寸类型
@@ -15,7 +15,7 @@ export type ActionButtonVariant = 'primary' | 'secondary' | 'ghost' | 'danger' |
 /**
  * ActionButton 组件属性
  */
-export interface ActionButtonProps extends Omit<ButtonProps, 'size' | 'type'> {
+export interface ActionButtonProps extends Omit<ButtonProps, 'size' | 'type' | 'variant'> {
   /** 按钮尺寸 */
   size?: ActionButtonSize;
   /** 按钮变体 */

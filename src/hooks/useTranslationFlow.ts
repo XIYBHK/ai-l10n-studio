@@ -24,6 +24,7 @@ import {
   useGetEntryIndex,
   useIsTranslating,
   useSetTranslating,
+  useProgress,
   useSetProgress,
   useResetSessionStats,
   useUpdateSessionStats,
@@ -57,6 +58,7 @@ export function useTranslationFlow() {
   const getEntryIndex = useGetEntryIndex();
   const setTranslating = useSetTranslating();
   const setProgress = useSetProgress();
+  const progress = useProgress();
   const resetSessionStats = useResetSessionStats();
   const updateSessionStats = useUpdateSessionStats();
   const updateCumulativeStats = useUpdateCumulativeStatsAction();
@@ -360,10 +362,10 @@ export function useTranslationFlow() {
     try {
       const requests = selectedEntries.map(({ index, entry }) => ({
         msgid: entry.msgid,
-        msgctxt: entry.msgctxt || undefined,
-        comment: entry.comments.join('\n') || undefined,
-        previousEntry: index > 0 ? entries[index - 1]?.msgstr : undefined,
-        nextEntry: index < entries.length - 1 ? entries[index + 1]?.msgstr : undefined,
+        msgctxt: entry.msgctxt ?? null,
+        comment: entry.comments.join('\n') ?? null,
+        previousEntry: index > 0 ? (entries[index - 1]?.msgstr ?? null) : null,
+        nextEntry: index < entries.length - 1 ? (entries[index + 1]?.msgstr ?? null) : null,
       }));
 
       log.info('[精翻] 开始精翻', { count: requests.length });

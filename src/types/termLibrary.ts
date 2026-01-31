@@ -2,7 +2,11 @@
  * 术语库相关类型
  */
 
-// 导出自动生成的类型
+// 导入自动生成的类型
+import type { TermEntry } from './generated/TermEntry';
+import type { StyleSummary } from './generated/StyleSummary';
+
+// 重新导出
 export type { TermEntry } from './generated/TermEntry';
 export type { StyleSummary } from './generated/StyleSummary';
 

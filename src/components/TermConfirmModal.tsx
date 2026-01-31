@@ -1,4 +1,4 @@
-import React, { useEffect } from 'react';
+import { useEffect } from 'react';
 import { Modal, Button, Alert, Space, Typography } from 'antd';
 import { BookOutlined, CheckCircleOutlined } from '@ant-design/icons';
 import { TermDifference } from '../types/termLibrary';

@@ -119,3 +119,4 @@ export const useSessionStats = () => useSessionStore(selectSessionStats);
 export const useSetTranslating = () => useSessionStore(selectSetTranslating);
 export const useSetProgress = () => useSessionStore(selectSetProgress);
 export const useUpdateSessionStats = () => useSessionStore(selectUpdateSessionStats);
+export const useResetSessionStats = () => useSessionStore(selectResetSessionStats);

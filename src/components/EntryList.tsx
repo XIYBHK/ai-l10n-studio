@@ -12,7 +12,7 @@ import {
   getEntryStatusDescription,
 } from '../utils/accessibility';
 import { TruncatedText } from './TruncatedText';
-import { EmptyState } from './EmptyState';
+import { EmptyState } from './ui/EmptyState';
 import styles from './EntryList.module.css';
 
 const log = createModuleLogger('EntryList');
@@ -275,7 +275,7 @@ const VirtualColumn = memo(function VirtualColumn({
         aria-label={`${title}条目`}
       >
         {items.length === 0 ? (
-          <EmptyState type="column-empty" columnType={columnType} />
+          <EmptyState type="column-empty" />
         ) : (
           <div
             style={{

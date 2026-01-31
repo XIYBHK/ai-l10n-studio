@@ -1,7 +1,7 @@
 import React, { CSSProperties } from 'react';
 import { TranslationOutlined } from '@ant-design/icons';
 import { Input, Badge } from 'antd';
-import { CSS_COLORS } from '../hooks/useCssColors';
+import { CSS_COLORS } from '../../hooks/useCssColors';
 import { SectionHeader } from '../ui/SectionHeader';
 import { POEntry } from '../../types/tauri';
 

@@ -11,6 +11,7 @@ export enum LogLevel {
 }
 
 interface LogConfig {
+  level: LogLevel;
   enableTimestamp: boolean;
   enableModule: boolean;
 }

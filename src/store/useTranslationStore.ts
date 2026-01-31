@@ -216,5 +216,6 @@ export const useHasEntries = () => useTranslationStore(selectHasEntries);
 // Actions Hooks
 export const useSetEntries = () => useTranslationStore(selectSetEntries);
 export const useSetCurrentEntry = () => useTranslationStore(selectSetCurrentEntry);
+export const useSetCurrentFilePath = () => useTranslationStore(selectSetCurrentFilePath);
 export const useUpdateEntry = () => useTranslationStore(selectUpdateEntry);
 export const useGetEntryIndex = () => useTranslationStore(selectGetEntryIndex);

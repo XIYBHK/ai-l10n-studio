@@ -18,10 +18,10 @@ export function LogsTab() {
       .get()
       .then((config) => {
         form.setFieldsValue({
-          log_level: config.log_level || 'info',
-          log_retention_days: config.log_retention_days ?? 7,
-          log_max_size: config.log_max_size ?? 128,
-          log_max_count: config.log_max_count ?? 8,
+          log_level: config.logLevel || 'info',
+          log_retention_days: config.logRetentionDays ?? 7,
+          log_max_size: config.logMaxSize ?? 128,
+          log_max_count: config.logMaxCount ?? 8,
         });
         log.debug('日志配置已加载', config);
       })
@@ -40,10 +40,10 @@ export function LogsTab() {
     setLoading(true);
     try {
       await configCommands.update({
-        log_level: values.log_level,
-        log_retention_days: values.log_retention_days,
-        log_max_size: values.log_max_size,
-        log_max_count: values.log_max_count,
+        logLevel: values.log_level,
+        logRetentionDays: values.log_retention_days,
+        logMaxSize: values.log_max_size,
+        logMaxCount: values.log_max_count,
       });
       message.success('日志设置已保存');
       log.info('日志设置已保存', values);

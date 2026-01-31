@@ -1,5 +1,5 @@
 import React, { CSSProperties } from 'react';
-import { CSS_COLORS } from '../hooks/useCssColors';
+import { CSS_COLORS } from '../../hooks/useCssColors';
 
 interface StatusBarProps {
   lineNumber?: number;

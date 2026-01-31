@@ -85,9 +85,6 @@ export const lightTheme: ThemeConfig = {
       defaultActiveBg: palette.light.border,
       defaultActiveColor: palette.light.textPrimary,
       defaultActiveBorderColor: palette.light.border,
-      disabledBg: palette.light.bgContainer,
-      disabledBorderColor: palette.light.borderSecondary,
-      disabledColor: palette.light.textDisabled,
       defaultShadow: '0 2px 4px rgba(0, 0, 0, 0.04)',
       primaryShadow: '0 2px 8px rgba(203, 166, 247, 0.25)',
     },
@@ -110,7 +107,6 @@ export const lightTheme: ThemeConfig = {
       headerColor: palette.light.textSecondary,
       borderColor: palette.light.borderSecondary,
       rowHoverBg: palette.light.bgElevated,
-      cellBg: palette.light.bgContainer,
     },
     Modal: {
       contentBg: palette.light.bgContainer,
@@ -150,9 +146,6 @@ export const darkTheme: ThemeConfig = {
       defaultHoverBg: palette.dark.bgContainer,
       defaultHoverColor: palette.dark.textPrimary,
       defaultHoverBorderColor: palette.dark.border,
-      disabledBg: palette.dark.bgElevated,
-      disabledBorderColor: palette.dark.borderSecondary,
-      disabledColor: palette.dark.textDisabled,
       primaryShadow: '0 2px 8px rgba(203, 166, 247, 0.3)',
     },
     Input: {
@@ -166,7 +159,6 @@ export const darkTheme: ThemeConfig = {
       headerColor: palette.dark.textSecondary,
       borderColor: palette.dark.border,
       rowHoverBg: 'rgba(203, 166, 247, 0.08)',
-      cellBg: palette.dark.bgContainer,
     },
     Modal: {
       contentBg: palette.dark.bgElevated,
