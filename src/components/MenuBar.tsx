@@ -507,7 +507,7 @@ export const MenuBar = memo(function MenuBar({
         onSettings={onSettings}
         onDevTools={onDevTools}
       />
-    </div>
+    </nav>
   );
 });
 

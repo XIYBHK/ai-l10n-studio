@@ -204,7 +204,7 @@ export const EditorPane = memo(function EditorPane({
         <EmptyState
           type="default"
           title="请从左侧列表选择一个条目"
-          description="或者点击工具栏的"打开"按钮导入 PO 文件开始翻译"
+          description='或者点击工具栏的"打开"按钮导入 PO 文件开始翻译'
           showShortcuts
           shortcuts={[
             { key: 'Ctrl + O', description: '打开文件' },
