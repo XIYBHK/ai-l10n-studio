@@ -3,6 +3,7 @@ import { Card, Form, Switch, Button, message } from 'antd';
 import { BellOutlined } from '@ant-design/icons';
 import { notificationManager } from '../../utils/notificationManager';
 import { createModuleLogger } from '../../utils/logger';
+import { CSS_COLORS } from '../../hooks/useCssColors';
 
 const log = createModuleLogger('NotificationTab');
 
@@ -47,7 +48,7 @@ export function NotificationTab() {
       }
       size="small"
     >
-      <p style={{ marginBottom: 16, color: '#666', fontSize: '13px' }}>
+      <p style={{ marginBottom: 'var(--space-4)', color: CSS_COLORS.textSecondary, fontSize: 'var(--font-size-base)' }}>
         配置翻译完成、系统更新等事件的通知提醒。
       </p>
 

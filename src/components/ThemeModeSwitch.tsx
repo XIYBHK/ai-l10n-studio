@@ -21,8 +21,8 @@ export const ThemeModeSwitch = memo(function ThemeModeSwitch({
           style={{
             display: 'flex',
             alignItems: 'center',
-            gap: '6px',
-            fontSize: '13px',
+            gap: 'var(--space-1)',
+            fontSize: 'var(--font-size-base)',
           }}
         >
           <BulbOutlined />
@@ -37,8 +37,8 @@ export const ThemeModeSwitch = memo(function ThemeModeSwitch({
           style={{
             display: 'flex',
             alignItems: 'center',
-            gap: '6px',
-            fontSize: '13px',
+            gap: 'var(--space-1)',
+            fontSize: 'var(--font-size-base)',
           }}
         >
           <MoonOutlined />
@@ -53,8 +53,8 @@ export const ThemeModeSwitch = memo(function ThemeModeSwitch({
           style={{
             display: 'flex',
             alignItems: 'center',
-            gap: '6px',
-            fontSize: '13px',
+            gap: 'var(--space-1)',
+            fontSize: 'var(--font-size-base)',
           }}
         >
           <DesktopOutlined />

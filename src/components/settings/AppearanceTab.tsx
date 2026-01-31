@@ -1,12 +1,13 @@
 import { Card, Form, Select, Row, Col } from 'antd';
 import { BgColorsOutlined } from '@ant-design/icons';
-import { useAppStore } from '../../store/useAppStore';
+import { useLanguage, useSetLanguageAction } from '../../store';
 import { ThemeModeSwitch } from '../ThemeModeSwitch';
 
 interface AppearanceTabProps {}
 
 export function AppearanceTab({}: AppearanceTabProps) {
-  const { language, setLanguage } = useAppStore();
+  const language = useLanguage();
+  const setLanguage = useSetLanguageAction();
   const [form] = Form.useForm();
 
   const handleLanguageChange = (value: string) => {
@@ -20,8 +21,8 @@ export function AppearanceTab({}: AppearanceTabProps) {
           style={{
             display: 'flex',
             alignItems: 'center',
-            gap: '8px',
-            fontSize: '14px',
+            gap: 'var(--space-2)',
+            fontSize: 'var(--font-size-md)',
             fontWeight: 600,
           }}
         >

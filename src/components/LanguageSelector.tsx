@@ -1,4 +1,5 @@
 import { Select } from 'antd';
+import type { CSSProperties } from 'react';
 import type { LanguageInfo } from '../types/generated/LanguageInfo';
 import { createModuleLogger } from '../utils/logger';
 import { useSupportedLanguages } from '../hooks/useLanguage';

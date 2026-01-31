@@ -284,7 +284,7 @@ export function AIConfigTab({ onProviderChange }: AIConfigTabProps) {
               <List.Item.Meta
                 title={<span>{getProviderLabel(config.providerId)}</span>}
                 description={
-                  <div style={{ fontSize: '12px', color: '#666' }}>
+                  <div style={{ fontSize: 'var(--font-size-sm)', color: '#666' }}>
                     <div>模型: {config.model || '(未设置)'}</div>
                     {config.proxy?.enabled && (
                       <div>

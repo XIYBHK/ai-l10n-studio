@@ -124,7 +124,7 @@ export function TermLibraryManager({ visible, onClose }: TermLibraryManagerProps
       ellipsis: true,
       render: (text: string) => (
         <Tooltip title={text}>
-          <span style={{ fontSize: '13px' }}>{text}</span>
+          <span style={{ fontSize: 'var(--font-size-base)' }}>{text}</span>
         </Tooltip>
       ),
     },
@@ -140,10 +140,10 @@ export function TermLibraryManager({ visible, onClose }: TermLibraryManagerProps
             value={editingTerm?.user_translation}
             onChange={(e) => setEditingTerm({ ...editingTerm!, user_translation: e.target.value })}
             autoSize={{ minRows: 1, maxRows: 4 }}
-            style={{ fontSize: '13px' }}
+            style={{ fontSize: 'var(--font-size-base)' }}
           />
         ) : (
-          <span style={{ fontSize: '13px', color: cssColors.statusTranslated }}>{text}</span>
+          <span style={{ fontSize: 'var(--font-size-base)', color: cssColors.statusTranslated }}>{text}</span>
         );
       },
     },
@@ -155,7 +155,7 @@ export function TermLibraryManager({ visible, onClose }: TermLibraryManagerProps
       ellipsis: true,
       render: (text: string) => (
         <Tooltip title={text}>
-          <span style={{ fontSize: '13px', color: cssColors.textTertiary }}>{text}</span>
+          <span style={{ fontSize: 'var(--font-size-base)', color: cssColors.textTertiary }}>{text}</span>
         </Tooltip>
       ),
     },
@@ -205,7 +205,7 @@ export function TermLibraryManager({ visible, onClose }: TermLibraryManagerProps
         <span>
           <BookOutlined /> 术语库管理
           {library && (
-            <Tag color="blue" style={{ marginLeft: 8 }}>
+            <Tag color="blue" style={{ marginLeft: 'var(--space-2)' }}>
               {library.metadata.total_terms} 条术语
             </Tag>
           )}
@@ -238,14 +238,14 @@ export function TermLibraryManager({ visible, onClose }: TermLibraryManagerProps
       {/* 风格提示词说明 */}
       <div
         style={{
-          marginBottom: 16,
-          padding: '10px 12px',
+          marginBottom: 'var(--space-4)',
+          padding: 'var(--space-2) var(--space-3)',
           background: cssColors.bgTertiary,
           border: `1px solid ${cssColors.borderPrimary}`,
-          borderRadius: 4,
+          borderRadius: 'var(--radius-sm)',
         }}
       >
-        <div style={{ fontSize: '12px', color: cssColors.textSecondary, lineHeight: '1.6' }}>
+        <div style={{ fontSize: 'var(--font-size-sm)', color: cssColors.textSecondary, lineHeight: '1.6' }}>
           💡 <strong style={{ color: cssColors.textPrimary }}>风格提示词自动生成规则：</strong>
           首次添加或每新增5条术语时自动生成，也可随时点击下方按钮手动生成
         </div>
@@ -255,17 +255,17 @@ export function TermLibraryManager({ visible, onClose }: TermLibraryManagerProps
       {library?.style_summary && (
         <div
           style={{
-            marginBottom: 16,
-            padding: 12,
+            marginBottom: 'var(--space-4)',
+            padding: 'var(--space-3)',
             background: cssColors.bgTertiary,
-            borderRadius: 4,
+            borderRadius: 'var(--radius-sm)',
           }}
         >
           <div
             style={{
-              fontSize: '12px',
+              fontSize: 'var(--font-size-sm)',
               fontWeight: 600,
-              marginBottom: 8,
+              marginBottom: 'var(--space-2)',
               color: cssColors.textPrimary,
             }}
           >
@@ -273,7 +273,7 @@ export function TermLibraryManager({ visible, onClose }: TermLibraryManagerProps
           </div>
           <div
             style={{
-              fontSize: '13px',
+              fontSize: 'var(--font-size-base)',
               lineHeight: '1.6',
               color: cssColors.textSecondary,
             }}
@@ -282,8 +282,8 @@ export function TermLibraryManager({ visible, onClose }: TermLibraryManagerProps
           </div>
           <div
             style={{
-              fontSize: '11px',
-              marginTop: 8,
+              fontSize: 'var(--font-size-xs)',
+              marginTop: 'var(--space-2)',
               color: cssColors.textTertiary,
             }}
           >
@@ -315,13 +315,13 @@ export function TermLibraryManager({ visible, onClose }: TermLibraryManagerProps
         <div
           style={{
             textAlign: 'center',
-            padding: '40px 20px',
+            padding: 'var(--space-8) var(--space-4)',
             color: cssColors.textTertiary,
           }}
         >
-          <BookOutlined style={{ fontSize: 48, marginBottom: 16 }} />
+          <BookOutlined style={{ fontSize: 'var(--font-size-2xl)', marginBottom: 'var(--space-4)' }} />
           <div>术语库为空</div>
-          <div style={{ fontSize: '12px', marginTop: 8 }}>
+          <div style={{ fontSize: 'var(--font-size-sm)', marginTop: 'var(--space-2)' }}>
             在编辑器中修改AI翻译后，系统会自动检测并建议加入术语库
           </div>
         </div>

@@ -430,8 +430,8 @@ export function MemoryManager({ visible, onClose }: MemoryManagerProps) {
         },
       }}
     >
-      <div style={{ marginBottom: 16 }}>
-        <Space style={{ marginBottom: 12, width: '100%', justifyContent: 'space-between' }}>
+      <div style={{ marginBottom: 'var(--space-4)' }}>
+        <Space style={{ marginBottom: 'var(--space-3)', width: '100%', justifyContent: 'space-between' }}>
           <Space>
             <Button icon={<ImportOutlined />} onClick={handleImport}>
               导入
@@ -462,7 +462,7 @@ export function MemoryManager({ visible, onClose }: MemoryManagerProps) {
           prefix={<SearchOutlined />}
           value={searchText}
           onChange={(e) => setSearchText(e.target.value)}
-          style={{ marginBottom: 12 }}
+          style={{ marginBottom: 'var(--space-3)' }}
         />
 
         <Space.Compact style={{ width: '100%' }}>

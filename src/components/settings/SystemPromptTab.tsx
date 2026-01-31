@@ -5,6 +5,7 @@ import { systemPromptCommands } from '../../services/commands';
 import { useSystemPrompt } from '../../hooks/useConfig';
 import { useAsync } from '../../hooks/useAsync';
 import { createModuleLogger } from '../../utils/logger';
+import { CSS_COLORS } from '../../hooks/useCssColors';
 
 const log = createModuleLogger('SystemPromptTab');
 
@@ -69,7 +70,7 @@ export function SystemPromptTab() {
       }
       size="small"
     >
-      <p style={{ marginBottom: 16, color: '#666', fontSize: '13px' }}>
+      <p style={{ marginBottom: 'var(--space-4)', color: CSS_COLORS.textSecondary, fontSize: 'var(--font-size-base)' }}>
         定义 AI 翻译时的系统行为和风格要求。这些提示词将作为翻译任务的前置上下文，影响所有翻译结果。
       </p>
 
@@ -80,7 +81,7 @@ export function SystemPromptTab() {
             onChange={handlePromptChange}
             placeholder="请输入系统提示词..."
             rows={12}
-            style={{ fontFamily: 'monospace', fontSize: '13px' }}
+            style={{ fontFamily: 'monospace', fontSize: 'var(--font-size-base)' }}
           />
         </Form.Item>
 

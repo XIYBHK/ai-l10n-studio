@@ -31,8 +31,8 @@ export function SettingsModal({ visible, onClose }: SettingsModalProps) {
           style={{
             display: 'flex',
             alignItems: 'center',
-            gap: '6px',
-            fontSize: '13px',
+            gap: 'var(--space-2)',
+            fontSize: 'var(--font-size-base)',
           }}
         >
           <ApiOutlined /> AI 配置
@@ -47,8 +47,8 @@ export function SettingsModal({ visible, onClose }: SettingsModalProps) {
           style={{
             display: 'flex',
             alignItems: 'center',
-            gap: '6px',
-            fontSize: '13px',
+            gap: 'var(--space-2)',
+            fontSize: 'var(--font-size-base)',
           }}
         >
           <FileTextOutlined /> 系统提示词
@@ -63,8 +63,8 @@ export function SettingsModal({ visible, onClose }: SettingsModalProps) {
           style={{
             display: 'flex',
             alignItems: 'center',
-            gap: '6px',
-            fontSize: '13px',
+            gap: 'var(--space-2)',
+            fontSize: 'var(--font-size-base)',
           }}
         >
           <BgColorsOutlined /> 外观
@@ -79,8 +79,8 @@ export function SettingsModal({ visible, onClose }: SettingsModalProps) {
           style={{
             display: 'flex',
             alignItems: 'center',
-            gap: '6px',
-            fontSize: '13px',
+            gap: 'var(--space-2)',
+            fontSize: 'var(--font-size-base)',
           }}
         >
           <BellOutlined /> 通知
@@ -95,8 +95,8 @@ export function SettingsModal({ visible, onClose }: SettingsModalProps) {
           style={{
             display: 'flex',
             alignItems: 'center',
-            gap: '6px',
-            fontSize: '13px',
+            gap: 'var(--space-2)',
+            fontSize: 'var(--font-size-base)',
           }}
         >
           <InfoCircleOutlined /> 日志
