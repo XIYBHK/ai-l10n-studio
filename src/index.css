@@ -34,22 +34,22 @@
   --color-textDisabled: rgba(76, 79, 105, 0.5);
   --color-borderPrimary: #ccd0da;
   --color-borderSecondary: #dce0e8;
-
+  
   /* 状态颜色 */
   --color-statusUntranslated: #cba6f7;
   --color-statusNeedsReview: #89b4fa;
   --color-statusTranslated: #166534;
-
+  
   /* 交互状态 */
   --color-selectedBg: rgba(203, 166, 247, 0.15);
   --color-hoverBg: #dce0e8;
   --color-activeBg: rgba(203, 166, 247, 0.1);
   --color-selectedBorder: #cba6f7;
-
+  
   /* 品牌色 */
   --color-brandPrimary: #cba6f7;
   --color-brandSecondary: #89b4fa;
-
+  
   /* 翻译来源标识 */
   --color-sourceTmBg: rgba(82, 196, 26, 0.1);
   --color-sourceTmColor: #52c41a;
@@ -57,10 +57,64 @@
   --color-sourceDedupColor: #1890ff;
   --color-sourceAiBg: rgba(250, 173, 20, 0.1);
   --color-sourceAiColor: #faad14;
-
+  
   /* 遮罩层 */
   --color-overlayBg: rgba(0, 0, 0, 0.5);
   --color-overlayText: #ffffff;
+
+  /* ============================================
+     设计系统规范 - 字体层级
+     ============================================ */
+  --font-size-xs: 11px;      /* 辅助文字、标签 */
+  --font-size-sm: 12px;      /* 正文、按钮 */
+  --font-size-base: 13px;    /* 列表标题、菜单 */
+  --font-size-md: 14px;      /* 编辑器正文 */
+  --font-size-lg: 16px;      /* 小标题 */
+  --font-size-xl: 20px;      /* 标题 */
+  --font-size-2xl: 24px;     /* Logo */
+
+  --font-weight-normal: 400;
+  --font-weight-medium: 500;
+  --font-weight-semibold: 600;
+  --font-weight-bold: 700;
+
+  /* ============================================
+     设计系统规范 - 间距系统 (8px 网格)
+     ============================================ */
+  --space-1: 4px;
+  --space-2: 8px;
+  --space-3: 12px;
+  --space-4: 16px;
+  --space-5: 20px;
+  --space-6: 24px;
+  --space-8: 32px;
+
+  /* ============================================
+     设计系统规范 - 圆角
+     ============================================ */
+  --radius-sm: 4px;
+  --radius-base: 6px;
+  --radius-md: 8px;
+  --radius-lg: 12px;
+  --radius-xl: 16px;
+  --radius-full: 9999px;
+
+  /* ============================================
+     设计系统规范 - 阴影
+     ============================================ */
+  --shadow-sm: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
+  --shadow-base: 0 1px 3px 0 rgba(0, 0, 0, 0.1), 0 1px 2px 0 rgba(0, 0, 0, 0.06);
+  --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+  --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+
+  /* ============================================
+     设计系统规范 - 过渡动画
+     ============================================ */
+  --duration-fast: 150ms;
+  --duration-base: 200ms;
+  --duration-slow: 300ms;
+  --ease-out: cubic-bezier(0, 0, 0.2, 1);
+  --ease-in-out: cubic-bezier(0.4, 0, 0.2, 1);
 }
 
 /* ============================================
@@ -76,22 +130,22 @@
   --color-textDisabled: rgba(205, 214, 244, 0.5);
   --color-borderPrimary: #313244;
   --color-borderSecondary: #45475a;
-
+  
   /* 状态颜色 - 暗色模式更亮 */
   --color-statusUntranslated: #cba6f7;
   --color-statusNeedsReview: #89b4fa;
   --color-statusTranslated: #a6e3a1;
-
+  
   /* 交互状态 - 暗色模式降低透明度 */
   --color-selectedBg: rgba(203, 166, 247, 0.2);
   --color-hoverBg: rgba(203, 166, 247, 0.1);
   --color-activeBg: rgba(203, 166, 247, 0.15);
   --color-selectedBorder: #cba6f7;
-
+  
   /* 品牌色保持一致 */
   --color-brandPrimary: #cba6f7;
   --color-brandSecondary: #89b4fa;
-
+  
   /* 翻译来源标识 - 暗色模式使用更高对比度 */
   --color-sourceTmBg: rgba(82, 196, 26, 0.2);
   --color-sourceTmColor: #73d13d;
@@ -99,7 +153,7 @@
   --color-sourceDedupColor: #69c0ff;
   --color-sourceAiBg: rgba(250, 173, 20, 0.2);
   --color-sourceAiColor: #ffd666;
-
+  
   /* 遮罩层 */
   --color-overlayBg: rgba(0, 0, 0, 0.7);
   --color-overlayText: #cdd6f4;
@@ -129,61 +183,6 @@ button:focus-visible {
   outline: 4px auto -webkit-focus-ring-color;
 }
 
-/* 过渡动画 - 主题切换时平滑过渡 */
-/* ============================================
-   设计系统规范 - 字体层级
-   ============================================ */
---font-size-xs: 11px; /* 辅助文字、标签 */
---font-size-sm: 12px; /* 正文、按钮 */
---font-size-base: 13px; /* 列表标题、菜单 */
---font-size-md: 14px; /* 编辑器正文 */
---font-size-lg: 16px; /* 小标题 */
---font-size-xl: 20px; /* 标题 */
---font-size-2xl: 24px; /* Logo */
-
---font-weight-normal: 400;
---font-weight-medium: 500;
---font-weight-semibold: 600;
---font-weight-bold: 700;
-
-/* ============================================
-     设计系统规范 - 间距系统 (8px 网格)
-     ============================================ */
---space-1: 4px;
---space-2: 8px;
---space-3: 12px;
---space-4: 16px;
---space-5: 20px;
---space-6: 24px;
---space-8: 32px;
-
-/* ============================================
-     设计系统规范 - 圆角
-     ============================================ */
---radius-sm: 4px;
---radius-base: 6px;
---radius-md: 8px;
---radius-lg: 12px;
---radius-xl: 16px;
---radius-full: 9999px;
-
-/* ============================================
-     设计系统规范 - 阴影
-     ============================================ */
---shadow-sm: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
---shadow-base: 0 1px 3px 0 rgba(0, 0, 0, 0.1), 0 1px 2px 0 rgba(0, 0, 0, 0.06);
---shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
---shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
-
-/* ============================================
-     设计系统规范 - 过渡动画
-     ============================================ */
---duration-fast: 150ms;
---duration-base: 200ms;
---duration-slow: 300ms;
---ease-out: cubic-bezier(0, 0, 0.2, 1);
---ease-in-out: cubic-bezier(0.4, 0, 0.2, 1);
-
 /* 全局过渡动画 - 仅应用于颜色和边框 */
 * {
   transition-property: background-color, border-color, color;
@@ -194,7 +193,7 @@ button:focus-visible {
 /* 禁用某些元素的过渡动画（性能优化） */
 .virtual-scroll-optimized,
 .resize-handle,
-[resizing='true'] * {
+[resizing="true"] * {
   transition: none !important;
 }
 
