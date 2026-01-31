@@ -1,0 +1,91 @@
+/* 骨架屏样式 - 支持亮色/暗色主题 */
+
+/* CSS变量定义 */
+:root {
+  /* 亮色主题默认值 */
+  --color-bgTertiary: #f0f0f0;
+  --color-bgSecondary: #fafafa;
+  --color-bgPrimary: #ffffff;
+  --color-border: #e0e0e0;
+  --radius-sm: 4px;
+  --radius-md: 8px;
+}
+
+/* 暗色主题 */
+[data-theme='dark'] {
+  --color-bgTertiary: #2a2a2a;
+  --color-bgSecondary: #1f1f1f;
+  --color-bgPrimary: #141414;
+  --color-border: #303030;
+}
+
+/* 脉冲动画 */
+@keyframes skeleton-pulse {
+  0% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.5;
+  }
+  100% {
+    opacity: 1;
+  }
+}
+
+/* 骨架屏基础样式 */
+.skeleton-base {
+  display: inline-block;
+  background: linear-gradient(
+    90deg,
+    var(--color-bgTertiary) 25%,
+    var(--color-bgSecondary) 50%,
+    var(--color-bgTertiary) 75%
+  );
+  background-size: 200% 100%;
+}
+
+/* 使用Ant Design Skeleton时的样式覆盖 */
+.ant-skeleton .ant-skeleton-content .ant-skeleton-title,
+.ant-skeleton .ant-skeleton-content .ant-skeleton-paragraph > li {
+  background: var(--color-bgTertiary) !important;
+}
+
+.ant-skeleton.ant-skeleton-active .ant-skeleton-content .ant-skeleton-title,
+.ant-skeleton.ant-skeleton-active .ant-skeleton-content .ant-skeleton-paragraph > li {
+  background: linear-gradient(
+    90deg,
+    var(--color-bgTertiary) 25%,
+    var(--color-bgSecondary) 50%,
+    var(--color-bgTertiary) 75%
+  );
+  background-size: 400% 100%;
+  animation: ant-skeleton-loading 1.4s ease infinite;
+}
+
+@keyframes ant-skeleton-loading {
+  0% {
+    background-position: 100% 50%;
+  }
+  100% {
+    background-position: 0 50%;
+  }
+}
+
+/* 骨架屏容器 */
+.skeleton-container {
+  position: relative;
+  overflow: hidden;
+}
+
+/* 骨架屏变体 */
+.skeleton-base.text {
+  border-radius: var(--radius-sm);
+}
+
+.skeleton-base.circle {
+  border-radius: 50%;
+}
+
+.skeleton-base.rect {
+  border-radius: var(--radius-md);
+}
