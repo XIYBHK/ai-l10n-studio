@@ -1,3 +1,8 @@
+/* ============================================
+   编辑器面板样式
+   ============================================ */
+
+/* 空状态 */
 .emptyContainer {
   height: 100%;
   display: flex;
@@ -6,226 +11,413 @@
   justify-content: center;
   background-color: var(--color-bgPrimary);
   color: var(--color-textTertiary);
+  padding: var(--space-6);
+  animation: fadeIn var(--duration-slow) var(--ease-out);
 }
 
-.emptyIcon {
-  font-size: 48px;
-  margin-bottom: 16px;
-}
-
-.emptyText {
-  font-size: 16px;
-  color: var(--color-textSecondary);
-}
-
-.emptySubtext {
-  font-size: 12px;
-  margin-top: 8px;
-  color: var(--color-textTertiary);
-}
-
+/* 主容器 */
 .container {
   height: 100%;
   display: flex;
   flex-direction: column;
+  overflow: hidden;
 }
 
-.toolbar {
-  padding: 8px 16px;
-  border-bottom: 1px solid var(--color-borderSecondary);
-  background: var(--color-bgTertiary);
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  gap: 8px;
-}
-
-.toolbarStatus {
-  font-size: 12px;
-  color: var(--color-textTertiary);
-}
-
-.unsavedText {
-  color: var(--color-statusUntranslated);
-}
-
-.toolbarActions {
-  display: flex;
-  gap: 8px;
-}
-
+/* 分割视图 */
 .splitView {
   flex: 1;
   display: flex;
   flex-direction: column;
   overflow: hidden;
   background-color: var(--color-bgPrimary);
+  position: relative;
 }
 
+/* 原文区域 - 上半部分 */
 .sourceArea {
   flex: 0 0 40%;
-  border-bottom: 1px solid var(--color-borderSecondary);
   display: flex;
   flex-direction: column;
+  border-bottom: 2px solid var(--color-borderPrimary);
+  background-color: var(--color-bgPrimary);
 }
 
-.sectionHeader {
-  padding: 8px 16px;
-  background: var(--color-bgTertiary);
-  border-bottom: 1px solid var(--color-borderSecondary);
-  font-size: 12px;
-  font-weight: 600;
-  color: var(--color-textSecondary);
-  display: flex;
-  align-items: center;
-  gap: 8px;
-}
-
-.sourceContent {
-  flex: 1;
-  padding: 16px;
-  background: var(--color-bgPrimary);
-  font-size: 14px;
-  line-height: 1.6;
-  color: var(--color-textPrimary);
-  overflow-y: auto;
-  white-space: pre-wrap;
-  word-break: break-word;
-}
-
-.emptyContent {
-  color: var(--color-textDisabled);
-}
-
-.contextBox {
-  margin-top: 20px;
-  padding: 12px;
-  background: var(--color-bgSecondary);
-  border-radius: 6px;
-  border: 1px solid var(--color-borderSecondary);
-}
-
-.contextItem {
-  font-size: 12px;
-  color: var(--color-textSecondary);
-  font-family: sans-serif;
-}
-
-.contextLabel {
-  font-weight: 600;
-  margin-bottom: 4px;
-}
-
-.contextValue {
-  font-family: monospace;
-  background: var(--color-bgPrimary);
-  padding: 2px 6px;
-  border-radius: 4px;
-  display: inline-block;
-}
-
-.commentItem {
-  color: var(--color-textTertiary);
-}
-
+/* 译文区域 - 下半部分 */
 .targetArea {
   flex: 1 1 60%;
   display: flex;
   flex-direction: column;
+  background-color: var(--color-bgPrimary);
 }
 
+/* 区块头部 */
+.sectionHeader {
+  padding: var(--space-3) var(--space-4);
+  background: var(--color-bgTertiary);
+  border-bottom: 1px solid var(--color-borderSecondary);
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-semibold);
+  color: var(--color-textSecondary);
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+/* 原文内容区 */
+.sourceContent {
+  flex: 1;
+  padding: var(--space-4);
+  background: var(--color-bgSecondary);
+  border-radius: var(--radius-md);
+  margin: var(--space-4);
+  margin-top: 0;
+  box-shadow: var(--shadow-sm);
+  overflow-y: auto;
+}
+
+.sourceText {
+  font-size: var(--font-size-md);
+  line-height: 1.6;
+  color: var(--color-textPrimary);
+  white-space: pre-wrap;
+  word-break: break-word;
+  font-family: var(--mono-font);
+}
+
+/* 上下文信息区 */
+.contextBox {
+  margin-top: var(--space-5);
+  padding: var(--space-3);
+  background: var(--color-bgTertiary);
+  border-radius: var(--radius-base);
+  border: 1px solid var(--color-borderSecondary);
+}
+
+.contextItem {
+  font-size: var(--font-size-sm);
+  color: var(--color-textSecondary);
+  font-family: var(--body-font);
+}
+
+.contextItem:not(:last-child) {
+  margin-bottom: var(--space-3);
+}
+
+.contextLabel {
+  font-weight: var(--font-weight-semibold);
+  margin-bottom: var(--space-1);
+  color: var(--color-textPrimary);
+  font-size: var(--font-size-xs);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.contextValue {
+  font-family: var(--mono-font);
+  background: var(--color-bgPrimary);
+  padding: var(--space-1) var(--space-2);
+  border-radius: var(--radius-sm);
+  display: inline-block;
+  font-size: var(--font-size-sm);
+  color: var(--color-textSecondary);
+  border: 1px solid var(--color-borderSecondary);
+}
+
+.commentItem {
+  color: var(--color-textTertiary);
+  font-size: var(--font-size-xs);
+  margin-top: var(--space-1);
+  padding-left: var(--space-2);
+  border-left: 2px solid var(--color-borderSecondary);
+}
+
+/* 译文内容容器 */
 .targetContentContainer {
   flex: 1;
   display: flex;
   flex-direction: column;
   position: relative;
-  /* 将背景色移至容器，并应用过渡，解决 AntD 组件闪烁问题 */
-  background-color: var(--color-bgPrimary);
+  padding: var(--space-4);
 }
 
+/* 文本输入区 */
 .textArea {
   flex: 1;
-  font-size: 14px;
+  font-size: var(--font-size-md);
   line-height: 1.6;
-  padding: 16px;
+  padding: var(--space-4);
   resize: none;
-  /* AntD 组件设为透明，透出容器背景 */
-  background-color: transparent !important;
-  /* Ant Design TextArea override */
-  border: none !important;
+  background-color: var(--color-bgSecondary) !important;
+  border: 1px solid var(--color-borderSecondary) !important;
+  border-radius: var(--radius-md) !important;
+  box-shadow: var(--shadow-sm) !important;
+  transition: all var(--duration-base) var(--ease-out) !important;
+  font-family: var(--mono-font) !important;
+}
+
+.textArea:hover {
+  border-color: var(--color-brandPrimary) !important;
+  box-shadow: 0 0 0 2px var(--color-brandPrimary)20 !important;
+}
+
+.textArea:focus {
+  border-color: var(--color-brandPrimary) !important;
+  box-shadow: 0 0 0 3px var(--color-brandPrimary)30 !important;
   outline: none !important;
-  box-shadow: none !important;
+}
+
+/* 未保存状态样式 */
+.textArea.unsaved {
+  border-color: var(--color-statusUntranslated) !important;
+  box-shadow: 0 0 0 2px var(--color-statusUntranslated)20 !important;
+}
+
+.textArea.unsaved:focus {
+  border-color: var(--color-statusUntranslated) !important;
+  box-shadow: 0 0 0 3px var(--color-statusUntranslated)30 !important;
 }
 
 .textArea textarea {
   background-color: transparent !important;
   color: var(--color-textPrimary) !important;
-  transition:
-    background-color var(--theme-transition-duration) var(--theme-transition-timing),
-    color var(--theme-transition-duration) var(--theme-transition-timing) !important;
+  font-family: var(--mono-font) !important;
 }
 
-.textArea:focus {
-  box-shadow: none !important;
+/* 字符计数器 */
+.charCounter {
+  position: absolute;
+  bottom: var(--space-5);
+  right: var(--space-5);
+  font-size: var(--font-size-xs);
+  color: var(--color-textTertiary);
+  background-color: var(--color-bgTertiary);
+  padding: var(--space-1) var(--space-2);
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--color-borderSecondary);
+  font-family: var(--mono-font);
 }
 
+/* 未保存提示徽标 */
 .unsavedBadge {
   position: absolute;
-  bottom: 16px;
-  right: 16px;
-  padding: 4px 12px;
-  background: var(--color-overlayBg);
-  color: var(--color-overlayText);
-  border-radius: 20px;
-  font-size: 12px;
-  pointer-events: none;
-  backdrop-filter: blur(4px);
+  bottom: var(--space-5);
+  left: var(--space-5);
+  display: flex;
+  align-items: center;
+  gap: var(--space-1);
+  padding: var(--space-1) var(--space-3);
+  background-color: var(--color-statusUntranslated);
+  color: #ffffff;
+  border-radius: var(--radius-full);
+  font-size: var(--font-size-xs);
+  font-weight: var(--font-weight-semibold);
+  animation: pulse-badge 2s ease-in-out infinite;
+  box-shadow: var(--shadow-md);
+  z-index: 10;
 }
 
-.statusBar {
-  padding: 6px 16px;
-  border-top: 1px solid var(--color-borderSecondary);
+.unsavedBadge::before {
+  content: '';
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background-color: #ffffff;
+}
+
+/* 工具栏 */
+.toolbar {
+  padding: var(--space-3) var(--space-4);
   background: var(--color-bgTertiary);
-  font-size: 12px;
+  border-bottom: 1px solid var(--color-borderSecondary);
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: var(--space-3);
+}
+
+.toolbarStatus {
+  font-size: var(--font-size-sm);
   color: var(--color-textTertiary);
   display: flex;
-  gap: 16px;
+  align-items: center;
+  gap: var(--space-2);
 }
 
-/* 
- * 显式添加过渡动画，确保在主题切换时平滑过渡
- * 即使 App.css 中有全局规则，这里显式声明可以避免 CSS Modules 隔离导致的潜在问题
- */
+.toolbarActions {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+.navigationGroup {
+  display: flex;
+  align-items: center;
+  gap: var(--space-1);
+  padding-right: var(--space-3);
+  border-right: 1px solid var(--color-borderSecondary);
+  margin-right: var(--space-2);
+}
+
+/* 保存状态指示器 */
+.savedIndicator {
+  color: var(--color-statusTranslated);
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-medium);
+  display: flex;
+  align-items: center;
+  gap: var(--space-1);
+}
+
+.savedIndicator::before {
+  content: '';
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background-color: var(--color-statusTranslated);
+}
+
+.unsavedIndicator {
+  color: var(--color-statusUntranslated);
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-medium);
+  display: flex;
+  align-items: center;
+  gap: var(--space-1);
+}
+
+.unsavedIndicator::before {
+  content: '';
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background-color: var(--color-statusUntranslated);
+  animation: pulse-dot 2s ease-in-out infinite;
+}
+
+/* 状态栏 */
+.statusBar {
+  padding: var(--space-2) var(--space-4);
+  border-top: 1px solid var(--color-borderSecondary);
+  background: var(--color-bgTertiary);
+  font-size: var(--font-size-xs);
+  color: var(--color-textTertiary);
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.statusBarLeft {
+  display: flex;
+  gap: var(--space-4);
+}
+
+.statusBarRight {
+  display: flex;
+  gap: var(--space-4);
+  align-items: center;
+}
+
+.shortcutsGroup {
+  display: flex;
+  gap: var(--space-3);
+}
+
+.kbd {
+  background-color: var(--color-bgPrimary);
+  padding: 2px 6px;
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--color-borderSecondary);
+  font-family: var(--mono-font);
+  font-size: var(--font-size-xs);
+  color: var(--color-textSecondary);
+}
+
+.translationStatus {
+  font-weight: var(--font-weight-medium);
+}
+
+.translationStatus.translated {
+  color: var(--color-statusTranslated);
+}
+
+.translationStatus.untranslated {
+  color: var(--color-statusUntranslated);
+}
+
+/* 翻译来源标签 */
+.sourceTag {
+  font-size: var(--font-size-xs);
+  font-weight: var(--font-weight-medium);
+  padding: var(--space-1) var(--space-2);
+  border-radius: var(--radius-sm);
+  border: 1px solid currentColor;
+}
+
+/* 动画定义 */
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes pulse-badge {
+  0%, 100% {
+    opacity: 1;
+    transform: scale(1);
+  }
+  50% {
+    opacity: 0.8;
+    transform: scale(0.95);
+  }
+}
+
+@keyframes pulse-dot {
+  0%, 100% {
+    opacity: 1;
+    box-shadow: 0 0 0 0 currentColor;
+  }
+  50% {
+    opacity: 0.6;
+    box-shadow: 0 0 0 4px currentColor40;
+  }
+}
+
+/* 过渡动画 */
 .emptyContainer,
-.toolbar,
+.container,
 .splitView,
 .sourceArea,
+.targetArea,
 .sectionHeader,
 .sourceContent,
 .contextBox,
-.contextValue,
-.targetArea,
+.targetContentContainer,
 .textArea,
 .statusBar,
-.unsavedBadge,
-.emptyText,
-.emptySubtext,
+.toolbar,
 .toolbarStatus,
-.unsavedText,
-.emptyContent,
-.contextItem,
-.commentItem {
+.savedIndicator,
+.unsavedIndicator {
   transition:
-    background-color var(--theme-transition-duration) var(--theme-transition-timing),
-    color var(--theme-transition-duration) var(--theme-transition-timing),
-    border-color var(--theme-transition-duration) var(--theme-transition-timing),
-    box-shadow var(--theme-transition-duration) var(--theme-transition-timing);
+    background-color var(--duration-base) var(--ease-out),
+    color var(--duration-base) var(--ease-out),
+    border-color var(--duration-base) var(--ease-out),
+    box-shadow var(--duration-base) var(--ease-out);
 }
 
-.targetContentContainer {
-  transition:
-    background-color var(--theme-transition-duration) var(--theme-transition-timing),
-    color var(--theme-transition-duration) var(--theme-transition-timing),
-    border-color var(--theme-transition-duration) var(--theme-transition-timing),
-    box-shadow var(--theme-transition-duration) var(--theme-transition-timing);
+/* 减少动画偏好支持 */
+@media (prefers-reduced-motion: reduce) {
+  .unsavedBadge,
+  .unsavedIndicator::before {
+    animation: none !important;
+  }
+  
+  .emptyContainer {
+    animation: none !important;
+  }
 }

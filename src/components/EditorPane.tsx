@@ -1,36 +1,50 @@
-import { useState, useEffect, memo } from 'react';
-import { Input, Button, message } from 'antd';
-import { CopyOutlined, SaveOutlined, GlobalOutlined, TranslationOutlined } from '@ant-design/icons';
+import { useState, useEffect, memo, useCallback, useRef } from 'react';
+import { message } from 'antd';
 import { POEntry } from '../types/tauri';
 import { useTranslationStore } from '../store';
 import { analyzeTranslationDifference } from '../utils/termAnalyzer';
+import { announceToScreenReader } from '../utils/accessibility';
 import { TermConfirmModal } from './TermConfirmModal';
 import { ErrorBoundary } from './ErrorBoundary';
 import { createModuleLogger } from '../utils/logger';
 import { termLibraryCommands } from '../services/commands';
 import { useAppData } from '../hooks/useConfig';
 import { useTermLibrary } from '../hooks/useTermLibrary';
+import { EditorToolbar } from './editor/EditorToolbar';
+import { SourceSection } from './editor/SourceSection';
+import { TargetSection } from './editor/TargetSection';
+import { StatusBar } from './editor/StatusBar';
+import { EmptyState } from './ui/EmptyState';
 import styles from './EditorPane.module.css';
 
-const { TextArea } = Input;
 const log = createModuleLogger('EditorPane');
 
 interface EditorPaneProps {
   entry: POEntry | null;
   onEntryUpdate: (index: number, updates: Partial<POEntry>) => void;
   aiTranslation?: string;
+  onNavigatePrev?: () => void;
+  onNavigateNext?: () => void;
+  canNavigatePrev?: boolean;
+  canNavigateNext?: boolean;
 }
 
 export const EditorPane = memo(function EditorPane({
   entry,
   onEntryUpdate,
   aiTranslation,
+  onNavigatePrev,
+  onNavigateNext,
+  canNavigatePrev,
+  canNavigateNext,
 }: EditorPaneProps) {
   const { activeAIConfig } = useAppData();
   const { refresh: refreshTermLibrary } = useTermLibrary();
+  const { entries } = useTranslationStore.getState();
 
   const [translation, setTranslation] = useState('');
   const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
+  const [originalTranslation, setOriginalTranslation] = useState('');
   const [termModalVisible, setTermModalVisible] = useState(false);
   const [detectedDifference, setDetectedDifference] = useState<{
     original: string;
@@ -39,9 +53,12 @@ export const EditorPane = memo(function EditorPane({
     difference: any;
   } | null>(null);
 
+  // 当条目变化时重置状态
   useEffect(() => {
     if (entry) {
-      setTranslation(entry.msgstr || '');
+      const initialTranslation = entry.msgstr || '';
+      setTranslation(initialTranslation);
+      setOriginalTranslation(initialTranslation);
       setHasUnsavedChanges(false);
       log.debug('条目已切换', {
         msgid: entry.msgid,
@@ -50,24 +67,23 @@ export const EditorPane = memo(function EditorPane({
         aiTranslation: aiTranslation,
       });
     }
-  }, [entry]); // 只在 entry 变化时重置，不依赖 aiTranslation
+  }, [entry]);
 
-  const handleTranslationChange = (value: string) => {
+  const handleTranslationChange = useCallback((value: string) => {
     setTranslation(value);
-    setHasUnsavedChanges(entry?.msgstr !== value);
-  };
+    setHasUnsavedChanges(entry ? entry.msgstr !== value : false);
+  }, [entry]);
 
-  const handleBlur = () => {
+  const handleBlur = useCallback(() => {
     if (hasUnsavedChanges && entry) {
       log.debug('译文输入框失去焦点，自动保存');
       handleSaveTranslation();
     }
-  };
+  }, [hasUnsavedChanges, entry, translation]);
 
-  const handleSaveTranslation = () => {
+  const handleSaveTranslation = useCallback(() => {
     if (!entry) return;
 
-    const { entries } = useTranslationStore.getState();
     const index = entries.findIndex((e) => e === entry);
 
     log.info('🔍 准备保存译文', {
@@ -81,7 +97,9 @@ export const EditorPane = memo(function EditorPane({
     if (index >= 0) {
       onEntryUpdate(index, { msgstr: translation, needsReview: false });
       setHasUnsavedChanges(false);
+      setOriginalTranslation(translation);
       message.success('译文已保存');
+      announceToScreenReader('译文已保存', 'polite');
       log.info('译文已保存', { index, translation });
 
       // 保存后检测术语差异
@@ -136,124 +154,115 @@ export const EditorPane = memo(function EditorPane({
         });
       }
     }
-  };
+  }, [entry, entries, onEntryUpdate, translation, aiTranslation]);
 
-  const handleCopyOriginal = () => {
+  const handleCancel = useCallback(() => {
+    setTranslation(originalTranslation);
+    setHasUnsavedChanges(false);
+    message.info('已取消修改');
+  }, [originalTranslation]);
+
+  const handleCopyOriginal = useCallback(() => {
     if (entry?.msgid) {
       navigator.clipboard.writeText(entry.msgid);
       message.success('原文已复制到剪贴板');
     }
-  };
+  }, [entry]);
 
-  // 快捷键支持：Ctrl+Enter 保存译文
+  // 快捷键支持
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
+      // Ctrl+Enter: 保存
       if ((e.ctrlKey || e.metaKey) && e.key === 'Enter' && hasUnsavedChanges) {
         e.preventDefault();
         handleSaveTranslation();
+      }
+      // Esc: 取消
+      if (e.key === 'Escape' && hasUnsavedChanges) {
+        e.preventDefault();
+        handleCancel();
+      }
+      // Ctrl+↑: 上一项
+      if ((e.ctrlKey || e.metaKey) && e.key === 'ArrowUp' && onNavigatePrev) {
+        e.preventDefault();
+        onNavigatePrev();
+      }
+      // Ctrl+↓: 下一项
+      if ((e.ctrlKey || e.metaKey) && e.key === 'ArrowDown' && onNavigateNext) {
+        e.preventDefault();
+        onNavigateNext();
       }
     };
 
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [hasUnsavedChanges, translation, entry, aiTranslation]);
+  }, [hasUnsavedChanges, handleSaveTranslation, handleCancel, onNavigatePrev, onNavigateNext]);
 
   if (!entry) {
     return (
       <div className={styles.emptyContainer}>
-        <div className={styles.emptyIcon}>📝</div>
-        <div className={styles.emptyText}>请从左侧列表选择一个条目进行编辑</div>
-        <div className={styles.emptySubtext}>或者点击工具栏的"打开"按钮导入 PO 文件</div>
+        <EmptyState
+          type="default"
+          title="请从左侧列表选择一个条目"
+          description="或者点击工具栏的"打开"按钮导入 PO 文件开始翻译"
+          showShortcuts
+          shortcuts={[
+            { key: 'Ctrl + O', description: '打开文件' },
+            { key: 'Ctrl + S', description: '保存文件' },
+            { key: 'Ctrl + Enter', description: '保存译文' },
+            { key: 'Esc', description: '取消编辑' },
+          ]}
+        />
       </div>
     );
   }
 
+  const saveStatusId = 'save-status';
+
   return (
-    <div className={styles.container}>
+    <div 
+      className={styles.container}
+      role="region"
+      aria-label="翻译编辑器"
+      id="main-editor"
+    >
       {/* 工具栏 */}
-      <div className={styles.toolbar}>
-        <div className={styles.toolbarStatus}>
-          {hasUnsavedChanges && <span className={styles.unsavedText}>● 有未保存的修改</span>}
-        </div>
-        <div className={styles.toolbarActions}>
-          <Button size="small" icon={<CopyOutlined />} onClick={handleCopyOriginal}>
-            复制原文
-          </Button>
-          <Button
-            size="small"
-            type="primary"
-            icon={<SaveOutlined />}
-            onClick={handleSaveTranslation}
-            disabled={!hasUnsavedChanges}
-          >
-            保存译文 (Ctrl+Enter)
-          </Button>
-        </div>
-      </div>
+      <EditorToolbar
+        hasUnsavedChanges={hasUnsavedChanges}
+        onSave={handleSaveTranslation}
+        onCancel={handleCancel}
+        onCopyOriginal={handleCopyOriginal}
+        onNavigatePrev={onNavigatePrev}
+        onNavigateNext={onNavigateNext}
+        canNavigatePrev={canNavigatePrev}
+        canNavigateNext={canNavigateNext}
+      />
 
-      {/* 双栏编辑区域 - Poedit 风格 */}
-      <div className={styles.splitView}>
+      {/* 双栏编辑区域 */}
+      <div className={styles.splitView} role="form" aria-label="翻译编辑表单">
         {/* 原文区域 */}
-        <div className={styles.sourceArea}>
-          <div className={styles.sectionHeader}>
-            <GlobalOutlined /> 原文 (Source)
-          </div>
-          <div className={`${styles.sourceContent} font-mono`}>
-            {entry.msgid || <span className={styles.emptyContent}>(空)</span>}
-
-            {/* 上下文和注释 */}
-            {(entry.msgctxt || (entry.comments && entry.comments.length > 0)) && (
-              <div className={styles.contextBox}>
-                {entry.msgctxt && (
-                  <div
-                    className={styles.contextItem}
-                    style={{ marginBottom: entry.comments?.length ? 8 : 0 }}
-                  >
-                    <div className={styles.contextLabel}>上下文:</div>
-                    <div className={styles.contextValue}>{entry.msgctxt}</div>
-                  </div>
-                )}
-                {entry.comments && entry.comments.length > 0 && (
-                  <div className={styles.contextItem}>
-                    <div className={styles.contextLabel}>注释:</div>
-                    {entry.comments.map((comment, index) => (
-                      <div key={index} className={styles.commentItem}>
-                        {comment}
-                      </div>
-                    ))}
-                  </div>
-                )}
-              </div>
-            )}
-          </div>
-        </div>
+        <SourceSection
+          entry={entry}
+          onCopyOriginal={handleCopyOriginal}
+        />
 
         {/* 译文区域 */}
-        <div className={styles.targetArea}>
-          <div className={styles.sectionHeader}>
-            <TranslationOutlined /> 译文 (Translation)
-          </div>
-          <div className={styles.targetContentContainer}>
-            <TextArea
-              className={`${styles.textArea} font-mono`}
-              value={translation}
-              onChange={(e) => handleTranslationChange(e.target.value)}
-              onBlur={handleBlur}
-              placeholder="在此输入翻译内容..."
-              bordered={false}
-            />
-            {/* 悬浮保存提示 */}
-            {hasUnsavedChanges && <div className={styles.unsavedBadge}>按 Ctrl+Enter 保存</div>}
-          </div>
-        </div>
+        <TargetSection
+          entry={entry}
+          translation={translation}
+          onTranslationChange={handleTranslationChange}
+          onBlur={handleBlur}
+          hasUnsavedChanges={hasUnsavedChanges}
+          saveStatusId={saveStatusId}
+        />
       </div>
 
       {/* 状态栏 */}
-      <div className={styles.statusBar}>
-        <span>行: {entry.line_start}</span>
-        <span>字符: {translation.length}</span>
-        <span>{translation ? '✓ 已翻译' : '○ 未翻译'}</span>
-      </div>
+      <StatusBar
+        lineNumber={entry.line_start}
+        charCount={translation.length}
+        isTranslated={!!translation}
+      />
 
       {/* 术语确认弹窗 */}
       {termModalVisible && detectedDifference && detectedDifference.difference && (
