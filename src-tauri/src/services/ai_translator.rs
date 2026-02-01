@@ -401,7 +401,10 @@ impl AITranslator {
                     if let Some(ref mut sources_vec) = sources {
                         sources_vec[i] = String::from("tm");
                     }
-                    // ❌ 此处不再上报进度，避免乱序
+                    // ✅ 按顺序上报TM命中进度
+                    if let Some(ref callback) = progress_callback {
+                        callback(i, translation.clone());
+                    }
                 } else {
                     // TM未命中，记录到去重map
                     untranslated_indices.push(i);
@@ -490,7 +493,7 @@ impl AITranslator {
                         "total_items": chunk.len(),
                         "sample_texts": sample_texts,
                         "model": self.model,
-                        "temperature": 0.3,
+                        "temperature": 1.0,
                         "provider": self.get_provider_display_name(),
                     });
                     crate::services::log_prompt("批量翻译", full_prompt, Some(metadata));
@@ -534,7 +537,9 @@ impl AITranslator {
 
             self.batch_stats.ai_translated = unique_list.len();
 
-            // Step 3: 将翻译结果分发到所有对应的索引
+            // Step 3: 将翻译结果分发到所有对应的索引（按原始顺序）
+            // 收集所有 (index, translation) 对并排序，确保按顺序上报
+            let mut updates: Vec<(usize, String)> = Vec::new();
             for (unique_text, translation) in unique_list.iter().zip(ai_translations.iter()) {
                 if let Some(indices) = unique_text_to_indices.get(unique_text) {
                     for (local_idx, &idx) in indices.iter().enumerate() {
@@ -547,13 +552,23 @@ impl AITranslator {
                                 String::from("dedup")
                             };
                         }
-                        // ❌ 此处不再上报进度，避免乱序
+                        // 收集更新，稍后按顺序上报
+                        updates.push((idx, translation.clone()));
                     }
                 }
+            }
+            // 按索引排序后上报进度，确保顺序正确
+            updates.sort_by_key(|&(idx, _)| idx);
+            if let Some(ref callback) = progress_callback {
+                for (idx, translation) in updates {
+                    callback(idx, translation);
+                }
+            }
 
-                // Step 4: 更新翻译记忆库（每个unique文本只学习一次）
-                // 只检查当前记忆库，不检查代码内置词库（用户清空后内置词库不参与）
-                if let Some(ref mut tm) = self.tm {
+            // Step 4: 更新翻译记忆库（每个unique文本只学习一次）
+            // 只检查当前记忆库，不检查代码内置词库（用户清空后内置词库不参与）
+            if let Some(ref mut tm) = self.tm {
+                for (unique_text, translation) in unique_list.iter().zip(ai_translations.iter()) {
                     if is_simple_phrase(unique_text) && translation.len() <= 50 {
                         // 🔧 修复：构造带语言的键来检查是否已存在
                         let check_key = if let Some(lang) = self.target_language.as_deref() {
@@ -580,15 +595,6 @@ impl AITranslator {
                             crate::app_log!("[TM跳过] {} (已在记忆库)", unique_text);
                         }
                     }
-                }
-            }
-        }
-
-        // ✨ Step 5: 修复 - 在所有翻译完成后，按顺序统一上报进度
-        if let Some(ref callback) = progress_callback {
-            for (i, _text) in texts.iter().enumerate() {
-                if !result[i].is_empty() {
-                    callback(i, result[i].clone());
                 }
             }
         }
@@ -645,7 +651,7 @@ impl AITranslator {
         let request = ChatRequest {
             model: self.model.clone(),
             messages,
-            temperature: 0.3,
+            temperature: 1.0,
         };
 
         // 最多重试3次，指数退避策略
@@ -750,7 +756,7 @@ impl AITranslator {
         let request = ChatRequest {
             model: self.model.clone(),
             messages,
-            temperature: 0.3,
+            temperature: 1.0,
         };
 
         // 最多重试3次，指数退避策略
