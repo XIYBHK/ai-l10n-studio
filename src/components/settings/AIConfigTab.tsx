@@ -4,7 +4,6 @@ import {
   Input,
   Select,
   Button,
-  List,
   Card,
   Col,
   Tag,
@@ -12,6 +11,7 @@ import {
   message,
   Space,
   AutoComplete,
+  Empty,
 } from 'antd';
 import {
   PlusOutlined,
@@ -55,6 +55,7 @@ export function AIConfigTab({ onProviderChange }: AIConfigTabProps) {
   const [editingIndex, setEditingIndex] = useState<number | null>(null);
   const [isAddingNew, setIsAddingNew] = useState(false);
   const [testing, setTesting] = useState(false);
+  const [deletingIndex, setDeletingIndex] = useState<number | null>(null);
   const [dynamicProviders, setDynamicProviders] = useState<ProviderInfo[]>([]);
   const [providersLoading, setProvidersLoading] = useState(false);
   const [availableModels, setAvailableModels] = useState<string[]>([]);
@@ -158,46 +159,60 @@ export function AIConfigTab({ onProviderChange }: AIConfigTabProps) {
   }
 
   function handleEdit(index: number) {
+    log.info('编辑配置', { index, total: configs.length });
     const config = configs[index];
+    log.info('配置数据', { config });
     setEditingIndex(index);
     setIsAddingNew(false);
-    form.setFieldsValue(config);
+    form.setFieldsValue({
+      ...config,
+      proxy: config.proxy || { enabled: false, host: '', port: '' },
+    });
   }
 
   async function handleDelete(index: number) {
+    setDeletingIndex(index);
+    log.info('[删除] 开始删除配置', { index, total: configs.length });
     try {
+      log.info('[删除] 调用删除命令');
       await aiConfigCommands.delete(String(index));
+      log.info('[删除] 命令执行成功');
       message.success('配置已删除');
       mutateAll();
       mutateActive();
-      log.info('删除配置', { index });
+      log.info('[删除] 配置删除成功', { index });
     } catch (error) {
       const errorMsg = error instanceof Error ? error.message : '删除失败';
-      message.error(errorMsg);
-      log.error('删除配置失败', { error });
+      message.error(`删除配置失败: ${errorMsg}`);
+      log.error('[删除] 删除配置失败', { error, index, total: configs.length });
+    } finally {
+      setDeletingIndex(null);
+      log.info('[删除] 清除删除状态');
     }
   }
 
   async function handleSetActive(index: number) {
     try {
+      log.info('设置启用配置', { index, total: configs.length });
       await aiConfigCommands.setActive(String(index));
       message.success('配置已启用');
       mutateActive();
-      log.info('设置启用配置', { index });
+      log.info('设置启用配置成功', { index });
     } catch (error) {
       const errorMsg = error instanceof Error ? error.message : '启用失败';
-      message.error(errorMsg);
-      log.error('启用配置失败', { error });
+      message.error(`启用配置失败: ${errorMsg}`);
+      log.error('启用配置失败', { error, index, total: configs.length });
     }
   }
 
   async function handleSave(values: any) {
     try {
+      // 确保空字符串转换为 null
       const config: AIConfig = {
         providerId: values.providerId,
         apiKey: values.apiKey,
-        baseUrl: values.baseUrl || undefined,
-        model: values.model,
+        baseUrl: values.baseUrl?.trim() || null,
+        model: values.model?.trim() || null,
         proxy: values.proxy?.enabled
           ? {
               enabled: true,
@@ -206,6 +221,8 @@ export function AIConfigTab({ onProviderChange }: AIConfigTabProps) {
             }
           : null,
       };
+
+      log.info('保存配置', { isAddingNew, editingIndex, providerId: config.providerId });
 
       if (isAddingNew) {
         await aiConfigCommands.add(config);
@@ -223,7 +240,7 @@ export function AIConfigTab({ onProviderChange }: AIConfigTabProps) {
     } catch (error) {
       const errorMsg = error instanceof Error ? error.message : '保存失败';
       message.error(errorMsg);
-      log.error('保存配置失败', { error });
+      log.error('保存配置失败', { error, values });
     }
   }
 
@@ -243,60 +260,81 @@ export function AIConfigTab({ onProviderChange }: AIConfigTabProps) {
         }
         size="small"
       >
-        <List
-          dataSource={configs}
-          locale={{ emptyText: '暂无配置，请点击"新增"添加配置' }}
-          renderItem={(config, index) => (
-            <List.Item
-              actions={[
-                activeIndex !== index ? (
-                  <Button
-                    key="active"
-                    type="primary"
-                    size="small"
-                    onClick={() => handleSetActive(index)}
-                  >
-                    设为启用
-                  </Button>
-                ) : (
-                  <Tag key="active-tag" color="green" icon={<CheckOutlined />}>
-                    启用中
-                  </Tag>
-                ),
-                <Button
-                  key="edit"
-                  type="link"
-                  icon={<EditOutlined />}
-                  onClick={() => handleEdit(index)}
-                  size="small"
-                />,
-                <Popconfirm
-                  key="delete"
-                  title="确认删除此配置？"
-                  onConfirm={() => handleDelete(index)}
-                  okText="确认"
-                  cancelText="取消"
-                >
-                  <Button type="link" danger icon={<DeleteOutlined />} size="small" />
-                </Popconfirm>,
-              ]}
-            >
-              <List.Item.Meta
-                title={<span>{getProviderLabel(config.providerId)}</span>}
-                description={
-                  <div style={{ fontSize: 'var(--font-size-sm)', color: '#666' }}>
-                    <div>模型: {config.model || '(未设置)'}</div>
-                    {config.proxy?.enabled && (
-                      <div>
-                        代理: {config.proxy.host}:{config.proxy.port}
-                      </div>
-                    )}
+        {configs.length === 0 ? (
+          <Empty
+            image={Empty.PRESENTED_IMAGE_SIMPLE}
+            description='暂无配置，请点击"新增"添加配置'
+            style={{ padding: '20px 0' }}
+          />
+        ) : (
+          <Space direction="vertical" style={{ width: '100%' }} size="small">
+            {configs.map((config, index) => (
+              <Card
+                key={`config-${index}-${config.providerId}`}
+                size="small"
+                styles={{
+                  body: { padding: '12px 16px' }
+                }}
+                style={{ border: '1px solid var(--ant-color-border-secondary)' }}
+              >
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 12 }}>
+                  <div style={{ flex: 1, minWidth: 0 }}>
+                    <div style={{ fontWeight: 500, marginBottom: 4 }}>
+                      {getProviderLabel(config.providerId)}
+                    </div>
+                    <div style={{ fontSize: 'var(--font-size-sm)', color: 'var(--ant-color-text-secondary)' }}>
+                      <div>模型: {config.model || '(未设置)'}</div>
+                      {config.proxy?.enabled && (
+                        <div>
+                          代理: {config.proxy.host}:{config.proxy.port}
+                        </div>
+                      )}
+                    </div>
                   </div>
-                }
-              />
-            </List.Item>
-          )}
-        />
+                  <Space size="small" wrap>
+                    {activeIndex !== index ? (
+                      <Button
+                        size="small"
+                        type="primary"
+                        onClick={() => handleSetActive(index)}
+                      >
+                        设为启用
+                      </Button>
+                    ) : (
+                      <Tag color="green" icon={<CheckOutlined />}>
+                        启用中
+                      </Tag>
+                    )}
+                    <Button
+                      size="small"
+                      type="link"
+                      icon={<EditOutlined />}
+                      onClick={() => handleEdit(index)}
+                      title="编辑"
+                    />
+                    <Popconfirm
+                      title="确认删除此配置？"
+                      onConfirm={() => handleDelete(index)}
+                      okText="确认"
+                      cancelText="取消"
+                      okButtonProps={{ loading: deletingIndex === index }}
+                    >
+                      <Button
+                        size="small"
+                        type="link"
+                        danger
+                        icon={<DeleteOutlined />}
+                        title="删除"
+                        loading={deletingIndex === index}
+                        disabled={deletingIndex !== null && deletingIndex !== index}
+                      />
+                    </Popconfirm>
+                  </Space>
+                </div>
+              </Card>
+            ))}
+          </Space>
+        )}
       </Card>
 
       {isAddingNew || editingIndex !== null ? (

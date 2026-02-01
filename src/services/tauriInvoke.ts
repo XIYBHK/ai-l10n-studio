@@ -68,7 +68,9 @@ export async function invoke<T>(
   _options: InvokeOptions = {}
 ): Promise<T> {
   try {
+    log.info(`⏳ Tauri调用开始: ${command}`, { args: maskSensitiveData(args) });
     const result = await tauriInvoke<T>(command, args as Record<string, any>);
+    log.info(`✅ Tauri调用成功: ${command}`);
     return result;
   } catch (error) {
     log.error(`❌ Tauri调用失败: ${command}`, {

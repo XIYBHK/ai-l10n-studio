@@ -12,6 +12,7 @@ export interface BatchProgressEvent {
   total: number;
   percentage: number;
   text?: string;
+  task_id?: number; // 新增：任务ID，用于取消翻译
 }
 
 export interface BatchStatsEvent {
@@ -52,6 +53,10 @@ export interface BatchResult {
   stats: TranslationStats;
 }
 
+export interface BatchResultWithTaskId extends BatchResult {
+  task_id: number;
+}
+
 export interface TranslationCallbacks {
   onProgress?: (current: number, total: number, percentage: number) => void;
   onStats?: (stats: BatchStatsEvent) => void;
@@ -66,6 +71,7 @@ export const useChannelTranslation = () => {
     percentage: 0,
   });
   const [stats, setStats] = useState<BatchStatsEvent | null>(null);
+  const [currentTaskId, setCurrentTaskId] = useState<number | null>(null);
 
   const callbacksRef = useRef<TranslationCallbacks>({});
 
@@ -82,6 +88,7 @@ export const useChannelTranslation = () => {
       setIsTranslating(true);
       setProgress({ current: 0, total: texts.length, percentage: 0 });
       setStats(null);
+      setCurrentTaskId(null);
       callbacksRef.current = callbacks || {};
 
       log.info('🚀 开始 Channel 批量翻译', {
@@ -99,6 +106,13 @@ export const useChannelTranslation = () => {
           const percentage = (progressEvent.percentage ?? 0) as number;
           const text = (progressEvent.text ?? progressEvent.current_item) as string | undefined;
           const index = (progressEvent.index ?? null) as number | null;
+          const taskId = (progressEvent.task_id ?? null) as number | null;
+
+          // 如果事件中包含任务ID，立即保存（用于取消翻译）
+          if (taskId !== null && taskId !== undefined) {
+            setCurrentTaskId(taskId);
+            log.info('🆔 收到任务ID:', taskId);
+          }
 
           const monotonicCurrent = Math.max(progress.current ?? 0, currentRaw);
           const normalized = { current: monotonicCurrent, total, percentage, text } as any;
@@ -123,7 +137,7 @@ export const useChannelTranslation = () => {
           }
         };
 
-        const result = await invoke<BatchResult>(
+        const result = await invoke<BatchResultWithTaskId>(
           'translate_batch_with_channel',
           {
             texts,
@@ -134,7 +148,11 @@ export const useChannelTranslation = () => {
           {}
         );
 
+        // 保存任务 ID 以便后续取消
+        setCurrentTaskId(result.task_id);
+
         log.info('✅ 批量翻译完成', {
+          taskId: result.task_id,
           translated: result.translations.length,
           tm_hits: result.stats.tm_hits,
           ai_translated: result.stats.ai_translated,
@@ -147,15 +165,32 @@ export const useChannelTranslation = () => {
         throw error;
       } finally {
         setIsTranslating(false);
+        setCurrentTaskId(null);
       }
     },
     []
   );
 
+  const cancelTranslation = useCallback(async () => {
+    if (currentTaskId !== null) {
+      log.info('🛑 取消翻译任务', { taskId: currentTaskId });
+      try {
+        await invoke('cancel_translation', { taskId: currentTaskId });
+        setIsTranslating(false);
+        setCurrentTaskId(null);
+        log.info('✅ 翻译任务已取消');
+      } catch (error) {
+        log.error('❌ 取消翻译失败:', error);
+        throw error;
+      }
+    }
+  }, [currentTaskId]);
+
   const reset = useCallback(() => {
     setProgress({ current: 0, total: 0, percentage: 0 });
     setStats(null);
     setIsTranslating(false);
+    setCurrentTaskId(null);
     callbacksRef.current = {};
   }, []);
 
@@ -163,7 +198,9 @@ export const useChannelTranslation = () => {
     isTranslating,
     progress,
     stats,
+    currentTaskId,
     translateBatch,
+    cancelTranslation,
     reset,
   };
 };

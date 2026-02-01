@@ -10,6 +10,7 @@ import {
   BugOutlined,
   GlobalOutlined,
   ArrowRightOutlined,
+  StopOutlined,
 } from '@ant-design/icons';
 import { CSS_COLORS } from '../hooks/useCssColors';
 import { ActionButton, InfoCard } from './ui';
@@ -41,6 +42,7 @@ interface MenuBarProps {
   sourceLanguage?: string;
   targetLanguage?: string;
   onTargetLanguageChange?: (langCode: string, langInfo: LanguageInfo | undefined) => void;
+  onCancelTranslation?: () => void;
 }
 
 interface LogoSectionProps {
@@ -60,6 +62,7 @@ interface TranslateActionProps {
   isTranslating: boolean;
   hasEntries: boolean;
   hasAIConfig: boolean;
+  onCancelTranslation?: () => void;
 }
 
 interface LanguageSelectorSectionProps {
@@ -179,34 +182,37 @@ const TranslateAction = memo(function TranslateAction({
   isTranslating,
   hasEntries,
   hasAIConfig,
+  onCancelTranslation,
 }: TranslateActionProps) {
   const getAriaLabel = () => {
     if (!hasAIConfig) return '批量翻译（请先配置 AI 服务）';
     if (!hasEntries) return '批量翻译（请先打开文件）';
-    if (isTranslating) return '翻译进行中...';
+    if (isTranslating) return '停止翻译';
     return '批量翻译所有未翻译条目';
   };
 
   return (
-    <Tooltip title={!hasAIConfig ? '请先配置 AI 服务' : '翻译所有未翻译条目'}>
+    <Tooltip title={!hasAIConfig ? '请先配置 AI 服务' : isTranslating ? '停止翻译' : '翻译所有未翻译条目'}>
       <ActionButton
-        variant="primary"
+        variant={isTranslating ? 'default' : 'primary'}
         size="small"
-        icon={<TranslationOutlined />}
-        onClick={onTranslateAll}
-        loading={isTranslating}
+        icon={isTranslating ? <StopOutlined /> : <TranslationOutlined />}
+        onClick={isTranslating ? onCancelTranslation : onTranslateAll}
         disabled={!hasAIConfig || !hasEntries}
         aria-label={getAriaLabel()}
         aria-disabled={!hasAIConfig || !hasEntries}
         aria-busy={isTranslating}
+        danger={isTranslating}
         style={{
-          backgroundColor: CSS_COLORS.brandPrimary,
-          borderColor: CSS_COLORS.brandPrimary,
-          boxShadow: '0 2px 8px rgba(139, 92, 246, 0.25)',
+          backgroundColor: isTranslating ? undefined : CSS_COLORS.brandPrimary,
+          borderColor: isTranslating ? undefined : CSS_COLORS.brandPrimary,
+          boxShadow: isTranslating
+            ? undefined
+            : '0 2px 8px rgba(139, 92, 246, 0.25)',
           fontWeight: 600,
         }}
       >
-        {isTranslating ? '翻译中...' : '批量翻译'}
+        {isTranslating ? '停止翻译' : '批量翻译'}
       </ActionButton>
     </Tooltip>
   );
@@ -378,6 +384,7 @@ export const MenuBar = memo(function MenuBar({
   sourceLanguage,
   targetLanguage,
   onTargetLanguageChange,
+  onCancelTranslation,
 }: MenuBarProps) {
   const { activeAIConfig } = useAppData();
   const windowWidth = useWindowWidth();
@@ -432,21 +439,21 @@ export const MenuBar = memo(function MenuBar({
           </Tooltip>
         </div>
 
-        <Tooltip title={!activeAIConfig ? '请先配置 AI 服务' : '批量翻译'}>
+        <Tooltip title={!activeAIConfig ? '请先配置 AI 服务' : isTranslating ? '停止翻译' : '批量翻译'}>
           <ActionButton
-            variant="primary"
+            variant={isTranslating ? 'default' : 'primary'}
             size="small"
-            icon={<TranslationOutlined />}
-            onClick={onTranslateAll}
-            loading={isTranslating}
+            icon={isTranslating ? <StopOutlined /> : <TranslationOutlined />}
+            onClick={isTranslating ? onCancelTranslation : onTranslateAll}
             disabled={!activeAIConfig || !hasEntries}
+            danger={isTranslating}
             aria-label={
               !activeAIConfig
                 ? '批量翻译（请先配置 AI 服务）'
                 : !hasEntries
                   ? '批量翻译（请先打开文件）'
                   : isTranslating
-                    ? '翻译进行中...'
+                    ? '停止翻译'
                     : '批量翻译所有未翻译条目'
             }
             aria-disabled={!activeAIConfig || !hasEntries}
@@ -503,6 +510,7 @@ export const MenuBar = memo(function MenuBar({
         isTranslating={isTranslating}
         hasEntries={hasEntries}
         hasAIConfig={!!activeAIConfig}
+        onCancelTranslation={onCancelTranslation}
       />
 
       {/* 语言选择器 */}

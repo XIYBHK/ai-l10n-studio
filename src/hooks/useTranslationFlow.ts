@@ -426,6 +426,7 @@ export function useTranslationFlow() {
     handleEntrySelect,
     handleEntryUpdate,
     handleTargetLanguageChange,
+    cancelTranslation: channelTranslation.cancelTranslation,
     resetTranslationStats: () => setTranslationStats(null),
   };
 }

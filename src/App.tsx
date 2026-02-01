@@ -40,6 +40,7 @@ export default function App() {
     handleEntrySelect,
     handleEntryUpdate,
     handleTargetLanguageChange,
+    cancelTranslation,
     resetTranslationStats,
   } = useTranslationFlow();
 
@@ -173,6 +174,13 @@ export default function App() {
               sourceLanguage={sourceLanguage}
               targetLanguage={targetLanguage}
               onTargetLanguageChange={handleTargetLanguageChange}
+              onCancelTranslation={async () => {
+                try {
+                  await cancelTranslation();
+                } catch (error) {
+                  console.error('[App] 取消翻译失败:', error);
+                }
+              }}
             />
 
             <TranslationWorkspace
