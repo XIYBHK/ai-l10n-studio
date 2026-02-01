@@ -273,16 +273,28 @@ export function AIConfigTab({ onProviderChange }: AIConfigTabProps) {
                 key={`config-${index}-${config.providerId}`}
                 size="small"
                 styles={{
-                  body: { padding: '12px 16px' }
+                  body: { padding: '12px 16px' },
                 }}
                 style={{ border: '1px solid var(--ant-color-border-secondary)' }}
               >
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 12 }}>
+                <div
+                  style={{
+                    display: 'flex',
+                    justifyContent: 'space-between',
+                    alignItems: 'center',
+                    gap: 12,
+                  }}
+                >
                   <div style={{ flex: 1, minWidth: 0 }}>
                     <div style={{ fontWeight: 500, marginBottom: 4 }}>
                       {getProviderLabel(config.providerId)}
                     </div>
-                    <div style={{ fontSize: 'var(--font-size-sm)', color: 'var(--ant-color-text-secondary)' }}>
+                    <div
+                      style={{
+                        fontSize: 'var(--font-size-sm)',
+                        color: 'var(--ant-color-text-secondary)',
+                      }}
+                    >
                       <div>模型: {config.model || '(未设置)'}</div>
                       {config.proxy?.enabled && (
                         <div>
@@ -293,11 +305,7 @@ export function AIConfigTab({ onProviderChange }: AIConfigTabProps) {
                   </div>
                   <Space size="small" wrap>
                     {activeIndex !== index ? (
-                      <Button
-                        size="small"
-                        type="primary"
-                        onClick={() => handleSetActive(index)}
-                      >
+                      <Button size="small" type="primary" onClick={() => handleSetActive(index)}>
                         设为启用
                       </Button>
                     ) : (

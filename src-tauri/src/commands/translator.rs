@@ -956,16 +956,20 @@ pub async fn translate_batch_with_channel(
     progress_channel: tauri::ipc::Channel<crate::services::BatchProgressEvent>,
     stats_channel: tauri::ipc::Channel<crate::services::BatchStatsEvent>,
 ) -> Result<BatchResultWithTaskId, String> {
+    use crate::services::translation_task::TaskGuard;
     use crate::services::{BatchStatsEvent, TokenStatsEvent};
     use crate::utils::progress_throttler::ProgressThrottler;
-    use crate::services::translation_task::TaskGuard;
 
     // 创建翻译任务
     let task = TaskGuard::new();
     let task_id = task.id();
     let cancel_token = task.token();
 
-    crate::app_log!("[翻译任务] 开始任务 #{}，共 {} 条文本", task_id, texts.len());
+    crate::app_log!(
+        "[翻译任务] 开始任务 #{}，共 {} 条文本",
+        task_id,
+        texts.len()
+    );
 
     // 立即发送初始进度事件，包含任务ID（用于前端取消翻译）
     let init_event = crate::services::BatchProgressEvent {
