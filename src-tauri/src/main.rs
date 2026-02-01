@@ -96,7 +96,10 @@ fn main() {
             // 🆕 动态 AI 供应商 API (Phase 1 重构)
             get_all_providers,
             get_all_models,
-            find_provider_for_model
+            find_provider_for_model,
+            // 🆕 翻译任务取消
+            cancel_translation,
+            cancel_all_translations,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
