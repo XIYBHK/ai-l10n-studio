@@ -48,7 +48,8 @@ impl ConfigDraft {
                         let config_path = paths::app_home_dir()
                             .map(|dir| dir.join("config.json"))
                             .unwrap_or_else(|_| {
-                                let mut path = dirs::home_dir().unwrap_or_else(|| PathBuf::from("."));
+                                let mut path =
+                                    dirs::home_dir().unwrap_or_else(|| PathBuf::from("."));
                                 path.push(".po-translator");
                                 path.push("config.json");
                                 path
@@ -123,14 +124,21 @@ impl ConfigDraft {
             if existing_config.ai_configs.is_empty() {
                 let legacy_path = Self::get_legacy_config_path();
                 if legacy_path.exists() {
-                    log::info!("🔄 检测到新配置的 aiConfigs 为空，尝试从旧配置迁移: {:?}", legacy_path);
+                    log::info!(
+                        "🔄 检测到新配置的 aiConfigs 为空，尝试从旧配置迁移: {:?}",
+                        legacy_path
+                    );
                     match Self::migrate_from_legacy(&legacy_path) {
                         Ok(legacy_config) => {
                             if !legacy_config.ai_configs.is_empty() {
-                                log::info!("✅ 从旧配置迁移成功，获得 {} 个 AI 配置", legacy_config.ai_configs.len());
+                                log::info!(
+                                    "✅ 从旧配置迁移成功，获得 {} 个 AI 配置",
+                                    legacy_config.ai_configs.len()
+                                );
                                 // 只迁移 AI 配置相关字段，保留其他新配置
                                 existing_config.ai_configs = legacy_config.ai_configs;
-                                existing_config.active_config_index = legacy_config.active_config_index;
+                                existing_config.active_config_index =
+                                    legacy_config.active_config_index;
                             } else {
                                 log::info!("ℹ️ 旧配置中也没有 AI 配置，无需迁移");
                             }
@@ -245,8 +253,12 @@ impl ConfigDraft {
                 proxy: Option<crate::services::ProxyConfig>,
             }
 
-            fn default_true() -> bool { true }
-            fn default_log_level() -> String { "info".to_string() }
+            fn default_true() -> bool {
+                true
+            }
+            fn default_log_level() -> String {
+                "info".to_string()
+            }
 
             let legacy: LegacyAppConfig = serde_json::from_str(&content).map_err(|e| {
                 log::error!("❌ 旧配置文件解析失败: {}", e);
@@ -375,7 +387,10 @@ impl ConfigDraft {
         log::info!("🔄 [apply] 开始应用草稿");
         // 🔧 修复死锁问题：先 apply 并保存返回的配置，避免在持有写锁时再次调用 clone_latest
         let new_config = self.config.apply();
-        log::info!("🔄 [apply] config.apply() 返回，有草稿: {}", new_config.is_some());
+        log::info!(
+            "🔄 [apply] config.apply() 返回，有草稿: {}",
+            new_config.is_some()
+        );
         if let Some(new_config) = new_config {
             // 保存到磁盘（使用克隆的配置，避免再次获取锁）
             log::info!("🔄 [apply] 准备调用 save_to_disk_with_config");
@@ -447,8 +462,14 @@ impl ConfigDraft {
     fn save_to_disk_with_config(&self, config: &Box<AppConfig>) -> Result<(), AppError> {
         log::info!("💾 [save_to_disk_with_config] 开始保存配置");
         let json = serde_json::to_string_pretty(&**config).map_err(AppError::from)?;
-        log::info!("💾 [save_to_disk_with_config] 已序列化配置，长度: {} bytes", json.len());
-        log::info!("💾 [save_to_disk_with_config] 准备写入文件: {:?}", *self.config_path);
+        log::info!(
+            "💾 [save_to_disk_with_config] 已序列化配置，长度: {} bytes",
+            json.len()
+        );
+        log::info!(
+            "💾 [save_to_disk_with_config] 准备写入文件: {:?}",
+            *self.config_path
+        );
         fs::write(&*self.config_path, json).map_err(AppError::from)?;
         log::info!("💾 [save_to_disk_with_config] 文件写入成功");
         Ok(())

@@ -3,10 +3,9 @@
  *
  * 提供全局的翻译任务状态管理和取消功能
  */
-
 use parking_lot::Mutex;
-use std::sync::Arc;
 use std::collections::HashMap;
+use std::sync::Arc;
 
 /// 翻译任务 ID 类型
 pub type TaskId = u64;
@@ -86,7 +85,8 @@ impl TaskManager {
     /// 检查任务是否被取消
     pub fn is_task_cancelled(&self, id: TaskId) -> bool {
         let tasks = self.tasks.lock();
-        tasks.get(&id)
+        tasks
+            .get(&id)
             .map(|token| token.is_cancelled())
             .unwrap_or(true)
     }

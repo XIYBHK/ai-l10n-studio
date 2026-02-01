@@ -192,7 +192,9 @@ const TranslateAction = memo(function TranslateAction({
   };
 
   return (
-    <Tooltip title={!hasAIConfig ? '请先配置 AI 服务' : isTranslating ? '停止翻译' : '翻译所有未翻译条目'}>
+    <Tooltip
+      title={!hasAIConfig ? '请先配置 AI 服务' : isTranslating ? '停止翻译' : '翻译所有未翻译条目'}
+    >
       <ActionButton
         variant={isTranslating ? 'secondary' : 'primary'}
         size="small"
@@ -206,9 +208,7 @@ const TranslateAction = memo(function TranslateAction({
         style={{
           backgroundColor: isTranslating ? undefined : CSS_COLORS.brandPrimary,
           borderColor: isTranslating ? undefined : CSS_COLORS.brandPrimary,
-          boxShadow: isTranslating
-            ? undefined
-            : '0 2px 8px rgba(139, 92, 246, 0.25)',
+          boxShadow: isTranslating ? undefined : '0 2px 8px rgba(139, 92, 246, 0.25)',
           fontWeight: 600,
         }}
       >
@@ -439,7 +439,9 @@ export const MenuBar = memo(function MenuBar({
           </Tooltip>
         </div>
 
-        <Tooltip title={!activeAIConfig ? '请先配置 AI 服务' : isTranslating ? '停止翻译' : '批量翻译'}>
+        <Tooltip
+          title={!activeAIConfig ? '请先配置 AI 服务' : isTranslating ? '停止翻译' : '批量翻译'}
+        >
           <ActionButton
             variant={isTranslating ? 'secondary' : 'primary'}
             size="small"
