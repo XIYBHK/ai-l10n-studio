@@ -160,6 +160,31 @@ pub struct BatchResult {
     pub stats: TranslationStats,
 }
 
+/// 带任务 ID 的批量翻译结果
+#[derive(Debug, Serialize)]
+pub struct BatchResultWithTaskId {
+    pub task_id: u64,
+    pub translations: Vec<String>,
+    pub translation_sources: Vec<String>, // 每个翻译的来源：'tm', 'dedup', 'ai'
+    pub stats: TranslationStats,
+}
+
+// 取消翻译任务
+#[tauri::command]
+pub fn cancel_translation(task_id: u64) -> Result<bool, String> {
+    use crate::services::translation_task::get_task_manager;
+    let cancelled = get_task_manager().cancel_task(task_id);
+    Ok(cancelled)
+}
+
+// 取消所有翻译任务
+#[tauri::command]
+pub fn cancel_all_translations() -> Result<usize, String> {
+    use crate::services::translation_task::get_task_manager;
+    let count = get_task_manager().cancel_all_tasks();
+    Ok(count)
+}
+
 // ❌ translate_batch (Event API) 已移除
 // ✅ 统一使用 translate_batch_with_channel (Channel API)
 
@@ -842,7 +867,7 @@ pub async fn contextual_refine(
             "msgid": requests.get(idx).map(|r| &r.msgid),
             "target_language": &target_language,
             "model": "auto",
-            "temperature": 0.3,
+            "temperature": 1.0,
         });
         crate::services::log_prompt("精翻", full_prompt, Some(metadata));
 
@@ -922,15 +947,37 @@ pub fn should_update_style_summary() -> Result<bool, String> {
 /// - 性能提升 ~40%
 /// - 内存占用降低 ~30%
 /// - 更适合大文件处理
+///
+/// 返回任务 ID，可用于取消翻译
 #[tauri::command]
 pub async fn translate_batch_with_channel(
     texts: Vec<String>,
     target_language: Option<String>,
     progress_channel: tauri::ipc::Channel<crate::services::BatchProgressEvent>,
     stats_channel: tauri::ipc::Channel<crate::services::BatchStatsEvent>,
-) -> Result<BatchResult, String> {
+) -> Result<BatchResultWithTaskId, String> {
     use crate::services::{BatchStatsEvent, TokenStatsEvent};
     use crate::utils::progress_throttler::ProgressThrottler;
+    use crate::services::translation_task::TaskGuard;
+
+    // 创建翻译任务
+    let task = TaskGuard::new();
+    let task_id = task.id();
+    let cancel_token = task.token();
+
+    crate::app_log!("[翻译任务] 开始任务 #{}，共 {} 条文本", task_id, texts.len());
+
+    // 立即发送初始进度事件，包含任务ID（用于前端取消翻译）
+    let init_event = crate::services::BatchProgressEvent {
+        processed: 0,
+        total: texts.len(),
+        current_item: None,
+        percentage: 0.0,
+        estimated_remaining_seconds: None,
+        index: None,
+        task_id: Some(task_id),
+    };
+    let _ = progress_channel.send(init_event);
 
     // 初始化配置和翻译器（在单独的作用域中以释放guard）
     let mut translator = {
@@ -969,13 +1016,25 @@ pub async fn translate_batch_with_channel(
     let mut total_tm_learned = 0usize;
 
     for chunk in texts.chunks(batch_size) {
+        // 🔧 检查是否被取消
+        if cancel_token.is_cancelled() {
+            crate::app_log!("[翻译任务] 任务 #{} 已被用户取消", task_id);
+            return Err("翻译已取消".to_string());
+        }
+
         let chunk_vec = chunk.to_vec();
         let chunk_start_index = global_index;
 
         // 🔔 创建 progress_callback，实时推送 TM 命中和 AI 翻译结果（带节流优化）
         let progress_channel_clone = progress_channel.clone();
         let throttler_clone = std::sync::Arc::clone(&progress_throttler);
+        let cancel_token_clone = cancel_token.clone();
         let progress_callback = Box::new(move |local_idx: usize, translation: String| {
+            // 检查取消状态
+            if cancel_token_clone.is_cancelled() {
+                return;
+            }
+
             // 使用节流器减少高频更新，仅每100ms发送一次进度
             if throttler_clone.should_update() {
                 let global_idx = chunk_start_index + local_idx;
@@ -994,6 +1053,12 @@ pub async fn translate_batch_with_channel(
             .translate_batch_with_sources(chunk_vec.clone(), Some(progress_callback), None)
             .await
             .map_err(|e| e.to_string())?;
+
+        // 🔧 再次检查是否被取消（AI 请求后）
+        if cancel_token.is_cancelled() {
+            crate::app_log!("[翻译任务] 任务 #{} 已被用户取消", task_id);
+            return Err("翻译已取消".to_string());
+        }
 
         // 收集翻译结果和来源
         for (translation, source) in result.iter().zip(sources.iter()) {
@@ -1036,14 +1101,14 @@ pub async fn translate_batch_with_channel(
     // 保存翻译记忆库
     auto_save_translation_memory(&translator);
 
-    // 发送任务完成统计事件 - 与其他翻译方式保持一致
-    // 注意：需要从上下文获取 app_handle，但 Channel API 没有传入
-    // 这是一个架构问题，暂时通过返回值让前端处理
+    crate::app_log!("[翻译任务] 任务 #{} 完成", task_id);
 
     // 返回最终结果（使用累加的统计，而不是最后一个批次的统计）
     let token_stats = translator.get_token_stats().clone();
 
-    Ok(BatchResult {
+    // TaskGuard 会在 drop 时自动完成任务
+    Ok(BatchResultWithTaskId {
+        task_id,
         translations,
         translation_sources, // 📍 返回翻译来源
         stats: TranslationStats {

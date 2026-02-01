@@ -27,6 +27,9 @@ pub struct BatchProgressEvent {
     pub estimated_remaining_seconds: Option<f32>,
     /// 当前项索引（用于实时写入待确认区）
     pub index: Option<usize>,
+    /// 任务ID（用于取消翻译）
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub task_id: Option<u64>,
 }
 
 impl BatchProgressEvent {
@@ -45,6 +48,7 @@ impl BatchProgressEvent {
             percentage,
             estimated_remaining_seconds: None,
             index: None,
+            task_id: None,
         }
     }
 
@@ -68,6 +72,7 @@ impl BatchProgressEvent {
             percentage,
             estimated_remaining_seconds: None,
             index: Some(index),
+            task_id: None,
         }
     }
 

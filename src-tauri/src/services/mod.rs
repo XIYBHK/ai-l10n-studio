@@ -9,6 +9,7 @@ pub mod config_draft;
 pub mod config_manager;
 pub mod po_parser;
 pub mod translation_stats;
+pub mod translation_task;
 
 // AI 和翻译相关
 pub mod ai;
