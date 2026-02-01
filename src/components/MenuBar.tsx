@@ -194,7 +194,7 @@ const TranslateAction = memo(function TranslateAction({
   return (
     <Tooltip title={!hasAIConfig ? '请先配置 AI 服务' : isTranslating ? '停止翻译' : '翻译所有未翻译条目'}>
       <ActionButton
-        variant={isTranslating ? 'default' : 'primary'}
+        variant={isTranslating ? 'secondary' : 'primary'}
         size="small"
         icon={isTranslating ? <StopOutlined /> : <TranslationOutlined />}
         onClick={isTranslating ? onCancelTranslation : onTranslateAll}
@@ -441,7 +441,7 @@ export const MenuBar = memo(function MenuBar({
 
         <Tooltip title={!activeAIConfig ? '请先配置 AI 服务' : isTranslating ? '停止翻译' : '批量翻译'}>
           <ActionButton
-            variant={isTranslating ? 'default' : 'primary'}
+            variant={isTranslating ? 'secondary' : 'primary'}
             size="small"
             icon={isTranslating ? <StopOutlined /> : <TranslationOutlined />}
             onClick={isTranslating ? onCancelTranslation : onTranslateAll}
