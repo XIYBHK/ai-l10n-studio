@@ -268,18 +268,20 @@ impl ConfigDraft {
             log::info!("✅ 成功解析旧配置文件（snake_case）");
 
             // 转换为新格式
-            let mut new_config = AppConfig::default();
-            new_config.api_key = legacy.api_key;
-            new_config.provider = legacy.provider;
-            new_config.model = legacy.model;
-            new_config.base_url = legacy.base_url;
-            new_config.use_translation_memory = legacy.use_translation_memory;
-            new_config.translation_memory_path = legacy.translation_memory_path;
-            new_config.log_level = legacy.log_level;
-            new_config.auto_save = legacy.auto_save;
-            new_config.batch_size = legacy.batch_size;
-            new_config.max_concurrent = legacy.max_concurrent;
-            new_config.timeout_seconds = legacy.timeout_seconds;
+            let mut new_config = AppConfig {
+                api_key: legacy.api_key,
+                provider: legacy.provider,
+                model: legacy.model,
+                base_url: legacy.base_url,
+                use_translation_memory: legacy.use_translation_memory,
+                translation_memory_path: legacy.translation_memory_path,
+                log_level: legacy.log_level,
+                auto_save: legacy.auto_save,
+                batch_size: legacy.batch_size,
+                max_concurrent: legacy.max_concurrent,
+                timeout_seconds: legacy.timeout_seconds,
+                ..Default::default()
+            };
 
             // 迁移 AI 配置
             if let Some(legacy_configs) = legacy.ai_configs_legacy {
@@ -459,9 +461,9 @@ impl ConfigDraft {
     }
 
     /// 保存指定配置到磁盘（避免死锁的版本）
-    fn save_to_disk_with_config(&self, config: &Box<AppConfig>) -> Result<(), AppError> {
+    fn save_to_disk_with_config(&self, config: &AppConfig) -> Result<(), AppError> {
         log::info!("💾 [save_to_disk_with_config] 开始保存配置");
-        let json = serde_json::to_string_pretty(&**config).map_err(AppError::from)?;
+        let json = serde_json::to_string_pretty(config).map_err(AppError::from)?;
         log::info!(
             "💾 [save_to_disk_with_config] 已序列化配置，长度: {} bytes",
             json.len()

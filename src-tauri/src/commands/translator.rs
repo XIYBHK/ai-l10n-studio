@@ -1032,7 +1032,7 @@ pub async fn translate_batch_with_channel(
         // 🔔 创建 progress_callback，实时推送 TM 命中和 AI 翻译结果（带节流优化）
         let progress_channel_clone = progress_channel.clone();
         let throttler_clone = std::sync::Arc::clone(&progress_throttler);
-        let cancel_token_clone = cancel_token.clone();
+        let cancel_token_clone = std::sync::Arc::clone(&cancel_token);
         let progress_callback = Box::new(move |local_idx: usize, translation: String| {
             // 检查取消状态
             if cancel_token_clone.is_cancelled() {

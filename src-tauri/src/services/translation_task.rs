@@ -103,6 +103,12 @@ impl TaskManager {
     }
 }
 
+impl Default for TaskManager {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 /// 翻译任务守卫，自动管理任务生命周期
 pub struct TaskGuard {
     id: TaskId,
@@ -119,6 +125,7 @@ impl TaskGuard {
     }
 
     /// 获取取消令牌
+    #[allow(clippy::expect_used)]
     pub fn token(&self) -> Arc<tokio_util::sync::CancellationToken> {
         get_task_manager()
             .get_task_token(self.id)
@@ -128,6 +135,12 @@ impl TaskGuard {
     /// 检查是否被取消
     pub fn is_cancelled(&self) -> bool {
         get_task_manager().is_task_cancelled(self.id)
+    }
+}
+
+impl Default for TaskGuard {
+    fn default() -> Self {
+        Self::new()
     }
 }
 
