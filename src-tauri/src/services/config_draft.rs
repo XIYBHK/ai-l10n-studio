@@ -9,6 +9,7 @@
  */
 use crate::error::AppError;
 use chrono; // For backup timestamp
+use serde::Deserialize;
 use std::fs;
 use std::path::PathBuf;
 use std::sync::Arc;
@@ -35,42 +36,68 @@ impl ConfigDraft {
     pub async fn global() -> &'static ConfigDraft {
         GLOBAL_CONFIG
             .get_or_init(|| async {
-                Self::new(None).unwrap_or_else(|e| {
-                    log::error!("⚠️ 初始化配置管理器失败: {}, 使用默认配置", e);
-
-                    // 🔧 修复：即使加载失败，也使用正常的配置路径（而不是临时路径）
-                    // 这样可以确保用户的新配置能够持久化
-                    let config_path = paths::app_home_dir()
-                        .map(|dir| dir.join("config.json"))
-                        .unwrap_or_else(|_| {
-                            let mut path = dirs::home_dir().unwrap_or_else(|| PathBuf::from("."));
-                            path.push(".po-translator");
-                            path.push("config.json");
-                            path
-                        });
-
-                    // 确保配置目录存在
-                    if let Some(parent) = config_path.parent() {
-                        let _ = fs::create_dir_all(parent);
+                match Self::new(None) {
+                    Ok(instance) => {
+                        log::info!("✅ 配置管理器初始化成功");
+                        instance
                     }
+                    Err(e) => {
+                        log::error!("⚠️ 初始化配置管理器失败: {}, 尝试从旧路径迁移", e);
 
-                    log::warn!("📂 使用配置路径: {:?}", config_path);
-                    log::warn!("🔄 已重置为默认配置，用户可重新配置AI供应商");
+                        // 🔧 修复：即使加载失败，也尝试从旧路径迁移配置
+                        let config_path = paths::app_home_dir()
+                            .map(|dir| dir.join("config.json"))
+                            .unwrap_or_else(|_| {
+                                let mut path = dirs::home_dir().unwrap_or_else(|| PathBuf::from("."));
+                                path.push(".po-translator");
+                                path.push("config.json");
+                                path
+                            });
 
-                    let instance = Self {
-                        config_path: Arc::new(config_path),
-                        config: Draft::from(Box::new(AppConfig::default())),
-                    };
+                        let mut config = AppConfig::default();
 
-                    // 尝试保存默认配置到正常路径
-                    if let Err(e) = instance.save_to_disk() {
-                        log::error!("❌ 保存默认配置失败: {}", e);
-                    } else {
-                        log::info!("✅ 默认配置已保存到磁盘");
+                        // 尝试从旧路径迁移
+                        let legacy_path = Self::get_legacy_config_path();
+                        if legacy_path.exists() {
+                            log::info!("🔄 尝试从旧配置迁移: {:?}", legacy_path);
+                            match Self::migrate_from_legacy(&legacy_path) {
+                                Ok(migrated_config) => {
+                                    log::info!("✅ 从旧配置迁移成功");
+                                    config = migrated_config;
+                                }
+                                Err(migrate_err) => {
+                                    log::warn!("⚠️ 旧配置迁移失败: {}, 使用默认配置", migrate_err);
+                                }
+                            }
+                        }
+
+                        // 确保配置目录存在
+                        if let Some(parent) = config_path.parent() {
+                            let _ = fs::create_dir_all(parent);
+                        }
+
+                        log::warn!("📂 使用配置路径: {:?}", config_path);
+                        if !config.ai_configs.is_empty() {
+                            log::info!("✅ 成功迁移 {} 个 AI 配置", config.ai_configs.len());
+                        } else {
+                            log::warn!("🔄 未找到可迁移的配置，用户需重新配置AI供应商");
+                        }
+
+                        let instance = Self {
+                            config_path: Arc::new(config_path),
+                            config: Draft::from(Box::new(config)),
+                        };
+
+                        // 尝试保存配置到正常路径
+                        if let Err(save_err) = instance.save_to_disk() {
+                            log::error!("❌ 保存配置失败: {}", save_err);
+                        } else {
+                            log::info!("✅ 配置已保存到磁盘");
+                        }
+
+                        instance
                     }
-
-                    instance
-                })
+                }
             })
             .await
     }
@@ -88,16 +115,58 @@ impl ConfigDraft {
                 })
         });
 
-        let config = if config_path.exists() {
-            Self::load_from_file(&config_path)?
-        } else {
-            let default_config = AppConfig::default();
-            // 确保配置目录存在
-            if let Some(parent) = config_path.parent() {
-                fs::create_dir_all(parent)?;
+        let mut config = if config_path.exists() {
+            // 加载现有配置
+            let mut existing_config = Self::load_from_file(&config_path)?;
+
+            // 🔧 智能迁移：如果新配置的 aiConfigs 为空，尝试从旧配置迁移
+            if existing_config.ai_configs.is_empty() {
+                let legacy_path = Self::get_legacy_config_path();
+                if legacy_path.exists() {
+                    log::info!("🔄 检测到新配置的 aiConfigs 为空，尝试从旧配置迁移: {:?}", legacy_path);
+                    match Self::migrate_from_legacy(&legacy_path) {
+                        Ok(legacy_config) => {
+                            if !legacy_config.ai_configs.is_empty() {
+                                log::info!("✅ 从旧配置迁移成功，获得 {} 个 AI 配置", legacy_config.ai_configs.len());
+                                // 只迁移 AI 配置相关字段，保留其他新配置
+                                existing_config.ai_configs = legacy_config.ai_configs;
+                                existing_config.active_config_index = legacy_config.active_config_index;
+                            } else {
+                                log::info!("ℹ️ 旧配置中也没有 AI 配置，无需迁移");
+                            }
+                        }
+                        Err(e) => {
+                            log::warn!("⚠️ 从旧配置迁移失败: {}, 使用现有配置", e);
+                        }
+                    }
+                }
             }
-            default_config
+
+            existing_config
+        } else {
+            // 🔧 新路径不存在时，尝试从旧路径迁移配置
+            let legacy_path = Self::get_legacy_config_path();
+            if legacy_path.exists() {
+                log::info!("🔄 检测到旧配置文件，尝试迁移: {:?}", legacy_path);
+                match Self::migrate_from_legacy(&legacy_path) {
+                    Ok(migrated_config) => {
+                        log::info!("✅ 配置迁移成功");
+                        migrated_config
+                    }
+                    Err(e) => {
+                        log::warn!("⚠️ 配置迁移失败: {}, 使用默认配置", e);
+                        AppConfig::default()
+                    }
+                }
+            } else {
+                AppConfig::default()
+            }
         };
+
+        // 确保配置目录存在
+        if let Some(parent) = config_path.parent() {
+            fs::create_dir_all(parent)?;
+        }
 
         let instance = Self {
             config_path: Arc::new(config_path),
@@ -108,6 +177,141 @@ impl ConfigDraft {
         instance.save_to_disk()?;
 
         Ok(instance)
+    }
+
+    /// 获取旧版配置文件路径
+    fn get_legacy_config_path() -> PathBuf {
+        let mut path = dirs::home_dir().unwrap_or_else(|| PathBuf::from("."));
+        path.push(".po-translator");
+        path.push("config.json");
+        path
+    }
+
+    /// 从旧版配置文件迁移配置
+    fn migrate_from_legacy<P: AsRef<std::path::Path>>(path: P) -> Result<AppConfig, AppError> {
+        let path_ref = path.as_ref();
+
+        // 读取旧配置文件
+        let content = fs::read_to_string(path_ref).map_err(AppError::from)?;
+
+        // 尝试作为新格式（camelCase）解析
+        let mut config = if let Ok(new_config) = serde_json::from_str::<AppConfig>(&content) {
+            log::info!("✅ 旧配置文件已是新格式（camelCase）");
+            new_config
+        } else {
+            // 尝试作为旧格式（snake_case）解析
+            #[derive(Debug, Deserialize)]
+            struct LegacyAppConfig {
+                #[serde(default)]
+                api_key: String,
+                #[serde(default)]
+                provider: String,
+                #[serde(default)]
+                model: String,
+                #[serde(default)]
+                base_url: Option<String>,
+                #[serde(default = "default_true")]
+                use_translation_memory: bool,
+                #[serde(default)]
+                translation_memory_path: Option<String>,
+                #[serde(default = "default_log_level")]
+                log_level: String,
+                #[serde(default = "default_true")]
+                auto_save: bool,
+                #[serde(default)]
+                batch_size: usize,
+                #[serde(default)]
+                max_concurrent: usize,
+                #[serde(default)]
+                timeout_seconds: u64,
+                #[serde(default)]
+                #[serde(rename = "ai_configs")]
+                ai_configs_legacy: Option<Vec<LegacyAIConfig>>,
+                #[serde(default)]
+                active_config_index: Option<usize>,
+            }
+
+            #[derive(Debug, Deserialize, Clone)]
+            struct LegacyAIConfig {
+                #[serde(default)]
+                provider: String,
+                #[serde(default)]
+                api_key: String,
+                #[serde(default)]
+                base_url: Option<String>,
+                #[serde(default)]
+                model: Option<String>,
+                #[serde(default)]
+                proxy: Option<crate::services::ProxyConfig>,
+            }
+
+            fn default_true() -> bool { true }
+            fn default_log_level() -> String { "info".to_string() }
+
+            let legacy: LegacyAppConfig = serde_json::from_str(&content).map_err(|e| {
+                log::error!("❌ 旧配置文件解析失败: {}", e);
+                AppError::Config(format!("旧配置文件格式错误: {}", e))
+            })?;
+
+            log::info!("✅ 成功解析旧配置文件（snake_case）");
+
+            // 转换为新格式
+            let mut new_config = AppConfig::default();
+            new_config.api_key = legacy.api_key;
+            new_config.provider = legacy.provider;
+            new_config.model = legacy.model;
+            new_config.base_url = legacy.base_url;
+            new_config.use_translation_memory = legacy.use_translation_memory;
+            new_config.translation_memory_path = legacy.translation_memory_path;
+            new_config.log_level = legacy.log_level;
+            new_config.auto_save = legacy.auto_save;
+            new_config.batch_size = legacy.batch_size;
+            new_config.max_concurrent = legacy.max_concurrent;
+            new_config.timeout_seconds = legacy.timeout_seconds;
+
+            // 迁移 AI 配置
+            if let Some(legacy_configs) = legacy.ai_configs_legacy {
+                log::info!("🔄 迁移 {} 个 AI 配置", legacy_configs.len());
+                for legacy_config in legacy_configs {
+                    // 旧格式的 provider 字段需要转换为 provider_id
+                    let provider_id = if legacy_config.provider.eq_ignore_ascii_case("moonshot") {
+                        "moonshot".to_string()
+                    } else if legacy_config.provider.eq_ignore_ascii_case("openai") {
+                        "openai".to_string()
+                    } else if legacy_config.provider.eq_ignore_ascii_case("deepseek") {
+                        "deepseek".to_string()
+                    } else {
+                        // 尝试直接使用
+                        legacy_config.provider.clone()
+                    };
+
+                    let new_config_item = crate::services::AIConfig {
+                        provider_id,
+                        api_key: legacy_config.api_key,
+                        base_url: legacy_config.base_url,
+                        model: legacy_config.model,
+                        proxy: legacy_config.proxy,
+                    };
+                    new_config.ai_configs.push(new_config_item);
+                }
+            }
+
+            // 保持原有的 active_config_index
+            new_config.active_config_index = legacy.active_config_index;
+
+            new_config
+        };
+
+        // 验证迁移后的配置
+        if !config.ai_configs.is_empty() {
+            log::info!(
+                "✅ 配置迁移完成: {} 个 AI 配置，启用索引: {:?}",
+                config.ai_configs.len(),
+                config.active_config_index
+            );
+        }
+
+        Ok(config)
     }
 
     /// 从文件加载配置
@@ -168,21 +372,28 @@ impl ConfigDraft {
     /// 1. 保存配置到磁盘
     /// 2. 发送配置更新事件（通知前端）
     pub fn apply(&self) -> Result<(), AppError> {
-        if let Some(_old_config) = self.config.apply() {
-            // 保存到磁盘
-            self.save_to_disk()?;
+        log::info!("🔄 [apply] 开始应用草稿");
+        // 🔧 修复死锁问题：先 apply 并保存返回的配置，避免在持有写锁时再次调用 clone_latest
+        let new_config = self.config.apply();
+        log::info!("🔄 [apply] config.apply() 返回，有草稿: {}", new_config.is_some());
+        if let Some(new_config) = new_config {
+            // 保存到磁盘（使用克隆的配置，避免再次获取锁）
+            log::info!("🔄 [apply] 准备调用 save_to_disk_with_config");
+            self.save_to_disk_with_config(&new_config)?;
+            log::info!("🔄 [apply] save_to_disk_with_config 完成");
 
             // 发送事件通知前端（异步执行，不阻塞当前线程）
-            let config_clone = self.config.clone_latest();
             tokio::spawn(async move {
-                if let Err(e) = Self::emit_config_updated(&config_clone) {
+                if let Err(e) = Self::emit_config_updated(&new_config) {
                     log::warn!("发送配置更新事件失败: {}", e);
                 }
             });
 
+            log::info!("🔄 [apply] 完成");
             Ok(())
         } else {
             // 没有草稿需要提交
+            log::info!("🔄 [apply] 没有草稿需要提交");
             Ok(())
         }
     }
@@ -221,9 +432,25 @@ impl ConfigDraft {
 
     /// 保存配置到磁盘
     fn save_to_disk(&self) -> Result<(), AppError> {
+        log::info!("💾 [save_to_disk] 开始保存配置");
         let config = self.config.clone_latest();
+        log::info!("💾 [save_to_disk] 已克隆配置");
         let json = serde_json::to_string_pretty(&*config).map_err(AppError::from)?;
+        log::info!("💾 [save_to_disk] 已序列化配置，长度: {} bytes", json.len());
+        log::info!("💾 [save_to_disk] 准备写入文件: {:?}", *self.config_path);
         fs::write(&*self.config_path, json).map_err(AppError::from)?;
+        log::info!("💾 [save_to_disk] 文件写入成功");
+        Ok(())
+    }
+
+    /// 保存指定配置到磁盘（避免死锁的版本）
+    fn save_to_disk_with_config(&self, config: &Box<AppConfig>) -> Result<(), AppError> {
+        log::info!("💾 [save_to_disk_with_config] 开始保存配置");
+        let json = serde_json::to_string_pretty(&**config).map_err(AppError::from)?;
+        log::info!("💾 [save_to_disk_with_config] 已序列化配置，长度: {} bytes", json.len());
+        log::info!("💾 [save_to_disk_with_config] 准备写入文件: {:?}", *self.config_path);
+        fs::write(&*self.config_path, json).map_err(AppError::from)?;
+        log::info!("💾 [save_to_disk_with_config] 文件写入成功");
         Ok(())
     }
 

@@ -40,9 +40,13 @@ pub async fn add_ai_config(config: AIConfig) -> Result<(), String> {
     );
 
     let draft = ConfigDraft::global().await;
-    let mut draft_config = draft.draft();
 
-    draft_config.add_ai_config(config);
+    // 🔧 修复死锁：在独立作用域内获取写锁
+    {
+        let mut draft_config = draft.draft();
+        draft_config.add_ai_config(config);
+    }
+
     draft.apply().map_err(|e| {
         crate::app_log!("❌ [AI配置] 保存配置失败: {}", e);
         e.to_string()
@@ -55,11 +59,14 @@ pub async fn add_ai_config(config: AIConfig) -> Result<(), String> {
 #[tauri::command]
 pub async fn update_ai_config(index: usize, config: AIConfig) -> Result<(), String> {
     let draft = ConfigDraft::global().await;
-    let mut draft_config = draft.draft();
 
-    draft_config
-        .update_ai_config(index, config)
-        .map_err(|e| e.to_string())?;
+    // 🔧 修复死锁：在独立作用域内获取写锁
+    {
+        let mut draft_config = draft.draft();
+        draft_config
+            .update_ai_config(index, config)
+            .map_err(|e| e.to_string())?;
+    }
 
     draft.apply().map_err(|e| e.to_string())?;
     crate::app_log!("✅ 更新 AI 配置成功，索引: {}", index);
@@ -68,14 +75,28 @@ pub async fn update_ai_config(index: usize, config: AIConfig) -> Result<(), Stri
 
 #[tauri::command]
 pub async fn remove_ai_config(index: usize) -> Result<(), String> {
+    crate::app_log!("🔄 [删除] 开始获取全局配置，索引: {}", index);
     let draft = ConfigDraft::global().await;
-    let mut draft_config = draft.draft();
+    crate::app_log!("🔄 [删除] 已获取全局配置");
 
-    draft_config
-        .remove_ai_config(index)
-        .map_err(|e| e.to_string())?;
+    // 🔧 修复死锁：在独立作用域内获取写锁，确保在 apply() 之前释放
+    {
+        let mut draft_config = draft.draft();
+        crate::app_log!("🔄 [删除] 已获取草稿");
 
-    draft.apply().map_err(|e| e.to_string())?;
+        draft_config
+            .remove_ai_config(index)
+            .map_err(|e| e.to_string())?;
+        crate::app_log!("🔄 [删除] 已从内存中删除，准备应用");
+    }
+
+    crate::app_log!("🔄 [删除] 开始 apply");
+    draft.apply().map_err(|e| {
+        crate::app_log!("❌ [删除] apply 失败: {}", e);
+        e.to_string()
+    })?;
+    crate::app_log!("🔄 [删除] apply 返回 Ok");
+
     crate::app_log!("✅ 删除 AI 配置成功，索引: {}", index);
     Ok(())
 }
@@ -85,18 +106,24 @@ pub async fn set_active_ai_config(index: usize) -> Result<(), String> {
     crate::app_log!("🔄 [AI配置] 设置启用配置，索引: {}", index);
 
     let draft = ConfigDraft::global().await;
-    let mut draft_config = draft.draft();
 
-    let total_configs = draft_config.ai_configs.len();
-    if index >= total_configs {
-        crate::app_log!("❌ [AI配置] 索引超出范围: {} >= {}", index, total_configs);
-        return Err(format!("配置索引超出范围: {} >= {}", index, total_configs));
-    }
+    // 🔧 修复死锁：在独立作用域内获取写锁
+    {
+        let mut draft_config = draft.draft();
 
-    draft_config.set_active_ai_config(index).map_err(|e| {
-        crate::app_log!("❌ [AI配置] 设置启用配置失败: {}", e);
-        e.to_string()
-    })?;
+        let total_configs = draft_config.ai_configs.len();
+        if index >= total_configs {
+            crate::app_log!("❌ [AI配置] 索引超出范围: {} >= {}", index, total_configs);
+            return Err(format!("配置索引超出范围: {} >= {}", index, total_configs));
+        }
+
+        draft_config.set_active_ai_config(index).map_err(|e| {
+            crate::app_log!("❌ [AI配置] 设置启用配置失败: {}", e);
+            e.to_string()
+        })?;
+
+        total_configs
+    };
 
     draft.apply().map_err(|e| {
         crate::app_log!("❌ [AI配置] 保存配置失败: {}", e);
@@ -170,7 +197,7 @@ pub async fn test_ai_connection(
                         "content": user_prompt
                     }
                 ],
-                "temperature": 0.3
+                "temperature": 1.0
             });
 
             let full_prompt = format!(
@@ -258,15 +285,19 @@ pub async fn update_system_prompt(prompt: String) -> Result<(), String> {
     let is_empty = prompt.trim().is_empty();
 
     let draft = ConfigDraft::global().await;
-    let mut draft_config = draft.draft();
 
-    draft_config.system_prompt = if is_empty {
-        crate::app_log!("🗑️ [系统提示词] 清空自定义提示词，将使用默认提示词");
-        None
-    } else {
-        crate::app_log!("📝 [系统提示词] 设置自定义提示词 ({}字符)", prompt.len());
-        Some(prompt)
-    };
+    // 🔧 修复死锁：在独立作用域内获取写锁
+    {
+        let mut draft_config = draft.draft();
+
+        draft_config.system_prompt = if is_empty {
+            crate::app_log!("🗑️ [系统提示词] 清空自定义提示词，将使用默认提示词");
+            None
+        } else {
+            crate::app_log!("📝 [系统提示词] 设置自定义提示词 ({}字符)", prompt.len());
+            Some(prompt)
+        };
+    }
 
     draft.apply().map_err(|e| {
         crate::app_log!("❌ [系统提示词] 保存失败: {}", e);
@@ -280,9 +311,13 @@ pub async fn update_system_prompt(prompt: String) -> Result<(), String> {
 #[tauri::command]
 pub async fn reset_system_prompt() -> Result<(), String> {
     let draft = ConfigDraft::global().await;
-    let mut draft_config = draft.draft();
 
-    draft_config.system_prompt = None;
+    // 🔧 修复死锁：在独立作用域内获取写锁
+    {
+        let mut draft_config = draft.draft();
+        draft_config.system_prompt = None;
+    }
+
     draft.apply().map_err(|e| e.to_string())?;
 
     crate::app_log!("✅ 系统提示词已重置为默认值");
