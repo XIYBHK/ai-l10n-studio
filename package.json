@@ -36,7 +36,7 @@
     "react": "^19.2.3",
     "react-dom": "^19.2.3",
     "react-draggable": "^4.5.0",
-    "react-i18next": "^16.5.3",
+    "react-i18next": "^16.5.4",
     "react-window-infinite-loader": "^2.0.1",
     "swr": "^2.3.8",
     "zustand": "^5.0.10"
