@@ -158,3 +158,150 @@ useEffect(() => {
 ## 更多错误解决方案
 
 详细的错误分析和解决方案请参考：`docs/ERRORS.md`
+
+---
+
+## 2026-02-08: CI 自动提交与 Clippy 修复
+
+### 11. CI 自动提交场景验证
+
+**发现**：项目配置了 CI 自动格式化，每次 push 都会创建新提交
+
+```yaml
+# .github/workflows/check.yml
+- name: Run Prettier (auto-fix)
+  run: npm run format
+- name: Run cargo fmt (auto-fix)
+  run: cargo fmt
+- name: Commit and push fixes
+  if: steps.changes.outputs.has_changes == 'true'
+  run: |
+    git commit -m "style: auto-fix formatting"
+    git push
+```
+
+**时间线示例**：
+```
+T1: 本地开发基于 commit A
+T2: 本地 push → CI 自动格式化 → 创建 commit B (style: auto-fix)
+T3: 本地继续开发（仍基于 A）
+T4: 尝试 push → ❌ rejected! 需要先拉取 B
+```
+
+**解决**：使用 git-commit skill 的方案 A，提交前检查远程状态
+
+```bash
+git fetch origin
+git log HEAD..@{u} --oneline  # 查看远程新提交
+git pull --rebase              # 同步 CI 提交
+```
+
+---
+
+### 12. Clippy expect_used 处理方式
+
+**问题**：硬编码字符串使用 `.parse().unwrap()` 被 Clippy 拒绝
+
+```rust
+// 错误：unwrap_used 被 -D warnings 视为错误
+.add_directive("po_translator_gui=info".parse().unwrap())
+```
+
+**解决**：使用 `#[allow(clippy::expect_used)]` + 说明
+
+```rust
+#[allow(clippy::expect_used)]
+let env_filter = EnvFilter::from_default_env()
+    .add_directive("po_translator_gui=info".parse().expect("invalid log filter"))
+    // 硬编码的常量字符串，解析不会失败
+```
+
+**原因**：
+- `unwrap()` 和 `expect()` 在 Cargo.toml 中配置为 `warn`
+- CI 运行 `cargo clippy -- -D warnings` 将警告视为错误
+- 对于确信不会失败的硬编码字符串，使用 `expect()` + allow 注释
+
+---
+
+### 13. tracing::instrument 导入问题
+
+**问题**：`use tracing::instrument;` 被报告为未使用
+
+```rust
+use tracing::instrument;  // ❌ 未使用警告
+
+#[tracing::instrument]  // 使用完整路径，不需要单独导入
+pub fn translate_with_ai(...) { ... }
+```
+
+**解决**：删除未使用的导入
+
+```rust
+// 删除这行
+// use tracing::instrument;
+
+// 直接使用完整路径
+#[tracing::instrument]
+pub fn translate_with_ai(...) { ... }
+```
+
+---
+
+### 14. git-commit skill 方案 A 实战验证
+
+**场景**：提交修复时遇到远程 CI 自动提交冲突
+
+```
+提交历史（rebase 前）：
+7c01ae1 fix(rust): 修复 Clippy 警告        ← 本地新提交
+1b2f4c0 docs: 更新项目文档和开发记忆       ← 基于此提交开发
+5e6ef44 style: auto-fix formatting        ← 远程 CI 自动提交（冲突！）
+```
+
+**完整解决流程**：
+
+```bash
+# 1. 尝试推送（失败）
+$ git push
+# ❌ rejected! 远程有新提交
+
+# 2. 检查远程状态
+$ git fetch origin
+$ git log HEAD..@{u} --oneline
+# 5e6ef44 style: auto-fix formatting
+
+# 3. 同步远程提交
+$ git pull --rebase
+# ✅ 成功 rebase
+
+# 4. 再次推送
+$ git push
+# ✅ 成功
+
+# 最终历史：
+# 7c01ae1 fix(rust): 修复 Clippy 警告
+# 5e6ef44 style: auto-fix formatting
+# 1b2f4c0 docs: 更新项目文档和开发记忆
+```
+
+**结论**：git-commit skill 的方案 A 功能在实际项目中得到验证，能有效避免 CI 冲突。
+
+---
+
+## 修复文件清单
+
+| 文件 | 问题 | 解决方案 |
+|------|------|---------|
+| `src-tauri/src/services/ai_translator.rs` | 未使用的 `tracing::instrument` 导入 | 删除导入 |
+| `src-tauri/src/utils/logger.rs` | 4 个 `unwrap()` 警告 | 添加 `#[allow(clippy::expect_used)]` + `expect()` |
+
+---
+
+## 技能文件更新
+
+**更新**：`C:\Users\xiybh\.claude\skills\git-commit\skill.md`
+
+新增功能：
+- 步骤 0：检查远程同步状态（方案 A）
+- CI 自动提交场景说明
+- 检测 CI 提交的命令示例
