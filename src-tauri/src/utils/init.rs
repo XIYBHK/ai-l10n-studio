@@ -148,6 +148,9 @@ async fn init_logger() -> Result<()> {
 
     let (log_max_size, log_max_count) = load_log_config().await;
 
+    // 初始化 tracing 日志系统
+    crate::utils::logger::init_tracing();
+
     let level = if cfg!(debug_assertions) {
         log::LevelFilter::Debug
     } else {
