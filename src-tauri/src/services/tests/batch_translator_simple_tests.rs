@@ -2,10 +2,10 @@
 //!
 //! 包含 `BatchTranslator` 的基础单元测试
 
-use crate::services::batch_translator::{
-    BatchTranslator, TranslationReport, DeduplicationStats, TranslationMemoryStats,
-};
 use crate::commands::POEntry;
+use crate::services::batch_translator::{
+    BatchTranslator, DeduplicationStats, TranslationMemoryStats, TranslationReport,
+};
 use crate::services::translation_stats::TokenStats;
 
 #[cfg(test)]
@@ -16,10 +16,7 @@ mod tests {
 
     #[test]
     fn test_batch_translator_new() {
-        let translator = BatchTranslator::new(
-            "test_key".to_string(),
-            None,
-        );
+        let translator = BatchTranslator::new("test_key".to_string(), None);
 
         assert!(translator.is_ok());
         let t = translator.unwrap();
@@ -38,10 +35,7 @@ mod tests {
 
     #[test]
     fn test_batch_translator_new_with_empty_api_key() {
-        let translator = BatchTranslator::new(
-            "".to_string(),
-            None,
-        );
+        let translator = BatchTranslator::new("".to_string(), None);
 
         // 空 API key 应该也能创建
         assert!(translator.is_ok());
@@ -51,10 +45,7 @@ mod tests {
 
     #[test]
     fn test_get_reports() {
-        let translator = BatchTranslator::new(
-            "test_key".to_string(),
-            None,
-        ).unwrap();
+        let translator = BatchTranslator::new("test_key".to_string(), None).unwrap();
 
         let reports = translator.get_reports();
         assert_eq!(reports.len(), 0);
@@ -62,10 +53,7 @@ mod tests {
 
     #[test]
     fn test_get_translation_memory() {
-        let translator = BatchTranslator::new(
-            "test_key".to_string(),
-            None,
-        ).unwrap();
+        let translator = BatchTranslator::new("test_key".to_string(), None).unwrap();
 
         let tm = translator.get_translation_memory();
         // 翻译记忆库应该存在（可能包含内置短语）
@@ -101,11 +89,7 @@ mod tests {
         let dedup_stats = DeduplicationStats {
             unique_entries: 5,
             duplicate_entries: 3,
-            unique_texts: vec![
-                "Hello".to_string(),
-                "World".to_string(),
-                "Test".to_string(),
-            ],
+            unique_texts: vec!["Hello".to_string(), "World".to_string(), "Test".to_string()],
         };
 
         let report = TranslationReport {
@@ -161,10 +145,7 @@ mod tests {
         let stats = DeduplicationStats {
             unique_entries: 5,
             duplicate_entries: 2,
-            unique_texts: vec![
-                "Hello".to_string(),
-                "World".to_string(),
-            ],
+            unique_texts: vec!["Hello".to_string(), "World".to_string()],
         };
 
         assert_eq!(stats.unique_entries, 5);
@@ -217,11 +198,7 @@ mod tests {
         let stats = DeduplicationStats {
             unique_entries: 3,
             duplicate_entries: 2,
-            unique_texts: vec![
-                "Hello".to_string(),
-                "World".to_string(),
-                "Test".to_string(),
-            ],
+            unique_texts: vec!["Hello".to_string(), "World".to_string(), "Test".to_string()],
         };
 
         assert_eq!(stats.unique_entries, 3);
@@ -401,11 +378,7 @@ mod tests {
         let mut translated_count = 0;
         let mut untranslated_count = 0;
 
-        let entries = vec![
-            ("Hello", "你好"),
-            ("World", ""),
-            ("Test", "测试"),
-        ];
+        let entries = vec![("Hello", "你好"), ("World", ""), ("Test", "测试")];
 
         for (msgid, msgstr) in &entries {
             if !msgid.is_empty() && msgstr.is_empty() {
@@ -430,10 +403,7 @@ mod tests {
     #[test]
     fn test_unicode_in_translations() {
         // 测试 Unicode 支持
-        let translations = vec![
-            ("你好", "世界"),
-            ("テスト", "日本語"),
-        ];
+        let translations = vec![("你好", "世界"), ("テスト", "日本語")];
 
         assert_eq!(translations.len(), 2);
         assert_eq!(translations[0].0, "你好");

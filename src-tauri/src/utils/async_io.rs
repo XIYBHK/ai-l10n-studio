@@ -3,7 +3,7 @@
 //! 提供 CPU 密集型或阻塞 I/O 操作的异步包装器,
 //! 使用 `tokio::task::spawn_blocking` 避免阻塞异步运行时。
 
-use anyhow::{anyhow, Result};
+use anyhow::{Result, anyhow};
 use std::path::Path;
 
 /// 异步读取文件内容到字符串
@@ -26,11 +26,9 @@ use std::path::Path;
 pub async fn read_file_async<P: AsRef<Path>>(file_path: P) -> Result<String> {
     let file_path = file_path.as_ref().to_path_buf();
 
-    tokio::task::spawn_blocking(move || {
-        std::fs::read_to_string(&file_path).map_err(Into::into)
-    })
-    .await
-    .map_err(|e| anyhow!("Task join error: {}", e))?
+    tokio::task::spawn_blocking(move || std::fs::read_to_string(&file_path).map_err(Into::into))
+        .await
+        .map_err(|e| anyhow!("Task join error: {}", e))?
 }
 
 /// 异步写入字符串到文件
@@ -47,17 +45,12 @@ pub async fn read_file_async<P: AsRef<Path>>(file_path: P) -> Result<String> {
 ///
 /// write_file_async("output.txt", "Hello, world!").await?;
 /// ```
-pub async fn write_file_async<P: AsRef<Path>>(
-    file_path: P,
-    content: String,
-) -> Result<()> {
+pub async fn write_file_async<P: AsRef<Path>>(file_path: P, content: String) -> Result<()> {
     let file_path = file_path.as_ref().to_path_buf();
 
-    tokio::task::spawn_blocking(move || {
-        std::fs::write(&file_path, content).map_err(Into::into)
-    })
-    .await
-    .map_err(|e| anyhow!("Task join error: {}", e))?
+    tokio::task::spawn_blocking(move || std::fs::write(&file_path, content).map_err(Into::into))
+        .await
+        .map_err(|e| anyhow!("Task join error: {}", e))?
 }
 
 /// 异步 JSON 序列化
@@ -84,11 +77,9 @@ pub async fn write_file_async<P: AsRef<Path>>(
 /// let json = to_json_async(&Data { field: "value".to_string() }).await?;
 /// ```
 pub async fn to_json_async<T: serde::Serialize + Send + 'static>(value: T) -> Result<String> {
-    tokio::task::spawn_blocking(move || {
-        serde_json::to_string(&value).map_err(Into::into)
-    })
-    .await
-    .map_err(|e| anyhow!("Task join error: {}", e))?
+    tokio::task::spawn_blocking(move || serde_json::to_string(&value).map_err(Into::into))
+        .await
+        .map_err(|e| anyhow!("Task join error: {}", e))?
 }
 
 /// 异步 JSON 反序列化
@@ -119,11 +110,9 @@ pub async fn from_json_async<T: for<'de> serde::Deserialize<'de> + Send + 'stati
 ) -> Result<T> {
     let json_str = json_str.to_owned();
 
-    tokio::task::spawn_blocking(move || {
-        serde_json::from_str::<T>(&json_str).map_err(Into::into)
-    })
-    .await
-    .map_err(|e| anyhow!("Task join error: {}", e))?
+    tokio::task::spawn_blocking(move || serde_json::from_str::<T>(&json_str).map_err(Into::into))
+        .await
+        .map_err(|e| anyhow!("Task join error: {}", e))?
 }
 
 #[cfg(test)]
@@ -180,6 +169,11 @@ mod tests {
         let json = r#"{"value":"test"}"#;
         let test: Test = from_json_async(json).await.unwrap();
 
-        assert_eq!(test, Test { value: "test".to_string() });
+        assert_eq!(
+            test,
+            Test {
+                value: "test".to_string()
+            }
+        );
     }
 }

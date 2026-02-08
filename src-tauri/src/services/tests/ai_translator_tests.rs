@@ -2,8 +2,8 @@
 //!
 //! 包含 `AITranslator` 的单元测试和集成测试
 
-use crate::services::ai_translator::{AITranslator, AIConfig, ProxyConfig};
-use crate::services::translation_stats::{TokenStats, BatchStats};
+use crate::services::ai_translator::{AIConfig, AITranslator, ProxyConfig};
+use crate::services::translation_stats::{BatchStats, TokenStats};
 
 #[cfg(test)]
 mod tests {
@@ -24,13 +24,7 @@ mod tests {
 
     #[test]
     fn test_ai_translator_new_basic() {
-        let translator = AITranslator::new(
-            "test_key".to_string(),
-            None,
-            false,
-            None,
-            None,
-        );
+        let translator = AITranslator::new("test_key".to_string(), None, false, None, None);
 
         assert!(translator.is_ok());
         // 验证翻译器创建成功，不访问私有字段
@@ -76,12 +70,7 @@ mod tests {
     #[test]
     fn test_ai_translator_new_with_config_basic() {
         let config = create_test_config();
-        let result = AITranslator::new_with_config(
-            config,
-            false,
-            None,
-            None,
-        );
+        let result = AITranslator::new_with_config(config, false, None, None);
 
         // 可能会失败（供应商配置问题），只验证方法调用不崩溃
         match result {
@@ -103,12 +92,7 @@ mod tests {
             enabled: true,
         });
 
-        let result = AITranslator::new_with_config(
-            config,
-            false,
-            None,
-            None,
-        );
+        let result = AITranslator::new_with_config(config, false, None, None);
 
         // 可能会失败，只验证方法调用不崩溃
         match result {
@@ -120,12 +104,7 @@ mod tests {
     #[test]
     fn test_ai_translator_new_with_config_with_tm() {
         let config = create_test_config();
-        let result = AITranslator::new_with_config(
-            config,
-            true,
-            None,
-            Some("zh-Hant".to_string()),
-        );
+        let result = AITranslator::new_with_config(config, true, None, Some("zh-Hant".to_string()));
 
         // 可能会失败，只验证方法调用不崩溃
         match result {
@@ -269,13 +248,8 @@ mod tests {
 
     #[test]
     fn test_get_token_stats() {
-        let translator = AITranslator::new(
-            "test_key".to_string(),
-            None,
-            false,
-            None,
-            None,
-        ).unwrap();
+        let translator =
+            AITranslator::new("test_key".to_string(), None, false, None, None).unwrap();
 
         let stats = translator.get_token_stats();
         assert_eq!(stats.input_tokens, 0);
@@ -284,13 +258,8 @@ mod tests {
 
     #[test]
     fn test_reset_stats() {
-        let mut translator = AITranslator::new(
-            "test_key".to_string(),
-            None,
-            false,
-            None,
-            None,
-        ).unwrap();
+        let mut translator =
+            AITranslator::new("test_key".to_string(), None, false, None, None).unwrap();
 
         // 重置统计
         translator.reset_stats();
@@ -301,13 +270,8 @@ mod tests {
 
     #[test]
     fn test_clear_conversation_history() {
-        let mut translator = AITranslator::new(
-            "test_key".to_string(),
-            None,
-            false,
-            None,
-            None,
-        ).unwrap();
+        let mut translator =
+            AITranslator::new("test_key".to_string(), None, false, None, None).unwrap();
 
         // 清空历史（应该不会出错）
         translator.clear_conversation_history();
@@ -316,13 +280,8 @@ mod tests {
 
     #[test]
     fn test_current_system_prompt() {
-        let translator = AITranslator::new(
-            "test_key".to_string(),
-            None,
-            false,
-            None,
-            None,
-        ).unwrap();
+        let translator =
+            AITranslator::new("test_key".to_string(), None, false, None, None).unwrap();
 
         let prompt = translator.current_system_prompt();
         assert!(!prompt.is_empty());
@@ -336,12 +295,10 @@ mod tests {
             false,
             None,
             Some("zh-Hans".to_string()),
-        ).unwrap();
+        )
+        .unwrap();
 
-        let texts = vec![
-            "Hello".to_string(),
-            "World".to_string(),
-        ];
+        let texts = vec!["Hello".to_string(), "World".to_string()];
 
         let prompt = translator.build_user_prompt(&texts);
         assert!(prompt.contains("简体中文"));
@@ -351,13 +308,8 @@ mod tests {
 
     #[test]
     fn test_build_user_prompt_without_target_language() {
-        let translator = AITranslator::new(
-            "test_key".to_string(),
-            None,
-            false,
-            None,
-            None,
-        ).unwrap();
+        let translator =
+            AITranslator::new("test_key".to_string(), None, false, None, None).unwrap();
 
         let texts = vec!["Hello".to_string()];
         let prompt = translator.build_user_prompt(&texts);
@@ -376,12 +328,7 @@ mod tests {
             enabled: false, // 禁用代理
         });
 
-        let result = AITranslator::new_with_config(
-            config,
-            false,
-            None,
-            None,
-        );
+        let result = AITranslator::new_with_config(config, false, None, None);
 
         // 可能会失败（供应商配置问题），只验证方法调用不崩溃
         match result {
@@ -392,13 +339,7 @@ mod tests {
 
     #[test]
     fn test_empty_api_key() {
-        let translator = AITranslator::new(
-            "".to_string(),
-            None,
-            false,
-            None,
-            None,
-        );
+        let translator = AITranslator::new("".to_string(), None, false, None, None);
 
         // 空 API key 应该也能创建（实际请求时会失败）
         assert!(translator.is_ok());
@@ -415,13 +356,8 @@ mod integration_tests {
     #[tokio::test]
     #[ignore] // 需要网络连接
     async fn test_translate_with_mock_api() {
-        let mut translator = AITranslator::new(
-            "test_key".to_string(),
-            None,
-            false,
-            None,
-            None,
-        ).unwrap();
+        let mut translator =
+            AITranslator::new("test_key".to_string(), None, false, None, None).unwrap();
 
         // test_key 会触发模拟模式
         let texts = vec!["Hello".to_string(), "World".to_string()];
@@ -435,13 +371,8 @@ mod integration_tests {
     #[tokio::test]
     #[ignore] // 需要网络连接
     async fn test_translate_empty_list() {
-        let mut translator = AITranslator::new(
-            "test_key".to_string(),
-            None,
-            false,
-            None,
-            None,
-        ).unwrap();
+        let mut translator =
+            AITranslator::new("test_key".to_string(), None, false, None, None).unwrap();
 
         let result = translator.translate_batch(vec![], None).await;
         assert!(result.is_ok());
@@ -451,19 +382,10 @@ mod integration_tests {
     #[tokio::test]
     #[ignore] // 需要网络连接
     async fn test_translate_batch_with_progress() {
-        let mut translator = AITranslator::new(
-            "test_key".to_string(),
-            None,
-            false,
-            None,
-            None,
-        ).unwrap();
+        let mut translator =
+            AITranslator::new("test_key".to_string(), None, false, None, None).unwrap();
 
-        let texts = vec![
-            "Hello".to_string(),
-            "World".to_string(),
-            "Test".to_string(),
-        ];
+        let texts = vec!["Hello".to_string(), "World".to_string(), "Test".to_string()];
 
         // 使用原子计数器来避免闭包可变性问题
         use std::sync::atomic::{AtomicUsize, Ordering};
@@ -474,7 +396,9 @@ mod integration_tests {
             progress_calls_clone.fetch_add(1, Ordering::SeqCst);
         });
 
-        let result = translator.translate_batch(texts, Some(progress_callback)).await;
+        let result = translator
+            .translate_batch(texts, Some(progress_callback))
+            .await;
         assert!(result.is_ok());
         // 模拟模式下，进度回调可能不会被调用
     }

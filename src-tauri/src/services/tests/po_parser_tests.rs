@@ -2,8 +2,8 @@
 //!
 //! 包含 `POParser` 的单元测试和集成测试
 
-use crate::services::po_parser::POParser;
 use crate::commands::POEntry;
+use crate::services::po_parser::POParser;
 use std::fs;
 use std::io::Write;
 use tempfile::TempDir;
@@ -242,15 +242,13 @@ msgstr "你好"
         let file_path = temp_dir.path().join("output.po");
 
         let parser = POParser::new().unwrap();
-        let entries = vec![
-            POEntry {
-                comments: vec![],
-                msgctxt: String::new(),
-                msgid: "Hello".to_string(),
-                msgstr: "你好".to_string(),
-                line_start: 0,
-            },
-        ];
+        let entries = vec![POEntry {
+            comments: vec![],
+            msgctxt: String::new(),
+            msgid: "Hello".to_string(),
+            msgstr: "你好".to_string(),
+            line_start: 0,
+        }];
 
         let result = parser.write_file(file_path.to_string_lossy().to_string(), &entries);
         assert!(result.is_ok());
@@ -270,15 +268,13 @@ msgstr "你好"
         let file_path = temp_dir.path().join("output.po");
 
         let parser = POParser::new().unwrap();
-        let entries = vec![
-            POEntry {
-                comments: vec![],
-                msgctxt: "Menu".to_string(),
-                msgid: "File".to_string(),
-                msgstr: "文件".to_string(),
-                line_start: 0,
-            },
-        ];
+        let entries = vec![POEntry {
+            comments: vec![],
+            msgctxt: "Menu".to_string(),
+            msgid: "File".to_string(),
+            msgstr: "文件".to_string(),
+            line_start: 0,
+        }];
 
         let result = parser.write_file(file_path.to_string_lossy().to_string(), &entries);
         assert!(result.is_ok());
@@ -294,15 +290,13 @@ msgstr "你好"
         let file_path = temp_dir.path().join("output.po");
 
         let parser = POParser::new().unwrap();
-        let entries = vec![
-            POEntry {
-                comments: vec!["This is a comment".to_string()],
-                msgctxt: String::new(),
-                msgid: "Hello".to_string(),
-                msgstr: "你好".to_string(),
-                line_start: 0,
-            },
-        ];
+        let entries = vec![POEntry {
+            comments: vec!["This is a comment".to_string()],
+            msgctxt: String::new(),
+            msgid: "Hello".to_string(),
+            msgstr: "你好".to_string(),
+            line_start: 0,
+        }];
 
         let result = parser.write_file(file_path.to_string_lossy().to_string(), &entries);
         assert!(result.is_ok());
@@ -348,15 +342,13 @@ msgstr "你好"
         let file_path = temp_dir.path().join("output.po");
 
         let parser = POParser::new().unwrap();
-        let entries = vec![
-            POEntry {
-                comments: vec![],
-                msgctxt: String::new(),
-                msgid: "Hello".to_string(),
-                msgstr: "你好".to_string(),
-                line_start: 0,
-            },
-        ];
+        let entries = vec![POEntry {
+            comments: vec![],
+            msgctxt: String::new(),
+            msgid: "Hello".to_string(),
+            msgstr: "你好".to_string(),
+            line_start: 0,
+        }];
 
         let result = parser.write_file(file_path.to_string_lossy().to_string(), &entries);
         assert!(result.is_ok());
@@ -397,10 +389,14 @@ msgstr "世界"
         // 写入新文件
         let temp_dir = TempDir::new().unwrap();
         let output_path = temp_dir.path().join("output.po");
-        parser.write_file(output_path.to_string_lossy().to_string(), &entries).unwrap();
+        parser
+            .write_file(output_path.to_string_lossy().to_string(), &entries)
+            .unwrap();
 
         // 再次解析
-        let re_parsed_entries = parser.parse_file(output_path.to_string_lossy().to_string()).unwrap();
+        let re_parsed_entries = parser
+            .parse_file(output_path.to_string_lossy().to_string())
+            .unwrap();
 
         // 验证条目数量
         assert_eq!(entries.len(), re_parsed_entries.len());
@@ -509,7 +505,10 @@ msgstr "说\"你好\""
     fn test_parse_large_file() {
         let mut content = String::new();
         for i in 0..1000 {
-            content.push_str(&format!("# Entry {}\nmsgid \"Text {}\"\nmsgstr \"翻译 {}\"\n\n", i, i, i));
+            content.push_str(&format!(
+                "# Entry {}\nmsgid \"Text {}\"\nmsgstr \"翻译 {}\"\n\n",
+                i, i, i
+            ));
         }
 
         let (_temp_dir, file_path) = create_temp_po_file(&content);

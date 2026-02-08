@@ -1,7 +1,7 @@
 use chrono::Local;
 use lazy_static::lazy_static;
 use std::sync::Mutex;
-use tracing_subscriber::{util::SubscriberInitExt, EnvFilter};
+use tracing_subscriber::{EnvFilter, util::SubscriberInitExt};
 
 lazy_static! {
     static ref LOG_BUFFER: Mutex<Vec<String>> = Mutex::new(Vec::new());

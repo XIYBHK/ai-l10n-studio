@@ -1,6 +1,7 @@
 # 任务 #4 完成: 优化异步模式和错误处理
 
 ## 完成时间
+
 2026-02-08
 
 ## 实现清单
@@ -12,6 +13,7 @@
 **文件**: `src-tauri/src/services/po_parser.rs`
 
 添加 `parse_file_async()` 函数:
+
 ```rust
 /// 异步解析 PO 文件（在阻塞线程池中执行 CPU 密集型任务）
 #[tracing::instrument(fields(file_path = %file_path.as_ref().display()))]
@@ -28,6 +30,7 @@ pub async fn parse_file_async<P: AsRef<Path>>(file_path: P) -> Result<Vec<POEntr
 ```
 
 **优化效果**:
+
 - PO 解析(正则匹配、字符串处理)移至阻塞线程池
 - 避免阻塞异步运行时
 - 大文件解析时 UI 保持响应
@@ -37,6 +40,7 @@ pub async fn parse_file_async<P: AsRef<Path>>(file_path: P) -> Result<Vec<POEntr
 **新文件**: `src-tauri/src/utils/async_io.rs`
 
 提供以下异步函数:
+
 - `read_file_async()` - 异步读取文件
 - `write_file_async()` - 异步写入文件
 - `to_json_async()` - 异步 JSON 序列化
@@ -51,6 +55,7 @@ pub async fn parse_file_async<P: AsRef<Path>>(file_path: P) -> Result<Vec<POEntr
 **文件**: `src-tauri/src/error.rs`
 
 添加追踪 ID 支持:
+
 ```rust
 impl AppError {
     /// 创建带追踪 ID 的网络错误
@@ -63,6 +68,7 @@ impl AppError {
 ```
 
 **使用示例**:
+
 ```rust
 let (error, trace_id) = AppError::network_with_trace("连接超时");
 // 错误信息: "网络错误: 连接超时 [Trace ID: a1b2c3d4-...]"
@@ -76,15 +82,18 @@ let (error, trace_id) = AppError::network_with_trace("连接超时");
 已添加到关键函数:
 
 **AI 翻译服务** (`ai_translator.rs`):
+
 - `translate_batch_with_callbacks`
 - `translate_batch`
 - `translate_batch_with_sources`
 - `translate_with_ai`
 
 **PO 解析器** (`po_parser.rs`):
+
 - `parse_file`
 
 **配置管理** (`config_draft.rs`):
+
 - `save_to_disk`
 - `save_to_disk_with_config`
 
@@ -93,11 +102,13 @@ let (error, trace_id) = AppError::network_with_trace("连接超时");
 ### 异步优化
 
 **优化前**:
+
 - PO 解析阻塞异步运行时
 - 大文件(>10MB)解析导致界面冻结
 - JSON 序列化在热路径上执行
 
 **优化后**:
+
 - CPU 密集型任务移至专用线程池
 - 异步运行时保持响应
 - 支持并发解析多个文件
@@ -106,11 +117,13 @@ let (error, trace_id) = AppError::network_with_trace("连接超时");
 ### 可观测性提升
 
 **优化前**:
+
 - 简单的 `log::info!` 日志
 - 无法追踪跨函数调用
 - 难以分析性能瓶颈
 
 **优化后**:
+
 - 结构化 tracing 日志
 - 自动 span 追踪
 - 支持 tokio-console 实时监控
@@ -181,11 +194,13 @@ cargo test
 ### spawn_blocking 使用场景
 
 **适合使用**:
+
 - CPU 密集型计算(正则、解析、加密)
 - 阻塞 I/O 操作(文件读写)
 - 同步第三方库调用
 
 **不适合使用**:
+
 - 已异步的操作(不必要)
 - 极短任务(开销大于收益)
 - 频繁调用的小任务(增加调度开销)

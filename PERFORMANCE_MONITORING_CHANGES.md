@@ -16,6 +16,7 @@ console-subscriber = { version = "0.4", optional = true }
 ```
 
 **新增 feature**:
+
 ```toml
 [features]
 console = ["dep:console-subscriber"]
@@ -26,6 +27,7 @@ console = ["dep:console-subscriber"]
 **文件**: `src-tauri/src/main.rs`
 
 在 `main()` 函数开头添加:
+
 ```rust
 // 初始化性能监控 (仅当启用 console feature 时)
 #[cfg(feature = "console")]
@@ -40,6 +42,7 @@ console = ["dep:console-subscriber"]
 **文件**: `src-tauri/src/utils/logger.rs`
 
 添加 `init_tracing()` 函数:
+
 ```rust
 pub fn init_tracing() {
     let env_filter = EnvFilter::from_default_env()
@@ -59,6 +62,7 @@ pub fn init_tracing() {
 ```
 
 在 `src-tauri/src/utils/init.rs` 的 `init_logger()` 中调用:
+
 ```rust
 async fn init_logger() -> Result<()> {
     // ... 现有代码 ...
@@ -72,17 +76,20 @@ async fn init_logger() -> Result<()> {
 **文件**: `src-tauri/src/services/ai_translator.rs`
 
 添加导入:
+
 ```rust
 use tracing::instrument;
 ```
 
 为以下关键函数添加性能监控:
+
 - `translate_batch_with_callbacks` - 批量翻译主入口
 - `translate_batch` - 简化批量翻译
 - `translate_batch_with_sources` - 带来源追踪的批量翻译
 - `translate_with_ai` - 核心 AI 翻译函数
 
 示例:
+
 ```rust
 #[tracing::instrument(
     name = "translate_with_ai",
@@ -131,11 +138,13 @@ fn save_to_disk(&self) -> Result<(), AppError> {
 **文件**: `src-tauri/src/error.rs`
 
 添加 UUID 导入:
+
 ```rust
 use uuid::Uuid;
 ```
 
 添加带追踪 ID 的错误构造函数:
+
 ```rust
 impl AppError {
     /// 创建带追踪 ID 的网络错误
@@ -152,6 +161,7 @@ impl AppError {
 **文件**: `src-tauri/src/services/po_parser.rs`
 
 添加异步解析函数:
+
 ```rust
 /// 异步解析 PO 文件（在阻塞线程池中执行 CPU 密集型任务）
 #[tracing::instrument(fields(file_path = %file_path.as_ref().display()))]
@@ -168,6 +178,7 @@ pub async fn parse_file_async<P: AsRef<Path>>(file_path: P) -> Result<Vec<POEntr
 ```
 
 **优化说明**:
+
 - PO 文件解析是 CPU 密集型操作(正则匹配、字符串处理)
 - 使用 `spawn_blocking` 将其移至阻塞线程池,避免阻塞异步运行时
 - 保持异步接口,方便调用方使用
@@ -218,10 +229,12 @@ let (error, trace_id) = AppError::network_with_trace("连接超时");
 ### 1. 异步优化
 
 **优化前**:
+
 - PO 解析阻塞异步运行时
 - 大文件解析导致界面卡顿
 
 **优化后**:
+
 - 使用 `spawn_blocking` 将 CPU 密集型任务移至专用线程池
 - 异步运行时保持响应
 - 支持并发解析多个文件
@@ -229,11 +242,13 @@ let (error, trace_id) = AppError::network_with_trace("连接超时");
 ### 2. 可观测性提升
 
 **优化前**:
+
 - 仅依靠简单的 `log::info!` 调试
 - 难以追踪跨函数调用
 - 无法监控异步任务性能
 
 **优化后**:
+
 - 结构化 tracing 日志
 - 自动 span 追踪
 - 支持 tokio-console 实时监控
@@ -257,6 +272,7 @@ runtime=warn              # 运行时系统
 - `fields`: 自定义字段(用于过滤和分析)
 
 示例:
+
 ```rust
 #[tracing::instrument(
     name = "translate_batch",
