@@ -47,7 +47,6 @@ use crate::utils::common::is_simple_phrase;
 use crate::utils::paths::get_translation_memory_path;
 use reqwest::Client as HttpClient;
 use serde::{Deserialize, Serialize};
-use tracing::instrument;
 
 #[cfg(feature = "ts-rs")]
 use ts_rs::TS;

@@ -10,11 +10,13 @@ lazy_static! {
 /// 初始化 tracing 日志系统
 pub fn init_tracing() {
     // 从环境变量读取日志级别,默认为 info
+    // 使用 allow 因为这些是硬编码的常量，解析不会失败
+    #[allow(clippy::expect_used)]
     let env_filter = EnvFilter::from_default_env()
-        .add_directive("po_translator_gui=info".parse().unwrap())
-        .add_directive("reqwest=warn".parse().unwrap())
-        .add_directive("tokio=warn".parse().unwrap())
-        .add_directive("runtime=warn".parse().unwrap());
+        .add_directive("po_translator_gui=info".parse().expect("invalid log filter"))
+        .add_directive("reqwest=warn".parse().expect("invalid log filter"))
+        .add_directive("tokio=warn".parse().expect("invalid log filter"))
+        .add_directive("runtime=warn".parse().expect("invalid log filter"));
 
     // 配置 fmt 层
     tracing_subscriber::fmt()
