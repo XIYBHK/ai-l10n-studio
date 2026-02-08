@@ -181,6 +181,7 @@ useEffect(() => {
 ```
 
 **时间线示例**：
+
 ```
 T1: 本地开发基于 commit A
 T2: 本地 push → CI 自动格式化 → 创建 commit B (style: auto-fix)
@@ -217,6 +218,7 @@ let env_filter = EnvFilter::from_default_env()
 ```
 
 **原因**：
+
 - `unwrap()` 和 `expect()` 在 Cargo.toml 中配置为 `warn`
 - CI 运行 `cargo clippy -- -D warnings` 将警告视为错误
 - 对于确信不会失败的硬编码字符串，使用 `expect()` + allow 注释
@@ -290,10 +292,10 @@ $ git push
 
 ## 修复文件清单
 
-| 文件 | 问题 | 解决方案 |
-|------|------|---------|
-| `src-tauri/src/services/ai_translator.rs` | 未使用的 `tracing::instrument` 导入 | 删除导入 |
-| `src-tauri/src/utils/logger.rs` | 4 个 `unwrap()` 警告 | 添加 `#[allow(clippy::expect_used)]` + `expect()` |
+| 文件                                      | 问题                                | 解决方案                                          |
+| ----------------------------------------- | ----------------------------------- | ------------------------------------------------- |
+| `src-tauri/src/services/ai_translator.rs` | 未使用的 `tracing::instrument` 导入 | 删除导入                                          |
+| `src-tauri/src/utils/logger.rs`           | 4 个 `unwrap()` 警告                | 添加 `#[allow(clippy::expect_used)]` + `expect()` |
 
 ---
 
@@ -302,6 +304,7 @@ $ git push
 **更新**：`C:\Users\xiybh\.claude\skills\git-commit\skill.md`
 
 新增功能：
+
 - 步骤 0：检查远程同步状态（方案 A）
 - CI 自动提交场景说明
 - 检测 CI 提交的命令示例
