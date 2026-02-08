@@ -106,9 +106,24 @@
 .columnHeaderLeft {
   display: flex;
   align-items: center;
-  gap: var(--space-1);
+  gap: var(--space-2);
   white-space: nowrap;
   overflow: hidden;
+}
+
+/* 状态指示器 - 圆点 */
+.columnHeaderLeft .ant-badge {
+  display: flex;
+  align-items: center;
+}
+
+.columnHeaderLeft .ant-badge-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  box-shadow:
+    0 0 0 2px var(--color-bgTertiary),
+    0 0 8px currentColor;
 }
 
 /* 计数徽章 */
@@ -117,10 +132,11 @@
   font-weight: var(--font-weight-normal);
   color: var(--color-textTertiary);
   background-color: var(--color-bgSecondary);
-  padding: 1px 6px;
+  padding: 2px 8px;
   border-radius: var(--radius-full);
   flex-shrink: 0;
   border: 1px solid var(--color-borderSecondary);
+  font-family: var(--mono-font);
 }
 
 /* 列操作按钮 */
@@ -165,17 +181,27 @@
   transition: all var(--duration-fast) var(--ease-out);
 }
 
-/* 悬停效果 */
+/* 悬停效果 - 现代化 */
 .virtualItem:hover {
   background-color: var(--color-hoverBg);
   transform: translateX(2px);
+  box-shadow:
+    var(--shadow-md),
+    inset 0 0 0 1px var(--color-borderSecondary);
+}
+
+/* 点击反馈 - 缩放效果 */
+.virtualItem:active {
+  transform: translateX(2px) scale(0.98);
 }
 
 /* 选中状态 - 增强 */
 .virtualItem.selected {
   border-left-color: var(--color-brandPrimary);
   background-color: var(--color-selectedBg);
-  box-shadow: inset 3px 0 0 var(--color-brandPrimary);
+  box-shadow:
+    inset 3px 0 0 var(--color-brandPrimary),
+    var(--shadow-sm);
 }
 
 /* 状态颜色标记 */
@@ -220,17 +246,19 @@
   font-size: var(--font-size-xs);
 }
 
-/* 翻译来源徽章 */
+/* 翻译来源徽章 - 药丸形状 */
 .sourceBadge {
-  font-size: 10px;
-  padding: 1px 5px;
-  border-radius: var(--radius-sm);
+  font-size: 11px;
+  padding: 2px 8px;
+  border-radius: var(--radius-full);
   white-space: nowrap;
-  font-weight: var(--font-weight-medium);
-  display: flex;
+  font-weight: var(--font-weight-semibold);
+  display: inline-flex;
   align-items: center;
-  gap: 3px;
+  gap: 4px;
   line-height: 1.2;
+  box-shadow: var(--shadow-sm);
+  letter-spacing: 0.02em;
 }
 
 /* 原文和译文文字 */
@@ -307,7 +335,8 @@
     background-color var(--duration-base) var(--ease-out),
     color var(--duration-base) var(--ease-out),
     border-color var(--duration-base) var(--ease-out),
-    box-shadow var(--duration-base) var(--ease-out);
+    box-shadow var(--duration-base) var(--ease-out),
+    transform 200ms var(--ease-out);
 }
 
 /* ============================================
