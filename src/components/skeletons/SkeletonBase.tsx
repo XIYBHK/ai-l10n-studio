@@ -23,7 +23,7 @@ const SkeletonBase: React.FC<SkeletonBaseProps> = ({
         return 'var(--radius-sm, 4px)';
       case 'rect':
       default:
-        return 'var(--radius-md, 8px)';
+        return 'var(--radius-lg, 12px)';
     }
   };
 
@@ -32,7 +32,7 @@ const SkeletonBase: React.FC<SkeletonBaseProps> = ({
     height: typeof height === 'number' ? `${height}px` : height,
     backgroundColor: 'var(--color-bgTertiary, #f0f0f0)',
     borderRadius: getBorderRadius(),
-    animation: 'skeleton-pulse 1.5s ease-in-out infinite',
+    animation: 'skeleton-pulse 2s ease-in-out infinite',
     ...style,
   };
 
