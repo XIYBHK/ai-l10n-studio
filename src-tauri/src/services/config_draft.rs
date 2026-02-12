@@ -14,6 +14,7 @@ use std::fs;
 use std::path::PathBuf;
 use std::sync::Arc;
 use tokio::sync::OnceCell;
+use tracing::instrument;
 
 use super::config_manager::AppConfig;
 use crate::utils::draft::Draft;
@@ -448,6 +449,7 @@ impl ConfigDraft {
     }
 
     /// 保存配置到磁盘
+    #[instrument(skip(self), fields(config_path = %self.config_path.display()))]
     fn save_to_disk(&self) -> Result<(), AppError> {
         log::info!("💾 [save_to_disk] 开始保存配置");
         let config = self.config.clone_latest();
@@ -461,6 +463,7 @@ impl ConfigDraft {
     }
 
     /// 保存指定配置到磁盘（避免死锁的版本）
+    #[instrument(skip(self, config), fields(config_path = %self.config_path.display()))]
     fn save_to_disk_with_config(&self, config: &AppConfig) -> Result<(), AppError> {
         log::info!("💾 [save_to_disk_with_config] 开始保存配置");
         let json = serde_json::to_string_pretty(config).map_err(AppError::from)?;

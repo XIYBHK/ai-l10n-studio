@@ -8,6 +8,7 @@
  * - MetricItem: 指标项
  * - ActionButton: 操作按钮
  * - EmptyState: 空状态
+ * - Ripple: 波纹效果组件 🆕
  */
 
 // StatCard 组件
@@ -37,3 +38,6 @@ export {
   type EmptyStateType,
   type ShortcutItem,
 } from './EmptyState';
+
+// Ripple 组件 🆕
+export { Ripple, type RippleProps } from './Ripple';

@@ -6,8 +6,10 @@
  * 2. 提供清晰的错误分类
  * 3. 自动转换常见错误（通过 From trait）
  * 4. 友好的中文错误信息
+ * 5. 支持请求追踪 ID（用于性能监控）
  */
 use thiserror::Error;
+use uuid::Uuid;
 
 /// 统一应用错误类型
 #[derive(Error, Debug)]
@@ -95,6 +97,13 @@ impl AppError {
             msg: msg.into(),
             retryable,
         }
+    }
+
+    /// 创建带追踪 ID 的网络错误
+    pub fn network_with_trace(msg: impl Into<String>) -> (Self, Uuid) {
+        let trace_id = Uuid::new_v4();
+        let error_msg = format!("{} [Trace ID: {}]", msg.into(), trace_id);
+        (AppError::Network(error_msg), trace_id)
     }
 
     /// 创建网络错误

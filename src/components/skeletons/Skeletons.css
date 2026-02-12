@@ -9,6 +9,8 @@
   --color-border: #e0e0e0;
   --radius-sm: 4px;
   --radius-md: 8px;
+  --radius-lg: 12px;
+  --radius-full: 9999px;
 }
 
 /* 暗色主题 */
@@ -19,29 +21,45 @@
   --color-border: #303030;
 }
 
-/* 脉冲动画 */
+/* 脉冲动画 - 现代化版本 */
 @keyframes skeleton-pulse {
   0% {
     opacity: 1;
+    background-position: -200% 0;
   }
   50% {
-    opacity: 0.5;
+    opacity: 0.7;
   }
   100% {
     opacity: 1;
+    background-position: 200% 0;
   }
 }
 
-/* 骨架屏基础样式 */
+/* 流光效果动画 */
+@keyframes skeleton-shimmer {
+  0% {
+    background-position: -200% 0;
+  }
+  100% {
+    background-position: 200% 0;
+  }
+}
+
+/* 骨架屏基础样式 - 增强版 */
 .skeleton-base {
   display: inline-block;
   background: linear-gradient(
     90deg,
-    var(--color-bgTertiary) 25%,
-    var(--color-bgSecondary) 50%,
-    var(--color-bgTertiary) 75%
+    var(--color-bgTertiary) 0%,
+    var(--color-bgSecondary) 20%,
+    var(--color-bgTertiary) 40%,
+    var(--color-bgSecondary) 60%,
+    var(--color-bgTertiary) 80%,
+    var(--color-bgSecondary) 100%
   );
   background-size: 200% 100%;
+  animation: skeleton-shimmer 2s ease-in-out infinite;
 }
 
 /* 使用Ant Design Skeleton时的样式覆盖 */
@@ -54,21 +72,12 @@
 .ant-skeleton.ant-skeleton-active .ant-skeleton-content .ant-skeleton-paragraph > li {
   background: linear-gradient(
     90deg,
-    var(--color-bgTertiary) 25%,
+    var(--color-bgTertiary) 0%,
     var(--color-bgSecondary) 50%,
-    var(--color-bgTertiary) 75%
+    var(--color-bgTertiary) 100%
   );
-  background-size: 400% 100%;
-  animation: ant-skeleton-loading 1.4s ease infinite;
-}
-
-@keyframes ant-skeleton-loading {
-  0% {
-    background-position: 100% 50%;
-  }
-  100% {
-    background-position: 0 50%;
-  }
+  background-size: 200% 100%;
+  animation: skeleton-shimmer 2s ease-in-out infinite;
 }
 
 /* 骨架屏容器 */
@@ -87,5 +96,14 @@
 }
 
 .skeleton-base.rect {
-  border-radius: var(--radius-md);
+  border-radius: var(--radius-lg);
+}
+
+/* 减少动画偏好支持 */
+@media (prefers-reduced-motion: reduce) {
+  .skeleton-base,
+  .ant-skeleton.ant-skeleton-active .ant-skeleton-content .ant-skeleton-title,
+  .ant-skeleton.ant-skeleton-active .ant-skeleton-content .ant-skeleton-paragraph > li {
+    animation: none !important;
+  }
 }

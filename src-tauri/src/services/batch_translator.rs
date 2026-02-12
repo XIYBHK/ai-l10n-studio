@@ -1,3 +1,43 @@
+//! 批量翻译器模块
+//!
+//! 提供批量翻译 PO 文件和目录的功能，支持进度报告和统计。
+//!
+//! # 主要功能
+//!
+//! - 批量翻译目录中的所有 PO 文件
+//! - 自动去重（相同原文只翻译一次）
+//! - 翻译记忆库（TM）集成
+//! - 详细的翻译报告和统计
+//! - 进度回调支持
+//!
+//! # 使用示例
+//!
+//! ```rust
+//! use crate::services::batch_translator::BatchTranslator;
+//!
+//! // 创建批量翻译器
+//! let mut translator = BatchTranslator::new(
+//!     "your-api-key".to_string(),
+//!     None,
+//! )?;
+//!
+//! // 翻译目录
+//! let reports = translator.translate_directory(
+//!     "/path/to/po/files",
+//!     Some(Box::new(|file, current, total| {
+//!         println!("正在处理: {} ({}/{})", file, current, total);
+//!     })),
+//! ).await?;
+//!
+//! // 查看报告
+//! for report in reports {
+//!     println!("文件: {}", report.file);
+//!     println!("  总条目: {}", report.total_entries);
+//!     println!("  已翻译: {}", report.translated);
+//!     println!("  失败: {}", report.failed);
+//! }
+//! ```
+
 use crate::commands::POEntry;
 use crate::error::AppError;
 use crate::services::translation_stats::TokenStats;
@@ -13,49 +53,97 @@ use std::path::{Path, PathBuf};
 #[cfg(feature = "ts-rs")]
 use ts_rs::TS;
 
+/// 翻译报告
+///
+/// 包含单个 PO 文件的翻译结果和统计信息。
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[cfg_attr(feature = "ts-rs", derive(TS))]
 #[cfg_attr(feature = "ts-rs", ts(export, export_to = "../src/types/generated/"))]
 pub struct TranslationReport {
+    /// 文件路径
     pub file: String,
+    /// 总条目数
     pub total_entries: usize,
+    /// 需要翻译的条目数
     pub need_translation: usize,
+    /// 翻译成功的条目数
     pub translated: usize,
+    /// 翻译失败的条目数
     pub failed: usize,
+    /// 翻译对列表
     pub translations: Vec<TranslationPair>,
+    /// Token 统计
     pub token_stats: TokenStats,
+    /// 去重统计（可选）
     pub deduplication: Option<DeduplicationStats>,
+    /// 翻译记忆库统计（可选）
     pub tm_stats: Option<TranslationMemoryStats>,
 }
 
+/// 翻译对
+///
+/// 表示一个原文和译文的对应关系。
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[cfg_attr(feature = "ts-rs", derive(TS))]
 #[cfg_attr(feature = "ts-rs", ts(export, export_to = "../src/types/generated/"))]
 pub struct TranslationPair {
+    /// 原文
     pub original: String,
+    /// 译文
     pub translation: String,
 }
 
 // TokenStats 已从 ai_translator 模块导入
 
+/// 去重统计
+///
+/// 记录批量翻译中的去重效果。
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[cfg_attr(feature = "ts-rs", derive(TS))]
 #[cfg_attr(feature = "ts-rs", ts(export, export_to = "../src/types/generated/"))]
 pub struct DeduplicationStats {
+    /// 唯一条目数
     pub unique_entries: usize,
+    /// 重复条目数
     pub duplicate_entries: usize,
+    /// 唯一文本列表
     pub unique_texts: Vec<String>,
 }
 
+/// 翻译记忆库统计
+///
+/// 记录翻译记忆库的使用情况。
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[cfg_attr(feature = "ts-rs", derive(TS))]
 #[cfg_attr(feature = "ts-rs", ts(export, export_to = "../src/types/generated/"))]
 pub struct TranslationMemoryStats {
+    /// 缓存命中次数
     pub cache_hits: usize,
+    /// 总查询次数
     pub total_queries: usize,
+    /// 命中率（百分比）
     pub hit_rate: f64,
 }
 
+/// 批量翻译器
+///
+/// 负责批量翻译 PO 文件和目录。
+///
+/// # 功能特性
+///
+/// - 递归扫描目录中的所有 PO 文件
+/// - 自动去重（相同原文只翻译一次）
+/// - 翻译记忆库（TM）集成
+/// - 详细的翻译报告和统计
+/// - 进度回调支持
+/// - 自动保存翻译记忆库
+///
+/// # 字段说明
+///
+/// - `parser`: PO 文件解析器
+/// - `translator`: AI 翻译器
+/// - `translation_memory`: 翻译记忆库
+/// - `reports`: 翻译报告列表
 #[derive(Debug, Clone)]
 pub struct BatchTranslator {
     parser: POParser,
@@ -65,6 +153,25 @@ pub struct BatchTranslator {
 }
 
 impl BatchTranslator {
+    /// 创建新的批量翻译器
+    ///
+    /// # 参数
+    ///
+    /// - `api_key`: API 密钥
+    /// - `base_url`: 可选的自定义 API 地址
+    ///
+    /// # 返回
+    ///
+    /// 成功返回 `BatchTranslator` 实例，失败返回 `AppError`。
+    ///
+    /// # 示例
+    ///
+    /// ```rust
+    /// let translator = BatchTranslator::new(
+    ///     "your-api-key".to_string(),
+    ///     None,
+    /// )?;
+    /// ```
     pub fn new(api_key: String, base_url: Option<String>) -> Result<Self, AppError> {
         let parser = POParser::new()?;
 

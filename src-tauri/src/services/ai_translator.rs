@@ -1,3 +1,42 @@
+//! AI 翻译器模块
+//!
+//! 提供基于大语言模型的翻译功能，支持多供应商、代理配置、翻译记忆等功能。
+//!
+//! # 主要功能
+//!
+//! - 支持多种 AI 供应商（OpenAI、DeepSeek、Moonshot 等）
+//! - 集成翻译记忆库（TM）提高翻译效率和一致性
+//! - 支持自定义系统提示词和术语库
+//! - 自动 token 统计和成本计算
+//! - 批量翻译优化（去重、分批处理）
+//!
+//! # 使用示例
+//!
+//! ```rust
+//! use crate::services::ai_translator::AITranslator;
+//!
+//! // 创建基础翻译器
+//! let mut translator = AITranslator::new(
+//!     "your-api-key".to_string(),
+//!     None,
+//!     true,
+//!     None,
+//!     Some("zh-Hans".to_string()),
+//! )?;
+//!
+//! // 批量翻译
+//! let texts = vec!["Hello".to_string(), "World".to_string()];
+//! let translations = translator.translate_batch(texts, None).await?;
+//! ```
+//!
+//! # 架构设计
+//!
+//! - `AITranslator`: 核心翻译器，管理 HTTP 客户端和翻译状态
+//! - `TranslationMemory`: 翻译记忆库，缓存常用短语
+//! - `TermLibrary`: 术语库，提供专业术语翻译和风格指导
+//! - `prompt_builder`: 提示词构建器，生成系统提示和用户提示
+//! - `translation_stats`: 统计模块，记录 token 使用和成本
+
 use crate::error::AppError;
 use crate::services::term_library::TermLibrary;
 use crate::services::translation_memory::TranslationMemory;
@@ -22,6 +61,26 @@ pub use crate::services::prompt_builder::DEFAULT_SYSTEM_PROMPT;
 // 请使用插件化供应商系统：crate::services::ai::provider
 
 /// 代理配置
+///
+/// 用于配置 HTTP 代理，支持通过代理服务器访问 AI API。
+///
+/// # 字段说明
+///
+/// - `host`: 代理服务器地址（如 "127.0.0.1"）
+/// - `port`: 代理服务器端口（如 7890）
+/// - `enabled`: 是否启用代理
+///
+/// # 示例
+///
+/// ```rust
+/// use crate::services::ai_translator::ProxyConfig;
+///
+/// let proxy = ProxyConfig {
+///     host: "127.0.0.1".to_string(),
+///     port: 7890,
+///     enabled: true,
+/// };
+/// ```
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")] // 🔧 序列化时使用 camelCase 命名，与前端保持一致
 #[cfg_attr(feature = "ts-rs", derive(TS))]
@@ -33,6 +92,34 @@ pub struct ProxyConfig {
 }
 
 /// AI 配置（插件化版本）
+///
+/// 包含连接 AI 服务所需的配置信息，支持插件化供应商系统。
+///
+/// # 字段说明
+///
+/// - `provider_id`: 供应商 ID（如 "openai", "deepseek", "moonshot"）
+/// - `api_key`: API 密钥
+/// - `base_url`: 可选的自定义 API 地址（默认使用供应商的默认地址）
+/// - `model`: 可选的自定义模型名称（默认使用供应商的默认模型）
+/// - `proxy`: 可选的代理配置
+///
+/// # 示例
+///
+/// ```rust
+/// use crate::services::ai_translator::{AIConfig, ProxyConfig};
+///
+/// let config = AIConfig {
+///     provider_id: "openai".to_string(),
+///     api_key: "sk-...".to_string(),
+///     base_url: Some("https://api.openai.com/v1".to_string()),
+///     model: Some("gpt-4".to_string()),
+///     proxy: Some(ProxyConfig {
+///         host: "127.0.0.1".to_string(),
+///         port: 7890,
+///         enabled: true,
+///     }),
+/// };
+/// ```
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")] // 🔧 序列化时使用 camelCase 命名，与前端保持一致
 #[cfg_attr(feature = "ts-rs", derive(TS))]
@@ -78,6 +165,45 @@ struct Usage {
     total_tokens: u32,
 }
 
+/// AI 翻译器
+///
+/// 核心翻译器，负责与 AI 服务交互，管理翻译流程和状态。
+///
+/// # 功能特性
+///
+/// - 支持批量翻译（自动分批、去重）
+/// - 集成翻译记忆库（TM）
+/// - 自动 token 统计和成本计算
+/// - 支持自定义系统提示词
+/// - 术语库集成
+/// - 目标语言支持
+///
+/// # 状态管理
+///
+/// - `conversation_history`: 对话历史（用于上下文翻译）
+/// - `token_stats`: token 使用统计
+/// - `batch_stats`: 批量翻译统计
+/// - `tm`: 翻译记忆库（可选）
+/// - `target_language`: 目标语言（可选）
+///
+/// # 示例
+///
+/// ```rust
+/// use crate::services::ai_translator::AITranslator;
+///
+/// // 创建基础翻译器
+/// let mut translator = AITranslator::new(
+///     "your-api-key".to_string(),
+///     None,
+///     true,
+///     None,
+///     Some("zh-Hans".to_string()),
+/// )?;
+///
+/// // 批量翻译
+/// let texts = vec!["Hello".to_string(), "World".to_string()];
+/// let translations = translator.translate_batch(texts, None).await?;
+/// ```
 #[derive(Debug, Clone)]
 pub struct AITranslator {
     client: HttpClient,
@@ -101,7 +227,38 @@ pub struct AITranslator {
 }
 
 impl AITranslator {
-    /// 原有构造函数（Phase 3: 支持自定义提示词，Phase 5: 支持目标语言）
+    /// 创建新的 AI 翻译器
+    ///
+    /// # 参数
+    ///
+    /// - `api_key`: API 密钥
+    /// - `base_url`: 可选的自定义 API 地址（默认使用 Moonshot）
+    /// - `use_tm`: 是否启用翻译记忆库
+    /// - `custom_system_prompt`: 可选的自定义系统提示词
+    /// - `target_language`: 可选的目标语言代码（如 "zh-Hans", "en" 等）
+    ///
+    /// # 返回
+    ///
+    /// 成功返回 `AITranslator` 实例，失败返回 `AppError`。
+    ///
+    /// # 示例
+    ///
+    /// ```rust
+    /// use crate::services::ai_translator::AITranslator;
+    ///
+    /// let translator = AITranslator::new(
+    ///     "your-api-key".to_string(),
+    ///     None,
+    ///     true,
+    ///     None,
+    ///     Some("zh-Hans".to_string()),
+    /// )?;
+    /// ```
+    ///
+    /// # 错误
+    ///
+    /// - 加载翻译记忆库失败时返回错误
+    /// - 加载术语库失败时会记录日志但不返回错误
     pub fn new(
         api_key: String,
         base_url: Option<String>,
@@ -161,7 +318,45 @@ impl AITranslator {
         })
     }
 
-    /// 使用 AIConfig 创建（插件化版本）
+    /// 使用 AIConfig 创建翻译器（插件化版本）
+    ///
+    /// # 参数
+    ///
+    /// - `config`: AI 配置（包含供应商 ID、API 密钥、代理等）
+    /// - `use_tm`: 是否启用翻译记忆库
+    /// - `custom_system_prompt`: 可选的自定义系统提示词
+    /// - `target_language`: 可选的目标语言代码
+    ///
+    /// # 返回
+    ///
+    /// 成功返回 `AITranslator` 实例，失败返回 `AppError`。
+    ///
+    /// # 示例
+    ///
+    /// ```rust
+    /// use crate::services::ai_translator::{AITranslator, AIConfig};
+    ///
+    /// let config = AIConfig {
+    ///     provider_id: "openai".to_string(),
+    ///     api_key: "sk-...".to_string(),
+    ///     base_url: None,
+    ///     model: None,
+    ///     proxy: None,
+    /// };
+    ///
+    /// let translator = AITranslator::new_with_config(
+    ///     config,
+    ///     true,
+    ///     None,
+    ///     Some("zh-Hans".to_string()),
+    /// )?;
+    /// ```
+    ///
+    /// # 错误
+    ///
+    /// - 代理配置无效时返回错误
+    /// - 加载翻译记忆库失败时返回错误
+    /// - 加载术语库失败时会记录日志但不返回错误
     pub fn new_with_config(
         config: AIConfig,
         use_tm: bool,
@@ -315,6 +510,56 @@ impl AITranslator {
         base_prompt.to_string()
     }
 
+    #[tracing::instrument(
+        name = "translate_batch_with_callbacks",
+        skip(self, progress_callback, stats_callback),
+        fields(text_count = texts.len())
+    )]
+    /// 批量翻译（带回调函数）
+    ///
+    /// 翻译一批文本，支持进度回调和统计回调。
+    ///
+    /// # 参数
+    ///
+    /// - `texts`: 待翻译的文本列表
+    /// - `progress_callback`: 可选的进度回调函数 `(index, translation)`
+    /// - `stats_callback`: 可选的统计回调函数 `(batch_stats, token_stats)`
+    ///
+    /// # 返回
+    ///
+    /// 成功返回翻译结果列表，失败返回 `AppError`。
+    ///
+    /// # 特性
+    ///
+    /// - 自动使用翻译记忆库（TM）进行预翻译
+    /// - 自动去重（相同原文只翻译一次）
+    /// - 自动分批处理（每批 25 条）
+    /// - 按原始顺序返回结果
+    ///
+    /// # 示例
+    ///
+    /// ```rust
+    /// let texts = vec![
+    ///     "Hello".to_string(),
+    ///     "World".to_string(),
+    ///     "Test".to_string(),
+    /// ];
+    ///
+    /// let progress_callback = Box::new(|index, translation| {
+    ///     println!("翻译进度: {} = {}", index, translation);
+    /// });
+    ///
+    /// let stats_callback = Box::new(|batch_stats, token_stats| {
+    ///     println!("TM命中: {}", batch_stats.tm_hits);
+    ///     println!("Token使用: {}", token_stats.total_tokens);
+    /// });
+    ///
+    /// let translations = translator.translate_batch_with_callbacks(
+    ///     texts,
+    ///     Some(progress_callback),
+    ///     Some(stats_callback),
+    /// ).await?;
+    /// ```
     pub async fn translate_batch_with_callbacks(
         &mut self,
         texts: Vec<String>,
@@ -325,6 +570,30 @@ impl AITranslator {
             .await
     }
 
+    #[tracing::instrument(
+        name = "translate_batch",
+        skip(self, progress_callback),
+        fields(text_count = texts.len())
+    )]
+    /// 批量翻译（简化版本）
+    ///
+    /// 翻译一批文本，不提供进度回调。
+    ///
+    /// # 参数
+    ///
+    /// - `texts`: 待翻译的文本列表
+    /// - `progress_callback`: 可选的进度回调函数
+    ///
+    /// # 返回
+    ///
+    /// 成功返回翻译结果列表，失败返回 `AppError`。
+    ///
+    /// # 示例
+    ///
+    /// ```rust
+    /// let texts = vec!["Hello".to_string(), "World".to_string()];
+    /// let translations = translator.translate_batch(texts, None).await?;
+    /// ```
     pub async fn translate_batch(
         &mut self,
         texts: Vec<String>,
@@ -337,6 +606,11 @@ impl AITranslator {
     }
 
     /// 翻译并返回每个条目的来源
+    #[tracing::instrument(
+        name = "translate_batch_with_sources",
+        skip(self, progress_callback, stats_callback),
+        fields(text_count = texts.len())
+    )]
     pub async fn translate_batch_with_sources(
         &mut self,
         texts: Vec<String>,
@@ -620,8 +894,30 @@ impl AITranslator {
         Ok(result)
     }
 
-    /// 使用自定义的用户提示词进行翻译（不使用标准提示词模板）
-    /// 用于精翻等场景，提示词已经完整构建好
+    /// 使用自定义用户提示词进行翻译
+    ///
+    /// 不使用标准的批量翻译提示词模板，用于精翻等需要完整控制提示词的场景。
+    ///
+    /// # 参数
+    ///
+    /// - `user_prompt`: 完整的用户提示词（已构建好）
+    ///
+    /// # 返回
+    ///
+    /// 成功返回 AI 的原始响应，失败返回 `AppError`。
+    ///
+    /// # 特性
+    ///
+    /// - 支持对话历史（连续翻译）
+    /// - 自动重试（最多 3 次，指数退避）
+    /// - 更新对话历史
+    ///
+    /// # 示例
+    ///
+    /// ```rust
+    /// let custom_prompt = "请将以下文本翻译成简体中文，只返回翻译结果：\n\nHello World";
+    /// let result = translator.translate_with_custom_user_prompt(custom_prompt).await?;
+    /// ```
     pub async fn translate_with_custom_user_prompt(
         &mut self,
         user_prompt: String,
@@ -721,6 +1017,15 @@ impl AITranslator {
         Ok(assistant_response.trim().to_string())
     }
 
+    #[tracing::instrument(
+        name = "translate_with_ai",
+        skip(self),
+        fields(
+            text_count = texts.len(),
+            provider = %self.provider_id,
+            model = %self.model
+        )
+    )]
     pub async fn translate_with_ai(&mut self, texts: Vec<String>) -> Result<Vec<String>, AppError> {
         // 单元测试模拟：如果 api_key 是 test_key，则直接返回原文作为译文，跳过网络请求
         if self.api_key == "test_key" {

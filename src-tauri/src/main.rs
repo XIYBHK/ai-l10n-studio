@@ -13,6 +13,13 @@ mod utils;
 use commands::*;
 
 fn main() {
+    // 初始化性能监控 (仅当启用 console feature 时)
+    #[cfg(feature = "console")]
+    {
+        console_subscriber::init();
+        log::info!("🔍 Tokio console 监控已启用");
+    }
+
     let runtime = tokio::runtime::Runtime::new().expect("Failed to create tokio runtime");
     if let Err(e) = runtime.block_on(utils::init::init_app()) {
         eprintln!("❌ Failed to initialize application: {}", e);

@@ -1,3 +1,4 @@
+pub mod async_io;
 pub mod common;
 pub mod draft;
 pub mod i18n;
