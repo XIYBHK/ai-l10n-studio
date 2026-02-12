@@ -7,9 +7,10 @@
  * 2. 使用 O(1) 索引查找替代 O(n) indexOf
  * 3. 移除不必要的 useCallback
  * 4. 修复 Tauri 事件监听的竞态条件
+ * 5. 实现渐进式上屏队列机制（0.33秒间隔）
  */
 
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { listen } from '@tauri-apps/api/event';
 import { message as msg } from 'antd';
 import { useChannelTranslation } from './useChannelTranslation';
@@ -31,7 +32,7 @@ import {
   useUpdateCumulativeStatsAction,
 } from '../store';
 import { useAsync } from './useAsync';
-import { POEntry, TranslationStats } from '../types/tauri';
+import { POEntry, TranslationStats, TranslationQueueItem } from '../types/tauri';
 import type { LanguageInfo } from '../types/generated/LanguageInfo';
 import {
   poFileCommands,
@@ -68,6 +69,11 @@ export function useTranslationFlow() {
   const [sourceLanguage, setSourceLanguage] = useState<string>('');
   const [targetLanguage, setTargetLanguage] = useState<string>('zh-CN');
 
+  // 渐进式上屏队列
+  const updateQueue = useRef<TranslationQueueItem[]>([]);
+  const isProcessingQueue = useRef(false);
+  const queueTimerRef = useRef<number | null>(null);
+
   // Hooks
   const { execute: parsePOFile } = useAsync(poFileCommands.parse);
   const channelTranslation = useChannelTranslation();
@@ -76,6 +82,109 @@ export function useTranslationFlow() {
     resetSessionStats();
     log.info('🔄 翻译流程初始化，会话统计已重置');
   }, [resetSessionStats]);
+
+  // 队列消费器 - 自适应间隔
+  const processUpdateQueue = useCallback(() => {
+    if (isProcessingQueue.current || updateQueue.current.length === 0) return;
+
+    isProcessingQueue.current = true;
+
+    const processNext = () => {
+      const item = updateQueue.current.shift();
+      if (!item) {
+        isProcessingQueue.current = false;
+        return;
+      }
+
+      // 更新条目并标记为刚更新（触发动画）
+      setEntries((prev) => {
+        const next = [...prev];
+        if (item.index >= 0 && item.index < next.length) {
+          next[item.index] = {
+            ...next[item.index],
+            msgstr: item.translation,
+            needsReview: item.source === 'ai',
+            justUpdated: true,
+          };
+        }
+        return next;
+      });
+
+      // 500ms 后移除高亮标记（动画完成）
+      setTimeout(() => {
+        setEntries((prev) => {
+          const next = [...prev];
+          if (item.index >= 0 && item.index < next.length) {
+            next[item.index] = { ...next[item.index], justUpdated: false };
+          }
+          return next;
+        });
+      }, 500);
+
+      // 刷新统计（如果有增量统计）
+      if (item.incrementalStats) {
+        const stats: TranslationStats = {
+          total: 1,
+          tm_hits: item.incrementalStats.tmHits || 0,
+          deduplicated: item.incrementalStats.deduplicated || 0,
+          ai_translated: item.incrementalStats.aiTranslated || 0,
+          tm_learned: item.incrementalStats.tmLearned || 0,
+          token_stats: {
+            input_tokens: item.incrementalStats.tokenStats?.inputTokens || 0,
+            output_tokens: item.incrementalStats.tokenStats?.outputTokens || 0,
+            total_tokens: item.incrementalStats.tokenStats?.totalTokens || 0,
+            cost: item.incrementalStats.tokenStats?.cost || 0,
+          },
+        };
+        updateSessionStats(stats);
+      }
+
+      // 自适应间隔：队列越长，间隔越短
+      if (updateQueue.current.length > 0) {
+        const queueLength = updateQueue.current.length;
+        let interval: number;
+
+        if (queueLength > 100) {
+          interval = 50; // 超过100条：50ms（快速处理）
+        } else if (queueLength > 50) {
+          interval = 100; // 50-100条：100ms（中速）
+        } else if (queueLength > 20) {
+          interval = 200; // 20-50条：200ms（适中）
+        } else {
+          interval = 300; // 少于20条：300ms（慢速，便于观察）
+        }
+
+        queueTimerRef.current = window.setTimeout(processNext, interval);
+      } else {
+        isProcessingQueue.current = false;
+        log.info('✅ 队列处理完成');
+      }
+    };
+
+    processNext();
+  }, [setEntries, updateSessionStats]);
+
+  // 入队函数
+  const enqueueUpdate = useCallback(
+    (item: TranslationQueueItem) => {
+      updateQueue.current.push(item);
+      if (!isProcessingQueue.current) {
+        processUpdateQueue();
+      }
+    },
+    [processUpdateQueue]
+  );
+
+  // 清空队列（切换文件/停止翻译时）
+  const clearQueue = useCallback(() => {
+    updateQueue.current = [];
+    if (queueTimerRef.current) {
+      clearTimeout(queueTimerRef.current);
+      queueTimerRef.current = null;
+    }
+    isProcessingQueue.current = false;
+    log.info('🧹 上屏队列已清空');
+  }, []);
 
   // 翻译统计事件监听 - 修复竞态条件
   useEffect(() => {
@@ -177,6 +286,9 @@ export function useTranslationFlow() {
 
   const openFile = async () => {
     try {
+      // 切换文件时清空队列
+      clearQueue();
+
       const filePath = await dialogCommands.openFile();
       if (filePath) {
         const newEntries = (await parsePOFile(filePath)) as POEntry[];
@@ -249,40 +361,48 @@ export function useTranslationFlow() {
             },
           } as TranslationStats;
           setTranslationStats(convertedStats);
+
+          // 批量统计到达后，分配到队列中的每一项作为增量统计
+          const aiQueueItems = updateQueue.current.filter((item) => item.source === 'ai');
+          const queueLength = aiQueueItems.length;
+          if (queueLength > 0) {
+            const incrementalStats = {
+              tmHits: 0,
+              deduplicated: 0,
+              aiTranslated: Math.ceil(stats.ai_translated / queueLength),
+              tmLearned: Math.ceil(stats.tm_learned / queueLength),
+              tokenStats: {
+                inputTokens: Math.ceil(stats.token_stats.input_tokens / queueLength),
+                outputTokens: Math.ceil(stats.token_stats.output_tokens / queueLength),
+                totalTokens: Math.ceil(stats.token_stats.total_tokens / queueLength),
+                cost: stats.token_stats.cost / queueLength,
+              },
+            };
+
+            // 仅为AI翻译项添加增量统计
+            aiQueueItems.forEach((item) => {
+              if (!item.incrementalStats) {
+                item.incrementalStats = incrementalStats;
+              }
+            });
+          }
         },
         onItem: (index, translation) => {
           const entry = entriesToTranslate[index];
-          // ✅ 使用 O(1) 查找替代 O(n) indexOf
           const entryIndex = getEntryIndex(entry);
           if (entryIndex >= 0) {
-            updateEntry(entryIndex, {
-              msgstr: translation,
-              needsReview: true,
+            // 入队而非立即更新
+            enqueueUpdate({
+              index: entryIndex,
+              translation,
+              source: 'ai',
             });
           }
         },
       });
 
-      entriesToTranslate.forEach((entry, localIndex) => {
-        // ✅ 使用 O(1) 查找替代 O(n) indexOf
-        const entryIndex = getEntryIndex(entry);
-        if (entryIndex >= 0 && localIndex < result.translations.length) {
-          const translation = result.translations[localIndex];
-          const source = (result.translation_sources && result.translation_sources[localIndex]) as
-            | 'tm'
-            | 'dedup'
-            | 'ai'
-            | undefined;
-
-          if (translation) {
-            updateEntry(entryIndex, {
-              msgstr: translation,
-              needsReview: true,
-              translationSource: source,
-            });
-          }
-        }
-      });
+      // 注意：由于使用渐进式上屏，不在这里立即更新条目
+      // 所有更新都通过 onItem 回调入队处理
 
       if (result.stats) {
         const finalStats: TranslationStats = {
@@ -315,6 +435,8 @@ export function useTranslationFlow() {
     } finally {
       setTranslating(false);
       setProgress(0);
+      // 翻译完成后等待队列处理完毕
+      log.info('🎯 翻译完成，等待队列处理', { queueLength: updateQueue.current.length });
     }
   };
 
@@ -408,6 +530,13 @@ export function useTranslationFlow() {
     }
   };
 
+  // 包装取消翻译，确保清空队列
+  const cancelTranslation = useCallback(() => {
+    clearQueue();
+    channelTranslation.cancelTranslation();
+    log.info('🛑 翻译已取消，队列已清空');
+  }, [channelTranslation, clearQueue]);
+
   return {
     entries,
     currentEntry,
@@ -426,7 +555,7 @@ export function useTranslationFlow() {
     handleEntrySelect,
     handleEntryUpdate,
     handleTargetLanguageChange,
-    cancelTranslation: channelTranslation.cancelTranslation,
+    cancelTranslation,
     resetTranslationStats: () => setTranslationStats(null),
   };
 }

@@ -196,6 +196,33 @@
   background-color: var(--color-hoverBg);
 }
 
+/* 刚刚更新的条目 - 高亮闪烁动画 */
+.virtualItem.justUpdated {
+  animation: highlight-flash 0.5s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+@keyframes highlight-flash {
+  0% {
+    background-color: var(--color-brandPrimaryLight);
+    transform: translateX(0) scale(1);
+    box-shadow: 0 0 0 0 rgba(22, 119, 255, 0.4);
+  }
+  25% {
+    background-color: var(--color-brandPrimaryLight);
+    transform: translateX(4px) scale(1.01);
+    box-shadow: 0 0 12px 2px rgba(22, 119, 255, 0.3);
+  }
+  50% {
+    background-color: var(--color-brandPrimaryLighter);
+    transform: translateX(2px) scale(1.005);
+  }
+  100% {
+    background-color: transparent;
+    transform: translateX(0) scale(1);
+    box-shadow: 0 0 0 0 rgba(22, 119, 255, 0);
+  }
+}
+
 /* 焦点样式 - 无障碍支持 */
 .virtualItem:focus-visible {
   outline: 2px solid var(--color-brandPrimary);
