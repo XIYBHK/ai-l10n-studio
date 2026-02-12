@@ -97,28 +97,15 @@ export function useTranslationFlow() {
       }
 
       // 更新条目并标记为刚更新（触发动画）
-      setEntries((prev) => {
-        const next = [...prev];
-        if (item.index >= 0 && item.index < next.length) {
-          next[item.index] = {
-            ...next[item.index],
-            msgstr: item.translation,
-            needsReview: item.source === 'ai',
-            justUpdated: true,
-          };
-        }
-        return next;
+      updateEntry(item.index, {
+        msgstr: item.translation,
+        needsReview: item.source === 'ai',
+        justUpdated: true,
       });
 
       // 500ms 后移除高亮标记（动画完成）
       setTimeout(() => {
-        setEntries((prev) => {
-          const next = [...prev];
-          if (item.index >= 0 && item.index < next.length) {
-            next[item.index] = { ...next[item.index], justUpdated: false };
-          }
-          return next;
-        });
+        updateEntry(item.index, { justUpdated: false });
       }, 500);
 
       // 刷新统计（如果有增量统计）
@@ -372,8 +359,8 @@ export function useTranslationFlow() {
               aiTranslated: Math.ceil(stats.ai_translated / queueLength),
               tmLearned: Math.ceil(stats.tm_learned / queueLength),
               tokenStats: {
-                inputTokens: Math.ceil(stats.token_stats.input_tokens / queueLength),
-                outputTokens: Math.ceil(stats.token_stats.output_tokens / queueLength),
+                inputTokens: Math.ceil(stats.token_stats.prompt_tokens / queueLength),
+                outputTokens: Math.ceil(stats.token_stats.completion_tokens / queueLength),
                 totalTokens: Math.ceil(stats.token_stats.total_tokens / queueLength),
                 cost: stats.token_stats.cost / queueLength,
               },
