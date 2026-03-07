@@ -7,6 +7,9 @@ license = ""
 repository = ""
 edition = "2024"
 
+[lib]
+doctest = false
+
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [build-dependencies]
@@ -14,7 +17,6 @@ tauri-build = { version = "2", features = [] }
 
 [dependencies]
 tauri = { version = "2", features = ["rustls-tls"] }
-tauri-plugin-shell = "2"
 tauri-plugin-dialog = "2.6"  # 匹配 @tauri-apps/plugin-dialog v2.6.0
 tauri-plugin-fs = "2.4"     # 匹配 @tauri-apps/plugin-fs v2.4.4
 tauri-plugin-store = "2.4"  # 匹配 @tauri-apps/plugin-store v2.4.1

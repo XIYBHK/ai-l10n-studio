@@ -31,7 +31,6 @@ fn main() {
     services::init_prompt_logger();
 
     tauri::Builder::default()
-        .plugin(tauri_plugin_shell::init())
         .plugin(tauri_plugin_dialog::init())
         .plugin(tauri_plugin_fs::init())
         .plugin(tauri_plugin_store::Builder::new().build()) // Tauri 2.x: Store Plugin

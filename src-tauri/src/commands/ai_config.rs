@@ -1,18 +1,57 @@
 use crate::services::{AIConfig, AITranslator, ConfigDraft};
 use serde::{Deserialize, Serialize};
 
-#[tauri::command]
-pub async fn get_all_ai_configs() -> Result<Vec<AIConfig>, String> {
-    let draft = ConfigDraft::global().await;
-    let config = draft.data();
-    Ok(config.get_all_ai_configs().clone())
+#[derive(Debug, Clone, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct AIConfigSummary {
+    pub index: usize,
+    pub provider_id: String,
+    pub api_key_preview: Option<String>,
+    pub has_api_key: bool,
+    pub base_url: Option<String>,
+    pub model: Option<String>,
+    pub proxy: Option<crate::services::ProxyConfig>,
+    pub is_active: bool,
+}
+
+impl AIConfigSummary {
+    fn from_config(index: usize, config: &AIConfig, active_index: Option<usize>) -> Self {
+        Self {
+            index,
+            provider_id: config.provider_id.clone(),
+            api_key_preview: (!config.api_key.is_empty()).then(|| mask_api_key(&config.api_key)),
+            has_api_key: !config.api_key.is_empty(),
+            base_url: config.base_url.clone(),
+            model: config.model.clone(),
+            proxy: config.proxy.clone(),
+            is_active: active_index == Some(index),
+        }
+    }
 }
 
 #[tauri::command]
-pub async fn get_active_ai_config() -> Result<Option<AIConfig>, String> {
+pub async fn get_all_ai_configs() -> Result<Vec<AIConfigSummary>, String> {
     let draft = ConfigDraft::global().await;
     let config = draft.data();
-    Ok(config.get_active_ai_config().cloned())
+    let active_index = config.active_config_index;
+
+    Ok(config
+        .get_all_ai_configs()
+        .iter()
+        .enumerate()
+        .map(|(index, item)| AIConfigSummary::from_config(index, item, active_index))
+        .collect())
+}
+
+#[tauri::command]
+pub async fn get_active_ai_config() -> Result<Option<AIConfigSummary>, String> {
+    let draft = ConfigDraft::global().await;
+    let config = draft.data();
+
+    Ok(config
+        .active_config_index
+        .and_then(|index| config.ai_configs.get(index).map(|item| (index, item)))
+        .map(|(index, item)| AIConfigSummary::from_config(index, item, config.active_config_index)))
 }
 
 fn mask_api_key(api_key: &str) -> String {
@@ -31,6 +70,10 @@ fn mask_api_key(api_key: &str) -> String {
 
 #[tauri::command]
 pub async fn add_ai_config(config: AIConfig) -> Result<(), String> {
+    if config.api_key.trim().is_empty() {
+        return Err("API Key 不能为空".to_string());
+    }
+
     crate::app_log!(
         "🔄 [AI配置] 添加新配置: provider={:?}, url={}, model={}, key={}",
         config.provider_id,
@@ -63,8 +106,18 @@ pub async fn update_ai_config(index: usize, config: AIConfig) -> Result<(), Stri
     // 🔧 修复死锁：在独立作用域内获取写锁
     {
         let mut draft_config = draft.draft();
+        let mut next_config = config;
+
+        if next_config.api_key.trim().is_empty() {
+            let existing = draft_config
+                .ai_configs
+                .get(index)
+                .ok_or_else(|| format!("配置索引超出范围: {}", index))?;
+            next_config.api_key = existing.api_key.clone();
+        }
+
         draft_config
-            .update_ai_config(index, config)
+            .update_ai_config(index, next_config)
             .map_err(|e| e.to_string())?;
     }
 
@@ -167,6 +220,10 @@ pub async fn test_ai_connection(
     request: TestConnectionRequest,
 ) -> Result<TestConnectionResult, String> {
     use std::time::Instant;
+
+    if request.api_key.trim().is_empty() {
+        return Err("测试连接前请输入 API Key".to_string());
+    }
 
     crate::app_log!("🔍 测试 AI 连接: {:?}", request.provider_id);
 

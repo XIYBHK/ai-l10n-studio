@@ -175,11 +175,11 @@ impl BatchTranslator {
     pub fn new(api_key: String, base_url: Option<String>) -> Result<Self, AppError> {
         let parser = POParser::new()?;
 
-        // Phase 3: 从配置获取自定义系统提示词
-        use crate::services::ConfigManager;
-        let custom_prompt = ConfigManager::new(None)
+        // Phase 3: 从当前配置获取自定义系统提示词
+        use crate::services::ConfigDraft;
+        let custom_prompt = ConfigDraft::new(None)
             .ok()
-            .and_then(|manager| manager.get_config().system_prompt.clone());
+            .and_then(|draft| draft.data().system_prompt.clone());
 
         // Phase 5: 批处理翻译器暂不支持目标语言（可在后续扩展）
         let translator =

@@ -98,12 +98,22 @@ pub fn find_provider_for_model(model_id: String) -> Result<Option<ProviderInfo>,
 #[allow(clippy::unwrap_used, clippy::expect_used)]
 mod tests {
     use super::*;
-    use crate::services::ai::providers::register_all_providers;
+    use crate::services::ai::plugin_loader::{init_global_plugin_loader, load_all_plugins};
+    use std::path::PathBuf;
+
+    fn init_test_plugins() {
+        let plugins_dir = PathBuf::from(env!("CARGO_MANIFEST_DIR"))
+            .parent()
+            .expect("workspace root")
+            .join("plugins");
+
+        init_global_plugin_loader(&plugins_dir).expect("初始化测试插件加载器失败");
+        load_all_plugins().expect("加载测试插件失败");
+    }
 
     #[tokio::test]
     async fn test_get_provider_models() {
-        // 测试环境：手动注册供应商（生产环境在 init.rs 中自动注册）
-        let _ = register_all_providers();
+        init_test_plugins();
 
         let models = get_provider_models("openai".to_string());
         assert!(models.is_ok());
@@ -120,7 +130,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_get_model_info() {
-        let _ = register_all_providers();
+        init_test_plugins();
 
         let model = get_model_info("openai".to_string(), "gpt-4o-mini".to_string());
         assert!(model.is_ok());
@@ -134,7 +144,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_estimate_translation_cost() {
-        let _ = register_all_providers();
+        init_test_plugins();
 
         let cost = estimate_translation_cost(
             "openai".to_string(),
@@ -151,7 +161,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_calculate_precise_cost() {
-        let _ = register_all_providers();
+        init_test_plugins();
 
         let breakdown = calculate_precise_cost(
             "openai".to_string(),
@@ -174,7 +184,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_invalid_cache_hit_rate() {
-        let _ = register_all_providers();
+        init_test_plugins();
 
         let cost = estimate_translation_cost(
             "openai".to_string(),
@@ -189,7 +199,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_nonexistent_model() {
-        let _ = register_all_providers();
+        init_test_plugins();
 
         let model = get_model_info("openai".to_string(), "nonexistent-model".to_string());
         assert!(model.is_ok());

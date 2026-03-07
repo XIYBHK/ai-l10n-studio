@@ -9,9 +9,9 @@
  */
 use crate::error::AppError;
 use chrono; // For backup timestamp
-use serde::Deserialize;
+use serde::{Deserialize, Serialize};
 use std::fs;
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
 use std::sync::Arc;
 use tokio::sync::OnceCell;
 use tracing::instrument;
@@ -28,8 +28,18 @@ static GLOBAL_CONFIG: OnceCell<ConfigDraft> = OnceCell::const_new();
 pub struct ConfigDraft {
     /// 配置文件路径
     config_path: Arc<PathBuf>,
+    /// 密钥文件路径
+    secrets_path: Arc<PathBuf>,
     /// Draft 配置数据
     config: Draft<Box<AppConfig>>,
+}
+
+#[derive(Debug, Clone, Default, Serialize, Deserialize)]
+struct ConfigSecrets {
+    #[serde(default)]
+    api_key: String,
+    #[serde(default)]
+    ai_api_keys: Vec<String>,
 }
 
 impl ConfigDraft {
@@ -85,8 +95,10 @@ impl ConfigDraft {
                             log::warn!("🔄 未找到可迁移的配置，用户需重新配置AI供应商");
                         }
 
+                        let secrets_path = Self::get_secrets_path(&config_path);
                         let instance = Self {
                             config_path: Arc::new(config_path),
+                            secrets_path: Arc::new(secrets_path),
                             config: Draft::from(Box::new(config)),
                         };
 
@@ -106,6 +118,8 @@ impl ConfigDraft {
 
     /// 创建新的配置管理器实例
     pub fn new(config_path: Option<PathBuf>) -> Result<Self, AppError> {
+        let should_migrate_legacy = config_path.is_none();
+
         let config_path = config_path.unwrap_or_else(|| {
             paths::app_home_dir()
                 .map(|dir| dir.join("config.json"))
@@ -122,7 +136,7 @@ impl ConfigDraft {
             let mut existing_config = Self::load_from_file(&config_path)?;
 
             // 🔧 智能迁移：如果新配置的 aiConfigs 为空，尝试从旧配置迁移
-            if existing_config.ai_configs.is_empty() {
+            if should_migrate_legacy && existing_config.ai_configs.is_empty() {
                 let legacy_path = Self::get_legacy_config_path();
                 if legacy_path.exists() {
                     log::info!(
@@ -155,7 +169,7 @@ impl ConfigDraft {
         } else {
             // 🔧 新路径不存在时，尝试从旧路径迁移配置
             let legacy_path = Self::get_legacy_config_path();
-            if legacy_path.exists() {
+            if should_migrate_legacy && legacy_path.exists() {
                 log::info!("🔄 检测到旧配置文件，尝试迁移: {:?}", legacy_path);
                 match Self::migrate_from_legacy(&legacy_path) {
                     Ok(migrated_config) => {
@@ -177,10 +191,15 @@ impl ConfigDraft {
             fs::create_dir_all(parent)?;
         }
 
+        let secrets_path = Self::get_secrets_path(&config_path);
+
         let instance = Self {
+            secrets_path: Arc::new(secrets_path),
             config_path: Arc::new(config_path),
             config: Draft::from(Box::new(config)),
         };
+
+        instance.load_secrets_into_memory()?;
 
         // 保存初始配置
         instance.save_to_disk()?;
@@ -194,6 +213,15 @@ impl ConfigDraft {
         path.push(".po-translator");
         path.push("config.json");
         path
+    }
+
+    fn get_secrets_path(config_path: &Path) -> PathBuf {
+        let parent = config_path.parent().unwrap_or_else(|| Path::new("."));
+        let stem = config_path
+            .file_stem()
+            .and_then(|value| value.to_str())
+            .unwrap_or("config");
+        parent.join(format!("{}.secrets.json", stem))
     }
 
     /// 从旧版配置文件迁移配置
@@ -364,6 +392,71 @@ impl ConfigDraft {
         Ok(config)
     }
 
+    fn split_config(config: &AppConfig) -> (AppConfig, ConfigSecrets) {
+        let mut public_config = config.clone();
+        let secrets = ConfigSecrets {
+            api_key: config.api_key.clone(),
+            ai_api_keys: config
+                .ai_configs
+                .iter()
+                .map(|item| item.api_key.clone())
+                .collect(),
+        };
+
+        public_config.api_key.clear();
+        for ai_config in &mut public_config.ai_configs {
+            ai_config.api_key.clear();
+        }
+
+        (public_config, secrets)
+    }
+
+    fn apply_secrets(config: &mut AppConfig, secrets: &ConfigSecrets) {
+        if !secrets.api_key.is_empty() {
+            config.api_key = secrets.api_key.clone();
+        }
+
+        for (ai_config, api_key) in config.ai_configs.iter_mut().zip(secrets.ai_api_keys.iter()) {
+            if !api_key.is_empty() {
+                ai_config.api_key = api_key.clone();
+            }
+        }
+    }
+
+    fn load_secrets(&self) -> Result<Option<ConfigSecrets>, AppError> {
+        if !self.secrets_path.exists() {
+            return Ok(None);
+        }
+
+        let content = fs::read_to_string(&*self.secrets_path).map_err(AppError::from)?;
+        let secrets = serde_json::from_str::<ConfigSecrets>(&content).map_err(|error| {
+            AppError::Config(format!("密钥文件格式错误: {}", error))
+        })?;
+
+        Ok(Some(secrets))
+    }
+
+    fn load_secrets_into_memory(&self) -> Result<(), AppError> {
+        if let Some(secrets) = self.load_secrets()? {
+            let mut config = self.config.data_mut();
+            Self::apply_secrets(&mut config, &secrets);
+        }
+
+        Ok(())
+    }
+
+    fn write_config_files(&self, config: &AppConfig) -> Result<(), AppError> {
+        let (public_config, secrets) = Self::split_config(config);
+
+        let public_json = serde_json::to_string_pretty(&public_config).map_err(AppError::from)?;
+        fs::write(&*self.config_path, public_json).map_err(AppError::from)?;
+
+        let secrets_json = serde_json::to_string_pretty(&secrets).map_err(AppError::from)?;
+        fs::write(&*self.secrets_path, secrets_json).map_err(AppError::from)?;
+
+        Ok(())
+    }
+
     /// 获取最新配置的只读引用（包含草稿）
     pub fn latest(&self) -> parking_lot::MappedRwLockReadGuard<'_, Box<AppConfig>> {
         self.config.latest_ref()
@@ -388,14 +481,15 @@ impl ConfigDraft {
     /// 2. 发送配置更新事件（通知前端）
     pub fn apply(&self) -> Result<(), AppError> {
         log::info!("🔄 [apply] 开始应用草稿");
-        // 🔧 修复死锁问题：先 apply 并保存返回的配置，避免在持有写锁时再次调用 clone_latest
-        let new_config = self.config.apply();
+        let applied = self.config.apply();
         log::info!(
             "🔄 [apply] config.apply() 返回，有草稿: {}",
-            new_config.is_some()
+            applied.is_some()
         );
-        if let Some(new_config) = new_config {
-            // 保存到磁盘（使用克隆的配置，避免再次获取锁）
+        if applied.is_some() {
+            let new_config = self.config.clone_data();
+
+            // 保存到磁盘（使用最新正式配置，避免将旧值写回）
             log::info!("🔄 [apply] 准备调用 save_to_disk_with_config");
             self.save_to_disk_with_config(&new_config)?;
             log::info!("🔄 [apply] save_to_disk_with_config 完成");
@@ -454,10 +548,8 @@ impl ConfigDraft {
         log::info!("💾 [save_to_disk] 开始保存配置");
         let config = self.config.clone_latest();
         log::info!("💾 [save_to_disk] 已克隆配置");
-        let json = serde_json::to_string_pretty(&*config).map_err(AppError::from)?;
-        log::info!("💾 [save_to_disk] 已序列化配置，长度: {} bytes", json.len());
         log::info!("💾 [save_to_disk] 准备写入文件: {:?}", *self.config_path);
-        fs::write(&*self.config_path, json).map_err(AppError::from)?;
+        self.write_config_files(&config)?;
         log::info!("💾 [save_to_disk] 文件写入成功");
         Ok(())
     }
@@ -466,16 +558,11 @@ impl ConfigDraft {
     #[instrument(skip(self, config), fields(config_path = %self.config_path.display()))]
     fn save_to_disk_with_config(&self, config: &AppConfig) -> Result<(), AppError> {
         log::info!("💾 [save_to_disk_with_config] 开始保存配置");
-        let json = serde_json::to_string_pretty(config).map_err(AppError::from)?;
-        log::info!(
-            "💾 [save_to_disk_with_config] 已序列化配置，长度: {} bytes",
-            json.len()
-        );
         log::info!(
             "💾 [save_to_disk_with_config] 准备写入文件: {:?}",
             *self.config_path
         );
-        fs::write(&*self.config_path, json).map_err(AppError::from)?;
+        self.write_config_files(config)?;
         log::info!("💾 [save_to_disk_with_config] 文件写入成功");
         Ok(())
     }
@@ -614,5 +701,48 @@ mod tests {
         assert_eq!(manager.data().model, "gemini-pro");
 
         let _ = fs::remove_file(&config_path);
+    }
+
+    #[tokio::test]
+    async fn test_secrets_are_stored_outside_public_config() {
+        let temp_dir = std::env::temp_dir();
+        let config_path = temp_dir.join("test_config_secrets.json");
+        let secrets_path = temp_dir.join("test_config_secrets.secrets.json");
+
+        let _ = fs::remove_file(&config_path);
+        let _ = fs::remove_file(&secrets_path);
+
+        fs::write(&config_path, serde_json::to_string(&AppConfig::default()).unwrap()).unwrap();
+
+        let manager = ConfigDraft::new(Some(config_path.clone())).unwrap();
+
+        manager
+            .update(|config| {
+                config.api_key = "legacy-secret".to_string();
+                config.ai_configs = vec![crate::services::AIConfig {
+                    provider_id: "openai".to_string(),
+                    api_key: "real-secret-key".to_string(),
+                    base_url: Some("https://api.openai.com/v1".to_string()),
+                    model: Some("gpt-4o-mini".to_string()),
+                    proxy: None,
+                }];
+                config.active_config_index = Some(0);
+            })
+            .unwrap();
+
+        let public_content = fs::read_to_string(&config_path).unwrap();
+        let secrets_content = fs::read_to_string(&secrets_path).unwrap();
+
+        assert!(!public_content.contains("real-secret-key"));
+        assert!(!public_content.contains("legacy-secret"));
+        assert!(secrets_content.contains("real-secret-key"));
+        assert!(secrets_content.contains("legacy-secret"));
+
+        let reloaded = ConfigDraft::new(Some(config_path.clone())).unwrap();
+        let active = reloaded.data().get_active_ai_config().cloned().unwrap();
+        assert_eq!(active.api_key, "real-secret-key");
+
+        let _ = fs::remove_file(&config_path);
+        let _ = fs::remove_file(&secrets_path);
     }
 }

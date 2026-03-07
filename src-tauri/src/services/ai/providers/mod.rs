@@ -25,24 +25,32 @@ pub fn register_all_providers() -> anyhow::Result<()> {
 
 #[cfg(test)]
 mod tests {
-    use super::*;
+    use crate::services::ai::plugin_loader::{init_global_plugin_loader, load_all_plugins};
     use crate::services::ai::provider::with_global_registry;
+    use std::path::PathBuf;
+
+    fn init_test_plugins() {
+        let plugins_dir = PathBuf::from(env!("CARGO_MANIFEST_DIR"))
+            .parent()
+            .expect("workspace root")
+            .join("plugins");
+
+        init_global_plugin_loader(&plugins_dir).expect("初始化测试插件加载器失败");
+        load_all_plugins().expect("加载测试插件失败");
+    }
 
     #[test]
     fn test_register_all_providers() {
-        // 测试中供应商可能已经注册过（其他测试或 init.rs），忽略重复注册错误
-        let _ = register_all_providers();
+        init_test_plugins();
 
         with_global_registry(|registry| {
-            // 验证内置供应商已注册
+            // 验证插件供应商已注册
             assert!(registry.get_provider("deepseek").is_some());
             assert!(registry.get_provider("minimax").is_some());
             assert!(registry.get_provider("openai").is_some());
 
-            // 注意：moonshot 和 zhipuai 已迁移到插件系统
-            // 如果有插件加载，应该会有更多供应商
             let provider_count = registry.get_provider_ids().len();
-            assert!(provider_count >= 3, "至少应该有3个内置供应商");
+            assert!(provider_count >= 3, "至少应该有3个插件供应商");
         });
     }
 }

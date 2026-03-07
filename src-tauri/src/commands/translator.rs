@@ -1,5 +1,6 @@
 use serde::{Deserialize, Serialize};
 use tauri::Emitter;
+use serde_json::Value;
 
 use crate::services::{
     AITranslator, BatchTranslator, ConfigDraft, POParser, TermLibrary, TranslationMemory,
@@ -15,6 +16,28 @@ async fn get_custom_system_prompt() -> Option<String> {
     let draft = ConfigDraft::global().await;
     let config = draft.data();
     config.system_prompt.clone()
+}
+
+fn strip_sensitive_fields(config: &crate::services::AppConfig) -> crate::services::AppConfig {
+    let mut public_config = config.clone();
+    public_config.api_key.clear();
+    for ai_config in &mut public_config.ai_configs {
+        ai_config.api_key.clear();
+    }
+    public_config
+}
+
+fn merge_json(target: &mut Value, patch: Value) {
+    match (target, patch) {
+        (Value::Object(target_map), Value::Object(patch_map)) => {
+            for (key, value) in patch_map {
+                merge_json(target_map.entry(key).or_insert(Value::Null), value);
+            }
+        }
+        (target_value, patch_value) => {
+            *target_value = patch_value;
+        }
+    }
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -328,17 +351,22 @@ pub async fn translate_directory(
 pub async fn get_app_config() -> Result<serde_json::Value, String> {
     let draft = ConfigDraft::global().await;
     let config = draft.data();
-    serde_json::to_value(&*config).map_err(|e| e.to_string())
+    serde_json::to_value(strip_sensitive_fields(&config)).map_err(|e| e.to_string())
 }
 
 #[tauri::command]
 pub async fn update_app_config(config: serde_json::Value) -> Result<(), String> {
-    let app_config: crate::services::AppConfig =
-        serde_json::from_value(config).map_err(|e| e.to_string())?;
-
     let draft = ConfigDraft::global().await;
     let mut draft_config = draft.draft();
+
+    let mut current_config = serde_json::to_value(&**draft_config).map_err(|e| e.to_string())?;
+    merge_json(&mut current_config, config);
+
+    let app_config: crate::services::AppConfig =
+        serde_json::from_value(current_config).map_err(|e| e.to_string())?;
+
     **draft_config = app_config;
+    drop(draft_config);
     draft.apply().map_err(|e| e.to_string())
 }
 
