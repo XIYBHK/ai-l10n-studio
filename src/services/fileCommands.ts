@@ -9,17 +9,29 @@ export const poFileCommands = {
   },
 
   async save(filePath: string, entries: POEntry[]): Promise<void> {
-    return invoke<void>(COMMANDS.PO_SAVE, { filePath, entries }, { errorMessage: '保存 PO 文件失败' });
+    return invoke<void>(
+      COMMANDS.PO_SAVE,
+      { filePath, entries },
+      { errorMessage: '保存 PO 文件失败' }
+    );
   },
 };
 
 export const fileFormatCommands = {
   async detect(filePath: string): Promise<string> {
-    return invoke<string>(COMMANDS.FILE_FORMAT_DETECT, { filePath }, { errorMessage: '检测文件格式失败' });
+    return invoke<string>(
+      COMMANDS.FILE_FORMAT_DETECT,
+      { filePath },
+      { errorMessage: '检测文件格式失败' }
+    );
   },
 
   async getMetadata(filePath: string): Promise<unknown> {
-    return invoke<unknown>(COMMANDS.FILE_METADATA_GET, { filePath }, { errorMessage: '获取文件元数据失败' });
+    return invoke<unknown>(
+      COMMANDS.FILE_METADATA_GET,
+      { filePath },
+      { errorMessage: '获取文件元数据失败' }
+    );
   },
 };
 

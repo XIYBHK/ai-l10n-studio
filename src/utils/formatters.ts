@@ -161,18 +161,21 @@ export const formatStats = {
   time: formatTime,
 };
 
-export function formatTranslationStatsSummary(stats: {
-  total: number;
-  tm_hits: number;
-  deduplicated: number;
-  ai_translated: number;
-  token_stats?: {
-    input_tokens: number;
-    output_tokens: number;
-    total_tokens: number;
-    cost: number;
-  };
-}, locale?: string) {
+export function formatTranslationStatsSummary(
+  stats: {
+    total: number;
+    tm_hits: number;
+    deduplicated: number;
+    ai_translated: number;
+    token_stats?: {
+      input_tokens: number;
+      output_tokens: number;
+      total_tokens: number;
+      cost: number;
+    };
+  },
+  locale?: string
+) {
   const total = stats.total || 0;
   const tmHits = stats.tm_hits || 0;
   const deduplicated = stats.deduplicated || 0;

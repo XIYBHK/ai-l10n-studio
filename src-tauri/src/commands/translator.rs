@@ -1,6 +1,6 @@
 use serde::{Deserialize, Serialize};
-use tauri::Emitter;
 use serde_json::Value;
+use tauri::Emitter;
 
 use crate::services::{
     AITranslator, BatchTranslator, ConfigDraft, POParser, TermLibrary, TranslationMemory,

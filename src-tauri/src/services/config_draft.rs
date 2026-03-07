@@ -429,9 +429,8 @@ impl ConfigDraft {
         }
 
         let content = fs::read_to_string(&*self.secrets_path).map_err(AppError::from)?;
-        let secrets = serde_json::from_str::<ConfigSecrets>(&content).map_err(|error| {
-            AppError::Config(format!("密钥文件格式错误: {}", error))
-        })?;
+        let secrets = serde_json::from_str::<ConfigSecrets>(&content)
+            .map_err(|error| AppError::Config(format!("密钥文件格式错误: {}", error)))?;
 
         Ok(Some(secrets))
     }
@@ -712,7 +711,11 @@ mod tests {
         let _ = fs::remove_file(&config_path);
         let _ = fs::remove_file(&secrets_path);
 
-        fs::write(&config_path, serde_json::to_string(&AppConfig::default()).unwrap()).unwrap();
+        fs::write(
+            &config_path,
+            serde_json::to_string(&AppConfig::default()).unwrap(),
+        )
+        .unwrap();
 
         let manager = ConfigDraft::new(Some(config_path.clone())).unwrap();
 

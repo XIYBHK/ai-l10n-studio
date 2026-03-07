@@ -66,10 +66,7 @@ export const InfoCard: React.FC<InfoCardProps> = ({
   if (!visible) return null;
 
   // 类型配置
-  const typeConfig: Record<
-    InfoCardType,
-    { icon: React.ReactNode; color: string }
-  > = {
+  const typeConfig: Record<InfoCardType, { icon: React.ReactNode; color: string }> = {
     info: {
       icon: <InfoCircleOutlined />,
       color: '#1890ff',

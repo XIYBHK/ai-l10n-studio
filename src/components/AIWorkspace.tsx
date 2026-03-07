@@ -15,7 +15,12 @@ import { CSS_COLORS } from '../hooks/useCssColors';
 import { useCumulativeStats, useResetCumulativeStatsAction, useSessionStats } from '../store';
 import { createModuleLogger } from '../utils/logger';
 import { useTermLibrary } from '../hooks/useTermLibrary';
-import { formatTokens, formatPercentage, formatCostByLocale, formatDateTime } from '../utils/formatters';
+import {
+  formatTokens,
+  formatPercentage,
+  formatCostByLocale,
+  formatDateTime,
+} from '../utils/formatters';
 import { useAppStore } from '../store/useAppStore';
 import { useAppData } from '../hooks/useConfig';
 import { aiModelCommands } from '../services/aiCommands';
@@ -694,7 +699,10 @@ export const AIWorkspace = memo(function AIWorkspace({
 
       {memoryManagerVisible ? (
         <Suspense fallback={null}>
-          <MemoryManager visible={memoryManagerVisible} onClose={() => setMemoryManagerVisible(false)} />
+          <MemoryManager
+            visible={memoryManagerVisible}
+            onClose={() => setMemoryManagerVisible(false)}
+          />
         </Suspense>
       ) : null}
       {termLibraryVisible ? (

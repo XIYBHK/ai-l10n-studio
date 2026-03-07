@@ -11,9 +11,13 @@ import './i18n/config';
 import './App.css';
 
 const log = createModuleLogger('AppShell');
-const MenuBar = lazy(() => import('./components/MenuBar').then((module) => ({ default: module.MenuBar })));
+const MenuBar = lazy(() =>
+  import('./components/MenuBar').then((module) => ({ default: module.MenuBar }))
+);
 const TranslationWorkspace = lazy(() =>
-  import('./components/TranslationWorkspace').then((module) => ({ default: module.TranslationWorkspace }))
+  import('./components/TranslationWorkspace').then((module) => ({
+    default: module.TranslationWorkspace,
+  }))
 );
 const SettingsModal = lazy(() =>
   import('./components/SettingsModal').then((module) => ({ default: module.SettingsModal }))
@@ -129,9 +133,7 @@ export default function AppShell() {
   };
 
   return (
-    <ConfigProvider
-      theme={themeData.themeConfig}
-    >
+    <ConfigProvider theme={themeData.themeConfig}>
       <AntApp>
         <div data-theme={themeData.isDark ? 'dark' : 'light'} style={{ height: '100vh' }}>
           {initError && (

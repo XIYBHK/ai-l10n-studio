@@ -23,9 +23,13 @@ export const aiConfigCommands = {
       throw new Error(`无效的配置索引: ${indexStr}`);
     }
 
-    return invoke<void>(COMMANDS.AI_CONFIG_SET_ACTIVE, { index }, {
-      errorMessage: '设置活动AI配置失败',
-    });
+    return invoke<void>(
+      COMMANDS.AI_CONFIG_SET_ACTIVE,
+      { index },
+      {
+        errorMessage: '设置活动AI配置失败',
+      }
+    );
   },
 
   async add(config: AIConfig): Promise<void> {
@@ -37,9 +41,13 @@ export const aiConfigCommands = {
       throw new Error(`无效的配置索引: ${index}`);
     }
 
-    return invoke<void>(COMMANDS.AI_CONFIG_UPDATE, { index, config }, {
-      errorMessage: '更新AI配置失败',
-    });
+    return invoke<void>(
+      COMMANDS.AI_CONFIG_UPDATE,
+      { index, config },
+      {
+        errorMessage: '更新AI配置失败',
+      }
+    );
   },
 
   async delete(indexStr: string): Promise<void> {
@@ -48,9 +56,13 @@ export const aiConfigCommands = {
       throw new Error(`无效的配置索引: ${indexStr}`);
     }
 
-    return invoke<void>(COMMANDS.AI_CONFIG_DELETE, { index }, {
-      errorMessage: '删除AI配置失败',
-    });
+    return invoke<void>(
+      COMMANDS.AI_CONFIG_DELETE,
+      { index },
+      {
+        errorMessage: '删除AI配置失败',
+      }
+    );
   },
 
   async testConnection(
@@ -81,15 +93,23 @@ export const aiConfigCommands = {
 
 export const aiModelCommands = {
   async getProviderModels(providerId: string): Promise<ModelInfo[]> {
-    return invoke<ModelInfo[]>(COMMANDS.AI_MODEL_GET_PROVIDER_MODELS, { providerId }, {
-      errorMessage: '获取模型列表失败',
-    });
+    return invoke<ModelInfo[]>(
+      COMMANDS.AI_MODEL_GET_PROVIDER_MODELS,
+      { providerId },
+      {
+        errorMessage: '获取模型列表失败',
+      }
+    );
   },
 
   async getModelInfo(providerId: string, modelId: string): Promise<ModelInfo | null> {
-    return invoke<ModelInfo | null>(COMMANDS.AI_MODEL_GET_INFO, { providerId, modelId }, {
-      errorMessage: '获取模型信息失败',
-    });
+    return invoke<ModelInfo | null>(
+      COMMANDS.AI_MODEL_GET_INFO,
+      { providerId, modelId },
+      {
+        errorMessage: '获取模型信息失败',
+      }
+    );
   },
 
   async estimateCost(
@@ -142,9 +162,13 @@ export const aiProviderCommands = {
   },
 
   async findProviderForModel(modelId: string): Promise<ProviderInfo | null> {
-    return invoke<ProviderInfo | null>(COMMANDS.AI_PROVIDER_FIND_BY_MODEL, { modelId }, {
-      errorMessage: '查找模型供应商失败',
-    });
+    return invoke<ProviderInfo | null>(
+      COMMANDS.AI_PROVIDER_FIND_BY_MODEL,
+      { modelId },
+      {
+        errorMessage: '查找模型供应商失败',
+      }
+    );
   },
 };
 
@@ -156,9 +180,13 @@ export const systemPromptCommands = {
   },
 
   async set(prompt: string): Promise<void> {
-    return invoke<void>(COMMANDS.SYSTEM_PROMPT_SET, { prompt }, {
-      errorMessage: '设置系统提示词失败',
-    });
+    return invoke<void>(
+      COMMANDS.SYSTEM_PROMPT_SET,
+      { prompt },
+      {
+        errorMessage: '设置系统提示词失败',
+      }
+    );
   },
 
   async reset(): Promise<void> {

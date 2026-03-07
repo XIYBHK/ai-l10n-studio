@@ -37,9 +37,13 @@ export const i18nCommands = {
   },
 
   async detectLanguage(text: string): Promise<{ code: string; display_name: string }> {
-    return invoke<{ code: string; display_name: string }>(COMMANDS.LANGUAGE_DETECT, { text }, {
-      errorMessage: '语言检测失败',
-    });
+    return invoke<{ code: string; display_name: string }>(
+      COMMANDS.LANGUAGE_DETECT,
+      { text },
+      {
+        errorMessage: '语言检测失败',
+      }
+    );
   },
 
   async getDefaultTargetLanguage(

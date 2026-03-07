@@ -11,7 +11,9 @@ import { EditorPane } from './EditorPane';
 import { FileInfoBar } from './FileInfoBar';
 import { AIWorkspaceSkeleton } from './skeletons';
 
-const AIWorkspace = lazy(() => import('./AIWorkspace').then((module) => ({ default: module.AIWorkspace })));
+const AIWorkspace = lazy(() =>
+  import('./AIWorkspace').then((module) => ({ default: module.AIWorkspace }))
+);
 
 interface TranslationWorkspaceProps {
   // 数据

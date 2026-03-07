@@ -17,7 +17,9 @@ export const logCommands = {
   },
 
   async getPromptLogs(): Promise<string> {
-    return invoke<string>(COMMANDS.PROMPT_LOG_GET, undefined, { errorMessage: '获取提示词日志失败' });
+    return invoke<string>(COMMANDS.PROMPT_LOG_GET, undefined, {
+      errorMessage: '获取提示词日志失败',
+    });
   },
 
   async clearPromptLogs(): Promise<void> {

@@ -394,11 +394,7 @@ export function AIConfigTab({ onProviderChange }: AIConfigTabProps) {
                   ? []
                   : [{ required: true, whitespace: true, message: '请输入 API Key' }]
               }
-              extra={
-                isEditingExisting
-                  ? '留空则保留当前密钥；测试连接前需重新输入。'
-                  : undefined
-              }
+              extra={isEditingExisting ? '留空则保留当前密钥；测试连接前需重新输入。' : undefined}
             >
               <Input.Password
                 placeholder={isEditingExisting ? '留空则保留当前密钥' : '请输入 API Key'}
