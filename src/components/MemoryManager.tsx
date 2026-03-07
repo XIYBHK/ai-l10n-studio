@@ -10,7 +10,7 @@ import {
 } from '@ant-design/icons';
 import { save, open } from '@tauri-apps/plugin-dialog';
 import { writeTextFile, readTextFile } from '@tauri-apps/plugin-fs';
-import { translationMemoryCommands } from '../services/commands';
+import { translationMemoryCommands } from '../services/termCommands';
 import { createModuleLogger } from '../utils/logger';
 import { useTranslationMemory } from '../hooks/useTranslationMemory';
 import { useSupportedLanguages } from '../hooks/useLanguage';
@@ -414,12 +414,12 @@ export function MemoryManager({ visible, onClose }: MemoryManagerProps) {
       open={visible}
       onCancel={onClose}
       onOk={handleSave}
-      width={900}
+      width={960}
+      centered
       okText="保存"
       cancelText="取消"
       confirmLoading={loading}
       destroyOnClose
-      mask={false}
       style={{ top: 20 }}
       styles={{
         body: {
@@ -460,7 +460,7 @@ export function MemoryManager({ visible, onClose }: MemoryManagerProps) {
         </Space>
 
         <Input
-          placeholder="搜索原文或译文..."
+          placeholder="搜索原文或译文…"
           prefix={<SearchOutlined />}
           value={searchText}
           onChange={(e) => setSearchText(e.target.value)}
@@ -490,14 +490,14 @@ export function MemoryManager({ visible, onClose }: MemoryManagerProps) {
         columns={columns}
         dataSource={filteredMemories}
         loading={loading}
-        size="small"
+        size="middle"
         pagination={{
           pageSize: 10,
           showSizeChanger: true,
           showTotal: (total) => `共 ${total} 条记忆`,
           position: ['bottomCenter'],
         }}
-        scroll={{ y: tableHeight }}
+        scroll={{ x: 900, y: tableHeight }}
       />
     </Modal>
   );

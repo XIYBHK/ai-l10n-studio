@@ -1,6 +1,6 @@
 import useSWR from 'swr';
 import type { FileFormat, FileMetadata } from '../types/fileFormat';
-import { fileFormatCommands } from '../services/commands';
+import { fileFormatCommands } from '../services/fileCommands';
 
 export function useFileFormat(filePath: string | null | undefined) {
   const key = filePath ? `file_format:${filePath}` : null;

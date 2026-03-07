@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { Card, Form, Select, InputNumber, Button, message } from 'antd';
 import { InfoCircleOutlined } from '@ant-design/icons';
-import { configCommands } from '../../services/commands';
+import { configCommands } from '../../services/configCommands';
 import { createModuleLogger } from '../../utils/logger';
 import { CSS_COLORS } from '../../hooks/useCssColors';
 

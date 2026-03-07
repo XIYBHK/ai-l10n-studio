@@ -14,6 +14,7 @@ import {
   PauseCircleOutlined,
 } from '@ant-design/icons';
 import { useTheme } from '../hooks/useTheme';
+import { formatTime } from '../utils/formatters';
 
 // ✅ 新的日志服务
 import {
@@ -207,7 +208,7 @@ export function DevToolsPage() {
                 >
                   <span>日志行数: {backendLogText.split('\n').filter((l) => l.trim()).length}</span>
                   <span>字符数: {backendLogText.length}</span>
-                  <span>最后更新: {new Date().toLocaleTimeString()}</span>
+                  <span>最后更新: {formatTime()}</span>
                 </div>
               </div>
             ),
@@ -273,7 +274,7 @@ export function DevToolsPage() {
                   value={promptLogText}
                   readOnly
                   rows={25}
-                  placeholder="等待提示词日志输出...
+                  placeholder="等待提示词日志输出…
 提示:
 - 执行精翻或批量翻译时会自动记录
 - 包含完整的输入提示词和AI响应
@@ -295,7 +296,7 @@ export function DevToolsPage() {
                 >
                   <span>日志行数: {promptLogText.split('\n').filter((l) => l.trim()).length}</span>
                   <span>字符数: {promptLogText.length}</span>
-                  <span>最后更新: {new Date().toLocaleTimeString()}</span>
+                  <span>最后更新: {formatTime()}</span>
                 </div>
               </div>
             ),

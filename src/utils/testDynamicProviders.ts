@@ -4,7 +4,7 @@
  * 用于验证 Phase 2 的动态供应商系统是否正常工作
  */
 
-import { aiProviderCommands } from '../services/commands';
+import { aiProviderCommands } from '../services/aiCommands';
 import { createModuleLogger } from './logger';
 
 const log = createModuleLogger('TestDynamicProviders');

@@ -20,8 +20,8 @@ import {
   CheckOutlined,
   ApiOutlined,
 } from '@ant-design/icons';
-import { aiConfigCommands, aiModelCommands, aiProviderCommands } from '../../services/commands';
-import { AIConfig } from '../../types/aiProvider';
+import { aiConfigCommands, aiModelCommands, aiProviderCommands } from '../../services/aiCommands';
+import type { AIConfig } from '../../types/aiProvider';
 import { createModuleLogger } from '../../utils/logger';
 import { useAIConfigs } from '../../hooks/useConfig';
 import type { ProviderInfo } from '../../types/generated/ProviderInfo';
@@ -63,6 +63,7 @@ export function AIConfigTab({ onProviderChange }: AIConfigTabProps) {
   const providerConfigs: ProviderConfig[] = useMemo(() => {
     return dynamicProviders.map(mapProviderInfoToConfig);
   }, [dynamicProviders]);
+  const isEditingExisting = editingIndex !== null && !isAddingNew;
 
   useEffect(() => {
     setProvidersLoading(true);
@@ -82,9 +83,7 @@ export function AIConfigTab({ onProviderChange }: AIConfigTabProps) {
 
   useEffect(() => {
     if (active) {
-      const idx = configs.findIndex(
-        (c) => c.providerId === active.providerId && c.apiKey === active.apiKey
-      );
+      const idx = configs.findIndex((config) => config.index === active.index);
       setActiveIndex(idx >= 0 ? idx : null);
     } else {
       setActiveIndex(null);
@@ -121,11 +120,17 @@ export function AIConfigTab({ onProviderChange }: AIConfigTabProps) {
   }
 
   async function handleTestConnection(values: any) {
+    const apiKey = values.apiKey?.trim();
+    if (!apiKey) {
+      message.warning('测试连接前请重新输入 API Key');
+      return;
+    }
+
     setTesting(true);
     try {
       const testConfig: AIConfig = {
         providerId: values.providerId,
-        apiKey: values.apiKey,
+        apiKey,
         baseUrl: values.baseUrl || undefined,
         model: values.model,
         proxy: values.proxy?.enabled
@@ -165,7 +170,10 @@ export function AIConfigTab({ onProviderChange }: AIConfigTabProps) {
     setEditingIndex(index);
     setIsAddingNew(false);
     form.setFieldsValue({
-      ...config,
+      providerId: config.providerId,
+      baseUrl: config.baseUrl,
+      model: config.model,
+      apiKey: '',
       proxy: config.proxy || { enabled: false, host: '', port: '' },
     });
   }
@@ -207,10 +215,16 @@ export function AIConfigTab({ onProviderChange }: AIConfigTabProps) {
 
   async function handleSave(values: any) {
     try {
+      const apiKey = values.apiKey?.trim() ?? '';
+      if (isAddingNew && !apiKey) {
+        message.error('请输入 API Key');
+        return;
+      }
+
       // 确保空字符串转换为 null
       const config: AIConfig = {
         providerId: values.providerId,
-        apiKey: values.apiKey,
+        apiKey,
         baseUrl: values.baseUrl?.trim() || null,
         model: values.model?.trim() || null,
         proxy: values.proxy?.enabled
@@ -296,6 +310,7 @@ export function AIConfigTab({ onProviderChange }: AIConfigTabProps) {
                       }}
                     >
                       <div>模型: {config.model || '(未设置)'}</div>
+                      <div>密钥: {config.apiKeyPreview || '(未设置)'}</div>
                       {config.proxy?.enabled && (
                         <div>
                           代理: {config.proxy.host}:{config.proxy.port}
@@ -374,9 +389,20 @@ export function AIConfigTab({ onProviderChange }: AIConfigTabProps) {
             <Form.Item
               label="API Key"
               name="apiKey"
-              rules={[{ required: true, message: '请输入 API Key' }]}
+              rules={
+                isEditingExisting
+                  ? []
+                  : [{ required: true, whitespace: true, message: '请输入 API Key' }]
+              }
+              extra={
+                isEditingExisting
+                  ? '留空则保留当前密钥；测试连接前需重新输入。'
+                  : undefined
+              }
             >
-              <Input.Password placeholder="请输入 API Key" />
+              <Input.Password
+                placeholder={isEditingExisting ? '留空则保留当前密钥' : '请输入 API Key'}
+              />
             </Form.Item>
 
             <Form.Item label="基础 URL" name="baseUrl">

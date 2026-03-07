@@ -68,27 +68,23 @@ export const InfoCard: React.FC<InfoCardProps> = ({
   // 类型配置
   const typeConfig: Record<
     InfoCardType,
-    { icon: React.ReactNode; color: string; bgColor: string }
+    { icon: React.ReactNode; color: string }
   > = {
     info: {
       icon: <InfoCircleOutlined />,
       color: '#1890ff',
-      bgColor: '#e6f7ff',
     },
     warning: {
       icon: <ExclamationCircleOutlined />,
       color: '#faad14',
-      bgColor: '#fffbe6',
     },
     success: {
       icon: <CheckCircleOutlined />,
       color: CSS_COLORS.statusTranslated,
-      bgColor: '#f6ffed',
     },
     error: {
       icon: <CloseCircleOutlined />,
       color: '#ff4d4f',
-      bgColor: '#fff2f0',
     },
   };
 
@@ -101,8 +97,9 @@ export const InfoCard: React.FC<InfoCardProps> = ({
     gap: 'var(--space-3)',
     padding: 'var(--space-3) var(--space-4)',
     borderRadius: 'var(--radius-md)',
-    backgroundColor: config.bgColor,
-    border: `1px solid ${config.color}30`,
+    backgroundColor: CSS_COLORS.bgTertiary,
+    border: `1px solid ${CSS_COLORS.borderSecondary}`,
+    boxShadow: `inset 3px 0 0 ${config.color}`,
     ...style,
   };
 
@@ -142,7 +139,8 @@ export const InfoCard: React.FC<InfoCardProps> = ({
     color: CSS_COLORS.textTertiary,
     fontSize: 'var(--font-size-sm)',
     borderRadius: 'var(--radius-sm)',
-    transition: 'all var(--duration-fast) ease',
+    transition:
+      'background-color var(--duration-fast) ease, color var(--duration-fast) ease, transform var(--duration-fast) ease',
     flexShrink: 0,
   };
 

@@ -1,7 +1,7 @@
 import { useEffect } from 'react';
 import useSWR from 'swr';
 import { listen } from '@tauri-apps/api/event';
-import { translationMemoryCommands } from '../services/commands';
+import { translationMemoryCommands } from '../services/termCommands';
 
 const TM_KEY = 'translation_memory';
 

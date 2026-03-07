@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { Card, Form, Input, Button, Space, message } from 'antd';
 import { FileTextOutlined, UndoOutlined } from '@ant-design/icons';
-import { systemPromptCommands } from '../../services/commands';
+import { systemPromptCommands } from '../../services/aiCommands';
 import { useSystemPrompt } from '../../hooks/useConfig';
 import { useAsync } from '../../hooks/useAsync';
 import { createModuleLogger } from '../../utils/logger';
@@ -85,7 +85,7 @@ export function SystemPromptTab() {
           <Input.TextArea
             value={promptText}
             onChange={handlePromptChange}
-            placeholder="请输入系统提示词..."
+            placeholder="请输入系统提示词…"
             rows={12}
             style={{ fontFamily: 'monospace', fontSize: 'var(--font-size-base)' }}
           />

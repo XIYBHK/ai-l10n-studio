@@ -2,7 +2,7 @@ import { useEffect } from 'react';
 import useSWR from 'swr';
 import { listen } from '@tauri-apps/api/event';
 import type { TermLibrary } from '../types/termLibrary';
-import { termLibraryCommands } from '../services/commands';
+import { termLibraryCommands } from '../services/termCommands';
 
 const KEY = 'term_library';
 

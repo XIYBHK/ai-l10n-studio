@@ -136,7 +136,7 @@ export const TargetSection: React.FC<TargetSectionProps> = ({
           value={translation}
           onChange={(e) => onTranslationChange(e.target.value)}
           onBlur={onBlur}
-          placeholder="在此输入翻译内容..."
+          placeholder="在此输入翻译内容…"
           style={textAreaStyles}
           aria-label="译文编辑"
           aria-describedby={saveStatusId}

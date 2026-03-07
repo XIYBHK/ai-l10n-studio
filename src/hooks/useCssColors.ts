@@ -36,17 +36,6 @@ export type CssColors = {
   sourceAiColor: string;
   overlayBg: string;
   overlayText: string;
-  // 新增毛玻璃和渐变颜色
-  glassBg: string;
-  glassBgHover: string;
-  glassBorder: string;
-  gradientPrimary: string;
-  gradientSecondary: string;
-  shadowSm: string;
-  shadow: string;
-  shadowMd: string;
-  shadowLg: string;
-  shadowXl: string;
 };
 
 /**
@@ -85,17 +74,6 @@ export const CSS_COLORS: CssColors = {
   sourceAiColor: 'var(--color-sourceAiColor)',
   overlayBg: 'var(--color-overlayBg)',
   overlayText: 'var(--color-overlayText)',
-  // 新增毛玻璃和渐变颜色
-  glassBg: 'var(--glass-bg)',
-  glassBgHover: 'var(--glass-bg-hover)',
-  glassBorder: 'var(--glass-border)',
-  gradientPrimary: 'var(--primary-gradient)',
-  gradientSecondary: 'var(--secondary-gradient)',
-  shadowSm: 'var(--shadow-sm)',
-  shadow: 'var(--shadow)',
-  shadowMd: 'var(--shadow-md)',
-  shadowLg: 'var(--shadow-lg)',
-  shadowXl: 'var(--shadow-xl)',
 };
 
 /**

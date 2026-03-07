@@ -2,23 +2,12 @@
   --theme-transition-duration: 0.3s;
   --theme-transition-timing: cubic-bezier(0.645, 0.045, 0.355, 1);
 
-  /* 毛玻璃效果系统 */
-  --glass-bg: rgba(255, 255, 255, 0.7);
-  --glass-bg-hover: rgba(255, 255, 255, 0.85);
-  --glass-border: rgba(255, 255, 255, 0.18);
-  --glass-shadow: 0 8px 32px 0 rgba(31, 38, 135, 0.07);
-
   /* 现代阴影系统 */
   --shadow-sm: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
   --shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
   --shadow-md: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
   --shadow-lg: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
   --shadow-xl: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
-
-  /* 渐变主色 */
-  --primary-gradient: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-  --primary-gradient-hover: linear-gradient(135deg, #5a67d8 0%, #6b46a0 100%);
-  --secondary-gradient: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
 
   /* 圆角系统 */
   --radius-xs: 4px;
@@ -29,14 +18,6 @@
   --radius-xl: 24px;
   --radius-2xl: 32px;
   --radius-full: 9999px;
-}
-
-/* 暗色主题下的毛玻璃效果 */
-[data-theme='dark'] {
-  --glass-bg: rgba(30, 41, 59, 0.7);
-  --glass-bg-hover: rgba(30, 41, 59, 0.85);
-  --glass-border: rgba(255, 255, 255, 0.08);
-  --glass-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.37);
 }
 
 * {
@@ -122,27 +103,6 @@ p,
   contain: strict;
   content-visibility: auto;
   contain-intrinsic-size: auto 500px;
-}
-
-body::before {
-  content: '';
-  position: fixed;
-  top: 0;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  z-index: -1;
-  background-image:
-    linear-gradient(rgba(203, 166, 247, 0.02) 1px, transparent 1px),
-    linear-gradient(90deg, rgba(203, 166, 247, 0.02) 1px, transparent 1px);
-  background-size: 40px 40px;
-  pointer-events: none;
-}
-
-[data-theme='dark'] body::before {
-  background-image:
-    linear-gradient(rgba(203, 166, 247, 0.04) 1px, transparent 1px),
-    linear-gradient(90deg, rgba(203, 166, 247, 0.04) 1px, transparent 1px);
 }
 
 #root {
@@ -293,181 +253,24 @@ textarea {
   }
 }
 
-/* 毛玻璃面板样式 */
-.glass-panel {
-  background: var(--glass-bg);
-  backdrop-filter: blur(12px) saturate(180%);
-  -webkit-backdrop-filter: blur(12px) saturate(180%);
-  border: 1px solid var(--glass-border);
-  box-shadow: var(--glass-shadow);
-  border-radius: var(--radius-lg);
-  transition:
-    background-color var(--theme-transition-duration) var(--theme-transition-timing),
-    border-color var(--theme-transition-duration) var(--theme-transition-timing),
-    box-shadow var(--theme-transition-duration) var(--theme-transition-timing);
-}
-
-.glass-panel:hover {
-  background: var(--glass-bg-hover);
-}
-
-/* 菜单栏毛玻璃效果 */
-.menu-bar-glass {
-  background: var(--glass-bg);
-  backdrop-filter: blur(16px) saturate(180%) brightness(1.1);
-  -webkit-backdrop-filter: blur(16px) saturate(180%) brightness(1.1);
-  border-bottom: 1px solid var(--glass-border);
-  box-shadow: var(--shadow-sm);
-  transition:
-    background-color var(--theme-transition-duration) var(--theme-transition-timing),
-    border-color var(--theme-transition-duration) var(--theme-transition-timing),
-    box-shadow var(--theme-transition-duration) var(--theme-transition-timing);
-}
-
-/* 卡片毛玻璃效果 */
-.glass-card {
-  background: var(--glass-bg);
-  backdrop-filter: blur(8px) saturate(180%);
-  -webkit-backdrop-filter: blur(8px) saturate(180%);
-  border: 1px solid var(--glass-border);
-  border-radius: var(--radius-md);
-  box-shadow: var(--shadow);
-  transition: all var(--theme-transition-duration) var(--theme-transition-timing);
-}
-
-.glass-card:hover {
-  box-shadow: var(--shadow-md);
-  transform: translateY(-2px);
-}
-
-/* 渐变按钮样式 */
-.gradient-button {
-  background: var(--primary-gradient);
-  border: none;
-  border-radius: var(--radius-md);
-  color: white;
-  font-weight: 500;
-  padding: 8px 16px;
-  cursor: pointer;
-  transition: all 0.2s ease;
-  box-shadow: var(--shadow);
-}
-
-.gradient-button:hover {
-  background: var(--primary-gradient-hover);
-  box-shadow: var(--shadow-md);
-  transform: translateY(-1px);
-}
-
-.gradient-button:active {
-  transform: translateY(0);
-  box-shadow: var(--shadow-sm);
-}
-
-/* 现代输入框样式 */
-.modern-input {
-  background: var(--glass-bg);
-  backdrop-filter: blur(8px);
-  -webkit-backdrop-filter: blur(8px);
-  border: 1px solid var(--glass-border);
-  border-radius: var(--radius-md);
-  padding: 8px 12px;
-  transition: all var(--theme-transition-duration) var(--theme-transition-timing);
-}
-
-.modern-input:focus {
-  outline: none;
-  border-color: var(--color-brandPrimary, #667eea);
-  box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
-}
-
-/* 浮动面板样式 */
-.floating-panel {
-  background: var(--glass-bg);
-  backdrop-filter: blur(20px) saturate(180%);
-  -webkit-backdrop-filter: blur(20px) saturate(180%);
-  border: 1px solid var(--glass-border);
-  border-radius: var(--radius-xl);
-  box-shadow: var(--shadow-xl);
-}
-
-/* 高亮面板 */
-.glass-highlight {
-  background: linear-gradient(135deg, rgba(102, 126, 234, 0.1) 0%, rgba(118, 75, 162, 0.1) 100%);
-  backdrop-filter: blur(12px);
-  -webkit-backdrop-filter: blur(12px);
-  border: 1px solid rgba(102, 126, 234, 0.2);
-  border-radius: var(--radius-lg);
-}
-
-/* 玻璃态模态框背景 */
-.glass-overlay {
-  background: rgba(0, 0, 0, 0.3);
-  backdrop-filter: blur(4px);
-  -webkit-backdrop-filter: blur(4px);
-}
-
-/* 🆕 ActionButton 动画样式 */
+/* ActionButton 动画样式 */
 .action-button-animated {
-  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  transition:
+    transform 0.2s cubic-bezier(0.4, 0, 0.2, 1),
+    box-shadow 0.2s cubic-bezier(0.4, 0, 0.2, 1),
+    background-color var(--theme-transition-duration) var(--theme-transition-timing),
+    border-color var(--theme-transition-duration) var(--theme-transition-timing),
+    color var(--theme-transition-duration) var(--theme-transition-timing);
 }
 
 .action-button-animated:hover {
-  transform: translateY(-2px);
+  transform: translateY(-1px);
 }
 
 .action-button-animated:active {
   transform: translateY(0) scale(0.98);
 }
 
-/* 🆕 ActionButton 波纹效果 */
-.action-button-ripple-container {
-  position: absolute;
-  top: 0;
-  left: 0;
-  width: 100%;
-  height: 100%;
-  overflow: hidden;
-  border-radius: inherit;
-  pointer-events: none;
-}
-
-.action-button-ripple {
-  position: absolute;
-  border-radius: 50%;
-  background: rgba(255, 255, 255, 0.5);
-  transform: scale(0);
-  animation: ripple-animation 0.6s ease-out;
-  pointer-events: none;
-}
-
-@keyframes ripple-animation {
-  to {
-    transform: scale(4);
-    opacity: 0;
-  }
-}
-
-/* 🆕 渐变按钮特殊效果 */
-.action-button-gradient {
-  position: relative;
-  overflow: hidden;
-}
-
-.action-button-gradient::before {
-  content: '';
-  position: absolute;
-  top: 0;
-  left: -100%;
-  width: 100%;
-  height: 100%;
-  background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.2), transparent);
-  transition: left 0.5s ease;
-}
-
-.action-button-gradient:hover::before {
-  left: 100%;
-}
 
 /* 🆕 通用微动画 */
 @keyframes slideInUp {

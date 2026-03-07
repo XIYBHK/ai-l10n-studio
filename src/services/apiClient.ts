@@ -9,7 +9,6 @@
  * - 统一错误提示
  */
 
-import { message } from 'antd';
 import { invoke } from './tauriInvoke';
 import { createModuleLogger } from '../utils/logger';
 
@@ -97,6 +96,7 @@ class APIClient {
       log.logError(error, `API调用失败: ${command}`);
 
       if (showErrorMessage) {
+        const { message } = await import('antd');
         message.error(displayMsg);
       }
 

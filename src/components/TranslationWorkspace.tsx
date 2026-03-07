@@ -2,14 +2,16 @@
  * 翻译工作区组件
  */
 
-import { useState, useRef, useEffect } from 'react';
+import { useState, useRef, useEffect, lazy, Suspense } from 'react';
 import { Layout } from 'antd';
 import { POEntry, TranslationStats } from '../types/tauri';
 import { useCssColors } from '../hooks/useCssColors';
 import { EntryList } from './EntryList';
 import { EditorPane } from './EditorPane';
-import { AIWorkspace } from './AIWorkspace';
 import { FileInfoBar } from './FileInfoBar';
+import { AIWorkspaceSkeleton } from './skeletons';
+
+const AIWorkspace = lazy(() => import('./AIWorkspace').then((module) => ({ default: module.AIWorkspace })));
 
 interface TranslationWorkspaceProps {
   // 数据
@@ -44,11 +46,24 @@ export function TranslationWorkspace({
   const cssColors = useCssColors();
 
   // 布局状态
-  const [leftWidth, setLeftWidth] = useState(35);
+  const [leftWidth, setLeftWidth] = useState(34);
   const [isResizing, setIsResizing] = useState(false);
+  const [viewportWidth, setViewportWidth] = useState(
+    typeof window === 'undefined' ? 1440 : window.innerWidth
+  );
   const sidebarRef = useRef<HTMLDivElement>(null);
 
+  const leftMinWidth = viewportWidth < 1200 ? '260px' : '280px';
+  const rightPanelWidth = viewportWidth < 1200 ? 272 : viewportWidth < 1600 ? 296 : 320;
+  const workspaceHeight = 'calc(100vh - 56px - 32px)';
+
   const handleMouseDown = () => setIsResizing(true);
+
+  useEffect(() => {
+    const handleResize = () => setViewportWidth(window.innerWidth);
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
+  }, []);
 
   useEffect(() => {
     if (!isResizing) return;
@@ -61,7 +76,7 @@ export function TranslationWorkspace({
         const windowWidth = window.innerWidth;
         const newWidth = (e.clientX / windowWidth) * 100;
 
-        if (newWidth >= 20 && newWidth <= 60) {
+        if (newWidth >= 24 && newWidth <= 52) {
           if (sidebarRef.current) {
             sidebarRef.current.style.width = `${newWidth}%`;
           }
@@ -75,7 +90,7 @@ export function TranslationWorkspace({
 
       const windowWidth = window.innerWidth;
       const newWidth = (e.clientX / windowWidth) * 100;
-      if (newWidth >= 20 && newWidth <= 60) {
+      if (newWidth >= 24 && newWidth <= 52) {
         setLeftWidth(newWidth);
       }
 
@@ -136,7 +151,7 @@ export function TranslationWorkspace({
 
       <Layout
         className="workspace-fade-in"
-        style={{ height: 'calc(100vh - 48px - 28px)', position: 'relative' }}
+        style={{ height: workspaceHeight, position: 'relative' }}
         role="main"
         aria-label="翻译工作区"
       >
@@ -149,7 +164,7 @@ export function TranslationWorkspace({
             borderRight: `1px solid ${cssColors.borderPrimary}`,
             overflow: 'hidden',
             position: 'relative',
-            minWidth: '320px',
+            minWidth: leftMinWidth,
             transition: isResizing
               ? 'none'
               : 'width 0.1s ease, background-color 0.3s cubic-bezier(0.645, 0.045, 0.355, 1), border-color 0.3s cubic-bezier(0.645, 0.045, 0.355, 1)',
@@ -203,7 +218,7 @@ export function TranslationWorkspace({
         </Layout.Content>
 
         <Layout.Sider
-          width={320}
+          width={rightPanelWidth}
           style={{
             backgroundColor: cssColors.bgPrimary,
             borderLeft: `1px solid ${cssColors.borderPrimary}`,
@@ -213,11 +228,13 @@ export function TranslationWorkspace({
           }}
           collapsible={false}
         >
-          <AIWorkspace
-            stats={translationStats}
-            isTranslating={isTranslating}
-            onResetStats={onResetStats}
-          />
+          <Suspense fallback={<AIWorkspaceSkeleton />}>
+            <AIWorkspace
+              stats={translationStats}
+              isTranslating={isTranslating}
+              onResetStats={onResetStats}
+            />
+          </Suspense>
         </Layout.Sider>
       </Layout>
 

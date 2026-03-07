@@ -86,7 +86,6 @@ export function TermConfirmModal({
       open={visible}
       onCancel={onCancel}
       destroyOnClose
-      mask={false}
       footer={[
         <Button key="cancel" onClick={() => onConfirm(false)}>
           仅此一次

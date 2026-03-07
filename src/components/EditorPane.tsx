@@ -1,4 +1,4 @@
-import { useState, useEffect, memo, useCallback, useRef } from 'react';
+﻿import { useState, useEffect, memo, useCallback, useRef } from 'react';
 import { message } from 'antd';
 import { POEntry } from '../types/tauri';
 import { useTranslationStore } from '../store';
@@ -7,7 +7,7 @@ import { announceToScreenReader } from '../utils/accessibility';
 import { TermConfirmModal } from './TermConfirmModal';
 import { ErrorBoundary } from './ErrorBoundary';
 import { createModuleLogger } from '../utils/logger';
-import { termLibraryCommands } from '../services/commands';
+import { termLibraryCommands } from '../services/termCommands';
 import { useAppData } from '../hooks/useConfig';
 import { useTermLibrary } from '../hooks/useTermLibrary';
 import { EditorToolbar } from './editor/EditorToolbar';
@@ -294,7 +294,7 @@ export const EditorPane = memo(function EditorPane({
                   log.debug('检查是否需要更新风格总结', { shouldUpdate });
 
                   if (shouldUpdate && activeAIConfig) {
-                    message.info('正在生成风格总结...', 1);
+                    message.info('正在生成风格总结…', 1);
                     await termLibraryCommands.generateStyleSummary();
                     message.success('术语已添加，风格总结已更新');
                   } else {

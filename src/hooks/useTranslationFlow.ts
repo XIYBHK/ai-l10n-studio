@@ -34,12 +34,8 @@ import {
 import { useAsync } from './useAsync';
 import { POEntry, TranslationStats, TranslationQueueItem } from '../types/tauri';
 import type { LanguageInfo } from '../types/generated/LanguageInfo';
-import {
-  poFileCommands,
-  dialogCommands,
-  i18nCommands,
-  translatorCommands,
-} from '../services/commands';
+import { poFileCommands, dialogCommands } from '../services/fileCommands';
+import { i18nCommands, translatorCommands } from '../services/translationCommands';
 import { createModuleLogger } from '../utils/logger';
 
 const log = createModuleLogger('useTranslationFlow');
@@ -405,9 +401,6 @@ export function useTranslationFlow() {
           },
           tm_learned: result.stats.tm_learned || 0,
         };
-
-        updateSessionStats(finalStats);
-        updateCumulativeStats(finalStats);
 
         log.info('📊 统计已更新', finalStats);
       }

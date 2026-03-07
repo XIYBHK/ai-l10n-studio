@@ -12,7 +12,9 @@ import { useTermLibrary } from '../hooks/useTermLibrary';
 import { useCssColors } from '../hooks/useCssColors';
 import { useAppData } from '../hooks/useConfig';
 import { createModuleLogger } from '../utils/logger';
-import { termLibraryCommands } from '../services/commands'; // ✅ 迁移到统一命令层
+import { termLibraryCommands } from '../services/termCommands';
+import { formatDateTime } from '../utils/formatters';
+import { useAppStore } from '../store/useAppStore';
 
 const { TextArea } = Input;
 const log = createModuleLogger('TermLibraryManager');
@@ -30,6 +32,7 @@ interface EditingTerm {
 export function TermLibraryManager({ visible, onClose }: TermLibraryManagerProps) {
   const { activeAIConfig } = useAppData();
   const { termLibrary: library, refresh, mutate } = useTermLibrary({ enabled: visible });
+  const language = useAppStore((state) => state.language);
   const [loading, setLoading] = useState(false);
   const [editingKey, setEditingKey] = useState<string>('');
   const [editingTerm, setEditingTerm] = useState<EditingTerm | null>(null);
@@ -217,9 +220,9 @@ export function TermLibraryManager({ visible, onClose }: TermLibraryManagerProps
       }
       open={visible}
       onCancel={onClose}
-      width={1000}
+      width={1040}
+      centered
       destroyOnClose={true}
-      mask={false}
       footer={[
         <Button key="refresh" icon={<ReloadOutlined />} onClick={() => refresh()}>
           刷新
@@ -298,7 +301,7 @@ export function TermLibraryManager({ visible, onClose }: TermLibraryManagerProps
             }}
           >
             基于 {library.style_summary.based_on_terms} 条术语 · 最后更新:{' '}
-            {new Date(library.style_summary.generated_at).toLocaleString('zh-CN')}
+            {formatDateTime(library.style_summary.generated_at, language)}
           </div>
         </div>
       )}
@@ -314,7 +317,8 @@ export function TermLibraryManager({ visible, onClose }: TermLibraryManagerProps
           showSizeChanger: true,
           showTotal: (total) => `共 ${total} 条术语`,
         }}
-        size="small"
+        size="middle"
+        scroll={{ x: 960 }}
         locale={{
           emptyText: '暂无术语数据',
         }}

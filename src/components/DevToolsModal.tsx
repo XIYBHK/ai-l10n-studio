@@ -10,6 +10,7 @@ import {
   PauseCircleOutlined,
 } from '@ant-design/icons';
 import Draggable from 'react-draggable';
+import { formatTime } from '../utils/formatters';
 import {
   useGlobalLogStore,
   toggleBackendLogEnabled,
@@ -137,10 +138,9 @@ export function DevToolsModal({ visible, onClose }: DevToolsModalProps) {
       }
       open={visible}
       onCancel={onClose}
-      width={900}
-      style={{ top: 20 }}
+      width={960}
+      centered
       destroyOnClose
-      mask={false}
       footer={[
         <Button key="close" onClick={onClose}>
           关闭
@@ -218,7 +218,7 @@ export function DevToolsModal({ visible, onClose }: DevToolsModalProps) {
                 >
                   <span>日志行数: {backendLogText.split('\n').filter((l) => l.trim()).length}</span>
                   <span>字符数: {backendLogText.length}</span>
-                  <span>最后更新: {new Date().toLocaleTimeString()}</span>
+                  <span>最后更新: {formatTime()}</span>
                 </div>
               </div>
             ),
@@ -284,7 +284,7 @@ export function DevToolsModal({ visible, onClose }: DevToolsModalProps) {
                   value={promptLogText}
                   readOnly
                   rows={20}
-                  placeholder="等待提示词日志输出...
+                  placeholder="等待提示词日志输出…
 提示:
 - 执行精翻或批量翻译时会自动记录
 - 包含完整的输入提示词和AI响应
@@ -309,7 +309,7 @@ export function DevToolsModal({ visible, onClose }: DevToolsModalProps) {
                 >
                   <span>日志行数: {promptLogText.split('\n').filter((l) => l.trim()).length}</span>
                   <span>字符数: {promptLogText.length}</span>
-                  <span>最后更新: {new Date().toLocaleTimeString()}</span>
+                  <span>最后更新: {formatTime()}</span>
                 </div>
               </div>
             ),

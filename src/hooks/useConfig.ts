@@ -1,6 +1,7 @@
 import useSWR from 'swr';
-import type { AIConfig } from '../types/aiProvider';
-import { configCommands, aiConfigCommands, systemPromptCommands } from '../services/commands';
+import type { AIConfigSummary } from '../types/aiProvider';
+import { configCommands } from '../services/configCommands';
+import { aiConfigCommands, systemPromptCommands } from '../services/aiCommands';
 
 // 应用配置（整体）
 const APP_CONFIG_KEY = 'app_config';
@@ -43,10 +44,10 @@ export function useAIConfigs() {
     }
   );
   return {
-    configs: (all.data as AIConfig[] | undefined) ?? [],
+    configs: (all.data as AIConfigSummary[] | undefined) ?? [],
     loading: !!all.isLoading || !!active.isLoading,
     error: all.error || active.error,
-    active: (active.data as AIConfig | null | undefined) ?? null,
+    active: (active.data as AIConfigSummary | null | undefined) ?? null,
     mutateAll: all.mutate,
     mutateActive: active.mutate,
   } as const;

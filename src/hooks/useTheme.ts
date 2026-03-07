@@ -1,5 +1,4 @@
 import { useEffect, useMemo } from 'react';
-import { theme as antTheme } from 'antd';
 import { useAppStore } from '../store/useAppStore';
 import { lightTheme, darkTheme, semanticColors } from '../theme/config';
 import { emit } from '@tauri-apps/api/event';
@@ -43,9 +42,6 @@ export const useTheme = () => {
     root.classList.remove('light', 'dark');
     root.classList.add(effectiveTheme);
 
-    // 本地存储
-    window.localStorage.setItem('theme', themeMode);
-
     // 发送事件通知
     emit('theme:changed', { theme: themeMode }).catch((err) => {
       console.error('[useTheme] 发送主题变更事件失败:', err);
@@ -69,12 +65,11 @@ export const useTheme = () => {
     return () => mediaQuery.removeEventListener('change', handleChange);
   }, [themeMode, setThemeMode]);
 
-  const { themeConfig, colors, algorithm } = useMemo(() => {
+  const { themeConfig, colors } = useMemo(() => {
     const isDark = appliedTheme === 'dark';
     return {
       themeConfig: isDark ? darkTheme : lightTheme,
       colors: isDark ? semanticColors.dark : semanticColors.light,
-      algorithm: isDark ? antTheme.darkAlgorithm : antTheme.defaultAlgorithm,
     };
   }, [appliedTheme]);
 
@@ -92,7 +87,6 @@ export const useTheme = () => {
     appliedTheme,
     themeConfig,
     colors,
-    algorithm,
     toggleTheme,
     setTheme,
     isDark: appliedTheme === 'dark',

@@ -1,6 +1,6 @@
 import useSWR from 'swr';
 import type { LanguageInfo } from '../types/generated/LanguageInfo';
-import { i18nCommands } from '../services/commands';
+import { i18nCommands } from '../services/translationCommands';
 
 const SUPPORTED_LANGS_KEY = 'supported_languages';
 

@@ -3,7 +3,7 @@
     "import": "Import PO File",
     "save": "Save",
     "batchTranslate": "Batch Translate",
-    "translating": "Translating...",
+    "translating": "Translating…",
     "settings": "Settings"
   },
   "theme": {
@@ -34,7 +34,7 @@
   },
   "aiWorkspace": {
     "title": "AI Workspace",
-    "translating": "Translating...",
+    "translating": "Translating…",
     "memory": "Memory",
     "currentBatch": "Current Batch - Efficiency",
     "memoryHits": "Memory Hits",
@@ -51,7 +51,7 @@
   },
   "memoryManager": {
     "title": "Translation Memory",
-    "search": "Search...",
+    "search": "Search…",
     "add": "Add",
     "original": "Original",
     "translation": "Translation",

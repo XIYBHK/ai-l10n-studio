@@ -3,7 +3,7 @@
     "import": "导入PO文件",
     "save": "保存",
     "batchTranslate": "批量翻译",
-    "translating": "翻译中...",
+    "translating": "翻译中…",
     "settings": "设置"
   },
   "theme": {
@@ -34,7 +34,7 @@
   },
   "aiWorkspace": {
     "title": "AI 工作区",
-    "translating": "翻译中...",
+    "translating": "翻译中…",
     "memory": "记忆库",
     "currentBatch": "本次翻译 - 处理效率",
     "memoryHits": "记忆库命中",
@@ -51,7 +51,7 @@
   },
   "memoryManager": {
     "title": "翻译记忆库",
-    "search": "搜索...",
+    "search": "搜索…",
     "add": "添加",
     "original": "原文",
     "translation": "译文",

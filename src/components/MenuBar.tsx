@@ -1,5 +1,5 @@
 import { memo, useState, useEffect, CSSProperties } from 'react';
-import { Tooltip, Divider, Typography } from 'antd';
+import { Tooltip, Typography } from 'antd';
 import {
   FolderOpenOutlined,
   SaveOutlined,
@@ -22,9 +22,9 @@ import { useSupportedLanguages } from '../hooks/useLanguage';
 const { Text } = Typography;
 
 // 容器高度常量
-const MENU_HEIGHT = '48px';
-const MENU_PADDING_X = 'var(--space-4)'; // 16px
-const MENU_GAP = 'var(--space-3)'; // 12px
+const MENU_HEIGHT = '56px';
+const MENU_PADDING_X = 'var(--space-5)';
+const MENU_GAP = 'var(--space-4)';
 
 // ==================== Props Interfaces ====================
 
@@ -90,22 +90,16 @@ const LogoSection = memo(function LogoSection({ compact }: LogoSectionProps) {
   return (
     <div
       style={{
-        fontSize: compact ? '20px' : '22px',
-        fontWeight: 800,
+        fontSize: compact ? '18px' : '20px',
+        fontWeight: 700,
         fontFamily: 'var(--display-font)',
-        background: CSS_COLORS.brandPrimary,
-        WebkitBackgroundClip: 'text',
-        WebkitTextFillColor: 'transparent',
-        backgroundClip: 'text',
-        marginRight: 'var(--space-4)',
+        color: CSS_COLORS.brandPrimary,
         display: 'flex',
         alignItems: 'center',
         gap: 'var(--space-2)',
-        letterSpacing: '-0.5px',
+        letterSpacing: '-0.02em',
         flexShrink: 0,
         whiteSpace: 'nowrap',
-        cursor: 'pointer',
-        transition: 'opacity var(--duration-base) ease',
       }}
     >
       <GlobalOutlined
@@ -128,7 +122,15 @@ const FileActions = memo(function FileActions({
 }: FileActionsProps) {
   return (
     <div
-      style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-2)' }}
+      style={{
+        display: 'flex',
+        alignItems: 'center',
+        gap: 'var(--space-2)',
+        padding: 'var(--space-1)',
+        backgroundColor: CSS_COLORS.bgTertiary,
+        border: `1px solid ${CSS_COLORS.borderSecondary}`,
+        borderRadius: 'var(--radius-full)',
+      }}
       role="group"
       aria-label="文件操作"
     >
@@ -246,7 +248,7 @@ const LanguageSelectorSection = memo(function LanguageSelectorSection({
         alignItems: 'center',
         backgroundColor: CSS_COLORS.bgTertiary,
         padding: 'var(--space-1) var(--space-3)',
-        borderRadius: 'var(--radius-md)',
+        borderRadius: 'var(--radius-full)',
         border: `1px solid ${CSS_COLORS.borderSecondary}`,
         flexShrink: 0,
         whiteSpace: 'nowrap',
@@ -288,7 +290,15 @@ const SystemActions = memo(function SystemActions({
 }: SystemActionsProps) {
   return (
     <div
-      style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-1)' }}
+      style={{
+        display: 'flex',
+        alignItems: 'center',
+        gap: 'var(--space-1)',
+        padding: 'var(--space-1)',
+        backgroundColor: CSS_COLORS.bgTertiary,
+        border: `1px solid ${CSS_COLORS.borderSecondary}`,
+        borderRadius: 'var(--radius-full)',
+      }}
       role="group"
       aria-label="系统操作"
     >
@@ -345,9 +355,9 @@ const AIConfigPrompt = memo(function AIConfigPrompt({ isDarkMode }: { isDarkMode
         description="请先配置 AI 服务"
         style={{
           padding: 'var(--space-2) var(--space-3)',
-          fontSize: 'var(--font-size-xs)',
-          borderRadius: 'var(--radius-lg)',
-          backgroundColor: isDarkMode ? 'rgba(250, 173, 20, 0.15)' : '#fff7e6',
+          fontSize: 'var(--font-size-sm)',
+          borderRadius: 'var(--radius-full)',
+          backgroundColor: isDarkMode ? 'rgba(250, 173, 20, 0.12)' : 'rgba(250, 173, 20, 0.10)',
           border: `1px solid ${CSS_COLORS.statusNeedsReview}`,
         }}
       />
@@ -390,18 +400,18 @@ export const MenuBar = memo(function MenuBar({
   const windowWidth = useWindowWidth();
 
   // 响应式断点
-  const isCompact = windowWidth < 1024;
-  const isMinimal = windowWidth < 768;
+  const isCompact = windowWidth < 1280;
+  const isMinimal = windowWidth < 900;
 
   const containerStyles: CSSProperties = {
     display: 'flex',
     alignItems: 'center',
     padding: `0 ${MENU_PADDING_X}`,
-    backgroundColor: CSS_COLORS.bgSecondary,
-    borderBottom: `1px solid ${CSS_COLORS.borderPrimary}`,
+    backgroundColor: CSS_COLORS.bgPrimary,
+    borderBottom: `1px solid ${CSS_COLORS.borderSecondary}`,
     gap: MENU_GAP,
     height: MENU_HEIGHT,
-    boxShadow: isDarkMode ? 'none' : '0 1px 2px rgba(0,0,0,0.03)',
+    boxShadow: 'none',
     zIndex: 10,
   };
 
@@ -409,67 +419,92 @@ export const MenuBar = memo(function MenuBar({
   if (isMinimal) {
     return (
       <nav style={containerStyles} aria-label="主菜单">
-        <LogoSection compact />
-
-        <div
-          style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-2)' }}
-          role="group"
-          aria-label="文件操作"
-        >
-          <Tooltip title="打开 PO 文件 (Ctrl+O)">
-            <ActionButton
-              variant="ghost"
-              size="small"
-              icon={<FolderOpenOutlined />}
-              onClick={onOpenFile}
-              aria-label="打开 PO 文件 (Ctrl+O)"
-            />
-          </Tooltip>
-
-          <Tooltip title="保存 (Ctrl+S)">
-            <ActionButton
-              variant="ghost"
-              size="small"
-              icon={<SaveOutlined />}
-              onClick={onSaveFile}
-              disabled={!hasEntries}
-              aria-label={hasEntries ? '保存 (Ctrl+S)' : '保存（请先打开文件）'}
-              aria-disabled={!hasEntries}
-            />
-          </Tooltip>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-3)', minWidth: 0 }}>
+          <LogoSection compact />
+          <FileActions
+            onOpenFile={onOpenFile}
+            onSaveFile={onSaveFile}
+            onSaveAsFile={onSaveAsFile}
+            hasEntries={hasEntries}
+            compact
+          />
         </div>
 
-        <Tooltip
-          title={!activeAIConfig ? '请先配置 AI 服务' : isTranslating ? '停止翻译' : '批量翻译'}
-        >
-          <ActionButton
-            variant={isTranslating ? 'secondary' : 'primary'}
-            size="small"
-            icon={isTranslating ? <StopOutlined /> : <TranslationOutlined />}
-            onClick={isTranslating ? onCancelTranslation : onTranslateAll}
-            disabled={!activeAIConfig || !hasEntries}
-            danger={isTranslating}
-            aria-label={
-              !activeAIConfig
-                ? '批量翻译（请先配置 AI 服务）'
-                : !hasEntries
-                  ? '批量翻译（请先打开文件）'
-                  : isTranslating
-                    ? '停止翻译'
-                    : '批量翻译所有未翻译条目'
-            }
-            aria-disabled={!activeAIConfig || !hasEntries}
-            aria-busy={isTranslating}
+        <div style={{ flex: 1, display: 'flex', justifyContent: 'center' }}>
+          <TranslateAction
+            onTranslateAll={onTranslateAll}
+            isTranslating={isTranslating}
+            hasEntries={hasEntries}
+            hasAIConfig={!!activeAIConfig}
+            onCancelTranslation={onCancelTranslation}
           />
-        </Tooltip>
+        </div>
 
-        <div style={{ flex: 1 }} />
+        <SystemActions
+          isDarkMode={isDarkMode}
+          onThemeToggle={onThemeToggle}
+          onSettings={onSettings}
+          onDevTools={undefined}
+        />
+      </nav>
+    );
+  }
 
-        {!activeAIConfig && (
-          <BulbFilled
-            style={{ color: CSS_COLORS.statusNeedsReview }}
-            aria-label="请先配置 AI 服务"
-          />
+  return (
+    <nav style={containerStyles} aria-label="主菜单">
+      <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-4)', minWidth: 0 }}>
+        <LogoSection compact={isCompact} />
+        <FileActions
+          onOpenFile={onOpenFile}
+          onSaveFile={onSaveFile}
+          onSaveAsFile={onSaveAsFile}
+          hasEntries={hasEntries}
+          compact={isCompact}
+        />
+      </div>
+
+      <div
+        style={{
+          flex: 1,
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          gap: 'var(--space-3)',
+          minWidth: 0,
+        }}
+      >
+        <TranslateAction
+          onTranslateAll={onTranslateAll}
+          isTranslating={isTranslating}
+          hasEntries={hasEntries}
+          hasAIConfig={!!activeAIConfig}
+          onCancelTranslation={onCancelTranslation}
+        />
+
+        <LanguageSelectorSection
+          sourceLanguage={sourceLanguage}
+          targetLanguage={targetLanguage}
+          onTargetLanguageChange={onTargetLanguageChange}
+          hasEntries={hasEntries}
+          isTranslating={isTranslating}
+          compact={isCompact}
+        />
+      </div>
+
+      <div
+        style={{
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'flex-end',
+          gap: 'var(--space-3)',
+          minWidth: 0,
+        }}
+      >
+        {!activeAIConfig && !isCompact && <AIConfigPrompt isDarkMode={isDarkMode} />}
+        {!activeAIConfig && isCompact && (
+          <Tooltip title="请先配置 AI 服务">
+            <BulbFilled style={{ color: CSS_COLORS.statusNeedsReview, fontSize: '16px' }} />
+          </Tooltip>
         )}
 
         <SystemActions
@@ -478,70 +513,7 @@ export const MenuBar = memo(function MenuBar({
           onSettings={onSettings}
           onDevTools={onDevTools}
         />
-      </nav>
-    );
-  }
-
-  return (
-    <nav style={containerStyles} aria-label="主菜单">
-      {/* Logo */}
-      <LogoSection compact={isCompact} />
-
-      {/* 文件操作 */}
-      <FileActions
-        onOpenFile={onOpenFile}
-        onSaveFile={onSaveFile}
-        onSaveAsFile={onSaveAsFile}
-        hasEntries={hasEntries}
-        compact={isCompact}
-      />
-
-      {/* 分隔线 */}
-      <Divider
-        type="vertical"
-        style={{
-          height: '20px',
-          margin: '0',
-          borderColor: CSS_COLORS.borderSecondary,
-        }}
-      />
-
-      {/* 翻译按钮 */}
-      <TranslateAction
-        onTranslateAll={onTranslateAll}
-        isTranslating={isTranslating}
-        hasEntries={hasEntries}
-        hasAIConfig={!!activeAIConfig}
-        onCancelTranslation={onCancelTranslation}
-      />
-
-      {/* 语言选择器 */}
-      <LanguageSelectorSection
-        sourceLanguage={sourceLanguage}
-        targetLanguage={targetLanguage}
-        onTargetLanguageChange={onTargetLanguageChange}
-        hasEntries={hasEntries}
-        isTranslating={isTranslating}
-        compact={isCompact}
-      />
-
-      <div style={{ flex: 1 }} />
-
-      {/* AI配置提示 */}
-      {!activeAIConfig && !isCompact && <AIConfigPrompt isDarkMode={isDarkMode} />}
-      {!activeAIConfig && isCompact && (
-        <Tooltip title="请先配置 AI 服务">
-          <BulbFilled style={{ color: CSS_COLORS.statusNeedsReview, fontSize: '16px' }} />
-        </Tooltip>
-      )}
-
-      {/* 系统操作 */}
-      <SystemActions
-        isDarkMode={isDarkMode}
-        onThemeToggle={onThemeToggle}
-        onSettings={onSettings}
-        onDevTools={onDevTools}
-      />
+      </div>
     </nav>
   );
 });

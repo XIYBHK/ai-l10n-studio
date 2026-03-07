@@ -1,4 +1,4 @@
-import React, { useState, memo } from 'react';
+import React, { useState, memo, lazy, Suspense } from 'react';
 import { Card, Tag, Divider, Button, Popconfirm } from 'antd';
 import {
   RobotOutlined,
@@ -11,19 +11,23 @@ import {
   InfoCircleOutlined,
 } from '@ant-design/icons';
 import type { TranslationStats } from '../types/tauri';
-import { MemoryManager } from './MemoryManager';
-import { TermLibraryManager } from './TermLibraryManager';
 import { CSS_COLORS } from '../hooks/useCssColors';
 import { useCumulativeStats, useResetCumulativeStatsAction, useSessionStats } from '../store';
 import { createModuleLogger } from '../utils/logger';
 import { useTermLibrary } from '../hooks/useTermLibrary';
-import { formatTokens, formatPercentage, formatCostByLocale } from '../utils/formatters';
+import { formatTokens, formatPercentage, formatCostByLocale, formatDateTime } from '../utils/formatters';
 import { useAppStore } from '../store/useAppStore';
 import { useAppData } from '../hooks/useConfig';
-import { aiModelCommands } from '../services/commands';
+import { aiModelCommands } from '../services/aiCommands';
 import type { ModelInfo } from '../types/generated/ModelInfo';
 
 const log = createModuleLogger('AIWorkspace');
+const MemoryManager = lazy(() =>
+  import('./MemoryManager').then((module) => ({ default: module.MemoryManager }))
+);
+const TermLibraryManager = lazy(() =>
+  import('./TermLibraryManager').then((module) => ({ default: module.TermLibraryManager }))
+);
 
 interface AIWorkspaceProps {
   stats: TranslationStats | null;
@@ -53,6 +57,7 @@ interface CumulativeStatsSectionProps {
 
 interface TermLibrarySectionProps {
   onManageClick: () => void;
+  language: string;
 }
 
 interface CostBreakdownProps {
@@ -88,22 +93,11 @@ const StatCard = memo(function StatCard({ title, value, suffix, icon, color }: S
     padding: 'var(--space-2)',
     backgroundColor: CSS_COLORS.bgTertiary,
     borderRadius: 'var(--radius-sm)',
-    transition: 'transform 0.2s, box-shadow 0.2s',
-    cursor: 'default',
-  };
-
-  const handleMouseEnter = (e: React.MouseEvent<HTMLDivElement>) => {
-    e.currentTarget.style.transform = 'translateY(-2px)';
-    e.currentTarget.style.boxShadow = `0 2px 8px ${CSS_COLORS.overlayBg}`;
-  };
-
-  const handleMouseLeave = (e: React.MouseEvent<HTMLDivElement>) => {
-    e.currentTarget.style.transform = 'translateY(0)';
-    e.currentTarget.style.boxShadow = 'none';
+    border: `1px solid ${CSS_COLORS.borderSecondary}`,
   };
 
   return (
-    <div style={containerStyle} onMouseEnter={handleMouseEnter} onMouseLeave={handleMouseLeave}>
+    <div style={containerStyle}>
       {icon && (
         <div style={{ marginBottom: 'var(--space-1)', color: CSS_COLORS.textTertiary }}>{icon}</div>
       )}
@@ -121,6 +115,7 @@ const StatCard = memo(function StatCard({ title, value, suffix, icon, color }: S
           fontSize: 'var(--font-size-lg)',
           fontWeight: 600,
           color: color ? CSS_COLORS[color as keyof typeof CSS_COLORS] : CSS_COLORS.textPrimary,
+          fontVariantNumeric: 'tabular-nums',
         }}
       >
         {value}
@@ -151,6 +146,7 @@ const TokenCard = memo(function TokenCard({ label, value }: { label: string; val
           fontSize: 'var(--font-size-base)',
           fontWeight: 600,
           color: CSS_COLORS.textPrimary,
+          fontVariantNumeric: 'tabular-nums',
         }}
       >
         {value}
@@ -492,6 +488,7 @@ const CumulativeStatsSection = memo(function CumulativeStatsSection({
 // 术语库区块
 const TermLibrarySection = memo(function TermLibrarySection({
   onManageClick,
+  language,
 }: TermLibrarySectionProps) {
   const { termLibrary } = useTermLibrary({ enabled: true });
 
@@ -559,7 +556,7 @@ const TermLibrarySection = memo(function TermLibrarySection({
           <div style={{ whiteSpace: 'pre-line' }}>{termLibrary.style_summary.prompt}</div>
           <div style={styleMetaStyle}>
             v{termLibrary.style_summary.version} ·{' '}
-            {new Date(termLibrary.style_summary.generated_at).toLocaleString('zh-CN')}
+            {formatDateTime(termLibrary.style_summary.generated_at, language)}
           </div>
         </div>
       )}
@@ -644,7 +641,7 @@ export const AIWorkspace = memo(function AIWorkspace({
                 style={{ marginLeft: 'var(--space-2)', border: 'none' }}
                 aria-label="翻译进行中"
               >
-                翻译中...
+                翻译中…
               </Tag>
             )}
           </span>
@@ -692,17 +689,22 @@ export const AIWorkspace = memo(function AIWorkspace({
         <Divider style={{ margin: 'var(--space-3) 0' }} />
 
         {/* 术语库 */}
-        <TermLibrarySection onManageClick={() => setTermLibraryVisible(true)} />
+        <TermLibrarySection onManageClick={() => setTermLibraryVisible(true)} language={language} />
       </Card>
 
-      <MemoryManager
-        visible={memoryManagerVisible}
-        onClose={() => setMemoryManagerVisible(false)}
-      />
-      <TermLibraryManager
-        visible={termLibraryVisible}
-        onClose={() => setTermLibraryVisible(false)}
-      />
+      {memoryManagerVisible ? (
+        <Suspense fallback={null}>
+          <MemoryManager visible={memoryManagerVisible} onClose={() => setMemoryManagerVisible(false)} />
+        </Suspense>
+      ) : null}
+      {termLibraryVisible ? (
+        <Suspense fallback={null}>
+          <TermLibraryManager
+            visible={termLibraryVisible}
+            onClose={() => setTermLibraryVisible(false)}
+          />
+        </Suspense>
+      ) : null}
     </>
   );
 });

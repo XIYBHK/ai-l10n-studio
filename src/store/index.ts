@@ -12,6 +12,8 @@
 import { loadPersistedState } from './useAppStore';
 import { loadStats } from './useStatsStore';
 
+let initPromise: Promise<void> | null = null;
+
 // Store 导出
 export {
   useAppStore,
@@ -62,13 +64,22 @@ export { tauriStore } from './tauriStore';
  * 应在应用启动时调用
  */
 export async function initializeStores() {
-  console.log('[Store] 初始化所有 Store...');
-
-  try {
-    await Promise.all([loadPersistedState(), loadStats()]);
-    console.log('[Store] 所有 Store 初始化成功');
-  } catch (error) {
-    console.error('[Store] Store 初始化失败:', error);
-    throw error;
+  if (initPromise) {
+    return initPromise;
   }
+
+  initPromise = (async () => {
+    console.log('[Store] 初始化所有 Store...');
+
+    try {
+      await Promise.all([loadPersistedState(), loadStats()]);
+      console.log('[Store] 所有 Store 初始化成功');
+    } catch (error) {
+      initPromise = null;
+      console.error('[Store] Store 初始化失败:', error);
+      throw error;
+    }
+  })();
+
+  return initPromise;
 }
