@@ -3,7 +3,9 @@ use crate::services::ai::plugin_loader;
 use crate::utils::logging::Type as LogType;
 use crate::utils::paths;
 use crate::{logging, logging_error};
-use anyhow::{Context, Result};
+#[cfg(not(debug_assertions))]
+use anyhow::Context;
+use anyhow::Result;
 use flexi_logger::{Cleanup, Criterion, Duplicate, FileSpec, LogSpecBuilder, Logger, WriteMode};
 use std::sync::OnceLock;
 use tokio::time::{Duration, timeout};
