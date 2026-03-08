@@ -8,7 +8,7 @@ on:
   workflow_dispatch:
 
 permissions:
-  contents: write
+  contents: read
 
 jobs:
   check:
@@ -18,7 +18,7 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v5
         with:
-          token: ${{ secrets.GITHUB_TOKEN }}
+          fetch-depth: 0
 
       - name: Setup Node.js
         uses: actions/setup-node@v5
@@ -58,34 +58,54 @@ jobs:
       - name: Install frontend dependencies
         run: npm ci
 
-      - name: Run Prettier (auto-fix)
-        run: npm run format
-
-      - name: Run cargo fmt (auto-fix)
-        working-directory: ./src-tauri
-        run: cargo fmt
-
-      - name: Check for changes
-        id: changes
+      - name: Collect changed files for Prettier
+        id: prettier-files
+        shell: bash
         run: |
-          if [[ -n $(git status --porcelain) ]]; then
-            echo "has_changes=true" >> $GITHUB_OUTPUT
+          if [[ "${{ github.event_name }}" == "pull_request" ]]; then
+            BASE_SHA="${{ github.event.pull_request.base.sha }}"
+            HEAD_SHA="${{ github.event.pull_request.head.sha }}"
           else
-            echo "has_changes=false" >> $GITHUB_OUTPUT
+            BASE_SHA="${{ github.event.before }}"
+            HEAD_SHA="${{ github.sha }}"
           fi
 
-      - name: Commit and push fixes
-        if: steps.changes.outputs.has_changes == 'true' && github.event_name == 'push'
+          if [[ -z "$BASE_SHA" || "$BASE_SHA" =~ ^0+$ ]]; then
+            BASE_SHA=$(git rev-parse "${HEAD_SHA}^" 2>/dev/null || true)
+          fi
+
+          CHANGED_FILES=$(git diff --name-only "$BASE_SHA" "$HEAD_SHA" -- '*.js' '*.jsx' '*.ts' '*.tsx' '*.json' '*.md' '*.yml' '*.yaml' '*.css' '*.html')
+
+          if [[ -n "$CHANGED_FILES" ]]; then
+            echo "has_files=true" >> "$GITHUB_OUTPUT"
+            {
+              echo 'files<<EOF'
+              echo "$CHANGED_FILES"
+              echo 'EOF'
+            } >> "$GITHUB_OUTPUT"
+          else
+            echo "has_files=false" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Check Prettier formatting
+        if: steps.prettier-files.outputs.has_files == 'true'
+        shell: bash
         run: |
-          git config --local user.email "github-actions[bot]@users.noreply.github.com"
-          git config --local user.name "github-actions[bot]"
-          git add -A
-          git commit -m "style: auto-fix formatting"
-          git push
+          echo "Checking files:"
+          printf '%s\n' "${{ steps.prettier-files.outputs.files }}"
+          npx prettier --check ${{ steps.prettier-files.outputs.files }}
+
+      - name: Check cargo fmt
+        working-directory: ./src-tauri
+        run: cargo fmt --check
 
       - name: Build frontend
         run: npm run build
 
+      - name: Run Rust tests
+        working-directory: ./src-tauri
+        run: cargo test --quiet
+
       - name: Run Rust clippy
         working-directory: ./src-tauri
-        run: cargo clippy --lib --all-features -- -D warnings
+        run: cargo clippy --all-targets --all-features -- -D warnings

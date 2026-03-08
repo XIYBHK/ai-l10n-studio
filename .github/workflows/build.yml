@@ -74,17 +74,6 @@ jobs:
         if: matrix.platform == 'macos-latest'
         run: npm run tauri build
 
-      - name: Debug - List Windows build output
-        if: matrix.platform == 'windows-latest'
-        shell: pwsh
-        run: |
-          Write-Host "=== Listing entire src-tauri/target directory ==="
-          if (Test-Path "src-tauri/target") {
-            Get-ChildItem -Path "src-tauri/target" -Recurse -File | Select-Object FullName, Length
-          } else {
-            Write-Host "Target directory does not exist"
-          }
-
       - name: Upload artifacts (Windows)
         if: matrix.platform == 'windows-latest'
         uses: actions/upload-artifact@v4
@@ -93,6 +82,7 @@ jobs:
           path: |
             src-tauri/target/release/bundle/msi/*.msi
             src-tauri/target/release/bundle/nsis/*.exe
+            src-tauri/target/release/PO-Translator.exe
             src-tauri/target/release/po-translator-gui.exe
           if-no-files-found: warn
           retention-days: 30
