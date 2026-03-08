@@ -91,9 +91,18 @@ jobs:
         if: steps.prettier-files.outputs.has_files == 'true'
         shell: bash
         run: |
+          FILES=()
+          while IFS= read -r file; do
+            if [[ -n "$file" ]]; then
+              FILES+=("$file")
+            fi
+          done <<'EOF'
+          ${{ steps.prettier-files.outputs.files }}
+          EOF
+
           echo "Checking files:"
-          printf '%s\n' "${{ steps.prettier-files.outputs.files }}"
-          npx prettier --check ${{ steps.prettier-files.outputs.files }}
+          printf '%s\n' "${FILES[@]}"
+          npx prettier --check "${FILES[@]}"
 
       - name: Check cargo fmt
         working-directory: ./src-tauri
