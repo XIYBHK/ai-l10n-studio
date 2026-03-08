@@ -18,7 +18,7 @@ What it does:
 - checks Rust formatting
 - builds the frontend (`npm run build`)
 - runs Rust tests
-- runs Clippy on all targets with warnings denied
+- runs Clippy on library and binary targets with warnings denied
 
 Important note:
 
