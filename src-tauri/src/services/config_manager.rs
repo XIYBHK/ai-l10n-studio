@@ -313,8 +313,8 @@ impl ConfigManager {
         let content = fs::read_to_string(config_path)
             .map_err(|e| anyhow!("Failed to read config file: {}", e))?;
 
-        let mut config: AppConfig =
-            serde_json::from_str(&content).map_err(|e| anyhow!("Failed to parse config file: {}", e))?;
+        let mut config: AppConfig = serde_json::from_str(&content)
+            .map_err(|e| anyhow!("Failed to parse config file: {}", e))?;
 
         let secrets_path = Self::get_secrets_path(config_path);
         if secrets_path.exists() {
@@ -335,7 +335,8 @@ impl ConfigManager {
         let secrets_content = serde_json::to_string_pretty(&secrets)
             .map_err(|e| anyhow!("Failed to serialize secrets data: {}", e))?;
 
-        fs::write(&self.config_path, content).map_err(|e| anyhow!("Failed to write config file: {}", e))?;
+        fs::write(&self.config_path, content)
+            .map_err(|e| anyhow!("Failed to write config file: {}", e))?;
         fs::write(Self::get_secrets_path(&self.config_path), secrets_content)
             .map_err(|e| anyhow!("Failed to write secrets file: {}", e))?;
 
@@ -447,7 +448,8 @@ impl ConfigManager {
         let secrets_content = serde_json::to_string_pretty(&secrets)
             .map_err(|e| anyhow!("Failed to serialize secrets data: {}", e))?;
 
-        fs::write(export_path, content).map_err(|e| anyhow!("Failed to export config file: {}", e))?;
+        fs::write(export_path, content)
+            .map_err(|e| anyhow!("Failed to export config file: {}", e))?;
         fs::write(Self::get_secrets_path(export_path), secrets_content)
             .map_err(|e| anyhow!("Failed to export secrets file: {}", e))?;
 
@@ -535,7 +537,6 @@ pub struct ProviderConfig {
     pub models: Vec<String>,
 }
 
-
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -572,7 +573,10 @@ mod tests {
 
         let reloaded = ConfigManager::new(Some(config_path.clone())).unwrap();
         assert_eq!(reloaded.get_config().api_key, "legacy-secret");
-        assert_eq!(reloaded.get_config().ai_configs[0].api_key, "real-secret-key");
+        assert_eq!(
+            reloaded.get_config().ai_configs[0].api_key,
+            "real-secret-key"
+        );
     }
 
     #[test]
@@ -612,7 +616,10 @@ mod tests {
         imported.import_config(&export_path).unwrap();
 
         assert_eq!(imported.get_config().api_key, "root-secret");
-        assert_eq!(imported.get_config().ai_configs[0].api_key, "provider-secret");
+        assert_eq!(
+            imported.get_config().ai_configs[0].api_key,
+            "provider-secret"
+        );
         assert_eq!(imported.get_config().active_config_index, Some(0));
     }
 
@@ -653,12 +660,19 @@ mod tests {
             "lastModified": null
         });
 
-        fs::write(&config_path, serde_json::to_string_pretty(&legacy_config).unwrap()).unwrap();
+        fs::write(
+            &config_path,
+            serde_json::to_string_pretty(&legacy_config).unwrap(),
+        )
+        .unwrap();
 
         let loaded = ConfigManager::new(Some(config_path.clone())).unwrap();
 
         assert_eq!(loaded.get_config().api_key, "legacy-root-secret");
-        assert_eq!(loaded.get_config().ai_configs[0].api_key, "legacy-provider-secret");
+        assert_eq!(
+            loaded.get_config().ai_configs[0].api_key,
+            "legacy-provider-secret"
+        );
         assert_eq!(loaded.get_config().active_config_index, Some(0));
     }
 }
