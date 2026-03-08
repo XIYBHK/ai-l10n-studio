@@ -1,5 +1,17 @@
 ## 数据契约（2025-11 性能优化重构版）
 
+### 当前状态（2026）
+
+- 运行时配置访问优先使用 `ConfigDraft`
+- 公开配置与 secrets 文件分离持久化
+- 文档示例避免直接输出 API Key
+- `ConfigManager` 仅保留给兼容与导入/导出场景
+
+## Historical Context
+
+The sections below preserve the 2025 contract simplification narrative.
+For current behavior, prioritize the 2026 summary above.
+
 ### 类型安全的前后端契约
 
 #### 🆕 2025-11 重构亮点（三轮优化）
@@ -459,7 +471,7 @@ await aiConfigCommands.add(config);
 let draft = ConfigDraft::global().await;
 {
     let config = draft.data(); // MappedRwLockReadGuard
-    println!("API Key: {}", config.api_key);
+    println!("Active config index: {:?}", config.active_config_index);
 } // guard 在此释放
 do_async_work().await; // 安全
 
@@ -468,6 +480,9 @@ let draft = ConfigDraft::global().await;
 let config = draft.data(); // 持有读锁
 do_async_work().await; // 编译错误：Send bound not satisfied
 ```
+
+> 当前实现采用“公开配置 + 独立 secrets 文件”的拆分存储策略；
+> 示例中避免直接输出 API Key，运行时配置访问优先使用 `ConfigDraft`。
 
 ### Draft 模式特性
 

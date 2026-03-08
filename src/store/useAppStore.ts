@@ -10,6 +10,19 @@ const log = createModuleLogger('useAppStore');
 type ThemeMode = 'light' | 'dark' | 'system';
 type Language = 'zh-CN' | 'en-US';
 
+function normalizeLanguage(language: string | null | undefined): Language {
+  if (!language) {
+    return 'zh-CN';
+  }
+
+  const normalized = language.toLowerCase();
+  if (normalized === 'en' || normalized === 'en-us') {
+    return 'en-US';
+  }
+
+  return 'zh-CN';
+}
+
 // 统计数据初始值常量
 const INITIAL_STATS: TranslationStats = {
   total: 0,
@@ -212,7 +225,7 @@ export async function loadPersistedState() {
     useAppStore.setState({ theme });
 
     const language = await tauriStore.getLanguage();
-    useAppStore.setState({ language: language as any });
+    useAppStore.setState({ language: normalizeLanguage(language) });
 
     const stats = await tauriStore.getCumulativeStats();
     useAppStore.setState({

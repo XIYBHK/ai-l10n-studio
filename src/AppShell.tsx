@@ -1,7 +1,6 @@
 import { useState, useEffect, useRef, lazy, Suspense } from 'react';
 import { ConfigProvider, App as AntApp } from 'antd';
 import { useTheme } from './hooks/useTheme';
-import { initializeStores } from './store';
 import { useAIConfigs } from './hooks/useConfig';
 import { useTranslationFlow } from './hooks/useTranslationFlow';
 import { openDevToolsWindow } from './utils/devToolsWindow';
@@ -23,12 +22,15 @@ const SettingsModal = lazy(() =>
   import('./components/SettingsModal').then((module) => ({ default: module.SettingsModal }))
 );
 
-export default function AppShell() {
+interface AppShellProps {
+  initError?: string | null;
+}
+
+export default function AppShell({ initError = null }: AppShellProps) {
   const { message: msg } = AntApp.useApp();
 
   const [settingsVisible, setSettingsVisible] = useState(false);
   const hasCheckedAIConfig = useRef(false);
-  const [initError, setInitError] = useState<string | null>(null);
   const openFileRef = useRef<() => Promise<void> | void>(() => undefined);
   const saveFileRef = useRef<() => Promise<void> | void>(() => undefined);
 
@@ -65,21 +67,14 @@ export default function AppShell() {
   const { active, loading: aiConfigLoading } = useAIConfigs();
 
   useEffect(() => {
-    initializeStores()
-      .then(() => log.info('Store initialized'))
-      .catch((error) => {
-        log.error('Store initialization failed', error);
-        setInitError('Store 初始化失败: ' + String(error));
-      });
-  }, []);
-
-  useEffect(() => {
     if (aiConfigLoading) return;
+
     if (!hasCheckedAIConfig.current && !active) {
       hasCheckedAIConfig.current = true;
       setSettingsVisible(true);
       log.info('No AI config found, opening settings');
     }
+
     if (active) {
       hasCheckedAIConfig.current = true;
     }
@@ -100,6 +95,7 @@ export default function AppShell() {
         saveFileRef.current();
       }
     };
+
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, []);
@@ -110,6 +106,7 @@ export default function AppShell() {
       msg.warning('请先在设置中配置并启用 AI 服务');
       return false;
     }
+
     return true;
   };
 
@@ -118,6 +115,7 @@ export default function AppShell() {
       log.warn('Translation already in progress');
       return;
     }
+
     if (!checkAIConfig()) return;
     await translateAll();
   };

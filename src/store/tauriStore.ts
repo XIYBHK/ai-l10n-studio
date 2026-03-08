@@ -251,7 +251,7 @@ class TauriStore {
 
   async getLanguage(): Promise<string> {
     const lang = await this.get('language');
-    return lang ?? 'zh';
+    return lang ?? 'zh-CN';
   }
 
   async setLanguage(language: string): Promise<void> {

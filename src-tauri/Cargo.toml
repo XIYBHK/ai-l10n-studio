@@ -1,6 +1,6 @@
 [package]
 name = "po-translator-gui"
-version = "0.0.0"
+version = "1.0.0"
 description = "PO文件AI翻译工具"
 authors = ["you"]
 license = ""

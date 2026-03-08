@@ -1,13 +1,24 @@
-## 文档索引
+# Documentation Index
 
-### 核心文档（2025-11 更新）
+## Core Docs
 
-- **API.md** - 统一命令层和简化事件系统
-- **Architecture.md** - 简化三层架构和性能优化成果
-- **DataContract.md** - 类型安全的前后端契约
-- **CHANGELOG.md** - 完整变更历史和优化记录
-- **ERRORS.md** - 错误码和故障排查
+- `Architecture.md` - Current architecture, layers, and dependency summary
+- `API.md` - Tauri commands, frontend service calls, and config access
+- `DataContract.md` - Shared frontend/backend data contracts
+- `SECURITY_NOTES.md` - Current secrets storage strategy and security tradeoffs
+- `CHANGELOG.md` - Main project change history
+- `ERRORS.md` - Troubleshooting and error references
 
-### 归档文档
+## Recommended Reading Order
 
-- **archive/** - 历史文档和长文档归档
+1. `Architecture.md`
+2. `API.md`
+3. `DataContract.md`
+4. `SECURITY_NOTES.md`
+
+## Notes
+
+- Runtime configuration access should prefer `ConfigDraft`
+- `ConfigManager` is retained only for compatibility and tooling flows such as import/export
+- Historical or superseded material lives under `archive/`
+- `Architecture.md`, `API.md`, and `DataContract.md` include historical sections; use their 2026 summaries first

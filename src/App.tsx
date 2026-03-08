@@ -4,11 +4,15 @@ import { TranslationWorkspaceSkeleton } from './components/skeletons';
 
 const AppShell = lazy(() => import('./AppShell'));
 
-export default function App() {
+interface AppProps {
+  initError?: string | null;
+}
+
+export default function App({ initError = null }: AppProps) {
   return (
     <ErrorBoundary>
       <Suspense fallback={<TranslationWorkspaceSkeleton />}>
-        <AppShell />
+        <AppShell initError={initError} />
       </Suspense>
     </ErrorBoundary>
   );

@@ -1,5 +1,18 @@
 ## API 索引
 
+### Current Status (2026)
+
+- Frontend-to-backend calls go through the unified command layer
+- Runtime configuration writes should prefer `ConfigDraft`
+- Public config and secrets are persisted separately
+- `ConfigManager` remains only for compatibility, import/export, and old-path scenarios
+- Security details are documented in `SECURITY_NOTES.md`
+
+## Historical Notes
+
+The sections below retain the 2025 refactoring history.
+For current runtime behavior, prioritize the Current Status (2026) summary above.
+
 ### 统一命令层 (2025-11 重构后)
 
 **位置**: `src/services/commands.ts`
@@ -560,7 +573,7 @@ const getSystemTheme = (): 'light' | 'dark' => {
 // 读取配置（只读访问）
 let draft = ConfigDraft::global().await;
 let config = draft.data(); // MappedRwLockReadGuard
-println!("API Key: {}", config.ai_configs[0].api_key);
+println!("Active config index: {:?}", config.active_config_index);
 // config 在作用域结束时自动释放读锁
 
 // 修改配置（原子更新）
@@ -585,9 +598,9 @@ some_async_fn().await; // 编译错误：Send bound not satisfied
 
 **迁移状态**:
 
-- 已迁移: 所有 `ConfigManager` 调用已迁移到 `ConfigDraft`
-- 已废弃: 旧的 `ConfigManager::new()` + `save_config()` 模式
-- 清理完成: 所有命令文件已完成迁移
+- Runtime path: configuration writes now go through `ConfigDraft`
+- Compatibility path: `ConfigManager` remains only for import/export and old-path compatibility
+- Persistence strategy: public config and secrets are stored separately
 
 ---
 

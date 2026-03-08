@@ -2,6 +2,14 @@
 
 🌐 基于 AI 的 PO 文件翻译工具，采用 Tauri + React + Rust 架构。
 
+## 当前状态（2026）
+
+- 前端栈：React 19 + TypeScript + Ant Design 6 + Zustand 5
+- 后端栈：Tauri 2.x + Rust + Tokio
+- 运行时配置：优先使用 `ConfigDraft`
+- 密钥存储：公开配置与独立 secrets 文件拆分持久化
+- 兼容路径：`ConfigManager` 仅保留给导入/导出与旧路径兼容
+
 ## ✨ 特性
 
 ### 核心功能
@@ -129,6 +137,9 @@ npm run tauri:build
 3. 选择 AI 提供商和模型
 4. 点击 **[保存]**
 
+> 安全说明：当前版本采用“公开配置 + 独立 secrets 文件”的拆分存储方案，
+> 运行时主路径优先使用 `ConfigDraft`。详细说明见 `docs/SECURITY_NOTES.md`。
+
 ### 2. 打开 PO 文件
 
 1. 点击工具栏 **[打开]** 按钮
@@ -199,6 +210,11 @@ npm run tauri:build
 - **模型** - 选择对应的 AI 模型
 - **基础 URL** - API 端点（可选）
 
+### 配置与密钥
+- **运行时配置** - 优先使用 `ConfigDraft`
+- **密钥持久化** - 公开配置与 secrets 文件分离存储
+- **兼容路径** - `ConfigManager` 仅保留给导入/导出与旧路径兼容
+
 ### 翻译设置
 - **批量大小** - 每批翻译的条目数
 - **最大并发** - 并发翻译请求数
@@ -246,9 +262,9 @@ ai-l10n-studio/
 
 ### 前端
 
-- **React 18** - UI 框架
+- **React 19** - UI 框架
 - **TypeScript** - 类型安全
-- **Ant Design 5** - UI 组件库
+- **Ant Design 6** - UI 组件库
 - **Zustand** - 状态管理
 - **Vite** - 构建工具
 
@@ -313,6 +329,8 @@ ai-l10n-studio/
 ### 📚 完整文档库
 
 **所有文档已整理到 [`docs/`](./docs/) 文件夹** - [查看文档索引](./docs/README.md)
+
+推荐优先阅读：`docs/Architecture.md`、`docs/API.md`、`docs/DataContract.md`、`docs/SECURITY_NOTES.md`
 
 ### 快速链接
 

@@ -34,6 +34,10 @@ pub mod tests;
 
 // 核心类型
 pub use ai_translator::{AIConfig, AITranslator, ProxyConfig};
+// Runtime configuration access should prefer `ConfigDraft`.
+// `AppConfig` / `ConfigVersionInfo` are still defined in `config_manager`
+// and re-exported here, but `ConfigManager` itself should remain a
+// compatibility/tooling entry point such as import/export workflows.
 pub use config_draft::ConfigDraft;
 pub use config_manager::{AppConfig, ConfigVersionInfo};
 pub use translation_stats::TokenStats;

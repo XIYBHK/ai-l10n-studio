@@ -1,10 +1,16 @@
-## 架构（2025-11 性能优化重构版）
+## Architecture Overview (2026 update)
 
-### 核心技术栈
+### Core Stack
 
-**前端**: React 18 + TypeScript + Ant Design + Zustand + SWR
-**后端**: Tauri **2.8** + Rust (Tokio) + nom parser + 8 AI SDKs
-**构建**: Vite + Vitest（73 测试，82.8% 覆盖率）
+**Frontend**: React 19 + TypeScript + Ant Design 6 + Zustand 5 + SWR
+**Backend**: Tauri 2.x + Rust (Tokio) + nom parser + AI provider plugins
+**Build & Validation**: Vite + TypeScript + Cargo tests
+**Secrets & Config**: Runtime writes should prefer `ConfigDraft`; secrets are stored separately from the public config snapshot, and `ConfigManager` is kept only for compatibility/import-export flows.
+
+## Historical Context
+
+The sections below are preserved as refactoring history and performance background.
+Use the summary above as the source of truth for the current project state.
 
 ### 2025-11 重大性能重构
 

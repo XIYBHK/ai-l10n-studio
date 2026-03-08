@@ -73,6 +73,14 @@ pub struct AppConfig {
     pub last_modified: Option<String>, // 最后修改时间
 }
 
+#[derive(Debug, Clone, Default, Serialize, Deserialize)]
+struct ConfigSecrets {
+    #[serde(default)]
+    api_key: String,
+    #[serde(default)]
+    ai_api_keys: Vec<String>,
+}
+
 impl Default for AppConfig {
     fn default() -> Self {
         // 获取默认的翻译记忆库路径
@@ -208,6 +216,12 @@ impl AppConfig {
     }
 }
 
+/// Legacy compatibility manager.
+///
+/// New runtime code should prefer `ConfigDraft`, which already provides
+/// draft-based updates, event emission, and split secret persistence.
+/// This type remains for compatibility utilities such as import/export
+/// and older code paths.
 #[derive(Debug, Clone)]
 pub struct ConfigManager {
     config_path: PathBuf,
@@ -215,6 +229,47 @@ pub struct ConfigManager {
 }
 
 impl ConfigManager {
+    fn get_secrets_path(config_path: &Path) -> PathBuf {
+        let parent = config_path.parent().unwrap_or_else(|| Path::new("."));
+        let stem = config_path
+            .file_stem()
+            .and_then(|value| value.to_str())
+            .unwrap_or("config");
+
+        parent.join(format!("{}.secrets.json", stem))
+    }
+
+    fn split_config(config: &AppConfig) -> (AppConfig, ConfigSecrets) {
+        let mut public_config = config.clone();
+        let secrets = ConfigSecrets {
+            api_key: config.api_key.clone(),
+            ai_api_keys: config
+                .ai_configs
+                .iter()
+                .map(|item| item.api_key.clone())
+                .collect(),
+        };
+
+        public_config.api_key.clear();
+        for ai_config in &mut public_config.ai_configs {
+            ai_config.api_key.clear();
+        }
+
+        (public_config, secrets)
+    }
+
+    fn apply_secrets(config: &mut AppConfig, secrets: &ConfigSecrets) {
+        if !secrets.api_key.is_empty() {
+            config.api_key = secrets.api_key.clone();
+        }
+
+        for (ai_config, api_key) in config.ai_configs.iter_mut().zip(secrets.ai_api_keys.iter()) {
+            if !api_key.is_empty() {
+                ai_config.api_key = api_key.clone();
+            }
+        }
+    }
+
     pub fn new(config_path: Option<PathBuf>) -> Result<Self> {
         let config_path = config_path.unwrap_or_else(|| {
             // Phase 9: 使用新的 paths.rs 统一路径管理
@@ -254,24 +309,40 @@ impl ConfigManager {
     }
 
     pub fn load_from_file<P: AsRef<Path>>(path: P) -> Result<AppConfig> {
-        let content = fs::read_to_string(path).map_err(|e| anyhow!("无法读取配置文件: {}", e))?;
+        let config_path = path.as_ref();
+        let content = fs::read_to_string(config_path)
+            .map_err(|e| anyhow!("Failed to read config file: {}", e))?;
 
-        let config: AppConfig =
-            serde_json::from_str(&content).map_err(|e| anyhow!("配置文件格式错误: {}", e))?;
+        let mut config: AppConfig =
+            serde_json::from_str(&content).map_err(|e| anyhow!("Failed to parse config file: {}", e))?;
+
+        let secrets_path = Self::get_secrets_path(config_path);
+        if secrets_path.exists() {
+            let secrets_content = fs::read_to_string(&secrets_path)
+                .map_err(|e| anyhow!("Failed to read secrets file: {}", e))?;
+            let secrets: ConfigSecrets = serde_json::from_str(&secrets_content)
+                .map_err(|e| anyhow!("Failed to parse secrets file: {}", e))?;
+            Self::apply_secrets(&mut config, &secrets);
+        }
 
         Ok(config)
     }
 
     pub fn save(&self) -> Result<()> {
-        let content = serde_json::to_string_pretty(&self.config)
-            .map_err(|e| anyhow!("序列化配置失败: {}", e))?;
+        let (public_config, secrets) = Self::split_config(&self.config);
+        let content = serde_json::to_string_pretty(&public_config)
+            .map_err(|e| anyhow!("Failed to serialize config data: {}", e))?;
+        let secrets_content = serde_json::to_string_pretty(&secrets)
+            .map_err(|e| anyhow!("Failed to serialize secrets data: {}", e))?;
 
-        fs::write(&self.config_path, content).map_err(|e| anyhow!("保存配置文件失败: {}", e))?;
+        fs::write(&self.config_path, content).map_err(|e| anyhow!("Failed to write config file: {}", e))?;
+        fs::write(Self::get_secrets_path(&self.config_path), secrets_content)
+            .map_err(|e| anyhow!("Failed to write secrets file: {}", e))?;
 
         Ok(())
     }
 
-    /// 保存配置并递增版本号（用于配置修改）
+    /// Save config and bump the version counter.
     fn save_with_version_increment(&mut self) -> Result<()> {
         // 递增版本号
         self.config.config_version = self.config.config_version.wrapping_add(1);
@@ -369,20 +440,22 @@ impl ConfigManager {
     }
 
     pub fn export_config<P: AsRef<Path>>(&self, export_path: P) -> Result<()> {
-        let content = serde_json::to_string_pretty(&self.config)
-            .map_err(|e| anyhow!("序列化配置失败: {}", e))?;
+        let (public_config, secrets) = Self::split_config(&self.config);
+        let export_path = export_path.as_ref();
+        let content = serde_json::to_string_pretty(&public_config)
+            .map_err(|e| anyhow!("Failed to serialize config data: {}", e))?;
+        let secrets_content = serde_json::to_string_pretty(&secrets)
+            .map_err(|e| anyhow!("Failed to serialize secrets data: {}", e))?;
 
-        fs::write(export_path, content).map_err(|e| anyhow!("导出配置文件失败: {}", e))?;
+        fs::write(export_path, content).map_err(|e| anyhow!("Failed to export config file: {}", e))?;
+        fs::write(Self::get_secrets_path(export_path), secrets_content)
+            .map_err(|e| anyhow!("Failed to export secrets file: {}", e))?;
 
         Ok(())
     }
 
     pub fn import_config<P: AsRef<Path>>(&mut self, import_path: P) -> Result<()> {
-        let content =
-            fs::read_to_string(import_path).map_err(|e| anyhow!("读取导入配置文件失败: {}", e))?;
-
-        let imported_config: AppConfig =
-            serde_json::from_str(&content).map_err(|e| anyhow!("导入配置文件格式错误: {}", e))?;
+        let imported_config = Self::load_from_file(import_path)?;
 
         self.config = imported_config;
         self.save()?;
@@ -460,4 +533,132 @@ pub struct ProviderConfig {
     pub display_name: String,
     pub base_url: String,
     pub models: Vec<String>,
+}
+
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use tempfile::tempdir;
+
+    #[test]
+    fn config_manager_stores_secrets_separately() {
+        let temp_dir = tempdir().unwrap();
+        let config_path = temp_dir.path().join("config.json");
+        let secrets_path = temp_dir.path().join("config.secrets.json");
+
+        let mut manager = ConfigManager::new(Some(config_path.clone())).unwrap();
+        manager.set_api_key("legacy-secret".to_string()).unwrap();
+        manager
+            .update_config(|config| {
+                config.ai_configs.push(AIConfig {
+                    provider_id: "openai".to_string(),
+                    api_key: "real-secret-key".to_string(),
+                    base_url: None,
+                    model: Some("gpt-4o-mini".to_string()),
+                    proxy: None,
+                });
+                config.active_config_index = Some(0);
+            })
+            .unwrap();
+
+        let public_content = fs::read_to_string(&config_path).unwrap();
+        let secrets_content = fs::read_to_string(&secrets_path).unwrap();
+
+        assert!(!public_content.contains("legacy-secret"));
+        assert!(!public_content.contains("real-secret-key"));
+        assert!(secrets_content.contains("legacy-secret"));
+        assert!(secrets_content.contains("real-secret-key"));
+
+        let reloaded = ConfigManager::new(Some(config_path.clone())).unwrap();
+        assert_eq!(reloaded.get_config().api_key, "legacy-secret");
+        assert_eq!(reloaded.get_config().ai_configs[0].api_key, "real-secret-key");
+    }
+
+    #[test]
+    fn config_manager_exports_and_imports_with_secrets() {
+        let temp_dir = tempdir().unwrap();
+        let config_path = temp_dir.path().join("config.json");
+        let export_path = temp_dir.path().join("exported.json");
+        let export_secrets_path = temp_dir.path().join("exported.secrets.json");
+
+        let mut manager = ConfigManager::new(Some(config_path.clone())).unwrap();
+        manager.set_api_key("root-secret".to_string()).unwrap();
+        manager
+            .update_config(|config| {
+                config.ai_configs.push(AIConfig {
+                    provider_id: "openai".to_string(),
+                    api_key: "provider-secret".to_string(),
+                    base_url: Some("https://api.openai.com/v1".to_string()),
+                    model: Some("gpt-4o-mini".to_string()),
+                    proxy: None,
+                });
+                config.active_config_index = Some(0);
+            })
+            .unwrap();
+
+        manager.export_config(&export_path).unwrap();
+
+        let public_export = fs::read_to_string(&export_path).unwrap();
+        let secrets_export = fs::read_to_string(&export_secrets_path).unwrap();
+
+        assert!(!public_export.contains("root-secret"));
+        assert!(!public_export.contains("provider-secret"));
+        assert!(secrets_export.contains("root-secret"));
+        assert!(secrets_export.contains("provider-secret"));
+
+        let import_target = temp_dir.path().join("imported.json");
+        let mut imported = ConfigManager::new(Some(import_target.clone())).unwrap();
+        imported.import_config(&export_path).unwrap();
+
+        assert_eq!(imported.get_config().api_key, "root-secret");
+        assert_eq!(imported.get_config().ai_configs[0].api_key, "provider-secret");
+        assert_eq!(imported.get_config().active_config_index, Some(0));
+    }
+
+    #[test]
+    fn config_manager_loads_legacy_inline_secrets() {
+        let temp_dir = tempdir().unwrap();
+        let config_path = temp_dir.path().join("legacy.json");
+
+        let legacy_config = serde_json::json!({
+            "apiKey": "legacy-root-secret",
+            "provider": "moonshot",
+            "model": "moonshot-v1-auto",
+            "baseUrl": "https://api.moonshot.cn/v1",
+            "useTranslationMemory": true,
+            "translationMemoryPath": null,
+            "logLevel": "info",
+            "autoSave": true,
+            "batchSize": 10,
+            "maxConcurrent": 3,
+            "timeoutSeconds": 30,
+            "aiConfigs": [
+                {
+                    "providerId": "openai",
+                    "apiKey": "legacy-provider-secret",
+                    "baseUrl": "https://api.openai.com/v1",
+                    "model": "gpt-4o-mini",
+                    "proxy": null
+                }
+            ],
+            "activeConfigIndex": 0,
+            "systemPrompt": null,
+            "themeMode": null,
+            "language": null,
+            "logRetentionDays": 7,
+            "logMaxSize": 128,
+            "logMaxCount": 8,
+            "configVersion": 0,
+            "lastModified": null
+        });
+
+        fs::write(&config_path, serde_json::to_string_pretty(&legacy_config).unwrap()).unwrap();
+
+        let loaded = ConfigManager::new(Some(config_path.clone())).unwrap();
+
+        assert_eq!(loaded.get_config().api_key, "legacy-root-secret");
+        assert_eq!(loaded.get_config().ai_configs[0].api_key, "legacy-provider-secret");
+        assert_eq!(loaded.get_config().active_config_index, Some(0));
+    }
 }
