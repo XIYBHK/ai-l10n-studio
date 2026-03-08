@@ -1,5 +1,6 @@
-use crate::services::ConfigDraft;
+﻿use crate::services::ConfigDraft;
 use crate::services::ai::plugin_loader;
+use crate::utils::logging::NoModuleFilter;
 use crate::utils::logging::Type as LogType;
 use crate::utils::paths;
 use crate::{logging, logging_error};
@@ -10,8 +11,6 @@ use flexi_logger::{Cleanup, Criterion, Duplicate, FileSpec, LogSpecBuilder, Logg
 use std::sync::OnceLock;
 use tokio::time::{Duration, timeout};
 
-use crate::utils::logging::NoModuleFilter;
-
 pub static LOGGER_HANDLE: OnceLock<flexi_logger::LoggerHandle> = OnceLock::new();
 
 pub async fn init_app() -> Result<()> {
@@ -20,11 +19,7 @@ pub async fn init_app() -> Result<()> {
     init_logger().await?;
     init_ai_providers()?;
 
-    logging!(
-        info,
-        LogType::Init,
-        "🚀 Application initialized successfully"
-    );
+    logging!(info, LogType::Init, "Application initialized successfully");
     logging!(
         info,
         LogType::Init,
@@ -42,21 +37,17 @@ pub async fn init_app() -> Result<()> {
 }
 
 fn init_ai_providers() -> Result<()> {
-    logging!(info, LogType::Init, "🔧 初始化 AI 供应商系统...");
+    logging!(info, LogType::Init, "Initializing AI providers...");
 
-    // 不再注册内置供应商，全部使用插件系统
-
-    // 确定插件目录路径
     let plugins_dir = get_plugins_dir()?;
 
-    logging!(info, LogType::Init, "🔧 插件目录路径: {:?}", plugins_dir);
+    logging!(info, LogType::Init, "Plugin directory: {:?}", plugins_dir);
 
-    // 如果插件目录不存在，记录警告但不中断启动
     if !plugins_dir.exists() {
         logging!(
             info,
             LogType::Init,
-            "⚠️ 插件目录不存在，请确保 plugins 目录已正确部署"
+            "Plugin directory is missing; skipping dynamic provider loading"
         );
         return Ok(());
     }
@@ -68,58 +59,48 @@ fn init_ai_providers() -> Result<()> {
             logging!(
                 info,
                 LogType::Init,
-                "✅ 插件系统初始化完成，加载了 {} 个 AI 供应商",
+                "Plugin system initialized, loaded {} AI providers",
                 count
             );
         }
-        Err(e) => {
-            logging_error!(LogType::Init, "⚠️ 插件加载失败: {}", e);
+        Err(error) => {
+            logging_error!(LogType::Init, "Failed to load plugins: {}", error);
         }
     }
 
     Ok(())
 }
 
-/// 获取插件目录路径
-///
-/// - 开发环境: 项目根目录的 plugins/
-/// - 生产环境: 应用资源目录的 plugins/（由 Tauri bundle.resources 打包）
 fn get_plugins_dir() -> anyhow::Result<std::path::PathBuf> {
     #[cfg(debug_assertions)]
     {
-        // 开发环境：项目根目录的 plugins/
         let current_dir = std::env::current_dir().unwrap_or_else(|_| std::path::PathBuf::from("."));
         Ok(current_dir.parent().unwrap_or(&current_dir).join("plugins"))
     }
 
     #[cfg(not(debug_assertions))]
     {
-        // 生产环境：从资源目录加载
-        // Tauri bundle.resources 会将整个 plugins 目录打包到特定位置
-        let exe_path = std::env::current_exe().context("获取可执行文件路径失败")?;
+        let exe_path = std::env::current_exe().context("Failed to get executable path")?;
 
-        // Windows: 可执行文件旁边的 plugins/
-        // macOS: .app/Contents/Resources/plugins/
-        // Linux: 可执行文件旁边的 plugins/
         #[cfg(target_os = "windows")]
         let plugins_dir = exe_path
             .parent()
-            .map(|p| p.join("plugins"))
+            .map(|dir| dir.join("plugins"))
             .unwrap_or_else(|| exe_path.join("plugins"));
 
         #[cfg(target_os = "macos")]
         let plugins_dir = exe_path
             .parent()
-            .and_then(|p| p.parent())
-            .and_then(|p| p.parent())
-            .and_then(|p| p.parent())
-            .map(|p| p.join("Resources").join("plugins"))
+            .and_then(|dir| dir.parent())
+            .and_then(|dir| dir.parent())
+            .and_then(|dir| dir.parent())
+            .map(|dir| dir.join("Resources").join("plugins"))
             .unwrap_or_else(|| exe_path.join("plugins"));
 
         #[cfg(target_os = "linux")]
         let plugins_dir = exe_path
             .parent()
-            .map(|p| p.join("plugins"))
+            .map(|dir| dir.join("plugins"))
             .unwrap_or_else(|| exe_path.join("plugins"));
 
         Ok(plugins_dir)
@@ -136,7 +117,7 @@ async fn load_log_config() -> (usize, usize) {
             )
         }
         Err(_) => {
-            eprintln!("⚠️ 日志初始化: 配置加载超时，使用默认值");
+            eprintln!("Logger init config load timed out, using defaults");
             (128 * 1024, 8)
         }
     }
@@ -150,7 +131,6 @@ async fn init_logger() -> Result<()> {
 
     let (log_max_size, log_max_count) = load_log_config().await;
 
-    // 初始化 tracing 日志系统
     crate::utils::logger::init_tracing();
 
     let level = if cfg!(debug_assertions) {
@@ -187,10 +167,12 @@ async fn init_logger() -> Result<()> {
         )
         .filter(Box::new(NoModuleFilter(filters)));
 
-    let handle = logger.start()?;
+    let handle = logger
+        .start()
+        .map_err(|error| anyhow::anyhow!("logger.start failed: {error:?}"))?;
     LOGGER_HANDLE.set(handle).ok();
 
-    log::info!("日志系统初始化完成，路径: {:?}", log_dir);
+    log::info!("Logger initialized at {:?}", log_dir);
     Ok(())
 }
 
@@ -209,12 +191,7 @@ pub async fn delete_old_logs(retention_days: Option<u32>) -> Result<()> {
         return Ok(());
     }
 
-    logging!(
-        info,
-        LogType::Init,
-        "Cleaning logs older than {} days",
-        days
-    );
+    logging!(info, LogType::Init, "Cleaning logs older than {} days", days);
 
     let now = chrono::Local::now();
     let cutoff = now - chrono::Duration::days(days as i64);
@@ -229,12 +206,12 @@ pub async fn delete_old_logs(retention_days: Option<u32>) -> Result<()> {
         {
             let modified_time: chrono::DateTime<chrono::Local> = modified.into();
             if modified_time < cutoff {
-                if let Err(e) = tokio::fs::remove_file(entry.path()).await {
+                if let Err(error) = tokio::fs::remove_file(entry.path()).await {
                     logging_error!(
                         LogType::Init,
                         "Failed to delete log file {:?}: {}",
                         entry.path(),
-                        e
+                        error
                     );
                 } else {
                     deleted_count += 1;

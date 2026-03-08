@@ -1,6 +1,6 @@
 /**
- * 设置窗口
- * 已拆解为多个独立的 Tab 组件
+ * 璁剧疆绐楀彛
+ * 宸叉媶瑙ｄ负澶氫釜鐙珛鐨?Tab 缁勪欢
  */
 
 import { Modal, Tabs } from 'antd';
@@ -35,7 +35,7 @@ export function SettingsModal({ visible, onClose }: SettingsModalProps) {
             fontSize: 'var(--font-size-base)',
           }}
         >
-          <ApiOutlined /> AI 配置
+          <ApiOutlined /> AI 閰嶇疆
         </span>
       ),
       children: <AIConfigTab />,
@@ -51,7 +51,7 @@ export function SettingsModal({ visible, onClose }: SettingsModalProps) {
             fontSize: 'var(--font-size-base)',
           }}
         >
-          <FileTextOutlined /> 系统提示词
+          <FileTextOutlined /> 绯荤粺鎻愮ず璇?
         </span>
       ),
       children: <SystemPromptTab />,
@@ -67,7 +67,7 @@ export function SettingsModal({ visible, onClose }: SettingsModalProps) {
             fontSize: 'var(--font-size-base)',
           }}
         >
-          <BgColorsOutlined /> 外观
+          <BgColorsOutlined /> 澶栬
         </span>
       ),
       children: <AppearanceTab />,
@@ -83,7 +83,7 @@ export function SettingsModal({ visible, onClose }: SettingsModalProps) {
             fontSize: 'var(--font-size-base)',
           }}
         >
-          <BellOutlined /> 通知
+          <BellOutlined /> 閫氱煡
         </span>
       ),
       children: <NotificationTab />,
@@ -99,7 +99,7 @@ export function SettingsModal({ visible, onClose }: SettingsModalProps) {
             fontSize: 'var(--font-size-base)',
           }}
         >
-          <InfoCircleOutlined /> 日志
+          <InfoCircleOutlined /> 鏃ュ織
         </span>
       ),
       children: <LogsTab />,
@@ -108,7 +108,7 @@ export function SettingsModal({ visible, onClose }: SettingsModalProps) {
 
   return (
     <Modal
-      title="设置"
+      title="璁剧疆"
       open={visible}
       onCancel={onClose}
       footer={null}
@@ -121,7 +121,9 @@ export function SettingsModal({ visible, onClose }: SettingsModalProps) {
         },
       }}
     >
-      <Tabs items={tabItems} defaultActiveKey="ai-config" />
+      <div data-testid="settings-modal-content">
+        <Tabs items={tabItems} defaultActiveKey="ai-config" />
+      </div>
     </Modal>
   );
 }

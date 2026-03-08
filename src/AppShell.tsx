@@ -103,7 +103,7 @@ export default function AppShell({ initError = null }: AppShellProps) {
   const checkAIConfig = (): boolean => {
     if (!active) {
       setSettingsVisible(true);
-      msg.warning('请先在设置中配置并启用 AI 服务');
+      msg.warning('璇峰厛鍦ㄨ缃腑閰嶇疆骞跺惎鐢?AI 鏈嶅姟');
       return false;
     }
 
@@ -133,7 +133,11 @@ export default function AppShell({ initError = null }: AppShellProps) {
   return (
     <ConfigProvider theme={themeData.themeConfig}>
       <AntApp>
-        <div data-theme={themeData.isDark ? 'dark' : 'light'} style={{ height: '100vh' }}>
+        <div
+          data-testid="app-shell"
+          data-theme={themeData.isDark ? 'dark' : 'light'}
+          style={{ height: '100vh' }}
+        >
           {initError && (
             <div
               style={{
@@ -148,9 +152,9 @@ export default function AppShell({ initError = null }: AppShellProps) {
                 textAlign: 'center',
               }}
             >
-              ⚠️ {initError}
+              鈿狅笍 {initError}
               <button onClick={() => window.location.reload()} style={{ marginLeft: '16px' }}>
-                重新加载
+                閲嶆柊鍔犺浇
               </button>
             </div>
           )}
@@ -166,7 +170,7 @@ export default function AppShell({ initError = null }: AppShellProps) {
                 try {
                   await openDevToolsWindow();
                 } catch (error) {
-                  console.error('[AppShell] 打开开发者工具失败:', error);
+                  console.error('[AppShell] 鎵撳紑寮€鍙戣€呭伐鍏峰け璐?', error);
                 }
               }}
               isTranslating={isTranslating}
@@ -180,7 +184,7 @@ export default function AppShell({ initError = null }: AppShellProps) {
                 try {
                   await cancelTranslation();
                 } catch (error) {
-                  console.error('[AppShell] 取消翻译失败:', error);
+                  console.error('[AppShell] 鍙栨秷缈昏瘧澶辫触:', error);
                 }
               }}
             />

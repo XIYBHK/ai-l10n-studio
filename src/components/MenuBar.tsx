@@ -21,7 +21,7 @@ import { useSupportedLanguages } from '../hooks/useLanguage';
 
 const { Text } = Typography;
 
-// 容器高度常量
+// 瀹瑰櫒楂樺害甯搁噺
 const MENU_HEIGHT = '56px';
 const MENU_PADDING_X = 'var(--space-5)';
 const MENU_GAP = 'var(--space-4)';
@@ -84,7 +84,7 @@ interface SystemActionsProps {
 // ==================== Sub Components ====================
 
 /**
- * Logo区域 - 简化渐变，移除复杂动画
+ * Logo鍖哄煙 - 绠€鍖栨笎鍙橈紝绉婚櫎澶嶆潅鍔ㄧ敾
  */
 const LogoSection = memo(function LogoSection({ compact }: LogoSectionProps) {
   return (
@@ -111,7 +111,7 @@ const LogoSection = memo(function LogoSection({ compact }: LogoSectionProps) {
 });
 
 /**
- * 文件操作按钮组
+ * 鏂囦欢鎿嶄綔鎸夐挳缁?
  */
 const FileActions = memo(function FileActions({
   onOpenFile,
@@ -132,21 +132,21 @@ const FileActions = memo(function FileActions({
         borderRadius: 'var(--radius-full)',
       }}
       role="group"
-      aria-label="文件操作"
+      aria-label="鏂囦欢鎿嶄綔"
     >
-      <Tooltip title="打开 PO 文件 (Ctrl+O)">
+      <Tooltip title="鎵撳紑 PO 鏂囦欢 (Ctrl+O)">
         <ActionButton
           variant="ghost"
           size="small"
           icon={<FolderOpenOutlined />}
           onClick={onOpenFile}
-          aria-label="打开 PO 文件 (Ctrl+O)"
+          aria-label="鎵撳紑 PO 鏂囦欢 (Ctrl+O)"
         >
-          {!compact && '打开'}
+          {!compact && '鎵撳紑'}
         </ActionButton>
       </Tooltip>
 
-      <Tooltip title="保存到原文件 (Ctrl+S)">
+      <Tooltip title="淇濆瓨鍒板師鏂囦欢 (Ctrl+S)">
         <ActionButton
           variant="ghost"
           size="small"
@@ -156,11 +156,11 @@ const FileActions = memo(function FileActions({
           aria-label={hasEntries ? '保存到原文件 (Ctrl+S)' : '保存（请先打开文件）'}
           aria-disabled={!hasEntries}
         >
-          {!compact && '保存'}
+          {!compact && '淇濆瓨'}
         </ActionButton>
       </Tooltip>
 
-      <Tooltip title="另存为新文件">
+      <Tooltip title="鍙﹀瓨涓烘柊鏂囦欢">
         <ActionButton
           variant="ghost"
           size="small"
@@ -177,7 +177,7 @@ const FileActions = memo(function FileActions({
 });
 
 /**
- * 翻译主按钮 - 更突出的视觉层次
+ * 缈昏瘧涓绘寜閽?- 鏇寸獊鍑虹殑瑙嗚灞傛
  */
 const TranslateAction = memo(function TranslateAction({
   onTranslateAll,
@@ -189,13 +189,19 @@ const TranslateAction = memo(function TranslateAction({
   const getAriaLabel = () => {
     if (!hasAIConfig) return '批量翻译（请先配置 AI 服务）';
     if (!hasEntries) return '批量翻译（请先打开文件）';
-    if (isTranslating) return '停止翻译';
-    return '批量翻译所有未翻译条目';
+    if (isTranslating) return '鍋滄缈昏瘧';
+    return '鎵归噺缈昏瘧鎵€鏈夋湭缈昏瘧鏉＄洰';
   };
 
   return (
     <Tooltip
-      title={!hasAIConfig ? '请先配置 AI 服务' : isTranslating ? '停止翻译' : '翻译所有未翻译条目'}
+      title={
+        !hasAIConfig
+          ? '璇峰厛閰嶇疆 AI 鏈嶅姟'
+          : isTranslating
+            ? '鍋滄缈昏瘧'
+            : '缈昏瘧鎵€鏈夋湭缈昏瘧鏉＄洰'
+      }
     >
       <ActionButton
         variant={isTranslating ? 'secondary' : 'primary'}
@@ -214,14 +220,14 @@ const TranslateAction = memo(function TranslateAction({
           fontWeight: 600,
         }}
       >
-        {isTranslating ? '停止翻译' : '批量翻译'}
+        {isTranslating ? '鍋滄缈昏瘧' : '鎵归噺缈昏瘧'}
       </ActionButton>
     </Tooltip>
   );
 });
 
 /**
- * 语言选择区域 - 统一输入框样式
+ * 璇█閫夋嫨鍖哄煙 - 缁熶竴杈撳叆妗嗘牱寮?
  */
 const LanguageSelectorSection = memo(function LanguageSelectorSection({
   sourceLanguage,
@@ -271,7 +277,7 @@ const LanguageSelectorSection = memo(function LanguageSelectorSection({
       <LanguageSelector
         value={targetLanguage}
         onChange={onTargetLanguageChange}
-        placeholder={compact ? '目标' : '目标语言'}
+        placeholder={compact ? '鐩爣' : '鐩爣璇█'}
         disabled={isTranslating}
         style={{ width: compact ? 100 : 140 }}
       />
@@ -280,7 +286,7 @@ const LanguageSelectorSection = memo(function LanguageSelectorSection({
 });
 
 /**
- * 系统操作按钮组（主题、设置、调试）
+ * 绯荤粺鎿嶄綔鎸夐挳缁勶紙涓婚銆佽缃€佽皟璇曪級
  */
 const SystemActions = memo(function SystemActions({
   isDarkMode,
@@ -300,7 +306,7 @@ const SystemActions = memo(function SystemActions({
         borderRadius: 'var(--radius-full)',
       }}
       role="group"
-      aria-label="系统操作"
+      aria-label="绯荤粺鎿嶄綔"
     >
       {onThemeToggle && (
         <Tooltip title={isDarkMode ? '切换到亮色模式' : '切换到暗色模式'}>
@@ -309,6 +315,7 @@ const SystemActions = memo(function SystemActions({
             size="small"
             icon={isDarkMode ? <BulbFilled /> : <BulbOutlined />}
             onClick={onThemeToggle}
+            data-testid="menu-theme-toggle"
             aria-label={isDarkMode ? '切换到亮色模式' : '切换到暗色模式'}
             aria-pressed={isDarkMode}
             style={{ color: CSS_COLORS.textSecondary }}
@@ -316,25 +323,26 @@ const SystemActions = memo(function SystemActions({
         </Tooltip>
       )}
 
-      <Tooltip title="设置">
+      <Tooltip title="璁剧疆">
         <ActionButton
           variant="text"
           size="small"
           icon={<SettingOutlined />}
           onClick={onSettings}
-          aria-label="打开设置"
+          data-testid="menu-settings-button"
+          aria-label="鎵撳紑璁剧疆"
           style={{ color: CSS_COLORS.textSecondary }}
         />
       </Tooltip>
 
       {onDevTools && (
-        <Tooltip title="调试日志">
+        <Tooltip title="璋冭瘯鏃ュ織">
           <ActionButton
             variant="text"
             size="small"
             icon={<BugOutlined />}
             onClick={onDevTools}
-            aria-label="打开调试日志"
+            aria-label="鎵撳紑璋冭瘯鏃ュ織"
             style={{ color: CSS_COLORS.textTertiary }}
           />
         </Tooltip>
@@ -344,7 +352,7 @@ const SystemActions = memo(function SystemActions({
 });
 
 /**
- * AI配置提示 - 使用InfoCard组件
+ * AI閰嶇疆鎻愮ず - 浣跨敤InfoCard缁勪欢
  */
 const AIConfigPrompt = memo(function AIConfigPrompt({ isDarkMode }: { isDarkMode?: boolean }) {
   return (
@@ -352,7 +360,7 @@ const AIConfigPrompt = memo(function AIConfigPrompt({ isDarkMode }: { isDarkMode
       <InfoCard
         type="warning"
         icon={<BulbFilled />}
-        description="请先配置 AI 服务"
+        description="璇峰厛閰嶇疆 AI 鏈嶅姟"
         style={{
           padding: 'var(--space-2) var(--space-3)',
           fontSize: 'var(--font-size-sm)',
@@ -367,7 +375,7 @@ const AIConfigPrompt = memo(function AIConfigPrompt({ isDarkMode }: { isDarkMode
 
 // ==================== Main Component ====================
 
-// 用于监听窗口宽度
+// 鐢ㄤ簬鐩戝惉绐楀彛瀹藉害
 function useWindowWidth() {
   const [width, setWidth] = useState(typeof window !== 'undefined' ? window.innerWidth : 1024);
 
@@ -399,7 +407,7 @@ export const MenuBar = memo(function MenuBar({
   const { activeAIConfig } = useAppData();
   const windowWidth = useWindowWidth();
 
-  // 响应式断点
+  // 鍝嶅簲寮忔柇鐐?
   const isCompact = windowWidth < 1280;
   const isMinimal = windowWidth < 900;
 
@@ -415,7 +423,7 @@ export const MenuBar = memo(function MenuBar({
     zIndex: 10,
   };
 
-  // 紧凑模式下的简化布局
+  // 绱у噾妯″紡涓嬬殑绠€鍖栧竷灞€
   if (isMinimal) {
     return (
       <nav style={containerStyles} aria-label="主菜单">
@@ -502,7 +510,7 @@ export const MenuBar = memo(function MenuBar({
       >
         {!activeAIConfig && !isCompact && <AIConfigPrompt isDarkMode={isDarkMode} />}
         {!activeAIConfig && isCompact && (
-          <Tooltip title="请先配置 AI 服务">
+          <Tooltip title="璇峰厛閰嶇疆 AI 鏈嶅姟">
             <BulbFilled style={{ color: CSS_COLORS.statusNeedsReview, fontSize: '16px' }} />
           </Tooltip>
         )}

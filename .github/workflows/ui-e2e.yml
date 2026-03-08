@@ -1,0 +1,49 @@
+﻿name: UI E2E
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  windows-e2e:
+    runs-on: windows-latest
+    timeout-minutes: 45
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v5
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v5
+        with:
+          node-version: '20'
+          cache: 'npm'
+          cache-dependency-path: |
+            package-lock.json
+            e2e-tests/package-lock.json
+
+      - name: Install Rust stable
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Rust cache
+        uses: swatinem/rust-cache@v2
+        with:
+          workspaces: 'src-tauri -> target'
+
+      - name: Install frontend dependencies
+        run: npm ci
+
+      - name: Install desktop E2E dependencies
+        run: npm ci --prefix e2e-tests
+
+      - name: Install tauri-driver
+        run: cargo install tauri-driver --locked
+
+      - name: Run desktop UI E2E
+        env:
+          CI: 'true'
+        run: npm run test:e2e
