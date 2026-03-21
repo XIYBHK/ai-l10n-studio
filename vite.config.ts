@@ -85,7 +85,6 @@ export default defineConfig(async () => ({
           }
 
           if (
-            matchesPackagePath(id, 'lodash') ||
             matchesPackagePath(id, 'i18next') ||
             matchesPackagePath(id, 'react-i18next') ||
             matchesPackagePath(id, 'dayjs')

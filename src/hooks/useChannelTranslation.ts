@@ -2,6 +2,7 @@ import { useState, useCallback, useRef } from 'react';
 import { Channel } from '@tauri-apps/api/core';
 import { invoke } from '../services/tauriInvoke';
 import { createModuleLogger } from '../utils/logger';
+import type { TranslationStats, TokenStats } from '../types/tauri';
 
 const log = createModuleLogger('useChannelTranslation');
 
@@ -31,21 +32,7 @@ export interface TokenStatsEvent {
   cost: number;
 }
 
-export interface TokenStats {
-  input_tokens: number;
-  output_tokens: number;
-  total_tokens: number;
-  cost: number;
-}
-
-export interface TranslationStats {
-  total: number;
-  tm_hits: number;
-  deduplicated: number;
-  ai_translated: number;
-  token_stats: TokenStats;
-  tm_learned: number;
-}
+export type { TranslationStats, TokenStats };
 
 export interface BatchResult {
   translations: string[];

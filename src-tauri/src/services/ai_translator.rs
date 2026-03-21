@@ -486,30 +486,6 @@ impl AITranslator {
         builder.build().map_err(AppError::from)
     }
 
-    /// Phase 3: 构建系统提示词（支持自定义 + 术语库拼接）
-    ///
-    /// custom_prompt: 用户自定义的基础提示词（None则使用DEFAULT_SYSTEM_PROMPT）
-    /// term_library: 术语库（用于拼接风格总结）
-    fn get_system_prompt(
-        custom_prompt: Option<&str>,
-        term_library: Option<&TermLibrary>,
-    ) -> String {
-        // 使用自定义提示词或默认提示词
-        let base_prompt = custom_prompt.unwrap_or(DEFAULT_SYSTEM_PROMPT);
-
-        // 如果有术语库的风格总结，注入到提示词中
-        if let Some(library) = term_library {
-            if let Some(style_summary) = &library.style_summary {
-                return format!(
-                    "{}\n\n【用户翻译风格偏好】（基于{}条术语学习）\n{}",
-                    base_prompt, style_summary.based_on_terms, style_summary.prompt
-                );
-            }
-        }
-
-        base_prompt.to_string()
-    }
-
     #[tracing::instrument(
         name = "translate_batch_with_callbacks",
         skip(self, progress_callback, stats_callback),

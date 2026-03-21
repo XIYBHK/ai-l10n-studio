@@ -227,7 +227,7 @@ impl BatchTranslator {
                     }
                 }
                 Err(e) => {
-                    eprintln!("翻译文件失败 {}: {}", file_path.display(), e);
+                    log::error!("翻译文件失败 {}: {}", file_path.display(), e);
                     reports.push(Self::create_failed_report(file_path));
                 }
             }
@@ -528,7 +528,7 @@ impl BatchTranslator {
         }
 
         fs::write(&report_file, content)?;
-        println!("翻译报告已保存到: {}", report_file.display());
+        log::info!("翻译报告已保存到: {}", report_file.display());
 
         Ok(())
     }

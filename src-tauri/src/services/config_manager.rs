@@ -465,43 +465,6 @@ impl ConfigManager {
         Ok(())
     }
 
-    pub fn validate_config(&self) -> Result<()> {
-        if self.config.api_key.is_empty() {
-            return Err(anyhow!("API密钥不能为空"));
-        }
-
-        if self.config.batch_size == 0 {
-            return Err(anyhow!("批量大小必须大于0"));
-        }
-
-        if self.config.max_concurrent == 0 {
-            return Err(anyhow!("最大并发数必须大于0"));
-        }
-
-        if self.config.timeout_seconds == 0 {
-            return Err(anyhow!("超时时间必须大于0"));
-        }
-
-        // 验证provider和model的组合
-        match self.config.provider.as_str() {
-            "moonshot" => {
-                if !self.config.model.starts_with("moonshot") {
-                    return Err(anyhow!("Moonshot provider必须使用moonshot模型"));
-                }
-            }
-            "openai" => {
-                if !self.config.model.starts_with("gpt") {
-                    return Err(anyhow!("OpenAI provider必须使用GPT模型"));
-                }
-            }
-            _ => {
-                return Err(anyhow!("不支持的provider: {}", self.config.provider));
-            }
-        }
-
-        Ok(())
-    }
-
     pub fn get_provider_configs() -> Vec<ProviderConfig> {
         vec![
             ProviderConfig {

@@ -215,7 +215,7 @@ pub fn cancel_all_translations() -> Result<usize, String> {
 pub fn get_translation_memory() -> Result<TranslationMemory, String> {
     let memory_path = get_translation_memory_path().to_string_lossy().to_string();
     TranslationMemory::new_from_file(memory_path).map_err(|e| {
-        println!("[TM] 加载记忆库失败: {}", e);
+        log::error!("[TM] 加载记忆库失败: {}", e);
         format!("加载记忆库失败: {}", e)
     })
 }

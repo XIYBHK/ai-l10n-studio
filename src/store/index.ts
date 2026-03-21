@@ -2,10 +2,10 @@
  * Store 模块统一导出
  *
  * 架构：
- * - useAppStore: 应用级配置（主题、语言、累计统计）
+ * - useAppStore: 应用级配置（主题、语言）
  * - useTranslationStore: 翻译状态（条目、当前条目、文件路径）
  * - useSessionStore: 会话状态（翻译进度、会话统计）
- * - useStatsStore: 累计统计（持久化）
+ * - useStatsStore: 累计统计（持久化，唯一数据源）
  * - tauriStore: 底层持久化存储
  */
 

@@ -4,7 +4,7 @@
  * 管理累计统计数据，应用关闭后保留
  * 使用 TauriStore 替代 localStorage
  *
- * 注意：累计统计主要由 useAppStore 管理，此 Store 仅用于特殊场景
+ * 累计统计的唯一数据源，所有统计读写均通过此 Store
  */
 
 import { create } from 'zustand';

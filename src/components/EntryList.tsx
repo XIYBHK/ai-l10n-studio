@@ -20,6 +20,76 @@ const log = createModuleLogger('EntryList');
 type ColumnType = 'untranslated' | 'needsReview' | 'translated';
 type IndexedEntry = { entry: POEntry; index: number };
 
+// 选中行操作按钮（必须定义在 EntryList 外部，否则 memo 失效）
+interface SelectionActionsProps {
+  selectedRowKeys: React.Key[];
+  entries: POEntry[];
+  getEntryStatus: (entry: POEntry) => string;
+  handleConfirmSelected: () => void;
+  handleContextualRefine: () => void;
+  handleTranslateSelected: () => void;
+  isTranslating: boolean;
+}
+
+const SelectionActions = memo(function SelectionActions({
+  selectedRowKeys,
+  entries,
+  getEntryStatus,
+  handleConfirmSelected,
+  handleContextualRefine,
+  handleTranslateSelected,
+  isTranslating,
+}: SelectionActionsProps) {
+  const hasNeedsReview = selectedRowKeys.some((key) => {
+    const entry = entries[key as number];
+    return entry && getEntryStatus(entry) === 'needs-review';
+  });
+
+  const hasUntranslated = selectedRowKeys.some((key) => {
+    const entry = entries[key as number];
+    return entry && getEntryStatus(entry) === 'untranslated';
+  });
+
+  return (
+    <div className={styles.selectionActions} role="group" aria-label="批量操作">
+      {hasNeedsReview && (
+        <>
+          <Button
+            type="primary"
+            size="small"
+            onClick={handleConfirmSelected}
+            icon={<CheckOutlined />}
+            aria-label={getBatchActionAriaLabel('confirm', selectedRowKeys.length)}
+          >
+            确认已选中
+          </Button>
+          <Button
+            type="default"
+            size="small"
+            onClick={handleContextualRefine}
+            icon={<ThunderboltOutlined />}
+            disabled={isTranslating}
+            aria-label={getBatchActionAriaLabel('refine', selectedRowKeys.length)}
+          >
+            精翻选中 (Ctrl+Shift+R)
+          </Button>
+        </>
+      )}
+      {hasUntranslated && (
+        <Button
+          type="primary"
+          size="small"
+          onClick={handleTranslateSelected}
+          disabled={isTranslating}
+          aria-label={getBatchActionAriaLabel('translate', selectedRowKeys.length)}
+        >
+          翻译选中
+        </Button>
+      )}
+    </div>
+  );
+});
+
 // 获取翻译来源样式
 function getSourceStyle(
   source: 'tm' | 'dedup' | 'ai' | undefined,
@@ -608,58 +678,6 @@ export const EntryList = memo(function EntryList({
     [onEntrySelect, lastClickedIndex, lastClickedColumn, groupedEntries, entries, selectedRowKeys]
   );
 
-  // 选中行操作按钮
-  const SelectionActions = memo(function SelectionActions() {
-    const hasNeedsReview = selectedRowKeys.some((key) => {
-      const entry = entries[key as number];
-      return entry && getEntryStatus(entry) === 'needs-review';
-    });
-
-    const hasUntranslated = selectedRowKeys.some((key) => {
-      const entry = entries[key as number];
-      return entry && getEntryStatus(entry) === 'untranslated';
-    });
-
-    return (
-      <div className={styles.selectionActions} role="group" aria-label="批量操作">
-        {hasNeedsReview && (
-          <>
-            <Button
-              type="primary"
-              size="small"
-              onClick={handleConfirmSelected}
-              icon={<CheckOutlined />}
-              aria-label={getBatchActionAriaLabel('confirm', selectedRowKeys.length)}
-            >
-              确认已选中
-            </Button>
-            <Button
-              type="default"
-              size="small"
-              onClick={handleContextualRefine}
-              icon={<ThunderboltOutlined />}
-              disabled={isTranslating}
-              aria-label={getBatchActionAriaLabel('refine', selectedRowKeys.length)}
-            >
-              精翻选中 (Ctrl+Shift+R)
-            </Button>
-          </>
-        )}
-        {hasUntranslated && (
-          <Button
-            type="primary"
-            size="small"
-            onClick={handleTranslateSelected}
-            disabled={isTranslating}
-            aria-label={getBatchActionAriaLabel('translate', selectedRowKeys.length)}
-          >
-            翻译选中
-          </Button>
-        )}
-      </div>
-    );
-  });
-
   return (
     <div
       ref={containerRef}
@@ -675,7 +693,15 @@ export const EntryList = memo(function EntryList({
         <div className={styles.headerActions}>
           {selectedRowKeys.length > 0 && (
             <>
-              <SelectionActions />
+              <SelectionActions
+                selectedRowKeys={selectedRowKeys}
+                entries={entries}
+                getEntryStatus={getEntryStatus}
+                handleConfirmSelected={handleConfirmSelected}
+                handleContextualRefine={handleContextualRefine}
+                handleTranslateSelected={handleTranslateSelected}
+                isTranslating={isTranslating}
+              />
               <span className={styles.shortcutHint} aria-label="键盘快捷键">
                 Ctrl+A 全选 | Ctrl+C 复制 | Esc 取消
               </span>

@@ -1,6 +1,6 @@
 import { create } from 'zustand';
 import { devtools } from 'zustand/middleware';
-import { AppConfig, TranslationStats } from '../types/tauri';
+import { AppConfig } from '../types/tauri';
 import { tauriStore } from './tauriStore';
 import { createModuleLogger } from '../utils/logger';
 
@@ -23,21 +23,6 @@ function normalizeLanguage(language: string | null | undefined): Language {
   return 'zh-CN';
 }
 
-// 统计数据初始值常量
-const INITIAL_STATS: TranslationStats = {
-  total: 0,
-  tm_hits: 0,
-  deduplicated: 0,
-  ai_translated: 0,
-  token_stats: {
-    input_tokens: 0,
-    output_tokens: 0,
-    total_tokens: 0,
-    cost: 0,
-  },
-  tm_learned: 0,
-};
-
 function getInitialSystemTheme(): 'light' | 'dark' {
   if (typeof window === 'undefined' || !window.matchMedia) {
     return 'light';
@@ -56,9 +41,6 @@ export interface AppState {
   // 🏗️ 系统主题状态（全局管理，参考 clash-verge-rev）
   systemTheme: 'light' | 'dark';
 
-  // 累计统计（持久化）
-  cumulativeStats: TranslationStats;
-
   // Actions - 配置
   setConfig: (config: AppConfig) => void;
 
@@ -66,12 +48,8 @@ export interface AppState {
   setTheme: (theme: ThemeMode) => void;
   setLanguage: (language: Language) => void;
 
-  // 🏗️ 系统主题管理（全局单例）
+  // 系统主题管理（全局单例）
   setSystemTheme: (systemTheme: 'light' | 'dark') => void;
-
-  // Actions - 累计统计
-  updateCumulativeStats: (stats: TranslationStats) => void;
-  resetCumulativeStats: () => void;
 }
 
 export const useAppStore = create<AppState>()(
@@ -84,7 +62,6 @@ export const useAppStore = create<AppState>()(
 
       // 系统主题状态（运行时检测，不持久化）
       systemTheme: getInitialSystemTheme(),
-      cumulativeStats: INITIAL_STATS,
 
       // Actions - 配置
       setConfig: (config) => set({ config }),
@@ -125,61 +102,6 @@ export const useAppStore = create<AppState>()(
         log.debug('更新全局系统主题', { from: current, to: systemTheme });
         set({ systemTheme });
       },
-
-      // 累计统计（持久化到 TauriStore）
-      updateCumulativeStats: (stats) => {
-        const prev = get().cumulativeStats;
-        const newStats = {
-          total: prev.total + stats.total,
-          tm_hits: prev.tm_hits + stats.tm_hits,
-          deduplicated: prev.deduplicated + stats.deduplicated,
-          ai_translated: prev.ai_translated + stats.ai_translated,
-          token_stats: {
-            input_tokens: prev.token_stats.input_tokens + stats.token_stats.input_tokens,
-            output_tokens: prev.token_stats.output_tokens + stats.token_stats.output_tokens,
-            total_tokens: prev.token_stats.total_tokens + stats.token_stats.total_tokens,
-            cost: prev.token_stats.cost + stats.token_stats.cost,
-          },
-          tm_learned: prev.tm_learned + stats.tm_learned,
-        };
-        set({ cumulativeStats: newStats });
-
-        tauriStore
-          .updateCumulativeStats({
-            totalTranslated: newStats.total,
-            totalTokens: newStats.token_stats.total_tokens,
-            totalCost: newStats.token_stats.cost,
-            sessionCount: prev.total > 0 ? 1 : 0,
-            lastUpdated: Date.now(),
-            tmHits: newStats.tm_hits,
-            deduplicated: newStats.deduplicated,
-            aiTranslated: newStats.ai_translated,
-            tmLearned: newStats.tm_learned,
-            inputTokens: newStats.token_stats.input_tokens,
-            outputTokens: newStats.token_stats.output_tokens,
-          })
-          .catch((err) => log.error('保存累计统计失败', err));
-      },
-
-      resetCumulativeStats: () => {
-        set({ cumulativeStats: INITIAL_STATS });
-
-        tauriStore
-          .updateCumulativeStats({
-            totalTranslated: 0,
-            totalTokens: 0,
-            totalCost: 0,
-            sessionCount: 0,
-            lastUpdated: Date.now(),
-            tmHits: 0,
-            deduplicated: 0,
-            aiTranslated: 0,
-            tmLearned: 0,
-            inputTokens: 0,
-            outputTokens: 0,
-          })
-          .catch((err) => log.error('重置累计统计失败', err));
-      },
     }),
     { name: 'AppStore' }
   )
@@ -194,15 +116,12 @@ export const selectTheme = (state: AppState) => state.theme;
 export const selectLanguage = (state: AppState) => state.language;
 export const selectSystemTheme = (state: AppState) => state.systemTheme;
 export const selectConfig = (state: AppState) => state.config;
-export const selectCumulativeStatsApp = (state: AppState) => state.cumulativeStats;
 
 // Actions Selectors
 export const selectSetTheme = (state: AppState) => state.setTheme;
 export const selectSetLanguage = (state: AppState) => state.setLanguage;
 export const selectSetSystemTheme = (state: AppState) => state.setSystemTheme;
 export const selectSetConfig = (state: AppState) => state.setConfig;
-export const selectUpdateCumulativeStatsApp = (state: AppState) => state.updateCumulativeStats;
-export const selectResetCumulativeStatsApp = (state: AppState) => state.resetCumulativeStats;
 
 // 便捷 Hooks
 export const useThemeMode = () => useAppStore(selectTheme);
@@ -227,24 +146,7 @@ export async function loadPersistedState() {
     const language = await tauriStore.getLanguage();
     useAppStore.setState({ language: normalizeLanguage(language) });
 
-    const stats = await tauriStore.getCumulativeStats();
-    useAppStore.setState({
-      cumulativeStats: {
-        total: stats.totalTranslated,
-        tm_hits: stats.tmHits,
-        deduplicated: stats.deduplicated,
-        ai_translated: stats.aiTranslated,
-        token_stats: {
-          input_tokens: stats.inputTokens,
-          output_tokens: stats.outputTokens,
-          total_tokens: stats.totalTokens,
-          cost: stats.totalCost,
-        },
-        tm_learned: stats.tmLearned,
-      },
-    });
-
-    log.info('持久化状态加载成功', { theme, language, stats });
+    log.info('持久化状态加载成功', { theme, language });
   } catch (error) {
     log.error('加载持久化状态失败', error);
   }
