@@ -4,20 +4,6 @@ import { ThemeModeSwitch } from '../../components/ThemeModeSwitch';
 import { useAppStore } from '../../store/useAppStore';
 import { renderWithProviders } from '../../test/renderWithProviders';
 
-const DEFAULT_STATS = {
-  total: 0,
-  tm_hits: 0,
-  deduplicated: 0,
-  ai_translated: 0,
-  token_stats: {
-    input_tokens: 0,
-    output_tokens: 0,
-    total_tokens: 0,
-    cost: 0,
-  },
-  tm_learned: 0,
-};
-
 describe('ThemeModeSwitch', () => {
   beforeEach(() => {
     useAppStore.setState({
@@ -25,7 +11,6 @@ describe('ThemeModeSwitch', () => {
       theme: 'system',
       language: 'zh-CN',
       systemTheme: 'light',
-      cumulativeStats: DEFAULT_STATS,
     });
   });
 
