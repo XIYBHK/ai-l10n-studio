@@ -91,7 +91,7 @@ export const useChannelTranslation = () => {
       setCurrentTaskId(null);
       callbacksRef.current = callbacks || {};
 
-      log.info('🚀 开始 Channel 批量翻译', {
+      log.info('开始 Channel 批量翻译', {
         total: texts.length,
         targetLanguage,
       });
@@ -116,7 +116,7 @@ export const useChannelTranslation = () => {
 
           const monotonicCurrent = Math.max(progress.current ?? 0, currentRaw);
           const normalized = { current: monotonicCurrent, total, percentage, text } as any;
-          log.debug('📊 进度更新:', normalized);
+          log.debug('进度更新:', normalized);
           setProgress(normalized);
 
           if (callbacksRef.current.onProgress) {
@@ -151,7 +151,7 @@ export const useChannelTranslation = () => {
         // 保存任务 ID 以便后续取消
         setCurrentTaskId(result.task_id);
 
-        log.info('✅ 批量翻译完成', {
+        log.info('批量翻译完成', {
           taskId: result.task_id,
           translated: result.translations.length,
           tm_hits: result.stats.tm_hits,
@@ -161,26 +161,27 @@ export const useChannelTranslation = () => {
 
         return result;
       } catch (error) {
-        log.error('❌ 批量翻译失败:', error);
+        log.error('批量翻译失败:', error);
         throw error;
       } finally {
         setIsTranslating(false);
         setCurrentTaskId(null);
       }
     },
+    // 所有外部依赖通过 ref 访问，参数通过调用时传入，故依赖数组为空
     []
   );
 
   const cancelTranslation = useCallback(async () => {
     if (currentTaskId !== null) {
-      log.info('🛑 取消翻译任务', { taskId: currentTaskId });
+      log.info('取消翻译任务', { taskId: currentTaskId });
       try {
         await invoke('cancel_translation', { taskId: currentTaskId });
         setIsTranslating(false);
         setCurrentTaskId(null);
-        log.info('✅ 翻译任务已取消');
+        log.info('翻译任务已取消');
       } catch (error) {
-        log.error('❌ 取消翻译失败:', error);
+        log.error('取消翻译失败:', error);
         throw error;
       }
     }

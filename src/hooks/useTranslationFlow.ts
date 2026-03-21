@@ -76,7 +76,7 @@ export function useTranslationFlow() {
 
   useEffect(() => {
     resetSessionStats();
-    log.info('🔄 翻译流程初始化，会话统计已重置');
+    log.info('翻译流程初始化，会话统计已重置');
   }, [resetSessionStats]);
 
   // 队列消费器 - 自适应间隔
@@ -140,12 +140,12 @@ export function useTranslationFlow() {
         queueTimerRef.current = window.setTimeout(processNext, interval);
       } else {
         isProcessingQueue.current = false;
-        log.info('✅ 队列处理完成');
+        log.info('队列处理完成');
       }
     };
 
     processNext();
-  }, [setEntries, updateSessionStats]);
+  }, [setEntries, updateSessionStats, updateEntry]);
 
   // 入队函数
   const enqueueUpdate = useCallback(
@@ -166,7 +166,7 @@ export function useTranslationFlow() {
       queueTimerRef.current = null;
     }
     isProcessingQueue.current = false;
-    log.info('🧹 上屏队列已清空');
+    log.info('上屏队列已清空');
   }, []);
 
   // 翻译统计事件监听 - 修复竞态条件
@@ -178,7 +178,7 @@ export function useTranslationFlow() {
       const unlisten = await listen<{ stats: TranslationStats }>('translation:after', (event) => {
         if (!isActive) return;
         const stats = event.payload.stats;
-        log.info('📊 收到翻译统计', stats);
+        log.info('收到翻译统计', stats);
 
         updateSessionStats(stats);
         updateCumulativeStats(stats);
@@ -324,7 +324,7 @@ export function useTranslationFlow() {
       setTranslating(true);
       setProgress(0);
 
-      log.info('🚀 开始翻译', { count: texts.length });
+      log.info('开始翻译', { count: texts.length });
 
       const result = await channelTranslation.translateBatch(texts, targetLanguage, {
         onProgress: (current, _total, percentage) => {
@@ -402,10 +402,10 @@ export function useTranslationFlow() {
           tm_learned: result.stats.tm_learned || 0,
         };
 
-        log.info('📊 统计已更新', finalStats);
+        log.info('统计已更新', finalStats);
       }
 
-      log.info('✅ 翻译完成', { count: completedCount });
+      log.info('翻译完成', { count: completedCount });
       return true;
     } catch (error) {
       log.logError(error, '翻译失败');
@@ -416,7 +416,7 @@ export function useTranslationFlow() {
       setTranslating(false);
       setProgress(0);
       // 翻译完成后等待队列处理完毕
-      log.info('🎯 翻译完成，等待队列处理', { queueLength: updateQueue.current.length });
+      log.info('翻译完成，等待队列处理', { queueLength: updateQueue.current.length });
     }
   };
 
@@ -492,17 +492,17 @@ export function useTranslationFlow() {
     }
   };
 
-  // ✅ 移除不必要的 useCallback
+  // 移除不必要的 useCallback
   const handleEntrySelect = (entry: POEntry) => {
     setCurrentEntry(entry);
   };
 
-  // ✅ 移除不必要的 useCallback
+  // 移除不必要的 useCallback
   const handleEntryUpdate = (index: number, updates: Partial<POEntry>) => {
     updateEntry(index, updates);
   };
 
-  // ✅ 移除不必要的 useCallback
+  // 移除不必要的 useCallback
   const handleTargetLanguageChange = (langCode: string, langInfo: LanguageInfo | undefined) => {
     setTargetLanguage(langCode);
     if (langInfo) {
@@ -514,7 +514,7 @@ export function useTranslationFlow() {
   const cancelTranslation = useCallback(() => {
     clearQueue();
     channelTranslation.cancelTranslation();
-    log.info('🛑 翻译已取消，队列已清空');
+    log.info('翻译已取消，队列已清空');
   }, [channelTranslation, clearQueue]);
 
   return {

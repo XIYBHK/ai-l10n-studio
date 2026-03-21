@@ -991,7 +991,7 @@ pub async fn translate_batch_with_channel(
     // 创建翻译任务
     let task = TaskGuard::new();
     let task_id = task.id();
-    let cancel_token = task.token();
+    let cancel_token = task.token()?;
 
     crate::app_log!(
         "[翻译任务] 开始任务 #{}，共 {} 条文本",

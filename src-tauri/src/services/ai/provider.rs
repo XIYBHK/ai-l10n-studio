@@ -134,35 +134,33 @@ impl Default for ProviderRegistry {
     }
 }
 
-use std::sync::{OnceLock, RwLock};
+use std::sync::OnceLock;
 
 /// 全局供应商注册表实例（线程安全）
-static GLOBAL_REGISTRY: OnceLock<RwLock<ProviderRegistry>> = OnceLock::new();
+static GLOBAL_REGISTRY: OnceLock<parking_lot::RwLock<ProviderRegistry>> = OnceLock::new();
 
 /// 初始化全局注册表
-fn init_global_registry() -> &'static RwLock<ProviderRegistry> {
-    GLOBAL_REGISTRY.get_or_init(|| RwLock::new(ProviderRegistry::new()))
+fn init_global_registry() -> &'static parking_lot::RwLock<ProviderRegistry> {
+    GLOBAL_REGISTRY.get_or_init(|| parking_lot::RwLock::new(ProviderRegistry::new()))
 }
 
 /// 获取全局供应商注册表（只读访问）
-#[allow(clippy::expect_used)]
 pub fn with_global_registry<T, F>(f: F) -> T
 where
     F: FnOnce(&ProviderRegistry) -> T,
 {
     let registry = init_global_registry();
-    let guard = registry.read().expect("Global registry lock poisoned");
+    let guard = registry.read();
     f(&guard)
 }
 
 /// 获取可变的全局供应商注册表（用于注册）
-#[allow(clippy::expect_used)]
 pub fn with_global_registry_mut<T, F>(f: F) -> T
 where
     F: FnOnce(&mut ProviderRegistry) -> T,
 {
     let registry = init_global_registry();
-    let mut guard = registry.write().expect("Global registry lock poisoned");
+    let mut guard = registry.write();
     f(&mut guard)
 }
 

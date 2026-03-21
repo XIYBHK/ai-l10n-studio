@@ -165,13 +165,8 @@ msgstr "第二"
 
         assert!(result.is_err());
         // 应该返回文件未找到错误
-        match result {
-            Err(e) => {
-                let error_msg = e.to_string();
-                assert!(error_msg.contains("not found") || error_msg.contains("找不到"));
-            }
-            _ => panic!("Expected error"),
-        }
+        let error_msg = result.unwrap_err().to_string();
+        assert!(error_msg.contains("not found") || error_msg.contains("找不到"));
     }
 
     #[test]
@@ -203,10 +198,10 @@ msgstr "第二"
 
     #[test]
     fn test_parse_file_with_only_comments() {
-        let content = r#"# Comment 1
+        let content = r"# Comment 1
 # Comment 2
 # Comment 3
-"#;
+";
 
         let (_temp_dir, file_path) = create_temp_po_file(content);
         let parser = POParser::new().unwrap();

@@ -416,9 +416,11 @@ impl ConfigDraft {
             config.api_key = secrets.api_key.clone();
         }
 
-        for (ai_config, api_key) in config.ai_configs.iter_mut().zip(secrets.ai_api_keys.iter()) {
-            if !api_key.is_empty() {
-                ai_config.api_key = api_key.clone();
+        for (i, ai_config) in config.ai_configs.iter_mut().enumerate() {
+            if let Some(api_key) = secrets.ai_api_keys.get(i) {
+                if !api_key.is_empty() {
+                    ai_config.api_key = api_key.clone();
+                }
             }
         }
     }

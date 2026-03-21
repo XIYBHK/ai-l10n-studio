@@ -722,7 +722,7 @@ impl AITranslator {
 
         // Step 2: 分批翻译去重后的文本
         if !unique_texts_ordered.is_empty() {
-            let unique_list = unique_texts_ordered.clone();
+            let unique_list = unique_texts_ordered;
             crate::app_log!(
                 "[预处理] 原始{}条 -> TM命中{}条 -> 待翻译{}条 -> 去重节省{}条",
                 texts.len(),
@@ -817,6 +817,10 @@ impl AITranslator {
             for (unique_text, translation) in unique_list.iter().zip(ai_translations.iter()) {
                 if let Some(indices) = unique_text_to_indices.get(unique_text) {
                     for (local_idx, &idx) in indices.iter().enumerate() {
+                        if idx >= result.len() {
+                            crate::app_log!("[翻译] 索引越界: idx={}, result.len={}", idx, result.len());
+                            continue;
+                        }
                         result[idx] = translation.clone();
                         // 记录来源：第一个是AI翻译，其余是去重
                         if let Some(ref mut sources_vec) = sources {

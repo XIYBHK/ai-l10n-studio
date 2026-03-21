@@ -40,7 +40,7 @@ export const EditorPane = memo(function EditorPane({
 }: EditorPaneProps) {
   const { activeAIConfig } = useAppData();
   const { refresh: refreshTermLibrary } = useTermLibrary();
-  const { entries } = useTranslationStore.getState();
+  const entries = useTranslationStore((state) => state.entries);
 
   const [translation, setTranslation] = useState('');
   const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
@@ -77,19 +77,12 @@ export const EditorPane = memo(function EditorPane({
     [entry]
   );
 
-  const handleBlur = useCallback(() => {
-    if (hasUnsavedChanges && entry) {
-      log.debug('译文输入框失去焦点，自动保存');
-      handleSaveTranslation();
-    }
-  }, [hasUnsavedChanges, entry, translation]);
-
   const handleSaveTranslation = useCallback(() => {
     if (!entry) return;
 
     const index = entries.findIndex((e) => e === entry);
 
-    log.info('🔍 准备保存译文', {
+    log.info('准备保存译文', {
       index,
       translation,
       hasAiTranslation: !!aiTranslation,
@@ -158,6 +151,13 @@ export const EditorPane = memo(function EditorPane({
       }
     }
   }, [entry, entries, onEntryUpdate, translation, aiTranslation]);
+
+  const handleBlur = useCallback(() => {
+    if (hasUnsavedChanges && entry) {
+      log.debug('译文输入框失去焦点，自动保存');
+      handleSaveTranslation();
+    }
+  }, [hasUnsavedChanges, entry, handleSaveTranslation]);
 
   const handleCancel = useCallback(() => {
     setTranslation(originalTranslation);
