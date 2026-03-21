@@ -1,6 +1,6 @@
 ﻿use chrono::Local;
 use lazy_static::lazy_static;
-use std::sync::Mutex;
+use parking_lot::Mutex;
 use tracing_subscriber::EnvFilter;
 
 lazy_static! {
@@ -29,33 +29,27 @@ pub fn init_tracing() {
         .finish();
 
     let _ = tracing::subscriber::set_global_default(subscriber);
-    tracing::info!("🔍 Tracing 日志系统已初始化");
+    tracing::info!("Tracing 日志系统已初始化");
 }
 
 pub fn log(message: String) {
     let timestamp = Local::now().format("%H:%M:%S");
     let log_entry = format!("[{}] {}", timestamp, message);
 
-    if let Ok(mut buffer) = LOG_BUFFER.lock() {
-        buffer.push(log_entry);
+    let mut buffer = LOG_BUFFER.lock();
+    buffer.push(log_entry);
 
-        if buffer.len() > 1000 {
-            buffer.remove(0);
-        }
+    if buffer.len() > 1000 {
+        buffer.remove(0);
     }
 }
 
 pub fn get_logs() -> Vec<String> {
-    LOG_BUFFER
-        .lock()
-        .map(|buffer| buffer.clone())
-        .unwrap_or_default()
+    LOG_BUFFER.lock().clone()
 }
 
 pub fn clear_logs() {
-    if let Ok(mut buffer) = LOG_BUFFER.lock() {
-        buffer.clear();
-    }
+    LOG_BUFFER.lock().clear();
 }
 
 #[macro_export]

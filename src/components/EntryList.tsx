@@ -356,7 +356,7 @@ export const EntryList = memo(function EntryList({
       if (status === 'translated') groups.translated.push({ entry, index });
     });
 
-    log.info('📊 条目分组', {
+    log.info('条目分组', {
       total: entries.length,
       untranslated: groups.untranslated.length,
       needsReview: groups.needsReview.length,

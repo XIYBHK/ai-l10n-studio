@@ -189,7 +189,7 @@ impl TranslationMemory {
     pub fn add_translation(&mut self, source: String, target: String, target_lang: Option<&str>) {
         const MAX_CAPACITY: usize = 10000;
 
-        // 🔧 修复：使用"源文本|目标语言"作为键，支持多语言
+        // 修复：使用"源文本|目标语言"作为键，支持多语言
         let key = if let Some(lang) = target_lang {
             format!("{}|{}", source, lang)
         } else {

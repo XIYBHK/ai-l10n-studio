@@ -75,7 +75,7 @@ pub async fn add_ai_config(config: AIConfig) -> Result<(), String> {
     }
 
     crate::app_log!(
-        "🔄 [AI配置] 添加新配置: provider={:?}, url={}, model={}, key={}",
+        "[AI配置] 添加新配置: provider={:?}, url={}, model={}, key={}",
         config.provider_id,
         config.base_url.as_deref().unwrap_or("默认"),
         config.model.as_deref().unwrap_or("默认"),
@@ -84,18 +84,18 @@ pub async fn add_ai_config(config: AIConfig) -> Result<(), String> {
 
     let draft = ConfigDraft::global().await;
 
-    // 🔧 修复死锁：在独立作用域内获取写锁
+    // 修复死锁：在独立作用域内获取写锁
     {
         let mut draft_config = draft.draft();
         draft_config.add_ai_config(config);
     }
 
     draft.apply().map_err(|e| {
-        crate::app_log!("❌ [AI配置] 保存配置失败: {}", e);
+        crate::app_log!("[AI配置] 保存配置失败: {}", e);
         e.to_string()
     })?;
 
-    crate::app_log!("✅ [AI配置] 新增配置成功");
+    crate::app_log!("[AI配置] 新增配置成功");
     Ok(())
 }
 
@@ -103,7 +103,7 @@ pub async fn add_ai_config(config: AIConfig) -> Result<(), String> {
 pub async fn update_ai_config(index: usize, config: AIConfig) -> Result<(), String> {
     let draft = ConfigDraft::global().await;
 
-    // 🔧 修复死锁：在独立作用域内获取写锁
+    // 修复死锁：在独立作用域内获取写锁
     {
         let mut draft_config = draft.draft();
         let mut next_config = config;
@@ -122,56 +122,56 @@ pub async fn update_ai_config(index: usize, config: AIConfig) -> Result<(), Stri
     }
 
     draft.apply().map_err(|e| e.to_string())?;
-    crate::app_log!("✅ 更新 AI 配置成功，索引: {}", index);
+    crate::app_log!("更新 AI 配置成功，索引: {}", index);
     Ok(())
 }
 
 #[tauri::command]
 pub async fn remove_ai_config(index: usize) -> Result<(), String> {
-    crate::app_log!("🔄 [删除] 开始获取全局配置，索引: {}", index);
+    crate::app_log!("[删除] 开始获取全局配置，索引: {}", index);
     let draft = ConfigDraft::global().await;
-    crate::app_log!("🔄 [删除] 已获取全局配置");
+    crate::app_log!("[删除] 已获取全局配置");
 
-    // 🔧 修复死锁：在独立作用域内获取写锁，确保在 apply() 之前释放
+    // 修复死锁：在独立作用域内获取写锁，确保在 apply() 之前释放
     {
         let mut draft_config = draft.draft();
-        crate::app_log!("🔄 [删除] 已获取草稿");
+        crate::app_log!("[删除] 已获取草稿");
 
         draft_config
             .remove_ai_config(index)
             .map_err(|e| e.to_string())?;
-        crate::app_log!("🔄 [删除] 已从内存中删除，准备应用");
+        crate::app_log!("[删除] 已从内存中删除，准备应用");
     }
 
-    crate::app_log!("🔄 [删除] 开始 apply");
+    crate::app_log!("[删除] 开始 apply");
     draft.apply().map_err(|e| {
-        crate::app_log!("❌ [删除] apply 失败: {}", e);
+        crate::app_log!("[删除] apply 失败: {}", e);
         e.to_string()
     })?;
-    crate::app_log!("🔄 [删除] apply 返回 Ok");
+    crate::app_log!("[删除] apply 返回 Ok");
 
-    crate::app_log!("✅ 删除 AI 配置成功，索引: {}", index);
+    crate::app_log!("删除 AI 配置成功，索引: {}", index);
     Ok(())
 }
 
 #[tauri::command]
 pub async fn set_active_ai_config(index: usize) -> Result<(), String> {
-    crate::app_log!("🔄 [AI配置] 设置启用配置，索引: {}", index);
+    crate::app_log!("[AI配置] 设置启用配置，索引: {}", index);
 
     let draft = ConfigDraft::global().await;
 
-    // 🔧 修复死锁：在独立作用域内获取写锁
+    // 修复死锁：在独立作用域内获取写锁
     {
         let mut draft_config = draft.draft();
 
         let total_configs = draft_config.ai_configs.len();
         if index >= total_configs {
-            crate::app_log!("❌ [AI配置] 索引超出范围: {} >= {}", index, total_configs);
+            crate::app_log!("[AI配置] 索引超出范围: {} >= {}", index, total_configs);
             return Err(format!("配置索引超出范围: {} >= {}", index, total_configs));
         }
 
         draft_config.set_active_ai_config(index).map_err(|e| {
-            crate::app_log!("❌ [AI配置] 设置启用配置失败: {}", e);
+            crate::app_log!("[AI配置] 设置启用配置失败: {}", e);
             e.to_string()
         })?;
 
@@ -179,18 +179,18 @@ pub async fn set_active_ai_config(index: usize) -> Result<(), String> {
     };
 
     draft.apply().map_err(|e| {
-        crate::app_log!("❌ [AI配置] 保存配置失败: {}", e);
+        crate::app_log!("[AI配置] 保存配置失败: {}", e);
         e.to_string()
     })?;
 
-    crate::app_log!("✅ [AI配置] 设置启用配置成功，索引: {}", index);
+    crate::app_log!("[AI配置] 设置启用配置成功，索引: {}", index);
     Ok(())
 }
 
 #[derive(Debug, Serialize, Deserialize)]
-#[serde(rename_all = "camelCase")] // 🔧 序列化时使用 camelCase 命名，与前端保持一致
+#[serde(rename_all = "camelCase")] // 序列化时使用 camelCase 命名，与前端保持一致
 pub struct TestConnectionRequest {
-    pub provider_id: String, // 🔧 插件化：使用 provider_id 字符串
+    pub provider_id: String, // 插件化：使用 provider_id 字符串
     pub api_key: String,
     pub base_url: Option<String>,
     pub model: Option<String>,
@@ -198,7 +198,7 @@ pub struct TestConnectionRequest {
 }
 
 #[derive(Debug, Serialize)]
-#[serde(rename_all = "camelCase")] // 🔧 序列化时使用 camelCase 命名，与前端保持一致
+#[serde(rename_all = "camelCase")] // 序列化时使用 camelCase 命名，与前端保持一致
 pub struct TestConnectionResult {
     pub success: bool,
     pub message: String,
@@ -225,7 +225,7 @@ pub async fn test_ai_connection(
         return Err("测试连接前请输入 API Key".to_string());
     }
 
-    crate::app_log!("🔍 测试 AI 连接: {:?}", request.provider_id);
+    crate::app_log!("测试 AI 连接: {:?}", request.provider_id);
 
     let ai_config = AIConfig {
         provider_id: request.provider_id.clone(),
@@ -279,17 +279,13 @@ pub async fn test_ai_connection(
             {
                 Ok(results) => {
                     let elapsed = start.elapsed().as_millis() as u64;
-                    crate::app_log!(
-                        "✅ 连接测试成功，响应时间: {}ms, 结果: {:?}",
-                        elapsed,
-                        results
-                    );
+                    crate::app_log!("连接测试成功，响应时间: {}ms, 结果: {:?}", elapsed, results);
 
                     let logs = crate::services::get_prompt_logs();
                     if let Some(last_idx) = logs.len().checked_sub(1)
                         && !results.is_empty()
                     {
-                        let response = format!("✅ 测试成功 ({}ms)\n结果: {}", elapsed, results[0]);
+                        let response = format!("测试成功 ({}ms)\n结果: {}", elapsed, results[0]);
                         crate::services::update_prompt_response(last_idx, response);
                     }
 
@@ -300,7 +296,7 @@ pub async fn test_ai_connection(
                     })
                 }
                 Err(e) => {
-                    crate::app_log!("❌ API 调用失败: {}", e);
+                    crate::app_log!("API 调用失败: {}", e);
                     Ok(TestConnectionResult {
                         success: false,
                         message: format!("API 调用失败: {}", e),
@@ -310,7 +306,7 @@ pub async fn test_ai_connection(
             }
         }
         Err(e) => {
-            crate::app_log!("❌ 创建翻译器失败: {}", e);
+            crate::app_log!("创建翻译器失败: {}", e);
             Ok(TestConnectionResult {
                 success: false,
                 message: format!("配置错误: {}", e),
@@ -343,25 +339,25 @@ pub async fn update_system_prompt(prompt: String) -> Result<(), String> {
 
     let draft = ConfigDraft::global().await;
 
-    // 🔧 修复死锁：在独立作用域内获取写锁
+    // 修复死锁：在独立作用域内获取写锁
     {
         let mut draft_config = draft.draft();
 
         draft_config.system_prompt = if is_empty {
-            crate::app_log!("🗑️ [系统提示词] 清空自定义提示词，将使用默认提示词");
+            crate::app_log!("[系统提示词] 清空自定义提示词，将使用默认提示词");
             None
         } else {
-            crate::app_log!("📝 [系统提示词] 设置自定义提示词 ({}字符)", prompt.len());
+            crate::app_log!("[系统提示词] 设置自定义提示词 ({}字符)", prompt.len());
             Some(prompt)
         };
     }
 
     draft.apply().map_err(|e| {
-        crate::app_log!("❌ [系统提示词] 保存失败: {}", e);
+        crate::app_log!("[系统提示词] 保存失败: {}", e);
         e.to_string()
     })?;
 
-    crate::app_log!("✅ [系统提示词] 更新成功");
+    crate::app_log!("[系统提示词] 更新成功");
     Ok(())
 }
 
@@ -369,7 +365,7 @@ pub async fn update_system_prompt(prompt: String) -> Result<(), String> {
 pub async fn reset_system_prompt() -> Result<(), String> {
     let draft = ConfigDraft::global().await;
 
-    // 🔧 修复死锁：在独立作用域内获取写锁
+    // 修复死锁：在独立作用域内获取写锁
     {
         let mut draft_config = draft.draft();
         draft_config.system_prompt = None;
@@ -377,6 +373,6 @@ pub async fn reset_system_prompt() -> Result<(), String> {
 
     draft.apply().map_err(|e| e.to_string())?;
 
-    crate::app_log!("✅ 系统提示词已重置为默认值");
+    crate::app_log!("系统提示词已重置为默认值");
     Ok(())
 }

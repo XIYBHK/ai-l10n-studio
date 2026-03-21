@@ -125,7 +125,9 @@ impl TaskGuard {
     }
 
     /// 获取取消令牌
-    pub fn token(&self) -> Result<Arc<tokio_util::sync::CancellationToken>, crate::error::AppError> {
+    pub fn token(
+        &self,
+    ) -> Result<Arc<tokio_util::sync::CancellationToken>, crate::error::AppError> {
         get_task_manager()
             .get_task_token(self.id)
             .ok_or_else(|| crate::error::AppError::Config(format!("任务令牌不存在: {}", self.id)))

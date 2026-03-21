@@ -259,7 +259,7 @@ export function TermLibraryManager({ visible, onClose }: TermLibraryManagerProps
             lineHeight: '1.6',
           }}
         >
-          💡 <strong style={{ color: cssColors.textPrimary }}>风格提示词自动生成规则：</strong>
+          <strong style={{ color: cssColors.textPrimary }}>风格提示词自动生成规则：</strong>
           首次添加或每新增5条术语时自动生成，也可随时点击下方按钮手动生成
         </div>
       </div>
@@ -282,7 +282,7 @@ export function TermLibraryManager({ visible, onClose }: TermLibraryManagerProps
               color: cssColors.textPrimary,
             }}
           >
-            📝 当前风格总结 (v{library.style_summary.version})
+            当前风格总结 (v{library.style_summary.version})
           </div>
           <div
             style={{

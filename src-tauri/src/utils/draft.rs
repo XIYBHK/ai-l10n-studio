@@ -34,7 +34,7 @@ impl<T: Clone> From<T> for Draft<T> {
 impl<T: Clone> Draft<Box<T>> {
     /// 获取正式数据的可写引用（直接修改已提交的数据）
     ///
-    /// ⚠️ 注意：直接修改正式数据会跳过草稿机制，请谨慎使用
+    /// 注意：直接修改正式数据会跳过草稿机制，请谨慎使用
     pub fn data_mut(&self) -> MappedRwLockWriteGuard<'_, Box<T>> {
         RwLockWriteGuard::map(self.inner.write(), |inner| &mut inner.0)
     }

@@ -29,4 +29,3 @@ exports.config = {
     timeout: 120000,
   },
 };
-

@@ -14,7 +14,7 @@ use ts_rs::TS;
 
 /// 配置版本信息（用于前后端同步验证）
 #[derive(Debug, Clone, Serialize, Deserialize)]
-#[serde(rename_all = "camelCase")] // 🔧 序列化时使用 camelCase 命名，与前端保持一致
+#[serde(rename_all = "camelCase")] // 序列化时使用 camelCase 命名，与前端保持一致
 #[cfg_attr(feature = "ts-rs", derive(TS))]
 #[cfg_attr(feature = "ts-rs", ts(export, export_to = "../src/types/generated/"))]
 pub struct ConfigVersionInfo {
@@ -25,7 +25,7 @@ pub struct ConfigVersionInfo {
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
-#[serde(rename_all = "camelCase")] // 🔧 序列化时使用 camelCase 命名，与前端保持一致
+#[serde(rename_all = "camelCase")] // 序列化时使用 camelCase 命名，与前端保持一致
 #[cfg_attr(feature = "ts-rs", derive(TS))]
 #[cfg_attr(feature = "ts-rs", ts(export, export_to = "../src/types/generated/"))]
 pub struct AppConfig {

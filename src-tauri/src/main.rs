@@ -17,16 +17,16 @@ fn main() {
     #[cfg(feature = "console")]
     {
         console_subscriber::init();
-        log::info!("🔍 Tokio console 监控已启用");
+        log::info!("Tokio console 监控已启用");
     }
 
     let runtime = tokio::runtime::Runtime::new().expect("Failed to create tokio runtime");
     if let Err(e) = runtime.block_on(utils::init::init_app()) {
-        eprintln!("❌ Failed to initialize application: {}", e);
+        eprintln!("Failed to initialize application: {}", e);
         std::process::exit(1);
     }
 
-    log::info!("🚀 PO Translator GUI starting...");
+    log::info!("PO Translator GUI starting...");
 
     services::init_prompt_logger();
 
@@ -53,7 +53,7 @@ fn main() {
             validate_config,
             get_app_logs,
             clear_app_logs,
-            get_frontend_logs, // 🔄 前端日志查看命令
+            get_frontend_logs, // 前端日志查看命令
             // 术语库相关
             get_term_library,
             add_term_to_library,
@@ -94,16 +94,16 @@ fn main() {
             get_prompt_logs,
             clear_prompt_logs,
             get_config_version,
-            // 🆕 AI 模型查询命令
+            // AI 模型查询命令
             get_provider_models,
             get_model_info,
             estimate_translation_cost,
             calculate_precise_cost,
-            // 🆕 动态 AI 供应商 API (Phase 1 重构)
+            // 动态 AI 供应商 API (Phase 1 重构)
             get_all_providers,
             get_all_models,
             find_provider_for_model,
-            // 🆕 翻译任务取消
+            // 翻译任务取消
             cancel_translation,
             cancel_all_translations,
         ])

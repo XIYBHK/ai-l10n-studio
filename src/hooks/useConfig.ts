@@ -14,7 +14,7 @@ const SYSTEM_PROMPT_KEY = 'system_prompt';
 export function useAppConfig() {
   const { data, error, isLoading, mutate } = useSWR(
     APP_CONFIG_KEY,
-    () => configCommands.get(), // ✅ 迁移到统一命令层
+    () => configCommands.get(), // 迁移到统一命令层
     {
       keepPreviousData: true,
       revalidateOnFocus: false, // 配置不需要聚焦刷新
@@ -27,7 +27,7 @@ export function useAppConfig() {
 export function useAIConfigs() {
   const all = useSWR(
     AI_CONFIGS_KEY,
-    () => aiConfigCommands.getAll(), // ✅ 迁移到统一命令层
+    () => aiConfigCommands.getAll(), // 迁移到统一命令层
     {
       keepPreviousData: true,
       revalidateOnFocus: false, // AI配置不需要聚焦刷新
@@ -36,7 +36,7 @@ export function useAIConfigs() {
   );
   const active = useSWR(
     ACTIVE_AI_CONFIG_KEY,
-    () => aiConfigCommands.getActive(), // ✅ 迁移到统一命令层
+    () => aiConfigCommands.getActive(), // 迁移到统一命令层
     {
       keepPreviousData: true,
       revalidateOnFocus: false,
@@ -56,7 +56,7 @@ export function useAIConfigs() {
 export function useSystemPrompt() {
   const { data, error, isLoading, mutate } = useSWR(
     SYSTEM_PROMPT_KEY,
-    () => systemPromptCommands.get(), // ✅ 迁移到统一命令层
+    () => systemPromptCommands.get(), // 迁移到统一命令层
     {
       revalidateOnFocus: false, // 系统提示词不需要聚焦刷新
       revalidateOnReconnect: false,

@@ -41,7 +41,7 @@ export function MemoryManager({ visible, onClose }: MemoryManagerProps) {
   const [memories, setMemories] = useState<MemoryEntry[]>([]);
   const [loading, setLoading] = useState(false);
   const { tm, isLoading: loadingTM, mutate } = useTranslationMemory();
-  const { languages } = useSupportedLanguages(); // 🔧 从后端动态获取语言列表
+  const { languages } = useSupportedLanguages(); // 从后端动态获取语言列表
   const [searchText, setSearchText] = useState('');
   const [newSource, setNewSource] = useState('');
   const [newTarget, setNewTarget] = useState('');

@@ -6,7 +6,8 @@ const edgedriver = require('edgedriver');
 
 const rootDir = path.resolve(__dirname, '..', '..');
 const appPath =
-  process.env.TAURI_APP_PATH || path.join(rootDir, 'src-tauri', 'target', 'debug', 'po-translator-gui.exe');
+  process.env.TAURI_APP_PATH ||
+  path.join(rootDir, 'src-tauri', 'target', 'debug', 'po-translator-gui.exe');
 const exeDir = path.dirname(appPath);
 const portableDir = path.join(exeDir, '.config');
 const portableMarker = path.join(portableDir, 'PORTABLE');
@@ -147,12 +148,16 @@ async function main() {
     shell: false,
   });
 
-  const tauriDriver = spawn(tauriDriverBin, ['--port', tauriDriverPort, '--native-port', nativeDriverPort], {
-    cwd: rootDir,
-    stdio: 'inherit',
-    env: driverEnv,
-    shell: process.platform === 'win32',
-  });
+  const tauriDriver = spawn(
+    tauriDriverBin,
+    ['--port', tauriDriverPort, '--native-port', nativeDriverPort],
+    {
+      cwd: rootDir,
+      stdio: 'inherit',
+      env: driverEnv,
+      shell: process.platform === 'win32',
+    }
+  );
 
   const shutdown = () => {
     killProcessTree(tauriDriver);

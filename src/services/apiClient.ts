@@ -163,9 +163,7 @@ class APIClient {
     }
 
     // 抛出错误
-    const finalError = new Error(
-      errorMessage || lastError?.message || `API调用失败: ${command}`
-    );
+    const finalError = new Error(errorMessage || lastError?.message || `API调用失败: ${command}`);
 
     throw finalError;
   }

@@ -1,4 +1,4 @@
-﻿use crate::services::ConfigDraft;
+use crate::services::ConfigDraft;
 use crate::services::ai::plugin_loader;
 use crate::utils::logging::NoModuleFilter;
 use crate::utils::logging::Type as LogType;
@@ -191,7 +191,12 @@ pub async fn delete_old_logs(retention_days: Option<u32>) -> Result<()> {
         return Ok(());
     }
 
-    logging!(info, LogType::Init, "Cleaning logs older than {} days", days);
+    logging!(
+        info,
+        LogType::Init,
+        "Cleaning logs older than {} days",
+        days
+    );
 
     let now = chrono::Local::now();
     let cutoff = now - chrono::Duration::days(days as i64);

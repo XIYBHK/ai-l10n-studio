@@ -73,7 +73,7 @@ pub struct TranslationPair {
 
 // Phase 7: Contextual Refine 请求结构体
 #[derive(Debug, Clone, Serialize, Deserialize)]
-#[serde(rename_all = "camelCase")] // 🔧 序列化时使用 camelCase 命名，与前端保持一致
+#[serde(rename_all = "camelCase")] // 序列化时使用 camelCase 命名，与前端保持一致
 #[cfg_attr(feature = "ts-rs", derive(TS))]
 #[cfg_attr(feature = "ts-rs", ts(export, export_to = "../src/types/generated/"))]
 pub struct ContextualRefineRequest {
@@ -208,8 +208,8 @@ pub fn cancel_all_translations() -> Result<usize, String> {
     Ok(count)
 }
 
-// ❌ translate_batch (Event API) 已移除
-// ✅ 统一使用 translate_batch_with_channel (Channel API)
+// translate_batch (Event API) 已移除
+// 统一使用 translate_batch_with_channel (Channel API)
 
 #[tauri::command]
 pub fn get_translation_memory() -> Result<TranslationMemory, String> {
@@ -464,14 +464,14 @@ pub fn clear_app_logs() -> Result<(), String> {
     Ok(())
 }
 
-// 🔄 获取前端日志文件内容（优先从统一日志目录读取）
+// 获取前端日志文件内容（优先从统一日志目录读取）
 #[tauri::command]
 pub fn get_frontend_logs() -> Result<Vec<String>, String> {
     use std::fs;
 
-    crate::app_log!("🔄 [前端日志] 开始读取前端日志文件");
+    crate::app_log!("[前端日志] 开始读取前端日志文件");
 
-    // 🔄 优先尝试从统一日志目录读取
+    // 优先尝试从统一日志目录读取
     let mut log_directories = Vec::new();
 
     // 1. 统一日志目录（优先）
@@ -490,11 +490,11 @@ pub fn get_frontend_logs() -> Result<Vec<String>, String> {
     // 尝试从各个目录读取前端日志
     for (dir_path, dir_name) in log_directories {
         if !dir_path.exists() {
-            crate::app_log!("📂 [前端日志] {} 不存在: {:?}", dir_name, dir_path);
+            crate::app_log!("[前端日志] {} 不存在: {:?}", dir_name, dir_path);
             continue;
         }
 
-        crate::app_log!("📂 [前端日志] 检查 {}: {:?}", dir_name, dir_path);
+        crate::app_log!("[前端日志] 检查 {}: {:?}", dir_name, dir_path);
 
         // 查找前端日志文件
         match fs::read_dir(&dir_path) {
@@ -509,7 +509,7 @@ pub fn get_frontend_logs() -> Result<Vec<String>, String> {
                     .collect();
 
                 if frontend_log_files.is_empty() {
-                    crate::app_log!("📭 [前端日志] {} 中没有前端日志文件", dir_name);
+                    crate::app_log!("[前端日志] {} 中没有前端日志文件", dir_name);
                     continue;
                 }
 
@@ -523,7 +523,7 @@ pub fn get_frontend_logs() -> Result<Vec<String>, String> {
                 frontend_log_files.reverse();
 
                 crate::app_log!(
-                    "📄 [前端日志] {} 找到 {} 个前端日志文件",
+                    "[前端日志] {} 找到 {} 个前端日志文件",
                     dir_name,
                     frontend_log_files.len()
                 );
@@ -540,12 +540,12 @@ pub fn get_frontend_logs() -> Result<Vec<String>, String> {
                     if let Ok(content) = fs::read_to_string(entry.path()) {
                         let lines: Vec<String> =
                             content.lines().map(|line| line.to_string()).collect();
-                        let lines_count = lines.len(); // 🔧 在移动前保存长度
+                        let lines_count = lines.len(); // 在移动前保存长度
                         all_lines.extend(lines);
                         found_files += 1;
 
                         crate::app_log!(
-                            "✅ [前端日志] 读取文件: {} ({} 行)",
+                            "[前端日志] 读取文件: {} ({} 行)",
                             entry.file_name().to_string_lossy(),
                             lines_count
                         );
@@ -558,18 +558,18 @@ pub fn get_frontend_logs() -> Result<Vec<String>, String> {
                 }
             }
             Err(e) => {
-                crate::app_log!("❌ [前端日志] 无法读取 {}: {}", dir_name, e);
+                crate::app_log!("[前端日志] 无法读取 {}: {}", dir_name, e);
             }
         }
     }
 
     if found_files == 0 {
-        crate::app_log!("📭 [前端日志] 所有目录都没有找到前端日志文件");
+        crate::app_log!("[前端日志] 所有目录都没有找到前端日志文件");
         return Ok(vec!["前端日志文件不存在，可能还没有保存过日志".to_string()]);
     }
 
     crate::app_log!(
-        "✅ [前端日志] 读取完成，共 {} 个文件，{} 行",
+        "[前端日志] 读取完成，共 {} 个文件，{} 行",
         found_files,
         all_lines.len()
     );
@@ -709,7 +709,7 @@ pub async fn generate_style_summary() -> Result<String, String> {
             // 检查是否包含需要清理的前缀
             for prefix in &prefixes_to_clean {
                 if trimmed.starts_with(prefix) {
-                    // 提取分隔符后的实际内容（支持 "：" ":" " - " 等分隔符）
+                    // 提取分隔符后的实际内容（支持 "：" ":" " - "等分隔符）
                     let separators = ["：", ":", " - ", "- "];
                     for sep in separators {
                         if let Some(pos) = trimmed.find(sep) {
@@ -850,7 +850,7 @@ pub async fn contextual_refine(
 
         AITranslator::new_with_config(
             ai_config,
-            false, // 🔑 绕过翻译记忆库
+            false, // 绕过翻译记忆库
             custom_prompt.as_deref(),
             Some(target_language.clone()),
         )
@@ -927,7 +927,7 @@ pub async fn contextual_refine(
 
     crate::app_log!("[精翻] 翻译完成，获得 {} 条结果", results.len());
 
-    // 🔧 发送统计事件（精翻）- 使用 translation:after 而不是 translation-stats-update
+    // 发送统计事件（精翻）- 使用 translation:after 而不是 translation-stats-update
     let batch_stats = &translator.batch_stats;
     let token_stats = translator.get_token_stats();
     let stats_payload = serde_json::json!({
@@ -1030,25 +1030,25 @@ pub async fn translate_batch_with_channel(
 
     // 翻译处理（按批次）
     let mut translations = Vec::with_capacity(texts.len());
-    let mut translation_sources = Vec::with_capacity(texts.len()); // 📍 收集翻译来源
+    let mut translation_sources = Vec::with_capacity(texts.len()); // 收集翻译来源
     let batch_size = 20; // 单批 20 条
     let mut global_index = 0; // 全局索引，用于追踪整体进度
     let total_count = texts.len(); // 提前保存总数，避免闭包中借用
 
-    // 🔧 记录上一批的 token 统计，用于计算增量
+    // 记录上一批的 token 统计，用于计算增量
     let mut prev_token_input = 0u32;
     let mut prev_token_output = 0u32;
     let mut prev_token_total = 0u32;
     let mut prev_token_cost = 0f64;
 
-    // 🔧 累加所有批次的统计（因为每次 translate_batch 都会重置 batch_stats）
+    // 累加所有批次的统计（因为每次 translate_batch 都会重置 batch_stats）
     let mut total_tm_hits = 0usize;
     let mut total_deduplicated = 0usize;
     let mut total_ai_translated = 0usize;
     let mut total_tm_learned = 0usize;
 
     for chunk in texts.chunks(batch_size) {
-        // 🔧 检查是否被取消
+        // 检查是否被取消
         if cancel_token.is_cancelled() {
             crate::app_log!("[翻译任务] 任务 #{} 已被用户取消", task_id);
             return Err("翻译已取消".to_string());
@@ -1057,7 +1057,7 @@ pub async fn translate_batch_with_channel(
         let chunk_vec = chunk.to_vec();
         let chunk_start_index = global_index;
 
-        // 🔔 创建 progress_callback，实时推送 TM 命中和 AI 翻译结果（带节流优化）
+        // 创建 progress_callback，实时推送 TM 命中和 AI 翻译结果（带节流优化）
         let progress_channel_clone = progress_channel.clone();
         let throttler_clone = std::sync::Arc::clone(&progress_throttler);
         let cancel_token_clone = std::sync::Arc::clone(&cancel_token);
@@ -1080,13 +1080,13 @@ pub async fn translate_batch_with_channel(
             }
         });
 
-        // 📍 使用 translate_batch_with_sources 获取翻译和来源
+        // 使用 translate_batch_with_sources 获取翻译和来源
         let (result, sources) = translator
             .translate_batch_with_sources(chunk_vec.clone(), Some(progress_callback), None)
             .await
             .map_err(|e| e.to_string())?;
 
-        // 🔧 再次检查是否被取消（AI 请求后）
+        // 再次检查是否被取消（AI 请求后）
         if cancel_token.is_cancelled() {
             crate::app_log!("[翻译任务] 任务 #{} 已被用户取消", task_id);
             return Err("翻译已取消".to_string());
@@ -1095,15 +1095,15 @@ pub async fn translate_batch_with_channel(
         // 收集翻译结果和来源
         for (translation, source) in result.iter().zip(sources.iter()) {
             translations.push(translation.clone());
-            translation_sources.push(source.clone()); // 📍 收集来源
+            translation_sources.push(source.clone()); // 收集来源
             global_index += 1;
         }
 
-        // 🔧 每批发送一次统计事件（batch_stats 是当前批次增量，token_stats 需计算增量）
+        // 每批发送一次统计事件（batch_stats 是当前批次增量，token_stats 需计算增量）
         let batch_stats = &translator.batch_stats;
         let token_stats = translator.get_token_stats();
 
-        // 🔧 累加批次统计
+        // 累加批次统计
         total_tm_hits += batch_stats.tm_hits;
         total_deduplicated += batch_stats.deduplicated;
         total_ai_translated += batch_stats.ai_translated;
@@ -1114,7 +1114,7 @@ pub async fn translate_batch_with_channel(
             deduplicated: batch_stats.deduplicated,
             ai_translated: batch_stats.ai_translated,
             token_stats: TokenStatsEvent {
-                // 🔧 发送 Token 增量，而非累计值
+                // 发送 Token 增量，而非累计值
                 prompt_tokens: (token_stats.input_tokens - prev_token_input) as usize,
                 completion_tokens: (token_stats.output_tokens - prev_token_output) as usize,
                 total_tokens: (token_stats.total_tokens - prev_token_total) as usize,
@@ -1123,7 +1123,7 @@ pub async fn translate_batch_with_channel(
         };
         let _ = stats_channel.send(stats_event);
 
-        // 🔧 保存当前累计值，用于下一批计算增量
+        // 保存当前累计值，用于下一批计算增量
         prev_token_input = token_stats.input_tokens;
         prev_token_output = token_stats.output_tokens;
         prev_token_total = token_stats.total_tokens;
@@ -1142,14 +1142,14 @@ pub async fn translate_batch_with_channel(
     Ok(BatchResultWithTaskId {
         task_id,
         translations,
-        translation_sources, // 📍 返回翻译来源
+        translation_sources, // 返回翻译来源
         stats: TranslationStats {
             total: texts.len(),                 // 使用总数，而不是 batch_stats.total
-            tm_hits: total_tm_hits,             // 🔧 使用累加值
-            deduplicated: total_deduplicated,   // 🔧 使用累加值
-            ai_translated: total_ai_translated, // 🔧 使用累加值
+            tm_hits: total_tm_hits,             // 使用累加值
+            deduplicated: total_deduplicated,   // 使用累加值
+            ai_translated: total_ai_translated, // 使用累加值
             token_stats,
-            tm_learned: total_tm_learned, // 🔧 使用累加值
+            tm_learned: total_tm_learned, // 使用累加值
         },
     })
 }

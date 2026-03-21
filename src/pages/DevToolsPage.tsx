@@ -16,7 +16,7 @@ import {
 import { useTheme } from '../hooks/useTheme';
 import { formatTime } from '../utils/formatters';
 
-// ✅ 新的日志服务
+// 新的日志服务
 import {
   useGlobalLogStore,
   toggleBackendLogEnabled,
@@ -34,14 +34,14 @@ export function DevToolsPage() {
   const { message } = App.useApp();
   const { colors, isDark } = useTheme();
 
-  // ✅ 使用全局日志 Store
+  // 使用全局日志 Store
   const { backendLogs, backendEnabled, promptLogs } = useGlobalLogStore();
 
   // 格式化日志显示
   const backendLogText = backendLogs.join('\n');
   const promptLogText = promptLogs;
 
-  // 📝 日志文本框样式（根据主题动态调整）
+  // 日志文本框样式（根据主题动态调整）
   const logTextAreaStyle: React.CSSProperties = {
     fontFamily: 'Consolas, Monaco, "Courier New", monospace',
     fontSize: '12px',
@@ -50,21 +50,21 @@ export function DevToolsPage() {
     border: `1px solid ${colors.borderPrimary}`,
   };
 
-  // 📜 日志自动滚动 refs
+  // 日志自动滚动 refs
   const backendLogRef = useRef<any>(null);
   const promptLogRef = useRef<any>(null);
 
-  // ⏸️ 暂停/继续日志收集
+  // 暂停/继续日志收集
   const handleToggleBackendLog = () => {
     toggleBackendLogEnabled();
-    message.info(backendEnabled ? '⏸️ 后端日志已暂停' : '▶️ 后端日志已继续');
+    message.info(backendEnabled ? '后端日志已暂停' : '后端日志已继续');
   };
 
-  // 🧹 清空日志
+  // 清空日志
   const handleClearBackendLogs = async () => {
     try {
       await clearBackendLogs();
-      message.success('🧹 后端日志已清空');
+      message.success('后端日志已清空');
     } catch (error) {
       console.error('[DevToolsPage] 清空后端日志失败:', error);
       message.error('清空失败');
@@ -74,14 +74,14 @@ export function DevToolsPage() {
   const handleClearPromptLogs = async () => {
     try {
       await clearPromptLogs();
-      message.success('🧹 提示词日志已清空');
+      message.success('提示词日志已清空');
     } catch (error) {
       console.error('[DevToolsPage] 清空提示词日志失败:', error);
       message.error('清空失败');
     }
   };
 
-  // 🎯 页面加载时启动日志监控
+  // 页面加载时启动日志监控
   useEffect(() => {
     startBackendLogMonitoring();
     startPromptLogMonitoring();
@@ -92,7 +92,7 @@ export function DevToolsPage() {
     };
   }, []);
 
-  // 📜 自动滚动到底部
+  // 自动滚动到底部
   useEffect(() => {
     if (backendLogRef.current?.resizableTextArea?.textArea) {
       const textarea = backendLogRef.current.resizableTextArea.textArea;
@@ -169,7 +169,7 @@ export function DevToolsPage() {
                       onClick={handleToggleBackendLog}
                       type={backendEnabled ? 'primary' : 'default'}
                     >
-                      {backendEnabled ? '⏸️ 暂停' : '▶️ 继续'}
+                      {backendEnabled ? '暂停' : '继续'}
                     </Button>
                     <Button icon={<ClearOutlined />} onClick={handleClearBackendLogs}>
                       清空
@@ -262,11 +262,11 @@ export function DevToolsPage() {
                     border: '1px solid var(--color-borderSecondary)',
                   }}
                 >
-                  💡 捕获精翻（Contextual Refine）和批量翻译时发送给 AI 的提示词及响应
+                  捕获精翻（Contextual Refine）和批量翻译时发送给 AI 的提示词及响应
                   <br />
-                  📊 每个日志包含：时间、类型、完整提示词、AI响应、元数据
+                  每个日志包含：时间、类型、完整提示词、AI响应、元数据
                   <br />
-                  🔄 最多保留最近 100 条记录，可手动清空
+                  最多保留最近 100 条记录，可手动清空
                 </div>
 
                 <TextArea

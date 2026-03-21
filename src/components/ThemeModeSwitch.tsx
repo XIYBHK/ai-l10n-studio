@@ -26,7 +26,7 @@ export const ThemeModeSwitch = memo(function ThemeModeSwitch({
           }}
         >
           <BulbOutlined />
-          <span>娴呰壊</span>
+          <span>浅色</span>
         </div>
       ),
       value: 'light',
@@ -42,7 +42,7 @@ export const ThemeModeSwitch = memo(function ThemeModeSwitch({
           }}
         >
           <MoonOutlined />
-          <span>娣辫壊</span>
+          <span>深色</span>
         </div>
       ),
       value: 'dark',
@@ -58,7 +58,7 @@ export const ThemeModeSwitch = memo(function ThemeModeSwitch({
           }}
         >
           <DesktopOutlined />
-          <span>璺熼殢绯荤粺</span>
+          <span>跟随系统</span>
         </div>
       ),
       value: 'system',

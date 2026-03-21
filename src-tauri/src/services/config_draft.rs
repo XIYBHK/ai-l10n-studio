@@ -49,13 +49,13 @@ impl ConfigDraft {
             .get_or_init(|| async {
                 match Self::new(None) {
                     Ok(instance) => {
-                        log::info!("✅ 配置管理器初始化成功");
+                        log::info!("配置管理器初始化成功");
                         instance
                     }
                     Err(e) => {
-                        log::error!("⚠️ 初始化配置管理器失败: {}, 尝试从旧路径迁移", e);
+                        log::error!("初始化配置管理器失败: {}, 尝试从旧路径迁移", e);
 
-                        // 🔧 修复：即使加载失败，也尝试从旧路径迁移配置
+                        // 修复：即使加载失败，也尝试从旧路径迁移配置
                         let config_path = paths::app_home_dir()
                             .map(|dir| dir.join("config.json"))
                             .unwrap_or_else(|_| {
@@ -71,14 +71,14 @@ impl ConfigDraft {
                         // 尝试从旧路径迁移
                         let legacy_path = Self::get_legacy_config_path();
                         if legacy_path.exists() {
-                            log::info!("🔄 尝试从旧配置迁移: {:?}", legacy_path);
+                            log::info!("尝试从旧配置迁移: {:?}", legacy_path);
                             match Self::migrate_from_legacy(&legacy_path) {
                                 Ok(migrated_config) => {
-                                    log::info!("✅ 从旧配置迁移成功");
+                                    log::info!("从旧配置迁移成功");
                                     config = migrated_config;
                                 }
                                 Err(migrate_err) => {
-                                    log::warn!("⚠️ 旧配置迁移失败: {}, 使用默认配置", migrate_err);
+                                    log::warn!("旧配置迁移失败: {}, 使用默认配置", migrate_err);
                                 }
                             }
                         }
@@ -88,11 +88,11 @@ impl ConfigDraft {
                             let _ = fs::create_dir_all(parent);
                         }
 
-                        log::warn!("📂 使用配置路径: {:?}", config_path);
+                        log::warn!("使用配置路径: {:?}", config_path);
                         if !config.ai_configs.is_empty() {
-                            log::info!("✅ 成功迁移 {} 个 AI 配置", config.ai_configs.len());
+                            log::info!("成功迁移 {} 个 AI 配置", config.ai_configs.len());
                         } else {
-                            log::warn!("🔄 未找到可迁移的配置，用户需重新配置AI供应商");
+                            log::warn!("未找到可迁移的配置，用户需重新配置AI供应商");
                         }
 
                         let secrets_path = Self::get_secrets_path(&config_path);
@@ -104,9 +104,9 @@ impl ConfigDraft {
 
                         // 尝试保存配置到正常路径
                         if let Err(save_err) = instance.save_to_disk() {
-                            log::error!("❌ 保存配置失败: {}", save_err);
+                            log::error!("保存配置失败: {}", save_err);
                         } else {
-                            log::info!("✅ 配置已保存到磁盘");
+                            log::info!("配置已保存到磁盘");
                         }
 
                         instance
@@ -135,19 +135,19 @@ impl ConfigDraft {
             // 加载现有配置
             let mut existing_config = Self::load_from_file(&config_path)?;
 
-            // 🔧 智能迁移：如果新配置的 aiConfigs 为空，尝试从旧配置迁移
+            // 智能迁移：如果新配置的 aiConfigs 为空，尝试从旧配置迁移
             if should_migrate_legacy && existing_config.ai_configs.is_empty() {
                 let legacy_path = Self::get_legacy_config_path();
                 if legacy_path.exists() {
                     log::info!(
-                        "🔄 检测到新配置的 aiConfigs 为空，尝试从旧配置迁移: {:?}",
+                        "检测到新配置的 aiConfigs 为空，尝试从旧配置迁移: {:?}",
                         legacy_path
                     );
                     match Self::migrate_from_legacy(&legacy_path) {
                         Ok(legacy_config) => {
                             if !legacy_config.ai_configs.is_empty() {
                                 log::info!(
-                                    "✅ 从旧配置迁移成功，获得 {} 个 AI 配置",
+                                    "从旧配置迁移成功，获得 {} 个 AI 配置",
                                     legacy_config.ai_configs.len()
                                 );
                                 // 只迁移 AI 配置相关字段，保留其他新配置
@@ -155,11 +155,11 @@ impl ConfigDraft {
                                 existing_config.active_config_index =
                                     legacy_config.active_config_index;
                             } else {
-                                log::info!("ℹ️ 旧配置中也没有 AI 配置，无需迁移");
+                                log::info!("旧配置中也没有 AI 配置，无需迁移");
                             }
                         }
                         Err(e) => {
-                            log::warn!("⚠️ 从旧配置迁移失败: {}, 使用现有配置", e);
+                            log::warn!("从旧配置迁移失败: {}, 使用现有配置", e);
                         }
                     }
                 }
@@ -167,17 +167,17 @@ impl ConfigDraft {
 
             existing_config
         } else {
-            // 🔧 新路径不存在时，尝试从旧路径迁移配置
+            // 新路径不存在时，尝试从旧路径迁移配置
             let legacy_path = Self::get_legacy_config_path();
             if should_migrate_legacy && legacy_path.exists() {
-                log::info!("🔄 检测到旧配置文件，尝试迁移: {:?}", legacy_path);
+                log::info!("检测到旧配置文件，尝试迁移: {:?}", legacy_path);
                 match Self::migrate_from_legacy(&legacy_path) {
                     Ok(migrated_config) => {
-                        log::info!("✅ 配置迁移成功");
+                        log::info!("配置迁移成功");
                         migrated_config
                     }
                     Err(e) => {
-                        log::warn!("⚠️ 配置迁移失败: {}, 使用默认配置", e);
+                        log::warn!("配置迁移失败: {}, 使用默认配置", e);
                         AppConfig::default()
                     }
                 }
@@ -233,7 +233,7 @@ impl ConfigDraft {
 
         // 尝试作为新格式（camelCase）解析
         let mut config = if let Ok(new_config) = serde_json::from_str::<AppConfig>(&content) {
-            log::info!("✅ 旧配置文件已是新格式（camelCase）");
+            log::info!("旧配置文件已是新格式（camelCase）");
             new_config
         } else {
             // 尝试作为旧格式（snake_case）解析
@@ -290,11 +290,11 @@ impl ConfigDraft {
             }
 
             let legacy: LegacyAppConfig = serde_json::from_str(&content).map_err(|e| {
-                log::error!("❌ 旧配置文件解析失败: {}", e);
+                log::error!("旧配置文件解析失败: {}", e);
                 AppError::Config(format!("旧配置文件格式错误: {}", e))
             })?;
 
-            log::info!("✅ 成功解析旧配置文件（snake_case）");
+            log::info!("成功解析旧配置文件（snake_case）");
 
             // 转换为新格式
             let mut new_config = AppConfig {
@@ -314,7 +314,7 @@ impl ConfigDraft {
 
             // 迁移 AI 配置
             if let Some(legacy_configs) = legacy.ai_configs_legacy {
-                log::info!("🔄 迁移 {} 个 AI 配置", legacy_configs.len());
+                log::info!("迁移 {} 个 AI 配置", legacy_configs.len());
                 for legacy_config in legacy_configs {
                     // 旧格式的 provider 字段需要转换为 provider_id
                     let provider_id = if legacy_config.provider.eq_ignore_ascii_case("moonshot") {
@@ -348,7 +348,7 @@ impl ConfigDraft {
         // 验证迁移后的配置
         if !config.ai_configs.is_empty() {
             log::info!(
-                "✅ 配置迁移完成: {} 个 AI 配置，启用索引: {:?}",
+                "配置迁移完成: {} 个 AI 配置，启用索引: {:?}",
                 config.ai_configs.len(),
                 config.active_config_index
             );
@@ -366,8 +366,8 @@ impl ConfigDraft {
 
         // 尝试反序列化配置
         let config: AppConfig = serde_json::from_str(&content).map_err(|e| {
-            log::error!("❌ 配置文件格式错误: {}", e);
-            log::error!("📄 配置文件路径: {:?}", path_ref);
+            log::error!("配置文件格式错误: {}", e);
+            log::error!("配置文件路径: {:?}", path_ref);
 
             // 备份损坏的配置文件
             if let Some(parent) = path_ref.parent() {
@@ -376,9 +376,9 @@ impl ConfigDraft {
                     chrono::Local::now().format("%Y%m%d_%H%M%S")
                 ));
                 if let Err(backup_err) = fs::copy(path_ref, &backup_path) {
-                    log::warn!("⚠️ 无法备份损坏的配置文件: {}", backup_err);
+                    log::warn!("无法备份损坏的配置文件: {}", backup_err);
                 } else {
-                    log::info!("💾 已备份损坏的配置文件到: {:?}", backup_path);
+                    log::info!("已备份损坏的配置文件到: {:?}", backup_path);
                 }
             }
 
@@ -388,7 +388,7 @@ impl ConfigDraft {
             ))
         })?;
 
-        log::info!("✅ 配置文件加载成功: {:?}", path_ref);
+        log::info!("配置文件加载成功: {:?}", path_ref);
         Ok(config)
     }
 
@@ -481,19 +481,16 @@ impl ConfigDraft {
     /// 1. 保存配置到磁盘
     /// 2. 发送配置更新事件（通知前端）
     pub fn apply(&self) -> Result<(), AppError> {
-        log::info!("🔄 [apply] 开始应用草稿");
+        log::info!("[apply] 开始应用草稿");
         let applied = self.config.apply();
-        log::info!(
-            "🔄 [apply] config.apply() 返回，有草稿: {}",
-            applied.is_some()
-        );
+        log::info!("[apply] config.apply() 返回，有草稿: {}", applied.is_some());
         if applied.is_some() {
             let new_config = self.config.clone_data();
 
             // 保存到磁盘（使用最新正式配置，避免将旧值写回）
-            log::info!("🔄 [apply] 准备调用 save_to_disk_with_config");
+            log::info!("[apply] 准备调用 save_to_disk_with_config");
             self.save_to_disk_with_config(&new_config)?;
-            log::info!("🔄 [apply] save_to_disk_with_config 完成");
+            log::info!("[apply] save_to_disk_with_config 完成");
 
             // 发送事件通知前端（异步执行，不阻塞当前线程）
             tokio::spawn(async move {
@@ -502,11 +499,11 @@ impl ConfigDraft {
                 }
             });
 
-            log::info!("🔄 [apply] 完成");
+            log::info!("[apply] 完成");
             Ok(())
         } else {
             // 没有草稿需要提交
-            log::info!("🔄 [apply] 没有草稿需要提交");
+            log::info!("[apply] 没有草稿需要提交");
             Ok(())
         }
     }
@@ -523,7 +520,7 @@ impl ConfigDraft {
 
     /// 直接修改正式配置并保存（不经过草稿）
     ///
-    /// ⚠️ 注意：这会跳过草稿机制，请谨慎使用
+    /// 注意：这会跳过草稿机制，请谨慎使用
     /// 推荐使用 draft() + apply() 的方式
     pub fn update_direct(&self, updater: impl FnOnce(&mut AppConfig)) -> Result<(), AppError> {
         {
@@ -546,25 +543,25 @@ impl ConfigDraft {
     /// 保存配置到磁盘
     #[instrument(skip(self), fields(config_path = %self.config_path.display()))]
     fn save_to_disk(&self) -> Result<(), AppError> {
-        log::info!("💾 [save_to_disk] 开始保存配置");
+        log::info!("[save_to_disk] 开始保存配置");
         let config = self.config.clone_latest();
-        log::info!("💾 [save_to_disk] 已克隆配置");
-        log::info!("💾 [save_to_disk] 准备写入文件: {:?}", *self.config_path);
+        log::info!("[save_to_disk] 已克隆配置");
+        log::info!("[save_to_disk] 准备写入文件: {:?}", *self.config_path);
         self.write_config_files(&config)?;
-        log::info!("💾 [save_to_disk] 文件写入成功");
+        log::info!("[save_to_disk] 文件写入成功");
         Ok(())
     }
 
     /// 保存指定配置到磁盘（避免死锁的版本）
     #[instrument(skip(self, config), fields(config_path = %self.config_path.display()))]
     fn save_to_disk_with_config(&self, config: &AppConfig) -> Result<(), AppError> {
-        log::info!("💾 [save_to_disk_with_config] 开始保存配置");
+        log::info!("[save_to_disk_with_config] 开始保存配置");
         log::info!(
-            "💾 [save_to_disk_with_config] 准备写入文件: {:?}",
+            "[save_to_disk_with_config] 准备写入文件: {:?}",
             *self.config_path
         );
         self.write_config_files(config)?;
-        log::info!("💾 [save_to_disk_with_config] 文件写入成功");
+        log::info!("[save_to_disk_with_config] 文件写入成功");
         Ok(())
     }
 

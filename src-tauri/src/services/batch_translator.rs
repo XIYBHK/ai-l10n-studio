@@ -274,7 +274,7 @@ impl BatchTranslator {
         // 使用翻译记忆库预翻译
         for text in unique_texts {
             tm_queries += 1;
-            // 🔧 修复：BatchTranslator 不支持目标语言，使用 None 降级到兼容模式
+            // 修复：BatchTranslator 不支持目标语言，使用 None 降级到兼容模式
             if let Some(translation) = self.translation_memory.get_translation(text, None) {
                 translations_map.insert(text.clone(), translation);
                 tm_hits += 1;
@@ -310,7 +310,7 @@ impl BatchTranslator {
         // 更新翻译记忆库
         for (original, translation) in &translations_map {
             if is_simple_phrase(original) && translation.len() <= 50 {
-                // 🔧 修复：BatchTranslator 不支持目标语言，使用 None 降级到兼容模式
+                // 修复：BatchTranslator 不支持目标语言，使用 None 降级到兼容模式
                 self.translation_memory.add_translation(
                     original.clone(),
                     translation.clone(),

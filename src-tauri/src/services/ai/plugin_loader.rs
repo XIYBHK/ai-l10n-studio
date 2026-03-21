@@ -56,7 +56,7 @@ impl PluginLoader {
 
     /// 扫描并加载所有插件
     pub fn load_all_plugins(&self) -> Result<usize> {
-        tracing::info!("🔍 开始扫描插件目录: {}", self.plugins_dir.display());
+        tracing::info!("开始扫描插件目录: {}", self.plugins_dir.display());
 
         let scanner = PluginScanner::new(&self.plugins_dir);
         let discovered_plugins = scanner.scan_plugins().context("插件目录扫描失败")?;
@@ -76,11 +76,7 @@ impl PluginLoader {
             }
         }
 
-        tracing::info!(
-            "✅ 插件加载完成: {} 成功, {} 失败",
-            loaded_count,
-            failed_count
-        );
+        tracing::info!("插件加载完成: {} 成功, {} 失败", loaded_count, failed_count);
 
         Ok(loaded_count)
     }
@@ -89,7 +85,7 @@ impl PluginLoader {
     fn load_single_plugin(&self, plugin_path: PathBuf, config: PluginConfig) -> Result<()> {
         let plugin_id = config.plugin.id.clone();
 
-        tracing::debug!("🔧 加载插件: {} ({})", config.plugin.name, plugin_id);
+        tracing::debug!("加载插件: {} ({})", config.plugin.name, plugin_id);
 
         // 1. 验证插件配置
         config
@@ -140,7 +136,7 @@ impl PluginLoader {
             plugins.insert(plugin_id.clone(), loaded_plugin);
         }
 
-        tracing::info!("✅ 插件加载成功: {}", plugin_id);
+        tracing::info!("插件加载成功: {}", plugin_id);
         Ok(())
     }
 
@@ -175,7 +171,7 @@ impl PluginLoader {
 
             // 检查是否已存在
             if registry.get_provider(&provider_id).is_some() {
-                tracing::warn!("⚠️ 供应商 '{}' 已存在，插件版本将覆盖内置版本", provider_id);
+                tracing::warn!("供应商 '{}' 已存在，插件版本将覆盖内置版本", provider_id);
             }
 
             // 直接注册（可能覆盖内置版本）
@@ -198,7 +194,7 @@ impl PluginLoader {
 
     /// 重新加载特定插件（用于热重载）
     pub fn reload_plugin(&self, plugin_id: &str) -> Result<()> {
-        tracing::info!("🔄 重新加载插件: {}", plugin_id);
+        tracing::info!("重新加载插件: {}", plugin_id);
 
         // 1. 从已加载列表中获取插件路径
         let plugin_path = {
@@ -230,7 +226,7 @@ impl PluginLoader {
         if !self.plugins_dir.exists() {
             std::fs::create_dir_all(&self.plugins_dir)
                 .with_context(|| format!("创建插件目录失败: {}", self.plugins_dir.display()))?;
-            tracing::info!("📁 创建插件目录: {}", self.plugins_dir.display());
+            tracing::info!("创建插件目录: {}", self.plugins_dir.display());
         }
         Ok(())
     }
@@ -273,7 +269,7 @@ impl AIProvider for DynamicAIProvider {
     }
 
     fn get_models(&self) -> Vec<ModelInfo> {
-        // 🔧 从插件配置动态生成模型列表
+        // 从插件配置动态生成模型列表
         self.config
             .provider
             .models
@@ -321,7 +317,7 @@ pub fn init_global_plugin_loader<P: AsRef<Path>>(plugins_dir: P) -> Result<()> {
         *loader_guard = Some(loader);
     }
 
-    tracing::info!("🚀 全局插件加载器初始化完成");
+    tracing::info!("全局插件加载器初始化完成");
     Ok(())
 }
 
@@ -360,16 +356,13 @@ mod tests {
 
         // 创建 plugin.toml
         let config_content = format!(
-            r#"
-[plugin]
+            r#"[plugin]
 name = "Test Plugin {}"
 id = "{}"
 version = "1.0.0"
 api_version = "1.0"
 description = "Test plugin"
-author = "Test Author"
-
-[provider]
+author = "Test Author"[provider]
 display_name = "Test Provider {}"
 default_url = "https://api.test{}.com/v1"
 default_model = "test-model-{}"
@@ -447,14 +440,11 @@ supports_images = false
         let plugin2_dir = plugins_dir.join("test2");
         std::fs::create_dir(&plugin2_dir).unwrap();
 
-        let config2_content = r#"
-[plugin]
+        let config2_content = r#"[plugin]
 name = "Test Plugin 2"
 id = "test2"
 version = "1.0.0"
-api_version = "1.0"
-
-[provider]
+api_version = "1.0"[provider]
 display_name = "Test Provider 2"
 default_url = "https://api.test2.com/v1"
 default_model = "test-model-2"

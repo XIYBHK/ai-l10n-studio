@@ -40,7 +40,7 @@
 use crate::error::AppError;
 use crate::services::term_library::TermLibrary;
 use crate::services::translation_memory::TranslationMemory;
-// 🆕 使用新的提示词和统计模块
+// 使用新的提示词和统计模块
 use crate::services::prompt_builder;
 use crate::services::translation_stats::{BatchStats, TokenStats};
 use crate::utils::common::is_simple_phrase;
@@ -82,7 +82,7 @@ pub use crate::services::prompt_builder::DEFAULT_SYSTEM_PROMPT;
 /// };
 /// ```
 #[derive(Debug, Clone, Serialize, Deserialize)]
-#[serde(rename_all = "camelCase")] // 🔧 序列化时使用 camelCase 命名，与前端保持一致
+#[serde(rename_all = "camelCase")] // 序列化时使用 camelCase 命名，与前端保持一致
 #[cfg_attr(feature = "ts-rs", derive(TS))]
 #[cfg_attr(feature = "ts-rs", ts(export, export_to = "../src/types/generated/"))]
 pub struct ProxyConfig {
@@ -121,7 +121,7 @@ pub struct ProxyConfig {
 /// };
 /// ```
 #[derive(Debug, Clone, Serialize, Deserialize)]
-#[serde(rename_all = "camelCase")] // 🔧 序列化时使用 camelCase 命名，与前端保持一致
+#[serde(rename_all = "camelCase")] // 序列化时使用 camelCase 命名，与前端保持一致
 #[cfg_attr(feature = "ts-rs", derive(TS))]
 #[cfg_attr(feature = "ts-rs", ts(export, export_to = "../src/types/generated/"))]
 pub struct AIConfig {
@@ -210,8 +210,8 @@ pub struct AITranslator {
     api_key: String,
     base_url: String,
     model: String,
-    provider_id: String, // 🔧 插件化：使用 provider_id 字符串
-    provider_info: Option<crate::services::ai::ProviderInfo>, // 🔧 缓存供应商信息
+    provider_id: String, // 插件化：使用 provider_id 字符串
+    provider_info: Option<crate::services::ai::ProviderInfo>, // 缓存供应商信息
     system_prompt: String,
     conversation_history: Vec<ChatMessage>,
     #[allow(dead_code)]
@@ -235,7 +235,7 @@ impl AITranslator {
     /// - `base_url`: 可选的自定义 API 地址（默认使用 Moonshot）
     /// - `use_tm`: 是否启用翻译记忆库
     /// - `custom_system_prompt`: 可选的自定义系统提示词
-    /// - `target_language`: 可选的目标语言代码（如 "zh-Hans", "en" 等）
+    /// - `target_language`: 可选的目标语言代码（如 "zh-Hans", "en"等）
     ///
     /// # 返回
     ///
@@ -273,7 +273,7 @@ impl AITranslator {
         let term_library_path = crate::utils::paths::get_term_library_path();
         let term_library = TermLibrary::load_from_file(&term_library_path).ok();
 
-        // 🔍 调试日志：检查术语库状态
+        // 调试日志：检查术语库状态
         if let Some(ref lib) = term_library {
             crate::app_log!(
                 "[AITranslator] 加载术语库: {} 条术语, 风格总结: {}",
@@ -305,7 +305,7 @@ impl AITranslator {
             api_key,
             base_url,
             model: "moonshot-v1-auto".to_string(),
-            provider_id: "moonshot".to_string(), // 🔧 插件化：默认使用 Moonshot
+            provider_id: "moonshot".to_string(), // 插件化：默认使用 Moonshot
             provider_info: None,                 // 延迟加载
             system_prompt,
             conversation_history: Vec::new(),
@@ -383,7 +383,7 @@ impl AITranslator {
         let term_library_path = crate::utils::paths::get_term_library_path();
         let term_library = TermLibrary::load_from_file(&term_library_path).ok();
 
-        // 🔍 调试日志：检查术语库状态
+        // 调试日志：检查术语库状态
         if let Some(ref lib) = term_library {
             crate::app_log!(
                 "[AITranslator] 加载术语库: {} 条术语, 风格总结: {}",
@@ -427,7 +427,7 @@ impl AITranslator {
             base_url,
             model,
             provider_id: config.provider_id.clone(),
-            provider_info: Some(provider_info), // 🔧 缓存 provider 信息
+            provider_info: Some(provider_info), // 缓存 provider 信息
             system_prompt,
             conversation_history: Vec::new(),
             max_history_tokens: 2000,
@@ -478,7 +478,7 @@ impl AITranslator {
                 builder = builder.proxy(proxy);
             }
         } else {
-            // 🔧 关键修复：显式禁用代理，防止 reqwest 自动读取系统环境变量
+            // 关键修复：显式禁用代理，防止 reqwest 自动读取系统环境变量
             crate::app_log!("[AI翻译器] 代理已禁用（忽略系统代理设置）");
             builder = builder.no_proxy();
         }
@@ -641,11 +641,11 @@ impl AITranslator {
             return Ok(Vec::new());
         }
 
-        // 🔍 调试：检查回调是否传入
+        // 调试：检查回调是否传入
         if progress_callback.is_some() {
-            crate::app_log!("[translate_batch] ✅ progress_callback 已传入");
+            crate::app_log!("[translate_batch] progress_callback 已传入");
         } else {
-            crate::app_log!("[translate_batch] ℹ️ progress_callback 为 None（内部调用）");
+            crate::app_log!("[translate_batch] progress_callback 为 None（内部调用）");
         }
 
         // 重置统计
@@ -665,7 +665,7 @@ impl AITranslator {
 
         if let Some(ref mut tm) = self.tm {
             for (i, text) in texts.iter().enumerate() {
-                // 🔧 修复：传入目标语言，避免跨语言命中
+                // 修复：传入目标语言，避免跨语言命中
                 if let Some(translation) = tm.get_translation(text, self.target_language.as_deref())
                 {
                     // TM命中
@@ -675,7 +675,7 @@ impl AITranslator {
                     if let Some(ref mut sources_vec) = sources {
                         sources_vec[i] = String::from("tm");
                     }
-                    // ✅ 按顺序上报TM命中进度
+                    // 按顺序上报TM命中进度
                     if let Some(ref callback) = progress_callback {
                         callback(i, translation.clone());
                     }
@@ -711,7 +711,7 @@ impl AITranslator {
         let unique_count = unique_texts_ordered.len();
         self.batch_stats.deduplicated = untranslated_count - unique_count;
 
-        // 📊 TM处理完成后推送第一次统计更新
+        // TM处理完成后推送第一次统计更新
         if let Some(ref stats_cb_opt) = stats_callback {
             if let Some(stats_cb) = stats_cb_opt {
                 let current_stats = self.batch_stats.clone();
@@ -818,7 +818,11 @@ impl AITranslator {
                 if let Some(indices) = unique_text_to_indices.get(unique_text) {
                     for (local_idx, &idx) in indices.iter().enumerate() {
                         if idx >= result.len() {
-                            crate::app_log!("[翻译] 索引越界: idx={}, result.len={}", idx, result.len());
+                            crate::app_log!(
+                                "[翻译] 索引越界: idx={}, result.len={}",
+                                idx,
+                                result.len()
+                            );
                             continue;
                         }
                         result[idx] = translation.clone();
@@ -848,7 +852,7 @@ impl AITranslator {
             if let Some(ref mut tm) = self.tm {
                 for (unique_text, translation) in unique_list.iter().zip(ai_translations.iter()) {
                     if is_simple_phrase(unique_text) && translation.len() <= 50 {
-                        // 🔧 修复：构造带语言的键来检查是否已存在
+                        // 修复：构造带语言的键来检查是否已存在
                         let check_key = if let Some(lang) = self.target_language.as_deref() {
                             format!("{}|{}", unique_text, lang)
                         } else {
@@ -856,7 +860,7 @@ impl AITranslator {
                         };
 
                         if !tm.memory.contains_key(&check_key) {
-                            // 🔧 修复：保存时记录目标语言
+                            // 修复：保存时记录目标语言
                             tm.add_translation(
                                 unique_text.clone(),
                                 translation.clone(),
@@ -886,7 +890,7 @@ impl AITranslator {
             self.batch_stats.tm_learned
         );
 
-        // 📊 最终统计更新（包含TM学习数量）
+        // 最终统计更新（包含TM学习数量）
         if let Some(ref stats_cb_opt) = stats_callback {
             if let Some(stats_cb) = stats_cb_opt {
                 let final_stats = self.batch_stats.clone();
@@ -1357,7 +1361,7 @@ impl AITranslator {
             }
         }
 
-        // ⚠️ 验证翻译数量（只在出错时输出详细日志）
+        // 验证翻译数量（只在出错时输出详细日志）
         if translations.len() != original_texts.len() {
             crate::app_log!(
                 "[解析错误] 期望{}条，实际{}条\n[AI响应]\n{}",

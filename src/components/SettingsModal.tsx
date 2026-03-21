@@ -1,6 +1,6 @@
 /**
- * 璁剧疆绐楀彛
- * 宸叉媶瑙ｄ负澶氫釜鐙珛鐨?Tab 缁勪欢
+ * 设置窗口
+ * 已拆解为多个独立的 Tab 组件
  */
 
 import { Modal, Tabs } from 'antd';
@@ -35,7 +35,7 @@ export function SettingsModal({ visible, onClose }: SettingsModalProps) {
             fontSize: 'var(--font-size-base)',
           }}
         >
-          <ApiOutlined /> AI 閰嶇疆
+          <ApiOutlined /> AI 配置
         </span>
       ),
       children: <AIConfigTab />,
@@ -51,7 +51,7 @@ export function SettingsModal({ visible, onClose }: SettingsModalProps) {
             fontSize: 'var(--font-size-base)',
           }}
         >
-          <FileTextOutlined /> 绯荤粺鎻愮ず璇?
+          <FileTextOutlined /> 系统提示词
         </span>
       ),
       children: <SystemPromptTab />,
@@ -67,7 +67,7 @@ export function SettingsModal({ visible, onClose }: SettingsModalProps) {
             fontSize: 'var(--font-size-base)',
           }}
         >
-          <BgColorsOutlined /> 澶栬
+          <BgColorsOutlined /> 外观
         </span>
       ),
       children: <AppearanceTab />,
@@ -83,7 +83,7 @@ export function SettingsModal({ visible, onClose }: SettingsModalProps) {
             fontSize: 'var(--font-size-base)',
           }}
         >
-          <BellOutlined /> 閫氱煡
+          <BellOutlined /> 通知
         </span>
       ),
       children: <NotificationTab />,
@@ -99,7 +99,7 @@ export function SettingsModal({ visible, onClose }: SettingsModalProps) {
             fontSize: 'var(--font-size-base)',
           }}
         >
-          <InfoCircleOutlined /> 鏃ュ織
+          <InfoCircleOutlined /> 日志
         </span>
       ),
       children: <LogsTab />,
@@ -108,7 +108,7 @@ export function SettingsModal({ visible, onClose }: SettingsModalProps) {
 
   return (
     <Modal
-      title="璁剧疆"
+      title="设置"
       open={visible}
       onCancel={onClose}
       footer={null}
