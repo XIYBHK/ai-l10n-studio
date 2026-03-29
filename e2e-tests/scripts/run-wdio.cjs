@@ -4,6 +4,21 @@ const net = require('node:net');
 const { spawn, spawnSync } = require('node:child_process');
 const edgedriver = require('edgedriver');
 
+// 加载 e2e-tests/.env（MidScene 模型密钥等），不覆盖已有环境变量
+const dotenvPath = path.join(__dirname, '..', '.env');
+if (fs.existsSync(dotenvPath)) {
+  const lines = fs.readFileSync(dotenvPath, 'utf8').split('\n');
+  for (const line of lines) {
+    const trimmed = line.trim();
+    if (!trimmed || trimmed.startsWith('#')) continue;
+    const eqIdx = trimmed.indexOf('=');
+    if (eqIdx < 1) continue;
+    const key = trimmed.slice(0, eqIdx).trim();
+    const val = trimmed.slice(eqIdx + 1).trim().replace(/^['"]|['"]$/g, '');
+    if (!(key in process.env)) process.env[key] = val;
+  }
+}
+
 const rootDir = path.resolve(__dirname, '..', '..');
 const appPath =
   process.env.TAURI_APP_PATH ||

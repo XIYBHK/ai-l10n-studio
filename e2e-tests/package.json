@@ -12,5 +12,8 @@
     "@wdio/spec-reporter": "^9.24.0",
     "edgedriver": "^6.3.0",
     "webdriverio": "^9.24.0"
+  },
+  "dependencies": {
+    "@midscene/core": "^1.6.0"
   }
 }
