@@ -1,4 +1,4 @@
-﻿import { useState, useEffect, memo, useCallback, useRef } from 'react';
+﻿import { useState, useEffect, memo, useCallback } from 'react';
 import { message } from 'antd';
 import { POEntry } from '../types/tauri';
 import { useTranslationStore } from '../store';
@@ -239,7 +239,7 @@ export const EditorPane = memo(function EditorPane({
       {/* 双栏编辑区域 */}
       <div className={styles.splitView} role="form" aria-label="翻译编辑表单">
         {/* 原文区域 */}
-        <SourceSection entry={entry} onCopyOriginal={handleCopyOriginal} />
+        <SourceSection entry={entry} />
 
         {/* 译文区域 */}
         <TargetSection

@@ -7,8 +7,6 @@ import { CSS_COLORS } from '../../hooks/useCssColors';
 
 const log = createModuleLogger('NotificationTab');
 
-interface NotificationTabProps {}
-
 export function NotificationTab() {
   const [notificationEnabled, setNotificationEnabled] = useState(notificationManager.isEnabled());
   const [form] = Form.useForm();

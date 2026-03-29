@@ -292,6 +292,7 @@ ref/
 docs/PLAN_STATUS_AUDIT.md
 .kiro/steering/xiybhk.md
 ci_log.txt
+build_output*.txt
 
 # Temporary files (nul)
 nul

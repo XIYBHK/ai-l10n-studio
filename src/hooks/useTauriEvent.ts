@@ -9,7 +9,7 @@
  */
 
 import { useEffect, useRef, useState } from 'react';
-import { listen, EventCallback, UnlistenFn } from '@tauri-apps/api/event';
+import { listen, UnlistenFn } from '@tauri-apps/api/event';
 
 interface UseTauriEventOptions<T> {
   /** 事件名称 */

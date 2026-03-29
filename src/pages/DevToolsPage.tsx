@@ -32,7 +32,7 @@ const { TextArea } = Input;
 
 export function DevToolsPage() {
   const { message } = App.useApp();
-  const { colors, isDark } = useTheme();
+  const { colors } = useTheme();
 
   // 使用全局日志 Store
   const { backendLogs, backendEnabled, promptLogs } = useGlobalLogStore();

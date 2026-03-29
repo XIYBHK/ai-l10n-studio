@@ -6,13 +6,12 @@ import { POEntry } from '../../types/tauri';
 
 interface SourceSectionProps {
   entry: POEntry;
-  onCopyOriginal: () => void;
 }
 
 /**
  * 源码展示区域组件
  */
-export const SourceSection: React.FC<SourceSectionProps> = ({ entry, onCopyOriginal }) => {
+export const SourceSection: React.FC<SourceSectionProps> = ({ entry }) => {
   const hasContext = entry.msgctxt || (entry.comments && entry.comments.length > 0);
 
   const containerStyles: CSSProperties = {

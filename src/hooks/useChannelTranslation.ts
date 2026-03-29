@@ -87,13 +87,13 @@ export const useChannelTranslation = () => {
         const progressChannel = new Channel<BatchProgressEvent>();
         const statsChannel = new Channel<BatchStatsEvent>();
 
-        progressChannel.onmessage = (progressEvent: any) => {
-          const currentRaw = (progressEvent.current ?? progressEvent.processed ?? 0) as number;
-          const total = (progressEvent.total ?? 0) as number;
-          const percentage = (progressEvent.percentage ?? 0) as number;
-          const text = (progressEvent.text ?? progressEvent.current_item) as string | undefined;
-          const index = (progressEvent.index ?? null) as number | null;
-          const taskId = (progressEvent.task_id ?? null) as number | null;
+        progressChannel.onmessage = (progressEvent: BatchProgressEvent) => {
+          const currentRaw = progressEvent.current;
+          const total = progressEvent.total;
+          const percentage = progressEvent.percentage;
+          const text = progressEvent.text;
+          const index: number | null = null;
+          const taskId = progressEvent.task_id ?? null;
 
           // 如果事件中包含任务ID，立即保存（用于取消翻译）
           if (taskId !== null && taskId !== undefined) {

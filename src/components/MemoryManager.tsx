@@ -104,7 +104,6 @@ export function MemoryManager({ visible, onClose }: MemoryManagerProps) {
 
   useEffect(() => {
     let rafId: number | null = null;
-    let lastWidth = window.innerWidth;
 
     const updateTableHeight = () => {
       const windowHeight = window.innerHeight;
@@ -116,7 +115,6 @@ export function MemoryManager({ visible, onClose }: MemoryManagerProps) {
         modalContentHeight - operationAreaHeight - paginationHeight
       );
       setTableHeight(newTableHeight);
-      lastWidth = window.innerWidth;
     };
 
     const handleResize = () => {
@@ -191,6 +189,7 @@ export function MemoryManager({ visible, onClose }: MemoryManagerProps) {
 
       await mutate(freshTM, false);
 
+      // getState() 为非响应式调用：此处只需读取当前值以执行一次性重置，不需要订阅变化
       const { cumulativeStats, setCumulativeStats } = useStatsStore.getState();
       setCumulativeStats({
         ...cumulativeStats,

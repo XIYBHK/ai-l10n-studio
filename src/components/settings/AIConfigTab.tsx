@@ -119,7 +119,7 @@ export function AIConfigTab({ onProviderChange }: AIConfigTabProps) {
     }
   }
 
-  async function handleTestConnection(values: any) {
+  async function handleTestConnection(values: AIConfig) {
     const apiKey = values.apiKey?.trim();
     if (!apiKey) {
       message.warning('测试连接前请重新输入 API Key');
@@ -131,7 +131,7 @@ export function AIConfigTab({ onProviderChange }: AIConfigTabProps) {
       const testConfig: AIConfig = {
         providerId: values.providerId,
         apiKey,
-        baseUrl: values.baseUrl || undefined,
+        baseUrl: values.baseUrl || null,
         model: values.model,
         proxy: values.proxy?.enabled
           ? {
@@ -213,7 +213,7 @@ export function AIConfigTab({ onProviderChange }: AIConfigTabProps) {
     }
   }
 
-  async function handleSave(values: any) {
+  async function handleSave(values: AIConfig) {
     try {
       const apiKey = values.apiKey?.trim() ?? '';
       if (isAddingNew && !apiKey) {

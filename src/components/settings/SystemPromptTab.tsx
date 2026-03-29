@@ -9,8 +9,6 @@ import { CSS_COLORS } from '../../hooks/useCssColors';
 
 const log = createModuleLogger('SystemPromptTab');
 
-interface SystemPromptTabProps {}
-
 export function SystemPromptTab() {
   const [form] = Form.useForm();
   const { prompt, mutate } = useSystemPrompt();

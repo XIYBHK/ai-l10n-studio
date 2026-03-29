@@ -77,12 +77,6 @@ const SESSION_CARD_DATA = [
   { key: 'tm_learned', label: '记忆库新增', color: 'statusTranslated', percentage: false },
 ] as const;
 
-const TOKEN_DATA = [
-  { key: 'input_tokens', label: '输入' },
-  { key: 'output_tokens', label: '输出' },
-  { key: 'total_tokens', label: '总计' },
-] as const;
-
 const CUMULATIVE_CARDS = [
   { key: 'total', label: '总计翻译', color: 'textPrimary' },
   { key: 'ai_translated', label: 'AI调用', color: 'textPrimary' },
@@ -286,7 +280,6 @@ const SessionStatsSection = memo(function SessionStatsSection({
   const tmHits = sessionStats.tm_hits ?? 0;
   const deduplicated = sessionStats.deduplicated ?? 0;
   const aiTranslated = sessionStats.ai_translated ?? 0;
-  const tmLearned = sessionStats.tm_learned ?? 0;
   const actualTotal = tmHits + deduplicated + aiTranslated;
 
   const getStatValue = (key: (typeof SESSION_CARD_DATA)[number]['key']) => {

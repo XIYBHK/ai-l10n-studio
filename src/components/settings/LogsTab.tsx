@@ -7,8 +7,6 @@ import { CSS_COLORS } from '../../hooks/useCssColors';
 
 const log = createModuleLogger('LogsTab');
 
-interface LogsTabProps {}
-
 export function LogsTab() {
   const [form] = Form.useForm();
   const [loading, setLoading] = useState(false);
