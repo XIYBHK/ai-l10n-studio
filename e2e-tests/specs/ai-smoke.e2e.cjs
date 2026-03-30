@@ -20,15 +20,21 @@ const APP_BOOT_WAIT = 5000;
 // 每个用例开始前给 AI agent 留的截图稳定时间
 const RENDER_SETTLE = 800;
 
-describe('AI 视觉冒烟测试', () => {
+describe('AI 视觉冒烟测试', function () {
   let agent;
 
-  before(async () => {
+  before(async function () {
+    // 未配置模型密钥时跳过整个套件（CI 无 secret 时不报错）
+    if (!process.env.MIDSCENE_MODEL_API_KEY) {
+      console.log('[AI] MIDSCENE_MODEL_API_KEY 未配置，跳过 AI 视觉测试');
+      this.skip();
+      return;
+    }
     // 等待应用启动完毕
     await browser.pause(APP_BOOT_WAIT);
   });
 
-  afterEach(async () => {
+  afterEach(async function () {
     // 每个用例结束后销毁 agent，避免资源泄漏
     if (agent) {
       await agent.destroy();
@@ -37,7 +43,7 @@ describe('AI 视觉冒烟测试', () => {
   });
 
   // ─── 用例 1：主界面可见性 ────────────────────────────────────────────
-  it('主界面加载完成且显示核心 UI 区域', async () => {
+  it('主界面加载完成且显示核心 UI 区域', async function () {
     await browser.pause(RENDER_SETTLE);
     agent = createMidsceneAgent(browser, { generateReport: true });
 
@@ -53,7 +59,7 @@ describe('AI 视觉冒烟测试', () => {
   });
 
   // ─── 用例 2：设置按钮可访问性 ────────────────────────────────────────
-  it('设置入口可见且可点击', async () => {
+  it('设置入口可见且可点击', async function () {
     await browser.pause(RENDER_SETTLE);
     agent = createMidsceneAgent(browser);
 
@@ -65,7 +71,7 @@ describe('AI 视觉冒烟测试', () => {
   });
 
   // ─── 用例 3：空状态 UI 引导 ──────────────────────────────────────────
-  it('未打开文件时显示引导提示或空状态', async () => {
+  it('未打开文件时显示引导提示或空状态', async function () {
     await browser.pause(RENDER_SETTLE);
     agent = createMidsceneAgent(browser);
 
@@ -83,7 +89,7 @@ describe('AI 视觉冒烟测试', () => {
   });
 
   // ─── 用例 4：菜单栏操作 ──────────────────────────────────────────────
-  it('点击设置按钮后弹出设置面板', async () => {
+  it('点击设置按钮后弹出设置面板', async function () {
     await browser.pause(RENDER_SETTLE);
     agent = createMidsceneAgent(browser, { generateReport: true });
 

@@ -46,4 +46,9 @@ jobs:
       - name: Run desktop UI E2E
         env:
           CI: 'true'
+          # MidScene AI 视觉测试（可选）：在仓库 Settings → Secrets 中配置以启用
+          # 未配置时 AI 用例自动跳过，不影响基础冒烟测试
+          MIDSCENE_MODEL_API_KEY: ${{ secrets.MIDSCENE_MODEL_API_KEY }}
+          MIDSCENE_MODEL_NAME: ${{ secrets.MIDSCENE_MODEL_NAME }}
+          MIDSCENE_MODEL_BASE_URL: ${{ secrets.MIDSCENE_MODEL_BASE_URL }}
         run: npm run test:e2e
