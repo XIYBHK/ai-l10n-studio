@@ -8,7 +8,12 @@
  * 4. 并发安全
  */
 use crate::error::AppError;
+use anyhow::{anyhow, Result};
 use chrono; // For backup timestamp
+use parking_lot::{
+    MappedRwLockReadGuard, MappedRwLockWriteGuard, RwLock, RwLockReadGuard,
+    RwLockUpgradableReadGuard, RwLockWriteGuard,
+};
 use serde::{Deserialize, Serialize};
 use std::fs;
 use std::path::{Path, PathBuf};
@@ -16,9 +21,247 @@ use std::sync::Arc;
 use tokio::sync::OnceCell;
 use tracing::instrument;
 
-use super::config_manager::AppConfig;
-use crate::utils::draft::Draft;
+use crate::services::ai_translator::AIConfig;
 use crate::utils::paths;
+
+#[cfg(feature = "ts-rs")]
+use ts_rs::TS;
+
+/// 配置版本信息（用于前后端同步验证）
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+#[cfg_attr(feature = "ts-rs", derive(TS))]
+#[cfg_attr(feature = "ts-rs", ts(export, export_to = "../src/types/generated/"))]
+pub struct ConfigVersionInfo {
+    pub version: u64,
+    pub timestamp: String,
+    pub active_config_index: Option<usize>,
+    pub config_count: usize,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+#[cfg_attr(feature = "ts-rs", derive(TS))]
+#[cfg_attr(feature = "ts-rs", ts(export, export_to = "../src/types/generated/"))]
+pub struct AppConfig {
+    pub api_key: String,
+    pub provider: String,
+    pub model: String,
+    pub base_url: Option<String>,
+    pub use_translation_memory: bool,
+    pub translation_memory_path: Option<String>,
+    pub log_level: String,
+    pub auto_save: bool,
+    pub batch_size: usize,
+    pub max_concurrent: usize,
+    pub timeout_seconds: u64,
+
+    #[serde(default)]
+    pub ai_configs: Vec<AIConfig>,
+    #[serde(default)]
+    pub active_config_index: Option<usize>,
+
+    #[serde(default)]
+    pub system_prompt: Option<String>,
+
+    #[serde(default)]
+    pub theme_mode: Option<String>,
+    #[serde(default)]
+    pub language: Option<String>,
+
+    #[serde(default)]
+    pub log_retention_days: Option<u32>,
+    #[serde(default)]
+    pub log_max_size: Option<u32>,
+    #[serde(default)]
+    pub log_max_count: Option<u32>,
+
+    #[serde(default)]
+    pub config_version: u64,
+    #[serde(default)]
+    pub last_modified: Option<String>,
+}
+
+impl Default for AppConfig {
+    fn default() -> Self {
+        let default_tm_path = Self::get_default_tm_path();
+
+        Self {
+            api_key: String::new(),
+            provider: "moonshot".to_string(),
+            model: "moonshot-v1-auto".to_string(),
+            base_url: Some("https://api.moonshot.cn/v1".to_string()),
+            use_translation_memory: true,
+            translation_memory_path: Some(default_tm_path),
+            log_level: "info".to_string(),
+            auto_save: true,
+            batch_size: 10,
+            max_concurrent: 3,
+            timeout_seconds: 30,
+            ai_configs: Vec::new(),
+            active_config_index: None,
+            system_prompt: None,
+            theme_mode: None,
+            language: None,
+            log_retention_days: Some(7),
+            log_max_size: Some(128),
+            log_max_count: Some(8),
+            config_version: 0,
+            last_modified: None,
+        }
+    }
+}
+
+impl AppConfig {
+    fn get_default_tm_path() -> String {
+        if let Ok(exe_path) = std::env::current_exe() {
+            if let Some(exe_dir) = exe_path.parent() {
+                let portable_tm = exe_dir.join("data").join("translation_memory.json");
+                if portable_tm.exists() || exe_dir.join("data").exists() {
+                    return portable_tm.to_string_lossy().to_string();
+                }
+            }
+        }
+
+        let mut path = dirs::home_dir().unwrap_or_else(|| PathBuf::from("."));
+        path.push(".po-translator");
+        path.push("translation_memory.json");
+        path.to_string_lossy().to_string()
+    }
+
+    pub fn get_active_ai_config(&self) -> Option<&AIConfig> {
+        self.active_config_index
+            .and_then(|index| self.ai_configs.get(index))
+    }
+
+    pub fn get_active_ai_config_mut(&mut self) -> Option<&mut AIConfig> {
+        if let Some(index) = self.active_config_index {
+            self.ai_configs.get_mut(index)
+        } else {
+            None
+        }
+    }
+
+    pub fn add_ai_config(&mut self, config: AIConfig) {
+        self.ai_configs.push(config);
+        if self.ai_configs.len() == 1 {
+            self.active_config_index = Some(0);
+        }
+    }
+
+    pub fn update_ai_config(&mut self, index: usize, config: AIConfig) -> Result<()> {
+        if index < self.ai_configs.len() {
+            self.ai_configs[index] = config;
+            Ok(())
+        } else {
+            Err(anyhow!("配置索引超出范围: {}", index))
+        }
+    }
+
+    pub fn remove_ai_config(&mut self, index: usize) -> Result<()> {
+        if index >= self.ai_configs.len() {
+            return Err(anyhow!("配置索引超出范围: {}", index));
+        }
+
+        self.ai_configs.remove(index);
+
+        if let Some(active_index) = self.active_config_index {
+            if active_index == index {
+                self.active_config_index = if self.ai_configs.is_empty() {
+                    None
+                } else {
+                    Some(0)
+                };
+            } else if active_index > index {
+                self.active_config_index = Some(active_index - 1);
+            }
+        }
+
+        Ok(())
+    }
+
+    pub fn set_active_ai_config(&mut self, index: usize) -> Result<()> {
+        if index < self.ai_configs.len() {
+            self.active_config_index = Some(index);
+            Ok(())
+        } else {
+            Err(anyhow!("配置索引超出范围: {}", index))
+        }
+    }
+
+    pub fn get_all_ai_configs(&self) -> &Vec<AIConfig> {
+        &self.ai_configs
+    }
+}
+
+#[derive(Debug, Clone)]
+struct Draft<T: Clone> {
+    inner: Arc<RwLock<(T, Option<T>)>>,
+}
+
+impl<T: Clone> From<T> for Draft<T> {
+    fn from(data: T) -> Self {
+        Self {
+            inner: Arc::new(RwLock::new((data, None))),
+        }
+    }
+}
+
+impl<T: Clone> Draft<Box<T>> {
+    fn data_mut(&self) -> MappedRwLockWriteGuard<'_, Box<T>> {
+        RwLockWriteGuard::map(self.inner.write(), |inner| &mut inner.0)
+    }
+
+    fn data_ref(&self) -> MappedRwLockReadGuard<'_, Box<T>> {
+        RwLockReadGuard::map(self.inner.read(), |inner| &inner.0)
+    }
+
+    fn draft_mut(&self) -> MappedRwLockWriteGuard<'_, Box<T>> {
+        let guard = self.inner.upgradable_read();
+
+        if guard.1.is_none() {
+            let mut guard = RwLockUpgradableReadGuard::upgrade(guard);
+            guard.1 = Some(guard.0.clone());
+            #[allow(clippy::unwrap_used)]
+            return RwLockWriteGuard::map(guard, |inner| inner.1.as_mut().unwrap());
+        }
+
+        #[allow(clippy::unwrap_used)]
+        RwLockWriteGuard::map(RwLockUpgradableReadGuard::upgrade(guard), |inner| {
+            inner.1.as_mut().unwrap()
+        })
+    }
+
+    fn latest_ref(&self) -> MappedRwLockReadGuard<'_, Box<T>> {
+        RwLockReadGuard::map(self.inner.read(), |inner| {
+            inner.1.as_ref().unwrap_or(&inner.0)
+        })
+    }
+
+    fn apply(&self) -> Option<Box<T>> {
+        let mut inner = self.inner.write();
+        inner
+            .1
+            .take()
+            .map(|draft| std::mem::replace(&mut inner.0, draft))
+    }
+
+    fn discard(&self) -> Option<Box<T>> {
+        self.inner.write().1.take()
+    }
+
+    fn has_draft(&self) -> bool {
+        self.inner.read().1.is_some()
+    }
+
+    fn clone_data(&self) -> Box<T> {
+        self.data_ref().clone()
+    }
+
+    fn clone_latest(&self) -> Box<T> {
+        self.latest_ref().clone()
+    }
+}
 
 /// 全局配置管理器单例
 static GLOBAL_CONFIG: OnceCell<ConfigDraft> = OnceCell::const_new();
@@ -611,6 +854,7 @@ impl ConfigDraft {
 #[allow(clippy::unwrap_used)]
 mod tests {
     use super::*;
+    use tempfile::tempdir;
 
     #[tokio::test]
     async fn test_config_draft_basic() {
@@ -746,5 +990,211 @@ mod tests {
 
         let _ = fs::remove_file(&config_path);
         let _ = fs::remove_file(&secrets_path);
+    }
+
+    #[tokio::test]
+    async fn config_manager_stores_secrets_separately() {
+        let temp_dir = tempdir().unwrap();
+        let config_path = temp_dir.path().join("config.json");
+        let secrets_path = temp_dir.path().join("config.secrets.json");
+
+        let manager = ConfigDraft::new(Some(config_path.clone())).unwrap();
+        manager
+            .update(|config| {
+                config.api_key = "legacy-secret".to_string();
+                config.ai_configs.push(AIConfig {
+                    provider_id: "openai".to_string(),
+                    api_key: "real-secret-key".to_string(),
+                    base_url: None,
+                    model: Some("gpt-4o-mini".to_string()),
+                    proxy: None,
+                });
+                config.active_config_index = Some(0);
+            })
+            .unwrap();
+
+        let public_content = fs::read_to_string(&config_path).unwrap();
+        let secrets_content = fs::read_to_string(&secrets_path).unwrap();
+
+        assert!(!public_content.contains("legacy-secret"));
+        assert!(!public_content.contains("real-secret-key"));
+        assert!(secrets_content.contains("legacy-secret"));
+        assert!(secrets_content.contains("real-secret-key"));
+
+        let reloaded = ConfigDraft::new(Some(config_path.clone())).unwrap();
+        assert_eq!(reloaded.data().api_key, "legacy-secret");
+        assert_eq!(reloaded.data().ai_configs[0].api_key, "real-secret-key");
+    }
+
+    #[tokio::test]
+    async fn config_manager_exports_and_imports_with_secrets() {
+        let temp_dir = tempdir().unwrap();
+        let config_path = temp_dir.path().join("config.json");
+        let export_path = temp_dir.path().join("exported.json");
+        let export_secrets_path = temp_dir.path().join("exported.secrets.json");
+
+        let manager = ConfigDraft::new(Some(config_path.clone())).unwrap();
+        manager
+            .update(|config| {
+                config.api_key = "root-secret".to_string();
+                config.ai_configs.push(AIConfig {
+                    provider_id: "openai".to_string(),
+                    api_key: "provider-secret".to_string(),
+                    base_url: Some("https://api.openai.com/v1".to_string()),
+                    model: Some("gpt-4o-mini".to_string()),
+                    proxy: None,
+                });
+                config.active_config_index = Some(0);
+            })
+            .unwrap();
+
+        fs::copy(&config_path, &export_path).unwrap();
+        fs::copy(config_path.with_extension("secrets.json"), &export_secrets_path).unwrap();
+
+        let public_export = fs::read_to_string(&export_path).unwrap();
+        let secrets_export = fs::read_to_string(&export_secrets_path).unwrap();
+
+        assert!(!public_export.contains("root-secret"));
+        assert!(!public_export.contains("provider-secret"));
+        assert!(secrets_export.contains("root-secret"));
+        assert!(secrets_export.contains("provider-secret"));
+
+        let import_target = temp_dir.path().join("imported.json");
+        let import_secrets = temp_dir.path().join("imported.secrets.json");
+        fs::copy(&export_path, &import_target).unwrap();
+        fs::copy(&export_secrets_path, &import_secrets).unwrap();
+
+        let imported = ConfigDraft::new(Some(import_target.clone())).unwrap();
+        assert_eq!(imported.data().api_key, "root-secret");
+        assert_eq!(imported.data().ai_configs[0].api_key, "provider-secret");
+        assert_eq!(imported.data().active_config_index, Some(0));
+    }
+
+    #[test]
+    fn config_manager_loads_legacy_inline_secrets() {
+        let temp_dir = tempdir().unwrap();
+        let config_path = temp_dir.path().join("legacy.json");
+
+        let legacy_config = serde_json::json!({
+            "apiKey": "legacy-root-secret",
+            "provider": "moonshot",
+            "model": "moonshot-v1-auto",
+            "baseUrl": "https://api.moonshot.cn/v1",
+            "useTranslationMemory": true,
+            "translationMemoryPath": null,
+            "logLevel": "info",
+            "autoSave": true,
+            "batchSize": 10,
+            "maxConcurrent": 3,
+            "timeoutSeconds": 30,
+            "aiConfigs": [
+                {
+                    "providerId": "openai",
+                    "apiKey": "legacy-provider-secret",
+                    "baseUrl": "https://api.openai.com/v1",
+                    "model": "gpt-4o-mini",
+                    "proxy": null
+                }
+            ],
+            "activeConfigIndex": 0,
+            "systemPrompt": null,
+            "themeMode": null,
+            "language": null,
+            "logRetentionDays": 7,
+            "logMaxSize": 128,
+            "logMaxCount": 8,
+            "configVersion": 0,
+            "lastModified": null
+        });
+
+        fs::write(
+            &config_path,
+            serde_json::to_string_pretty(&legacy_config).unwrap(),
+        )
+        .unwrap();
+
+        let loaded = ConfigDraft::new(Some(config_path.clone())).unwrap();
+
+        assert_eq!(loaded.data().api_key, "legacy-root-secret");
+        assert_eq!(loaded.data().ai_configs[0].api_key, "legacy-provider-secret");
+        assert_eq!(loaded.data().active_config_index, Some(0));
+    }
+
+    #[derive(Debug, Clone, PartialEq)]
+    struct TestConfig {
+        value: i32,
+        name: String,
+    }
+
+    #[test]
+    fn test_draft_basic() {
+        let config = Box::new(TestConfig {
+            value: 100,
+            name: "initial".to_string(),
+        });
+        let draft = Draft::from(config);
+
+        assert_eq!(draft.data_ref().value, 100);
+        assert_eq!(draft.data_ref().name, "initial");
+
+        {
+            let mut d = draft.draft_mut();
+            d.value = 200;
+            d.name = "modified".to_string();
+        }
+
+        assert_eq!(draft.data_ref().value, 100);
+        assert_eq!(draft.data_ref().name, "initial");
+
+        assert_eq!(draft.latest_ref().value, 200);
+        assert_eq!(draft.latest_ref().name, "modified");
+
+        let old = draft.apply();
+        assert!(old.is_some());
+        assert_eq!(old.unwrap().value, 100);
+
+        assert_eq!(draft.data_ref().value, 200);
+        assert_eq!(draft.data_ref().name, "modified");
+        assert!(!draft.has_draft());
+    }
+
+    #[test]
+    fn test_draft_discard() {
+        let config = Box::new(TestConfig {
+            value: 100,
+            name: "initial".to_string(),
+        });
+        let draft = Draft::from(config);
+
+        {
+            let mut d = draft.draft_mut();
+            d.value = 200;
+        }
+
+        assert!(draft.has_draft());
+
+        let discarded = draft.discard();
+        assert!(discarded.is_some());
+        assert_eq!(discarded.unwrap().value, 200);
+
+        assert_eq!(draft.data_ref().value, 100);
+        assert!(!draft.has_draft());
+    }
+
+    #[test]
+    fn test_draft_multiple_apply() {
+        let config = Box::new(TestConfig {
+            value: 100,
+            name: "initial".to_string(),
+        });
+        let draft = Draft::from(config);
+
+        draft.draft_mut().value = 200;
+        draft.apply();
+
+        draft.draft_mut().value = 300;
+        draft.apply();
+
+        assert_eq!(draft.data_ref().value, 300);
     }
 }
