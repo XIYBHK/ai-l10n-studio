@@ -10,7 +10,7 @@ use std::path::{Path, PathBuf};
 use std::sync::Arc;
 
 use super::plugin_config::{PluginConfig, PluginScanner};
-use super::provider::{ProviderInfo, with_global_registry_mut};
+use super::provider::{with_global_registry_mut, ProviderInfo};
 
 /// 插件加载器状态
 #[derive(Debug, Clone)]
@@ -246,8 +246,8 @@ impl DynamicAIProvider {
     }
 }
 
-use super::ModelInfo;
 use super::provider::AIProvider;
+use super::ModelInfo;
 
 impl AIProvider for DynamicAIProvider {
     fn id(&self) -> &'static str {
@@ -344,6 +344,7 @@ pub fn load_all_plugins() -> Result<usize> {
 }
 
 #[cfg(test)]
+#[allow(clippy::unwrap_used, clippy::expect_used, clippy::clone_on_ref_ptr)]
 mod tests {
     use super::*;
     use std::io::Write;

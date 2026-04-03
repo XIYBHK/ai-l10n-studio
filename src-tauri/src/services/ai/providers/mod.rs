@@ -24,6 +24,7 @@ pub fn register_all_providers() -> anyhow::Result<()> {
 }
 
 #[cfg(test)]
+#[allow(clippy::unwrap_used, clippy::expect_used, clippy::clone_on_ref_ptr)]
 mod tests {
     use crate::services::ai::plugin_loader::{init_global_plugin_loader, load_all_plugins};
     use crate::services::ai::provider::with_global_registry;

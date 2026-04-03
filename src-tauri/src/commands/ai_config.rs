@@ -55,17 +55,18 @@ pub async fn get_active_ai_config() -> Result<Option<AIConfigSummary>, String> {
 }
 
 fn mask_api_key(api_key: &str) -> String {
-    if api_key.starts_with("sk-") && api_key.len() > 8 {
-        format!("sk-***...***{}", &api_key[api_key.len() - 4..])
-    } else if api_key.len() > 8 {
-        format!(
-            "{}***...***{}",
-            &api_key[..3],
-            &api_key[api_key.len() - 3..]
-        )
-    } else {
-        "***".to_string()
+    let len = api_key.len();
+    if len <= 8 {
+        return "***".to_string();
     }
+    // 仅暴露前缀标识(3字符) + 末尾1字符，减少密钥重建风险
+    let prefix = if api_key.starts_with("sk-") {
+        "sk-"
+    } else {
+        &api_key[..3]
+    };
+    let suffix = &api_key[len - 1..];
+    format!("{}...{}", prefix, suffix)
 }
 
 #[tauri::command]

@@ -64,9 +64,7 @@ describe('AI 视觉冒烟测试', function () {
     agent = createMidsceneAgent(browser);
 
     // 断言：页面上有可识别的设置相关元素
-    const hasSettings = await agent.aiBoolean(
-      '页面上是否有"设置"、"Settings"按钮或齿轮图标？',
-    );
+    const hasSettings = await agent.aiBoolean('页面上是否有"设置"、"Settings"按钮或齿轮图标？');
     assert.ok(hasSettings, '应存在设置入口');
   });
 
@@ -76,14 +74,12 @@ describe('AI 视觉冒烟测试', function () {
     agent = createMidsceneAgent(browser);
 
     // 断言：没有错误弹窗或崩溃提示
-    const hasErrorDialog = await agent.aiBoolean(
-      '页面是否出现了错误提示、崩溃信息或异常弹窗？',
-    );
+    const hasErrorDialog = await agent.aiBoolean('页面是否出现了错误提示、崩溃信息或异常弹窗？');
     assert.equal(hasErrorDialog, false, '启动后不应出现错误弹窗');
 
     // 查询：确认空状态或欢迎内容
     const isEmptyOrWelcome = await agent.aiBoolean(
-      '页面是否处于空白状态、欢迎页或等待打开文件的状态？',
+      '页面是否处于空白状态、欢迎页或等待打开文件的状态？'
     );
     assert.ok(isEmptyOrWelcome, '未打开文件时应显示空状态或欢迎引导');
   });

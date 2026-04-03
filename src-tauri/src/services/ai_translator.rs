@@ -1011,7 +1011,8 @@ impl AITranslator {
         )
     )]
     pub async fn translate_with_ai(&mut self, texts: Vec<String>) -> Result<Vec<String>, AppError> {
-        // 单元测试模拟：如果 api_key 是 test_key，则直接返回原文作为译文，跳过网络请求
+        // 测试模拟：仅在测试构建中生效，生产构建完全移除此分支
+        #[cfg(test)]
         if self.api_key == "test_key" {
             crate::app_log!("[测试模拟] 检测到 test_key，返回模拟翻译结果。");
             return Ok(texts);

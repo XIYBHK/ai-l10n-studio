@@ -6,6 +6,7 @@ use crate::services::ai_translator::{AIConfig, AITranslator, ProxyConfig};
 use crate::services::translation_stats::{BatchStats, TokenStats};
 
 #[cfg(test)]
+#[allow(clippy::unwrap_used, clippy::expect_used, clippy::clone_on_ref_ptr)]
 mod tests {
     use super::*;
 
@@ -95,10 +96,7 @@ mod tests {
         let result = AITranslator::new_with_config(config, false, None, None);
 
         // 可能会失败，只验证方法调用不崩溃
-        match result {
-            Ok(_) => {}
-            Err(_) => {}
-        }
+        let _ = result;
     }
 
     #[test]
@@ -107,11 +105,8 @@ mod tests {
         let result = AITranslator::new_with_config(config, true, None, Some("zh-Hant".to_string()));
 
         // 可能会失败，只验证方法调用不崩溃
-        match result {
-            Ok(t) => {
-                let _tm = t.get_translation_memory();
-            }
-            Err(_) => {}
+        if let Ok(t) = result {
+            let _tm = t.get_translation_memory();
         }
     }
 
@@ -331,10 +326,7 @@ mod tests {
         let result = AITranslator::new_with_config(config, false, None, None);
 
         // 可能会失败（供应商配置问题），只验证方法调用不崩溃
-        match result {
-            Ok(_) => {}
-            Err(_) => {}
-        }
+        let _ = result;
     }
 
     #[test]
@@ -347,6 +339,7 @@ mod tests {
 }
 
 #[cfg(test)]
+#[allow(clippy::unwrap_used, clippy::expect_used, clippy::clone_on_ref_ptr)]
 mod integration_tests {
     use super::*;
 
