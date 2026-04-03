@@ -10,7 +10,7 @@ use std::path::{Path, PathBuf};
 use std::sync::Arc;
 
 use super::plugin_config::{PluginConfig, PluginScanner};
-use super::provider::{with_global_registry_mut, ProviderInfo};
+use super::provider::{ProviderInfo, with_global_registry_mut};
 
 /// 插件加载器状态
 #[derive(Debug, Clone)]
@@ -246,8 +246,8 @@ impl DynamicAIProvider {
     }
 }
 
-use super::provider::AIProvider;
 use super::ModelInfo;
+use super::provider::AIProvider;
 
 impl AIProvider for DynamicAIProvider {
     fn id(&self) -> &'static str {

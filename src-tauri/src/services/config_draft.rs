@@ -8,7 +8,7 @@
  * 4. 并发安全
  */
 use crate::error::AppError;
-use anyhow::{anyhow, Result};
+use anyhow::{Result, anyhow};
 use chrono; // For backup timestamp
 use parking_lot::{
     MappedRwLockReadGuard, MappedRwLockWriteGuard, RwLock, RwLockReadGuard,
@@ -1049,7 +1049,11 @@ mod tests {
             .unwrap();
 
         fs::copy(&config_path, &export_path).unwrap();
-        fs::copy(config_path.with_extension("secrets.json"), &export_secrets_path).unwrap();
+        fs::copy(
+            config_path.with_extension("secrets.json"),
+            &export_secrets_path,
+        )
+        .unwrap();
 
         let public_export = fs::read_to_string(&export_path).unwrap();
         let secrets_export = fs::read_to_string(&export_secrets_path).unwrap();
@@ -1116,7 +1120,10 @@ mod tests {
         let loaded = ConfigDraft::new(Some(config_path.clone())).unwrap();
 
         assert_eq!(loaded.data().api_key, "legacy-root-secret");
-        assert_eq!(loaded.data().ai_configs[0].api_key, "legacy-provider-secret");
+        assert_eq!(
+            loaded.data().ai_configs[0].api_key,
+            "legacy-provider-secret"
+        );
         assert_eq!(loaded.data().active_config_index, Some(0));
     }
 
