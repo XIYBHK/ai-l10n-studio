@@ -1,16 +1,15 @@
 import { open, save } from '@tauri-apps/plugin-dialog';
 import type { POEntry } from '../types/tauri';
-import { invoke } from './commandClient';
-import { COMMANDS } from './commandKeys';
+import { invoke } from './apiClient';
 
 export const poFileCommands = {
   async parse(filePath: string): Promise<POEntry[]> {
-    return invoke<POEntry[]>(COMMANDS.PO_PARSE, { filePath }, { errorMessage: '解析 PO 文件失败' });
+    return invoke<POEntry[]>('parse_po_file', { filePath }, { errorMessage: '解析 PO 文件失败' });
   },
 
   async save(filePath: string, entries: POEntry[]): Promise<void> {
     return invoke<void>(
-      COMMANDS.PO_SAVE,
+      'save_po_file',
       { filePath, entries },
       { errorMessage: '保存 PO 文件失败' }
     );
@@ -19,16 +18,12 @@ export const poFileCommands = {
 
 export const fileFormatCommands = {
   async detect(filePath: string): Promise<string> {
-    return invoke<string>(
-      COMMANDS.FILE_FORMAT_DETECT,
-      { filePath },
-      { errorMessage: '检测文件格式失败' }
-    );
+    return invoke<string>('detect_file_format', { filePath }, { errorMessage: '检测文件格式失败' });
   },
 
   async getMetadata(filePath: string): Promise<unknown> {
     return invoke<unknown>(
-      COMMANDS.FILE_METADATA_GET,
+      'get_file_metadata',
       { filePath },
       { errorMessage: '获取文件元数据失败' }
     );

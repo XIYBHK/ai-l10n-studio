@@ -5,7 +5,7 @@ import { useAIConfigs } from './hooks/useConfig';
 import { useTranslationFlow } from './hooks/useTranslationFlow';
 import { openDevToolsWindow } from './utils/devToolsWindow';
 import { createModuleLogger } from './utils/logger';
-import { MenuBarSkeleton, TranslationWorkspaceSkeleton } from './components/skeletons';
+
 import './i18n/config';
 import './App.css';
 
@@ -159,7 +159,7 @@ export default function AppShell({ initError = null }: AppShellProps) {
             </div>
           )}
 
-          <Suspense fallback={<MenuBarSkeleton />}>
+          <Suspense fallback={null}>
             <MenuBar
               onOpenFile={openFile}
               onSaveFile={saveFile}
@@ -190,7 +190,7 @@ export default function AppShell({ initError = null }: AppShellProps) {
             />
           </Suspense>
 
-          <Suspense fallback={<TranslationWorkspaceSkeleton />}>
+          <Suspense fallback={null}>
             <TranslationWorkspace
               entries={entries}
               currentEntry={currentEntry}

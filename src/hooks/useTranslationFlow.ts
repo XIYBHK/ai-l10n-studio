@@ -191,7 +191,7 @@ export function useTranslationFlow() {
       }
     };
 
-    setupListener();
+    setupListener().catch((err) => log.logError(err, '注册翻译统计监听失败'));
 
     return () => {
       isActive = false;
@@ -214,7 +214,6 @@ export function useTranslationFlow() {
           if (filePath.toLowerCase().endsWith('.po')) {
             try {
               const newEntries = (await parsePOFile(filePath)) as POEntry[];
-              // 使用 getState 获取最新状态
               setEntries(newEntries);
               setCurrentFilePath(filePath);
               await detectAndSetLanguages(newEntries);
@@ -234,7 +233,7 @@ export function useTranslationFlow() {
       }
     };
 
-    setupListener();
+    setupListener().catch((err) => log.logError(err, '注册文件拖放监听失败'));
 
     return () => {
       isActive = false;
@@ -291,6 +290,10 @@ export function useTranslationFlow() {
       msg.warning('没有打开的文件，请使用"另存为"');
       return;
     }
+    if (isTranslating) {
+      msg.warning('翻译进行中，请等待完成后再保存');
+      return;
+    }
     try {
       await poFileCommands.save(currentFilePath, entries);
       msg.success('保存成功！');
@@ -302,6 +305,10 @@ export function useTranslationFlow() {
   };
 
   const saveAsFile = async () => {
+    if (isTranslating) {
+      msg.warning('翻译进行中，请等待完成后再保存');
+      return;
+    }
     try {
       const filePath = await dialogCommands.saveFile();
       if (filePath) {

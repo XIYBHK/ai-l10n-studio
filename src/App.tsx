@@ -1,6 +1,5 @@
 import { lazy, Suspense } from 'react';
 import { ErrorBoundary } from './components/ErrorBoundary';
-import { TranslationWorkspaceSkeleton } from './components/skeletons';
 
 const AppShell = lazy(() => import('./AppShell'));
 
@@ -11,7 +10,7 @@ interface AppProps {
 export default function App({ initError = null }: AppProps) {
   return (
     <ErrorBoundary>
-      <Suspense fallback={<TranslationWorkspaceSkeleton />}>
+      <Suspense fallback={null}>
         <AppShell initError={initError} />
       </Suspense>
     </ErrorBoundary>

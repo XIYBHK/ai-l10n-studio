@@ -1,11 +1,10 @@
 import type { ContextualRefineRequest } from '../types/tauri';
-import { invoke } from './commandClient';
-import { COMMANDS } from './commandKeys';
+import { invoke } from './apiClient';
 
 export const translatorCommands = {
   async translateEntry(text: string, targetLanguage?: string): Promise<string> {
     return invoke<string>(
-      COMMANDS.TRANSLATE_ENTRY,
+      'translate_entry',
       { text, targetLanguage: targetLanguage || null },
       { errorMessage: '翻译失败', silent: false }
     );
@@ -16,7 +15,7 @@ export const translatorCommands = {
     targetLanguage: string
   ): Promise<string[]> {
     return invoke<string[]>(
-      COMMANDS.CONTEXTUAL_REFINE,
+      'contextual_refine',
       { requests, targetLanguage },
       { errorMessage: 'Contextual Refine 失败', silent: false }
     );
@@ -25,20 +24,20 @@ export const translatorCommands = {
 
 export const i18nCommands = {
   async getSupportedLanguages(): Promise<string[]> {
-    return invoke<string[]>(COMMANDS.I18N_GET_SUPPORTED, undefined, {
+    return invoke<string[]>('get_supported_langs', undefined, {
       errorMessage: '获取支持的语言列表失败',
     });
   },
 
   async getSystemLocale(): Promise<string> {
-    return invoke<string>(COMMANDS.I18N_GET_SYSTEM_LOCALE, undefined, {
+    return invoke<string>('get_system_locale', undefined, {
       errorMessage: '获取系统语言失败',
     });
   },
 
   async detectLanguage(text: string): Promise<{ code: string; display_name: string }> {
     return invoke<{ code: string; display_name: string }>(
-      COMMANDS.LANGUAGE_DETECT,
+      'detect_text_language',
       { text },
       {
         errorMessage: '语言检测失败',
@@ -50,7 +49,7 @@ export const i18nCommands = {
     sourceLangCode: string
   ): Promise<{ code: string; display_name: string }> {
     return invoke<{ code: string; display_name: string }>(
-      COMMANDS.LANGUAGE_GET_DEFAULT_TARGET,
+      'get_default_target_lang',
       { sourceLangCode },
       { errorMessage: '获取默认目标语言失败' }
     );
