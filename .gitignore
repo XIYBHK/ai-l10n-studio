@@ -1,238 +1,32 @@
-# Python
-__pycache__/
-*.py[cod]
-*$py.class
-*.so
-.Python
-build/
-develop-eggs/
-dist/
-downloads/
-eggs/
-.eggs/
-lib/
-lib64/
-parts/
-sdist/
-var/
-wheels/
-*.egg-info/
-.installed.cfg
-*.egg
-MANIFEST
-
-# PyInstaller
-*.manifest
-*.spec
-
-# Installer logs
-pip-log.txt
-pip-delete-this-directory.txt
-
-# Unit test / coverage reports
-htmlcov/
-.tox/
-.coverage
-.coverage.*
-.cache
-nosetests.xml
-coverage.xml
-*.cover
-.hypothesis/
-.pytest_cache/
-
-# Translations
-*.mo
-*.pot
-
-# Django stuff:
-*.log
-local_settings.py
-db.sqlite3
-
-# Flask stuff:
-instance/
-.webassets-cache
-
-# Scrapy stuff:
-.scrapy
-
-# Sphinx documentation
-docs/_build/
-
-# PyBuilder
-target/
-
-# Jupyter Notebook
-.ipynb_checkpoints
-
-# pyenv
-.python-version
-
-# celery beat schedule file
-celerybeat-schedule
-
-# SageMath parsed files
-*.sage.py
-
-# Environments
-.env
-.venv
-env/
-venv/
-ENV/
-env.bak/
-venv.bak/
-
-# Spyder project settings
-.spyderproject
-.spyproject
-
-# Rope project settings
-.ropeproject
-
-# mkdocs documentation
-/site
-
-# mypy
-.mypy_cache/
-.dmypy.json
-dmypy.json
-
 # Node.js
 node_modules/
 npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
 lerna-debug.log*
-
-# Runtime data
-pids
-*.pid
-*.seed
-*.pid.lock
-
-# Coverage directory used by tools like istanbul
-coverage/
-*.lcov
-
-# nyc test coverage
-.nyc_output
-
-# Grunt intermediate storage (https://gruntjs.com/creating-plugins#storing-task-files)
-.grunt
-
-# Bower dependency directory (https://bower.io/)
-bower_components
-
-# node-waf configuration
-.lock-wscript
-
-# Compiled binary addons (https://nodejs.org/api/addons.html)
-build/Release
-
-# Dependency directories
-jspm_packages/
-
-# TypeScript v1 declaration files
-typings/
-
-# TypeScript cache
 *.tsbuildinfo
-
-# Optional npm cache directory
 .npm
-
-# Optional eslint cache
 .eslintcache
-
-# Microbundle cache
-.rpt2_cache/
-.rts2_cache_cjs/
-.rts2_cache_es/
-.rts2_cache_umd/
-
-# Optional REPL history
-.node_repl_history
-
-# Output of 'npm pack'
-*.tgz
-
-# Yarn Integrity file
-.yarn-integrity
-
-# Trae IDE
-.trae/
-
-# dotenv environment variables file
-.env.test
-
-# parcel-bundler cache (https://parceljs.org/)
-.cache
-.parcel-cache
-
-# Next.js build output
-.next
-
-# Nuxt.js build / generate output
-.nuxt
-dist
-
-# Gatsby files
-.cache/
-public
-
-# Storybook build outputs
-.out
-.storybook-out
-
-# Temporary folders
-tmp/
-temp/
-
-# Logs
-logs
-*.log
-
-# Rust
-target/
-Cargo.lock
-
-# Tauri
-src-tauri/target/
-src-tauri/Cargo.lock
-src-tauri/gen/schemas/
-
-# Claude Code
-.claude/settings.local.json
-
-# IDE
-.vscode/
-.idea/
-*.swp
-*.swo
-*~
-
-# OS
-.DS_Store
-.DS_Store?
-._*
-.Spotlight-V100
-.Trashes
-ehthumbs.db
-Thumbs.db
-
-# Windows
-*.lnk
-
-# Temporary files
-*.tmp
-*.temp
 
 # Build outputs
 dist/
 build/
 out/
+
+# Coverage
+coverage/
+*.lcov
+.nyc_output
+htmlcov/
+
+# Vite
+.vite/
+
+# Rust / Tauri
+target/
+src-tauri/target/
+src-tauri/Cargo.lock
+src-tauri/gen/schemas/
 
 # Package managers (keep package-lock.json for reproducible builds)
 yarn.lock
@@ -241,61 +35,50 @@ pnpm-lock.yaml
 # Environment files
 .env
 .env.local
-.env.development.local
-.env.test.local
-.env.production.local
+.env.*.local
 e2e-tests/.env
 
-# Vite
-.vite/
+# IDE
+.vscode/
+.idea/
+.trae/
+*.swp
+*.swo
+*~
 
-# Tauri + React GUI project - Keep source code, ignore build artifacts (rooted)
-node_modules/
-dist/
-public/
-.vite/
-.eslintcache
-*.tsbuildinfo
-yarn.lock
-pnpm-lock.yaml
+# OS
+.DS_Store
+Thumbs.db
+ehthumbs.db
 
-# Project-specific patterns
-# Translation backup files
-*.po.backup
-*.pot.backup
+# Windows
+*.lnk
+nul
+**/nul
 
-# Log files (keep the log directory but ignore contents)
+# Claude Code
+.claude/settings.local.json
+
+# Logs
+*.log
 log/*.txt
 log/*.log
 
-# Archived backups and prototypes
-archive/backups/**
-archive/python-prototype/**
-
-# Translation memory and data examples (ignore if not needed in VCS)
-docs/examples/data/*.json
-
-# Python cache in subdirectories
-**/__pycache__/
-**/*.py[cod]
-**/*$py.class
-
-# Temporary and test files
-**/*.tmp
-**/*.temp
-**/test_*.py
+# Temporary files
+*.tmp
+*.temp
+tmp/
+temp/
 **/temp_*
 
-# Build artifacts in subdirectories
-**/build/
-**/dist/
+# Project-specific
+*.po.backup
+*.pot.backup
+archive/backups/**
+archive/python-prototype/**
+docs/examples/data/*.json
 ref/
 .cursor/rules/
-docs/PLAN_STATUS_AUDIT.md
-.kiro/steering/xiybhk.md
+.kiro/
 ci_log.txt
 build_output*.txt
-
-# Temporary files (nul)
-nul
-**/nul
