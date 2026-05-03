@@ -1,129 +1,16 @@
 import React, { useState, useEffect, useRef, memo, useCallback, useMemo } from 'react';
-import { Progress, Button, Badge } from 'antd';
-import { CheckOutlined, ThunderboltOutlined } from '@ant-design/icons';
-import { useVirtualizer } from '@tanstack/react-virtual';
+import { Progress } from 'antd';
 import { POEntry } from '../types/tauri';
 import { useUpdateEntry } from '../store';
 import { CSS_COLORS } from '../hooks/useCssColors';
 import { createModuleLogger } from '../utils/logger';
-import {
-  announceToScreenReader,
-  getBatchActionAriaLabel,
-  getEntryStatusDescription,
-} from '../utils/accessibility';
-import { TruncatedText } from './TruncatedText';
-import { EmptyState } from './ui/EmptyState';
+import { announceToScreenReader } from '../utils/accessibility';
 import styles from './EntryList.module.css';
 
+import { useEntrySelection } from '../hooks/useEntrySelection';
+import { StatusColumns, BatchActions, ColumnType, IndexedEntry } from './entryList';
+
 const log = createModuleLogger('EntryList');
-
-type ColumnType = 'untranslated' | 'needsReview' | 'translated';
-type IndexedEntry = { entry: POEntry; index: number };
-
-// 选中行操作按钮（必须定义在 EntryList 外部，否则 memo 失效）
-interface SelectionActionsProps {
-  selectedRowKeys: React.Key[];
-  entries: POEntry[];
-  getEntryStatus: (entry: POEntry) => string;
-  handleConfirmSelected: () => void;
-  handleContextualRefine: () => void;
-  handleTranslateSelected: () => void;
-  isTranslating: boolean;
-}
-
-const SelectionActions = memo(function SelectionActions({
-  selectedRowKeys,
-  entries,
-  getEntryStatus,
-  handleConfirmSelected,
-  handleContextualRefine,
-  handleTranslateSelected,
-  isTranslating,
-}: SelectionActionsProps) {
-  const hasNeedsReview = selectedRowKeys.some((key) => {
-    const entry = entries[key as number];
-    return entry && getEntryStatus(entry) === 'needs-review';
-  });
-
-  const hasUntranslated = selectedRowKeys.some((key) => {
-    const entry = entries[key as number];
-    return entry && getEntryStatus(entry) === 'untranslated';
-  });
-
-  return (
-    <div className={styles.selectionActions} role="group" aria-label="批量操作">
-      {hasNeedsReview && (
-        <>
-          <Button
-            type="primary"
-            size="small"
-            onClick={handleConfirmSelected}
-            icon={<CheckOutlined />}
-            aria-label={getBatchActionAriaLabel('confirm', selectedRowKeys.length)}
-          >
-            确认已选中
-          </Button>
-          <Button
-            type="default"
-            size="small"
-            onClick={handleContextualRefine}
-            icon={<ThunderboltOutlined />}
-            disabled={isTranslating}
-            aria-label={getBatchActionAriaLabel('refine', selectedRowKeys.length)}
-          >
-            精翻选中 (Ctrl+Shift+R)
-          </Button>
-        </>
-      )}
-      {hasUntranslated && (
-        <Button
-          type="primary"
-          size="small"
-          onClick={handleTranslateSelected}
-          disabled={isTranslating}
-          aria-label={getBatchActionAriaLabel('translate', selectedRowKeys.length)}
-        >
-          翻译选中
-        </Button>
-      )}
-    </div>
-  );
-});
-
-// 获取翻译来源样式
-function getSourceStyle(
-  source: 'tm' | 'dedup' | 'ai' | undefined,
-  colors: {
-    sourceTmBg: string;
-    sourceTmColor: string;
-    sourceDedupBg: string;
-    sourceDedupColor: string;
-    sourceAiBg: string;
-    sourceAiColor: string;
-  }
-) {
-  const styles = {
-    tm: { bg: colors.sourceTmBg, color: colors.sourceTmColor, label: '记忆' },
-    dedup: { bg: colors.sourceDedupBg, color: colors.sourceDedupColor, label: '去重' },
-    ai: { bg: colors.sourceAiBg, color: colors.sourceAiColor, label: 'AI' },
-  };
-  return styles[source || 'ai'];
-}
-
-// 获取条目状态CSS类名
-function getStatusClassName(entry: POEntry): string {
-  if (!entry.msgid) return '';
-  if (entry.msgstr && entry.needsReview) return styles.needsReview;
-  if (entry.msgstr) return styles.translated;
-  return styles.untranslated;
-}
-
-// 获取条目背景色（用于内联样式）
-function getEntryBackground(isSelected: boolean, isCurrent: boolean): string {
-  if (isSelected) return CSS_COLORS.selectedBg;
-  if (isCurrent) return CSS_COLORS.hoverBg;
-  return CSS_COLORS.bgPrimary;
-}
 
 interface EntryListProps {
   entries: POEntry[];
@@ -134,246 +21,6 @@ interface EntryListProps {
   onTranslateSelected?: (indices: number[]) => void;
   onContextualRefine?: (indices: number[]) => void;
 }
-
-// 渲染单个列表项
-const renderVirtualItem = (
-  entry: POEntry,
-  globalIndex: number,
-  virtualItem: { size: number; start: number },
-  selectedRowKeys: React.Key[],
-  currentEntry: POEntry | null,
-  columnType: ColumnType,
-  onRowClick: (
-    entry: POEntry,
-    index: number,
-    event: React.MouseEvent,
-    columnType: ColumnType
-  ) => void,
-  onConfirm: (index: number, event: React.MouseEvent) => void,
-  getEntryStatus: (entry: POEntry) => string
-) => {
-  const isSelected = selectedRowKeys.includes(globalIndex);
-  const isCurrent = currentEntry === entry;
-  const status = getEntryStatus(entry) as 'untranslated' | 'needs-review' | 'translated' | 'empty';
-  const statusClass = getStatusClassName(entry);
-
-  return (
-    <div
-      key={`${columnType}-${globalIndex}`}
-      role="listitem"
-      aria-selected={isSelected}
-      aria-label={getEntryStatusDescription(status, globalIndex, isSelected)}
-      tabIndex={0}
-      className={`
-        ${styles.virtualItem}
-        ${isSelected ? styles.selected : ''}
-        ${isCurrent ? styles.current : ''}
-        ${statusClass}
-      `}
-      style={{
-        height: `${virtualItem.size}px`,
-        transform: `translateY(${virtualItem.start}px)`,
-        backgroundColor: getEntryBackground(isSelected, isCurrent),
-      }}
-      onClick={(event) => onRowClick(entry, globalIndex, event, columnType)}
-      onKeyDown={(e) => {
-        if (e.key === 'Enter' || e.key === ' ') {
-          e.preventDefault();
-          onRowClick(entry, globalIndex, e as unknown as React.MouseEvent, columnType);
-        }
-      }}
-    >
-      <div className={styles.virtualItemMeta}>
-        <span className={styles.indexLabel}>#{globalIndex + 1}</span>
-        {status === 'needs-review' && entry.translationSource && (
-          <span
-            className={styles.sourceBadge}
-            style={{
-              backgroundColor: getSourceStyle(entry.translationSource, CSS_COLORS).bg,
-              color: getSourceStyle(entry.translationSource, CSS_COLORS).color,
-            }}
-          >
-            {getSourceStyle(entry.translationSource, CSS_COLORS).label}
-          </span>
-        )}
-      </div>
-      <TruncatedText
-        text={entry.msgid || '(空)'}
-        maxWidth="100%"
-        className={styles.msgidText}
-        style={{
-          color: entry.msgid ? CSS_COLORS.textPrimary : CSS_COLORS.textDisabled,
-        }}
-      />
-      {entry.msgstr && (
-        <TruncatedText
-          text={entry.msgstr}
-          maxWidth="100%"
-          className={styles.msgstrText}
-          style={{ color: CSS_COLORS.textSecondary }}
-        />
-      )}
-      {status === 'needs-review' && isSelected && (
-        <div className={styles.confirmButtonWrapper}>
-          <Button
-            type="primary"
-            size="small"
-            icon={<CheckOutlined />}
-            onClick={(e) => onConfirm(globalIndex, e)}
-            aria-label={`确认第 ${globalIndex + 1} 条翻译`}
-            style={{
-              fontSize: 'var(--font-size-xs)',
-              height: '20px',
-              padding: '0 6px',
-            }}
-          >
-            确认
-          </Button>
-        </div>
-      )}
-    </div>
-  );
-};
-
-interface VirtualColumnProps {
-  title: string;
-  items: IndexedEntry[];
-  statusColor: string;
-  columnType: ColumnType;
-  selectedRowKeys: React.Key[];
-  currentEntry: POEntry | null;
-  onRowClick: (
-    entry: POEntry,
-    index: number,
-    event: React.MouseEvent,
-    columnType: ColumnType
-  ) => void;
-  onConfirm: (index: number, event: React.MouseEvent) => void;
-  getEntryStatus: (entry: POEntry) => string;
-  onConfirmAll: () => void;
-  onRemoveAll: (columnType: 'needsReview' | 'translated') => void;
-  setActiveColumn: React.Dispatch<React.SetStateAction<ColumnType | null>>;
-}
-
-const VirtualColumn = memo(function VirtualColumn({
-  title,
-  items,
-  statusColor,
-  columnType,
-  selectedRowKeys,
-  currentEntry,
-  onRowClick,
-  onConfirm,
-  getEntryStatus,
-  onConfirmAll,
-  onRemoveAll,
-  setActiveColumn,
-}: VirtualColumnProps) {
-  const parentRef = useRef<HTMLDivElement>(null);
-
-  const virtualizer = useVirtualizer({
-    count: items.length,
-    getScrollElement: () => parentRef.current,
-    estimateSize: () => 80,
-    overscan: 5,
-  });
-
-  return (
-    <div
-      className={styles.virtualColumnContainer}
-      role="region"
-      aria-label={`${title}列表 (${items.length}项)`}
-      style={{
-        borderRight:
-          columnType !== 'translated' ? `1px solid ${CSS_COLORS.borderSecondary}` : 'none',
-      }}
-      onMouseEnter={() => setActiveColumn(columnType)}
-      onMouseLeave={() => setActiveColumn(null)}
-    >
-      <div className={styles.columnHeader}>
-        <div className={styles.columnHeaderLeft}>
-          <Badge color={statusColor} />
-          <span style={{ flexShrink: 0 }}>{title}</span>
-          <span className={styles.countBadge} aria-label={`${items.length}项`}>
-            {items.length}
-          </span>
-        </div>
-
-        {columnType === 'needsReview' && items.length > 0 && (
-          <div className={styles.columnActions}>
-            <Button
-              type="link"
-              size="small"
-              onClick={onConfirmAll}
-              className={styles.actionButton}
-              aria-label={`确认所有${title} (${items.length}项)`}
-              style={{ color: CSS_COLORS.brandPrimary }}
-            >
-              确认所有
-            </Button>
-            <Button
-              type="link"
-              size="small"
-              danger
-              onClick={() => onRemoveAll('needsReview')}
-              className={styles.actionButton}
-              aria-label={`移除所有${title}`}
-            >
-              移除
-            </Button>
-          </div>
-        )}
-
-        {columnType === 'translated' && items.length > 0 && (
-          <Button
-            type="link"
-            size="small"
-            danger
-            onClick={() => onRemoveAll('translated')}
-            className={styles.actionButton}
-            aria-label={`移除所有${title}`}
-          >
-            移除
-          </Button>
-        )}
-      </div>
-
-      <div
-        ref={parentRef}
-        className={`${styles.scrollContainer} virtual-scroll-optimized`}
-        role="list"
-        aria-label={`${title}条目`}
-      >
-        {items.length === 0 ? (
-          <EmptyState type="column-empty" />
-        ) : (
-          <div
-            style={{
-              height: `${virtualizer.getTotalSize()}px`,
-              width: '100%',
-              position: 'relative',
-            }}
-          >
-            {virtualizer.getVirtualItems().map((virtualItem) => {
-              const { entry, index } = items[virtualItem.index];
-              return renderVirtualItem(
-                entry,
-                index,
-                virtualItem,
-                selectedRowKeys,
-                currentEntry,
-                columnType,
-                onRowClick,
-                onConfirm,
-                getEntryStatus
-              );
-            })}
-          </div>
-        )}
-      </div>
-    </div>
-  );
-});
 
 export const EntryList = memo(function EntryList({
   entries,
@@ -386,23 +33,7 @@ export const EntryList = memo(function EntryList({
 }: EntryListProps) {
   const updateEntry = useUpdateEntry();
 
-  const [selectedRowKeys, setSelectedRowKeys] = useState<React.Key[]>([]);
-  const [lastClickedIndex, setLastClickedIndex] = useState<number | null>(null);
-  const [lastClickedColumn, setLastClickedColumn] = useState<
-    'untranslated' | 'needsReview' | 'translated' | null
-  >(null);
   const containerRef = useRef<HTMLDivElement>(null);
-  const col1Ref = useRef<HTMLDivElement>(null);
-  const col2Ref = useRef<HTMLDivElement>(null);
-  const col3Ref = useRef<HTMLDivElement>(null);
-
-  const [columnWidths, setColumnWidths] = useState([33.33, 33.33, 33.34]);
-  const widthsRef = useRef(columnWidths);
-  const [resizingColumn, setResizingColumn] = useState<number | null>(null);
-
-  useEffect(() => {
-    widthsRef.current = columnWidths;
-  }, [columnWidths]);
 
   const getEntryStatus = useCallback((entry: POEntry) => {
     if (!entry.msgid) return 'empty';
@@ -436,6 +67,21 @@ export const EntryList = memo(function EntryList({
     return groups;
   }, [entries, getEntryStatus]);
 
+  // 当前激活列
+  const [activeColumn, setActiveColumn] = useState<ColumnType | null>(null);
+
+  const {
+    selectedIndices,
+    setSelectedIndices,
+    clearSelection,
+    handleRowClick,
+  } = useEntrySelection({
+    entries,
+    groupedEntries,
+    activeColumn,
+    onEntrySelect,
+  });
+
   // 确认翻译
   const handleConfirm = useCallback(
     (index: number, event: React.MouseEvent) => {
@@ -454,36 +100,28 @@ export const EntryList = memo(function EntryList({
 
   // 确认已选中条目
   const handleConfirmSelected = () => {
-    selectedRowKeys.forEach((key) => {
-      const index = key as number;
+    selectedIndices.forEach((index) => {
       const entry = entries[index];
       if (entry && getEntryStatus(entry) === 'needs-review') {
         updateEntry(index, { needsReview: false });
       }
     });
-    setSelectedRowKeys([]);
+    clearSelection();
   };
 
   // 翻译已选中条目
   const handleTranslateSelected = () => {
-    if (onTranslateSelected && selectedRowKeys.length > 0) {
-      const indices = selectedRowKeys.map((key) => key as number);
-      onTranslateSelected(indices);
+    if (onTranslateSelected && selectedIndices.length > 0) {
+      onTranslateSelected(selectedIndices);
     }
   };
 
   // 精翻已选中条目
-  const handleContextualRefine = () => {
-    if (onContextualRefine && selectedRowKeys.length > 0) {
-      const indices = selectedRowKeys.map((key) => key as number);
-      onContextualRefine(indices);
+  const handleContextualRefine = useCallback(() => {
+    if (onContextualRefine && selectedIndices.length > 0) {
+      onContextualRefine(selectedIndices);
     }
-  };
-
-  // 当前激活列
-  const [activeColumn, setActiveColumn] = useState<
-    'untranslated' | 'needsReview' | 'translated' | null
-  >(null);
+  }, [onContextualRefine, selectedIndices]);
 
   // 移除指定列的所有翻译
   const handleRemoveAll = useCallback(
@@ -492,78 +130,10 @@ export const EntryList = memo(function EntryList({
       targetEntries.forEach(({ index }) => {
         updateEntry(index, { msgstr: '', needsReview: false, translationSource: undefined });
       });
-      setSelectedRowKeys([]);
+      clearSelection();
     },
-    [groupedEntries, updateEntry]
+    [groupedEntries, updateEntry, clearSelection]
   );
-
-  // 列宽调整
-  useEffect(() => {
-    if (resizingColumn === null) return;
-
-    let animationFrameId: number;
-
-    const handleMouseMove = (e: MouseEvent) => {
-      if (!containerRef.current) return;
-
-      cancelAnimationFrame(animationFrameId);
-      animationFrameId = requestAnimationFrame(() => {
-        if (!containerRef.current) return;
-
-        const containerRect = containerRef.current.getBoundingClientRect();
-        const currentWidths = [...widthsRef.current];
-        const mouseX = e.clientX - containerRect.left;
-        const containerWidth = containerRect.width;
-        const percentage = (mouseX / containerWidth) * 100;
-
-        if (resizingColumn === 0) {
-          const minWidth = 15;
-          const maxWidth = 100 - minWidth * 2;
-          const newFirstWidth = Math.max(minWidth, Math.min(maxWidth, percentage));
-          const diff = newFirstWidth - currentWidths[0];
-          currentWidths[0] = newFirstWidth;
-          currentWidths[1] = Math.max(minWidth, currentWidths[1] - diff);
-        } else if (resizingColumn === 1) {
-          const minWidth = 15;
-          const firstWidth = currentWidths[0];
-          const newSecondWidth = Math.max(
-            minWidth,
-            Math.min(100 - firstWidth - minWidth, percentage - firstWidth)
-          );
-          const diff = newSecondWidth - currentWidths[1];
-          currentWidths[1] = newSecondWidth;
-          currentWidths[2] = Math.max(minWidth, currentWidths[2] - diff);
-        }
-
-        if (col1Ref.current) col1Ref.current.style.width = `${currentWidths[0]}%`;
-        if (col2Ref.current) col2Ref.current.style.width = `${currentWidths[1]}%`;
-        if (col3Ref.current) col3Ref.current.style.width = `${currentWidths[2]}%`;
-
-        widthsRef.current = currentWidths;
-      });
-    };
-
-    const handleMouseUp = () => {
-      cancelAnimationFrame(animationFrameId);
-      setResizingColumn(null);
-      setColumnWidths(widthsRef.current);
-      document.body.style.cursor = '';
-      document.body.style.userSelect = '';
-    };
-
-    document.addEventListener('mousemove', handleMouseMove);
-    document.addEventListener('mouseup', handleMouseUp);
-    document.body.style.cursor = 'col-resize';
-    document.body.style.userSelect = 'none';
-
-    return () => {
-      cancelAnimationFrame(animationFrameId);
-      document.removeEventListener('mousemove', handleMouseMove);
-      document.removeEventListener('mouseup', handleMouseUp);
-      document.body.style.cursor = '';
-      document.body.style.userSelect = '';
-    };
-  }, [resizingColumn]);
 
   useEffect(() => {
     const handleKeyDown = (event: KeyboardEvent) => {
@@ -574,52 +144,51 @@ export const EntryList = memo(function EntryList({
         if (activeColumn) {
           const columnEntries = groupedEntries[activeColumn];
           const columnKeys = columnEntries.map(({ index }) => index);
-          setSelectedRowKeys(columnKeys);
+          setSelectedIndices(columnKeys);
         } else {
           const allKeys = entries.map((_, index) => index);
-          setSelectedRowKeys(allKeys);
+          setSelectedIndices(allKeys);
         }
       }
       // Ctrl+C 或 Cmd+C 复制选中内容
       else if ((event.ctrlKey || event.metaKey) && event.key === 'c') {
-        if (selectedRowKeys.length > 0) {
+        if (selectedIndices.length > 0) {
           event.preventDefault();
-          const selectedTexts = selectedRowKeys
-            .map((key) => {
-              const index = key as number;
+          const selectedTexts = selectedIndices
+            .map((index) => {
               const entry = entries[index];
               return `${entry.msgid || ''}\t${entry.msgstr || ''}`;
             })
             .join('\n');
 
           navigator.clipboard.writeText(selectedTexts).then(() => {
-            log.info(`已复制条目到剪贴板`, { count: selectedRowKeys.length });
-            announceToScreenReader(`已复制 ${selectedRowKeys.length} 条翻译条目到剪贴板`, 'polite');
+            log.info(`已复制条目到剪贴板`, { count: selectedIndices.length });
+            announceToScreenReader(`已复制 ${selectedIndices.length} 条翻译条目到剪贴板`, 'polite');
           });
         }
       }
       // Escape 取消选择
       else if (event.key === 'Escape') {
-        setSelectedRowKeys([]);
+        clearSelection();
       }
       // Ctrl+D 或 Cmd+D 取消选择
       else if ((event.ctrlKey || event.metaKey) && event.key === 'd') {
         event.preventDefault();
-        setSelectedRowKeys([]);
+        clearSelection();
       }
       // Ctrl+Shift+R 精翻选中的待确认条目
       else if ((event.ctrlKey || event.metaKey) && event.shiftKey && event.key === 'R') {
         event.preventDefault();
-        if (selectedRowKeys.length > 0 && !isTranslating) {
-          const hasNeedsReview = selectedRowKeys.some((key) => {
-            const entry = entries[key as number];
+        if (selectedIndices.length > 0 && !isTranslating) {
+          const hasNeedsReview = selectedIndices.some((index) => {
+            const entry = entries[index];
             return entry && getEntryStatus(entry) === 'needs-review';
           });
 
           if (hasNeedsReview) {
             handleContextualRefine();
-            log.info('快捷键触发精翻', { count: selectedRowKeys.length });
-            announceToScreenReader(`正在精翻 ${selectedRowKeys.length} 条翻译`, 'polite');
+            log.info('快捷键触发精翻', { count: selectedIndices.length });
+            announceToScreenReader(`正在精翻 ${selectedIndices.length} 条翻译`, 'polite');
           }
         }
       }
@@ -638,45 +207,15 @@ export const EntryList = memo(function EntryList({
     };
   }, [
     entries,
-    selectedRowKeys,
+    selectedIndices,
     activeColumn,
     groupedEntries,
     getEntryStatus,
     isTranslating,
     handleContextualRefine,
+    setSelectedIndices,
+    clearSelection,
   ]);
-
-  const handleRowClick = useCallback(
-    (record: POEntry, index: number, event: React.MouseEvent, columnType: ColumnType) => {
-      onEntrySelect(record);
-
-      if (event.shiftKey && lastClickedIndex !== null && lastClickedColumn === columnType) {
-        const columnEntries = groupedEntries[columnType];
-        const columnIndices = columnEntries.map(({ index: entryIndex }) => entryIndex);
-
-        const lastIndexInColumn = columnIndices.indexOf(lastClickedIndex);
-        const currentIndexInColumn = columnIndices.indexOf(index);
-
-        if (lastIndexInColumn !== -1 && currentIndexInColumn !== -1) {
-          const start = Math.min(lastIndexInColumn, currentIndexInColumn);
-          const end = Math.max(lastIndexInColumn, currentIndexInColumn);
-          const rangeKeys = columnIndices.slice(start, end + 1);
-          setSelectedRowKeys(rangeKeys);
-        }
-      } else if (event.ctrlKey || event.metaKey) {
-        if (selectedRowKeys.includes(index)) {
-          setSelectedRowKeys(selectedRowKeys.filter((key) => key !== index));
-        } else {
-          setSelectedRowKeys([...selectedRowKeys, index]);
-        }
-      } else {
-        setSelectedRowKeys([index]);
-        setLastClickedIndex(index);
-        setLastClickedColumn(columnType);
-      }
-    },
-    [onEntrySelect, lastClickedIndex, lastClickedColumn, groupedEntries, entries, selectedRowKeys]
-  );
 
   return (
     <div
@@ -688,18 +227,18 @@ export const EntryList = memo(function EntryList({
     >
       <div className={styles.header} role="banner">
         <span className={styles.headerText} aria-live="polite" aria-atomic="true">
-          共 {entries.length} 条 {selectedRowKeys.length > 0 && `(已选 ${selectedRowKeys.length})`}
+          共 {entries.length} 条 {selectedIndices.length > 0 && `(已选 ${selectedIndices.length})`}
         </span>
         <div className={styles.headerActions}>
-          {selectedRowKeys.length > 0 && (
+          {selectedIndices.length > 0 && (
             <>
-              <SelectionActions
-                selectedRowKeys={selectedRowKeys}
+              <BatchActions
+                selectedIndices={selectedIndices}
                 entries={entries}
                 getEntryStatus={getEntryStatus}
-                handleConfirmSelected={handleConfirmSelected}
-                handleContextualRefine={handleContextualRefine}
-                handleTranslateSelected={handleTranslateSelected}
+                onConfirmSelected={handleConfirmSelected}
+                onContextualRefine={handleContextualRefine}
+                onTranslateSelected={handleTranslateSelected}
                 isTranslating={isTranslating}
               />
               <span className={styles.shortcutHint} aria-label="键盘快捷键">
@@ -723,77 +262,17 @@ export const EntryList = memo(function EntryList({
         </div>
       )}
 
-      <div className={styles.columnsContainer}>
-        {/* 第一列 - 未翻译 */}
-        <div ref={col1Ref} className={styles.column} style={{ width: `${columnWidths[0]}%` }}>
-          <VirtualColumn
-            title="未翻译"
-            items={groupedEntries.untranslated}
-            statusColor={CSS_COLORS.statusUntranslated}
-            columnType="untranslated"
-            selectedRowKeys={selectedRowKeys}
-            currentEntry={currentEntry}
-            onRowClick={handleRowClick}
-            onConfirm={handleConfirm}
-            getEntryStatus={getEntryStatus}
-            onConfirmAll={handleConfirmAll}
-            onRemoveAll={handleRemoveAll}
-            setActiveColumn={setActiveColumn}
-          />
-          <div
-            onMouseDown={() => setResizingColumn(0)}
-            className={styles.resizeHandle}
-            onMouseEnter={(e) =>
-              (e.currentTarget.style.backgroundColor = CSS_COLORS.statusUntranslated)
-            }
-            onMouseLeave={(e) => (e.currentTarget.style.backgroundColor = 'transparent')}
-          />
-        </div>
-
-        {/* 第二列 - 待确认 */}
-        <div ref={col2Ref} className={styles.column} style={{ width: `${columnWidths[1]}%` }}>
-          <VirtualColumn
-            title="待确认"
-            items={groupedEntries.needsReview}
-            statusColor={CSS_COLORS.statusNeedsReview}
-            columnType="needsReview"
-            selectedRowKeys={selectedRowKeys}
-            currentEntry={currentEntry}
-            onRowClick={handleRowClick}
-            onConfirm={handleConfirm}
-            getEntryStatus={getEntryStatus}
-            onConfirmAll={handleConfirmAll}
-            onRemoveAll={handleRemoveAll}
-            setActiveColumn={setActiveColumn}
-          />
-          <div
-            onMouseDown={() => setResizingColumn(1)}
-            className={styles.resizeHandle}
-            onMouseEnter={(e) =>
-              (e.currentTarget.style.backgroundColor = CSS_COLORS.statusNeedsReview)
-            }
-            onMouseLeave={(e) => (e.currentTarget.style.backgroundColor = 'transparent')}
-          />
-        </div>
-
-        {/* 第三列 - 已翻译 */}
-        <div ref={col3Ref} className={styles.column} style={{ width: `${columnWidths[2]}%` }}>
-          <VirtualColumn
-            title="已翻译"
-            items={groupedEntries.translated}
-            statusColor={CSS_COLORS.statusTranslated}
-            columnType="translated"
-            selectedRowKeys={selectedRowKeys}
-            currentEntry={currentEntry}
-            onRowClick={handleRowClick}
-            onConfirm={handleConfirm}
-            getEntryStatus={getEntryStatus}
-            onConfirmAll={handleConfirmAll}
-            onRemoveAll={handleRemoveAll}
-            setActiveColumn={setActiveColumn}
-          />
-        </div>
-      </div>
+      <StatusColumns
+        groupedEntries={groupedEntries}
+        currentEntry={currentEntry}
+        selectedIndices={selectedIndices}
+        getEntryStatus={getEntryStatus}
+        onRowClick={handleRowClick}
+        onConfirm={handleConfirm}
+        onConfirmAll={handleConfirmAll}
+        onRemoveAll={handleRemoveAll}
+        setActiveColumn={setActiveColumn}
+      />
     </div>
   );
 });

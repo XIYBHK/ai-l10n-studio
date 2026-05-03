@@ -20,6 +20,7 @@ import {
   CheckOutlined,
   ApiOutlined,
 } from '@ant-design/icons';
+import { useTranslation } from 'react-i18next';
 import { aiConfigCommands, aiModelCommands, aiProviderCommands } from '../../services/aiCommands';
 import type { AIConfig } from '../../types/aiProvider';
 import { createModuleLogger } from '../../utils/logger';
@@ -49,6 +50,7 @@ interface AIConfigTabProps {
 }
 
 export function AIConfigTab({ onProviderChange }: AIConfigTabProps) {
+  const { t } = useTranslation();
   const [form] = Form.useForm();
   const { configs, active, mutateAll, mutateActive } = useAIConfigs();
   const [activeIndex, setActiveIndex] = useState<number | null>(null);
@@ -122,7 +124,7 @@ export function AIConfigTab({ onProviderChange }: AIConfigTabProps) {
   async function handleTestConnection(values: AIConfig) {
     const apiKey = values.apiKey?.trim();
     if (!apiKey) {
-      message.warning('测试连接前请重新输入 API Key');
+      message.warning(t('messages.reTypeApiKeyBeforeTest'));
       return;
     }
 
@@ -146,7 +148,7 @@ export function AIConfigTab({ onProviderChange }: AIConfigTabProps) {
         testConfig.apiKey,
         testConfig.baseUrl || undefined
       );
-      message.success('连接测试成功');
+      message.success(t('messages.connectionTestSuccess'));
       log.info('连接测试成功', { providerId: values.providerId });
     } catch (error) {
       const errorMsg = error instanceof Error ? error.message : '测试失败';
@@ -185,13 +187,13 @@ export function AIConfigTab({ onProviderChange }: AIConfigTabProps) {
       log.info('[删除] 调用删除命令');
       await aiConfigCommands.delete(String(index));
       log.info('[删除] 命令执行成功');
-      message.success('配置已删除');
+      message.success(t('messages.configDeleted'));
       mutateAll();
       mutateActive();
       log.info('[删除] 配置删除成功', { index });
     } catch (error) {
-      const errorMsg = error instanceof Error ? error.message : '删除失败';
-      message.error(`删除配置失败: ${errorMsg}`);
+      const errorMsg = error instanceof Error ? error.message : t('errors.unknown');
+      message.error(t('errors.configDeleteFailed', { error: errorMsg }));
       log.error('[删除] 删除配置失败', { error, index, total: configs.length });
     } finally {
       setDeletingIndex(null);
@@ -203,12 +205,12 @@ export function AIConfigTab({ onProviderChange }: AIConfigTabProps) {
     try {
       log.info('设置启用配置', { index, total: configs.length });
       await aiConfigCommands.setActive(String(index));
-      message.success('配置已启用');
+      message.success(t('messages.configEnabled'));
       mutateActive();
       log.info('设置启用配置成功', { index });
     } catch (error) {
-      const errorMsg = error instanceof Error ? error.message : '启用失败';
-      message.error(`启用配置失败: ${errorMsg}`);
+      const errorMsg = error instanceof Error ? error.message : t('errors.unknown');
+      message.error(t('errors.configEnableFailed', { error: errorMsg }));
       log.error('启用配置失败', { error, index, total: configs.length });
     }
   }
@@ -217,7 +219,7 @@ export function AIConfigTab({ onProviderChange }: AIConfigTabProps) {
     try {
       const apiKey = values.apiKey?.trim() ?? '';
       if (isAddingNew && !apiKey) {
-        message.error('请输入 API Key');
+        message.error(t('messages.apiKeyRequired'));
         return;
       }
 
@@ -240,10 +242,10 @@ export function AIConfigTab({ onProviderChange }: AIConfigTabProps) {
 
       if (isAddingNew) {
         await aiConfigCommands.add(config);
-        message.success('配置已添加');
+        message.success(t('messages.configAdded'));
       } else if (editingIndex !== null) {
         await aiConfigCommands.update(editingIndex, config);
-        message.success('配置已更新');
+        message.success(t('messages.configUpdated'));
       }
 
       setIsAddingNew(false);
@@ -333,7 +335,8 @@ export function AIConfigTab({ onProviderChange }: AIConfigTabProps) {
                       type="link"
                       icon={<EditOutlined />}
                       onClick={() => handleEdit(index)}
-                      title="编辑"
+                      title={t('common.edit')}
+                      aria-label={t('common.edit')}
                     />
                     <Popconfirm
                       title="确认删除此配置？"
@@ -347,7 +350,8 @@ export function AIConfigTab({ onProviderChange }: AIConfigTabProps) {
                         type="link"
                         danger
                         icon={<DeleteOutlined />}
-                        title="删除"
+                        title={t('common.delete')}
+                        aria-label={t('common.delete')}
                         loading={deletingIndex === index}
                         disabled={deletingIndex !== null && deletingIndex !== index}
                       />

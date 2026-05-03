@@ -26,16 +26,19 @@ export {
 } from './useAppStore';
 export {
   useTranslationStore,
-  // 原子化 Selectors Hooks
   useEntries,
   useCurrentEntry,
   useCurrentIndex,
   useCurrentFilePath,
   useEntryCount,
   useHasEntries,
+  useSourceLanguage,
+  useTargetLanguage,
   useSetEntries,
   useSetCurrentEntry,
   useSetCurrentFilePath,
+  useSetSourceLanguage,
+  useSetTargetLanguage,
   useUpdateEntry,
   useGetEntryIndex,
 } from './useTranslationStore';

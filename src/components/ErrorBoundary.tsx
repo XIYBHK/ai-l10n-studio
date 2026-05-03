@@ -1,4 +1,5 @@
 import React, { Component, ReactNode } from 'react';
+import i18n from '../i18n/config';
 import { createModuleLogger } from '../utils/logger';
 
 const log = createModuleLogger('ErrorBoundary');
@@ -71,15 +72,15 @@ export class ErrorBoundary extends Component<Props, State> {
           }}
         >
           <div style={{ fontSize: '16px', fontWeight: 600, marginBottom: '12px' }}>
-            组件渲染错误
+            {i18n.t('errorBoundary.title')}
           </div>
           <p style={{ margin: 0 }}>
-            <strong>错误信息：</strong>
+            <strong>{i18n.t('errorBoundary.errorLabel')}</strong>
             {this.state.error?.message}
           </p>
           {this.state.error?.stack && (
             <details style={{ marginTop: '10px' }}>
-              <summary>查看详细堆栈</summary>
+              <summary>{i18n.t('errorBoundary.viewStackTrace')}</summary>
               <pre
                 style={{
                   fontSize: '12px',
@@ -100,14 +101,14 @@ export class ErrorBoundary extends Component<Props, State> {
             style={{
               marginTop: '12px',
               border: 'none',
-              borderRadius: '6px',
-              background: '#ff4d4f',
+              borderRadius: 'var(--radius-base)',
+              background: 'var(--color-error)',
               color: '#fff',
               padding: '6px 12px',
               cursor: 'pointer',
             }}
           >
-            重置组件
+            {i18n.t('errorBoundary.resetButton')}
           </button>
         </div>
       );

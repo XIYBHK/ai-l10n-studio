@@ -19,16 +19,22 @@ export function useTranslationMemory() {
   );
 
   useEffect(() => {
-    let unlisten: (() => void) | undefined;
+    let unlistenFn: (() => void) | null = null;
+    let isActive = true;
 
     listen('translation:after', () => {
-      mutate();
+      if (isActive) mutate();
     }).then((fn) => {
-      unlisten = fn;
+      if (isActive) {
+        unlistenFn = fn;
+      } else {
+        fn();
+      }
     });
 
     return () => {
-      unlisten?.();
+      isActive = false;
+      unlistenFn?.();
     };
   }, [mutate]);
 

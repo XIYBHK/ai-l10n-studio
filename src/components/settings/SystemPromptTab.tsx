@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { Card, Form, Input, Button, Space, message } from 'antd';
 import { FileTextOutlined, UndoOutlined } from '@ant-design/icons';
+import { useTranslation } from 'react-i18next';
 import { systemPromptCommands } from '../../services/aiCommands';
 import { useSystemPrompt } from '../../hooks/useConfig';
 import { useAsync } from '../../hooks/useAsync';
@@ -10,6 +11,7 @@ import { CSS_COLORS } from '../../hooks/useCssColors';
 const log = createModuleLogger('SystemPromptTab');
 
 export function SystemPromptTab() {
+  const { t } = useTranslation();
   const [form] = Form.useForm();
   const { prompt, mutate } = useSystemPrompt();
   const { execute: savePrompt, loading: saving } = useAsync(systemPromptCommands.set);
@@ -28,7 +30,7 @@ export function SystemPromptTab() {
   async function handleSave(values: { prompt: string }) {
     try {
       await savePrompt(values.prompt);
-      message.success('系统提示词已保存');
+      message.success(t('messages.systemPromptSaved'));
       mutate();
       setIsModified(false);
       log.info('系统提示词已保存', { length: values.prompt.length });
@@ -42,7 +44,7 @@ export function SystemPromptTab() {
   async function handleReset() {
     try {
       await resetPrompt();
-      message.success('系统提示词已重置为默认值');
+      message.success(t('messages.systemPromptReset'));
       mutate();
       setIsModified(false);
       log.info('系统提示词已重置');

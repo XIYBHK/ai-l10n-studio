@@ -1,5 +1,6 @@
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect, useMemo, useDeferredValue } from 'react';
 import { Modal, Table, Input, Button, message, Space, Popconfirm, Tag } from 'antd';
+import { useTranslation } from 'react-i18next';
 import {
   DeleteOutlined,
   PlusOutlined,
@@ -48,6 +49,7 @@ interface MemoryManagerProps {
 }
 
 export function MemoryManager({ visible, onClose }: MemoryManagerProps) {
+  const { t } = useTranslation();
   const [memories, setMemories] = useState<MemoryEntry[]>([]);
   const [loading, setLoading] = useState(false);
   const { tm, isLoading: loadingTM, mutate } = useTranslationMemory();
@@ -166,7 +168,7 @@ export function MemoryManager({ visible, onClose }: MemoryManagerProps) {
         last_updated: new Date().toISOString(),
       });
 
-      message.success('记忆库已保存');
+      message.success(t('messages.memorySaved'));
       await mutate();
       onClose();
     } catch (error) {
@@ -207,7 +209,7 @@ export function MemoryManager({ visible, onClose }: MemoryManagerProps) {
         tm_learned: 0,
       });
 
-      message.success('已清空所有记忆');
+      message.success(t('messages.memoryCleared'));
     } catch (error) {
       log.logError(error, '清空记忆库失败');
       await mutate();
@@ -234,10 +236,14 @@ export function MemoryManager({ visible, onClose }: MemoryManagerProps) {
         log.info('记忆库界面已更新', { count: entries.length });
       }
 
-      message.success(`已加载内置词库，新增 ${addedCount} 条短语`);
+      message.success(t('messages.builtinLoaded', { count: addedCount }));
     } catch (error) {
       log.logError(error, '加载内置词库失败');
-      message.error(`加载失败: ${error instanceof Error ? error.message : '未知错误'}`);
+      message.error(
+        t('errors.loadFailed', {
+          error: error instanceof Error ? error.message : t('errors.unknown'),
+        })
+      );
     } finally {
       setLoading(false);
     }
@@ -272,7 +278,7 @@ export function MemoryManager({ visible, onClose }: MemoryManagerProps) {
         };
 
         await writeTextFile(filePath, JSON.stringify(exportData, null, 2));
-        message.success('记忆库已导出');
+        message.success(t('messages.memoryExported'));
       }
     } catch (error) {
       log.logError(error, '导出记忆库失败');
@@ -298,7 +304,7 @@ export function MemoryManager({ visible, onClose }: MemoryManagerProps) {
         if (isTranslationMemory(data)) {
           const entries = entriesFromMemory(data);
           setMemories(entries);
-          message.success(`已导入 ${entries.length} 条记忆`);
+          message.success(t('messages.memoryImported', { count: entries.length }));
         }
       }
     } catch (error) {
@@ -308,7 +314,7 @@ export function MemoryManager({ visible, onClose }: MemoryManagerProps) {
 
   const handleAdd = () => {
     if (!newSource || !newTarget) {
-      message.warning('请输入原文和译文');
+      message.warning(t('messages.requireSourceAndTarget'));
       return;
     }
 
@@ -321,7 +327,7 @@ export function MemoryManager({ visible, onClose }: MemoryManagerProps) {
     setMemories([...memories, newEntry]);
     setNewSource('');
     setNewTarget('');
-    message.success('已添加');
+    message.success(t('messages.entryAdded'));
   };
 
   const handleEdit = (key: string, field: 'source' | 'target', value: string) => {
@@ -330,11 +336,15 @@ export function MemoryManager({ visible, onClose }: MemoryManagerProps) {
     );
   };
 
-  const filteredMemories = memories.filter(
-    (entry) =>
-      entry.source.toLowerCase().includes(searchText.toLowerCase()) ||
-      entry.target.toLowerCase().includes(searchText.toLowerCase())
-  );
+  const deferredSearchText = useDeferredValue(searchText);
+  const filteredMemories = useMemo(() => {
+    const lower = deferredSearchText.toLowerCase();
+    if (!lower) return memories;
+    return memories.filter(
+      (entry) =>
+        entry.source.toLowerCase().includes(lower) || entry.target.toLowerCase().includes(lower)
+    );
+  }, [memories, deferredSearchText]);
 
   const columns = [
     {

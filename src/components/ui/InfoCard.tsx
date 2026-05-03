@@ -81,7 +81,7 @@ export const InfoCard: React.FC<InfoCardProps> = ({
     },
     error: {
       icon: <CloseCircleOutlined />,
-      color: '#ff4d4f',
+      color: CSS_COLORS.error,
     },
   };
 

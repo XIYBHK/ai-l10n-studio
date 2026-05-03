@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { Modal, Table, Button, Space, message, Popconfirm, Tag, Input, Tooltip } from 'antd';
+import { useTranslation } from 'react-i18next';
 import {
   DeleteOutlined,
   EditOutlined,
@@ -30,6 +31,7 @@ interface EditingTerm {
 }
 
 export function TermLibraryManager({ visible, onClose }: TermLibraryManagerProps) {
+  const { t } = useTranslation();
   const { activeAIConfig } = useAppData();
   const { termLibrary: library, refresh, mutate } = useTermLibrary({ enabled: visible });
   const language = useAppStore((state) => state.language);
@@ -48,11 +50,11 @@ export function TermLibraryManager({ visible, onClose }: TermLibraryManagerProps
   const handleDelete = async (source: string) => {
     try {
       await termLibraryCommands.removeTerm(source);
-      message.success('术语已删除');
+      message.success(t('messages.termDeleted'));
       await mutate();
     } catch (error) {
       log.logError(error, '删除术语失败');
-      message.error('删除术语失败');
+      message.error(t('errors.termDeleteFailed'));
     }
   };
 
@@ -80,13 +82,13 @@ export function TermLibraryManager({ visible, onClose }: TermLibraryManagerProps
         context: original.context || null,
       });
 
-      message.success('术语已更新');
+      message.success(t('messages.termUpdated'));
       setEditingKey('');
       setEditingTerm(null);
       await mutate();
     } catch (error) {
       log.logError(error, '更新术语失败');
-      message.error('更新术语失败');
+      message.error(t('errors.termUpdateFailed'));
     }
   };
 
@@ -98,7 +100,7 @@ export function TermLibraryManager({ visible, onClose }: TermLibraryManagerProps
 
   const handleGenerateStyleSummary = async () => {
     if (!activeAIConfig) {
-      message.error('请先设置并启用 AI 配置');
+      message.error(t('messages.aiConfigRequired'));
       return;
     }
 
@@ -108,11 +110,15 @@ export function TermLibraryManager({ visible, onClose }: TermLibraryManagerProps
       const summary = await termLibraryCommands.generateStyleSummary();
       const summaryText = typeof summary === 'string' ? summary : String(summary);
       log.info('风格总结生成成功', { summary: summaryText.substring(0, 50) + '...' });
-      message.success('风格总结已生成');
+      message.success(t('messages.styleSummaryGenerated'));
       await mutate();
     } catch (error) {
       log.logError(error, '生成风格总结失败');
-      message.error(`生成失败：${error instanceof Error ? error.message : String(error)}`);
+      message.error(
+        t('errors.generateFailed', {
+          error: error instanceof Error ? error.message : t('errors.unknown'),
+        })
+      );
     } finally {
       setLoading(false);
     }
@@ -191,14 +197,19 @@ export function TermLibraryManager({ visible, onClose }: TermLibraryManagerProps
           </Space>
         ) : (
           <Space size="small">
-            <Button size="small" icon={<EditOutlined />} onClick={() => handleEdit(record)} />
+            <Button
+              size="small"
+              icon={<EditOutlined />}
+              onClick={() => handleEdit(record)}
+              aria-label={t('common.edit')}
+            />
             <Popconfirm
               title="确定删除此术语？"
               onConfirm={() => handleDelete(record.source)}
               okText="确定"
               cancelText="取消"
             >
-              <Button size="small" danger icon={<DeleteOutlined />} />
+              <Button size="small" danger icon={<DeleteOutlined />} aria-label={t('common.delete')} />
             </Popconfirm>
           </Space>
         );

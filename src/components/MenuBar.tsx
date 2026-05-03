@@ -1,4 +1,4 @@
-import { memo, useState, useEffect, CSSProperties } from 'react';
+import { memo, useState, useEffect, useCallback, CSSProperties } from 'react';
 import { Tooltip, Typography } from 'antd';
 import {
   FolderOpenOutlined,
@@ -18,15 +18,17 @@ import { LanguageSelector } from './LanguageSelector';
 import type { LanguageInfo } from '../types/generated/LanguageInfo';
 import { useAppData } from '../hooks/useConfig';
 import { useSupportedLanguages } from '../hooks/useLanguage';
+import { useTheme } from '../hooks/useTheme';
+import { useSourceLanguage, useTargetLanguage, useSetTargetLanguage } from '../store';
+import { createModuleLogger } from '../utils/logger';
 
 const { Text } = Typography;
 
-// 容器高度常量
+const log = createModuleLogger('MenuBar');
+
 const MENU_HEIGHT = '56px';
 const MENU_PADDING_X = 'var(--space-5)';
 const MENU_GAP = 'var(--space-4)';
-
-// ==================== Props Interfaces ====================
 
 interface MenuBarProps {
   onOpenFile: () => void;
@@ -37,11 +39,6 @@ interface MenuBarProps {
   onDevTools?: () => void;
   isTranslating: boolean;
   hasEntries: boolean;
-  isDarkMode?: boolean;
-  onThemeToggle?: () => void;
-  sourceLanguage?: string;
-  targetLanguage?: string;
-  onTargetLanguageChange?: (langCode: string, langInfo: LanguageInfo | undefined) => void;
   onCancelTranslation?: () => void;
 }
 
@@ -391,15 +388,24 @@ export const MenuBar = memo(function MenuBar({
   onDevTools,
   isTranslating,
   hasEntries,
-  isDarkMode = false,
-  onThemeToggle,
-  sourceLanguage,
-  targetLanguage,
-  onTargetLanguageChange,
   onCancelTranslation,
 }: MenuBarProps) {
   const { activeAIConfig } = useAppData();
   const windowWidth = useWindowWidth();
+  const { isDark: isDarkMode, toggleTheme } = useTheme();
+  const sourceLanguage = useSourceLanguage();
+  const targetLanguage = useTargetLanguage();
+  const setTargetLanguage = useSetTargetLanguage();
+
+  const handleTargetLanguageChange = useCallback(
+    (langCode: string, langInfo: LanguageInfo | undefined) => {
+      setTargetLanguage(langCode);
+      if (langInfo) {
+        log.info('切换目标语言', { code: langInfo.code, name: langInfo.display_name });
+      }
+    },
+    [setTargetLanguage]
+  );
 
   // 响应式断点
   const isCompact = windowWidth < 1280;
@@ -444,7 +450,7 @@ export const MenuBar = memo(function MenuBar({
 
         <SystemActions
           isDarkMode={isDarkMode}
-          onThemeToggle={onThemeToggle}
+          onThemeToggle={toggleTheme}
           onSettings={onSettings}
           onDevTools={undefined}
         />
@@ -486,7 +492,7 @@ export const MenuBar = memo(function MenuBar({
         <LanguageSelectorSection
           sourceLanguage={sourceLanguage}
           targetLanguage={targetLanguage}
-          onTargetLanguageChange={onTargetLanguageChange}
+          onTargetLanguageChange={handleTargetLanguageChange}
           hasEntries={hasEntries}
           isTranslating={isTranslating}
           compact={isCompact}
@@ -511,7 +517,7 @@ export const MenuBar = memo(function MenuBar({
 
         <SystemActions
           isDarkMode={isDarkMode}
-          onThemeToggle={onThemeToggle}
+          onThemeToggle={toggleTheme}
           onSettings={onSettings}
           onDevTools={onDevTools}
         />

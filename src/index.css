@@ -38,8 +38,18 @@
 
   /* 状态颜色 */
   --color-statusUntranslated: #cba6f7;
-  --color-statusNeedsReview: #89b4fa;
+  --color-statusNeedsReview: #fab387;
   --color-statusTranslated: #166534;
+
+  /* 警示色（警告 / 错误） */
+  --color-warning: #fab387;
+  --color-warningBg: rgba(250, 179, 135, 0.15);
+  --color-error: #ed8796;
+  --color-errorBg: rgba(237, 135, 150, 0.15);
+
+  /* 高亮闪烁（使用品牌次要色） */
+  --color-flashGlow: rgba(137, 180, 250, 0.4);
+  --color-flashGlowSoft: rgba(137, 180, 250, 0.3);
 
   /* 交互状态 */
   --color-selectedBg: rgba(203, 166, 247, 0.15);
@@ -135,8 +145,18 @@
 
   /* 状态颜色 - 暗色模式更亮 */
   --color-statusUntranslated: #cba6f7;
-  --color-statusNeedsReview: #89b4fa;
+  --color-statusNeedsReview: #fab387;
   --color-statusTranslated: #a6e3a1;
+
+  /* 警示色（暗色模式） */
+  --color-warning: #fab387;
+  --color-warningBg: rgba(250, 179, 135, 0.2);
+  --color-error: #ed8796;
+  --color-errorBg: rgba(237, 135, 150, 0.2);
+
+  /* 高亮闪烁（暗色模式增强） */
+  --color-flashGlow: rgba(137, 180, 250, 0.5);
+  --color-flashGlowSoft: rgba(137, 180, 250, 0.4);
 
   /* 交互状态 - 暗色模式降低透明度 */
   --color-selectedBg: rgba(203, 166, 247, 0.2);

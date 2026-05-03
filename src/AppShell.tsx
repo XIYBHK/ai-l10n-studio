@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef, lazy, Suspense } from 'react';
 import { ConfigProvider, App as AntApp } from 'antd';
+import { useTranslation } from 'react-i18next';
 import { useTheme } from './hooks/useTheme';
 import { useAIConfigs } from './hooks/useConfig';
 import { useTranslationFlow } from './hooks/useTranslationFlow';
@@ -28,6 +29,7 @@ interface AppShellProps {
 
 export default function AppShell({ initError = null }: AppShellProps) {
   const { message: msg } = AntApp.useApp();
+  const { t } = useTranslation();
 
   const [settingsVisible, setSettingsVisible] = useState(false);
   const hasCheckedAIConfig = useRef(false);
@@ -41,8 +43,6 @@ export default function AppShell({ initError = null }: AppShellProps) {
     isTranslating,
     progress,
     translationStats,
-    sourceLanguage,
-    targetLanguage,
     openFile,
     saveFile,
     saveAsFile,
@@ -51,7 +51,6 @@ export default function AppShell({ initError = null }: AppShellProps) {
     handleContextualRefine,
     handleEntrySelect,
     handleEntryUpdate,
-    handleTargetLanguageChange,
     cancelTranslation,
     resetTranslationStats,
   } = useTranslationFlow();
@@ -103,7 +102,7 @@ export default function AppShell({ initError = null }: AppShellProps) {
   const checkAIConfig = (): boolean => {
     if (!active) {
       setSettingsVisible(true);
-      msg.warning('请先在设置中配置并启用 AI 服务');
+      msg.warning(t('messages.aiServiceRequired'));
       return false;
     }
 
@@ -138,23 +137,37 @@ export default function AppShell({ initError = null }: AppShellProps) {
           data-theme={themeData.isDark ? 'dark' : 'light'}
           style={{ height: '100vh' }}
         >
+          <h1 className="sr-only">{t('app.title')}</h1>
           {initError && (
             <div
+              role="alert"
               style={{
                 position: 'fixed',
                 top: 0,
                 left: 0,
                 right: 0,
-                background: '#ff4d4f',
-                color: 'white',
-                padding: '16px',
+                background: 'var(--color-error)',
+                color: '#ffffff',
+                padding: 'var(--space-4)',
                 zIndex: 9999,
                 textAlign: 'center',
+                boxShadow: 'var(--shadow-md)',
               }}
             >
               {initError}
-              <button onClick={() => window.location.reload()} style={{ marginLeft: '16px' }}>
-                重新加载
+              <button
+                onClick={() => window.location.reload()}
+                style={{
+                  marginLeft: 'var(--space-4)',
+                  padding: 'var(--space-1) var(--space-3)',
+                  borderRadius: 'var(--radius-base)',
+                  border: 'none',
+                  background: 'rgba(255,255,255,0.2)',
+                  color: '#ffffff',
+                  cursor: 'pointer',
+                }}
+              >
+                {t('messages.reload')}
               </button>
             </div>
           )}
@@ -175,11 +188,6 @@ export default function AppShell({ initError = null }: AppShellProps) {
               }}
               isTranslating={isTranslating}
               hasEntries={entries.length > 0}
-              isDarkMode={themeData.isDark}
-              onThemeToggle={themeData.toggleTheme}
-              sourceLanguage={sourceLanguage}
-              targetLanguage={targetLanguage}
-              onTargetLanguageChange={handleTargetLanguageChange}
               onCancelTranslation={async () => {
                 try {
                   await cancelTranslation();

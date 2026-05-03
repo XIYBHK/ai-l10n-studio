@@ -61,8 +61,8 @@ export const ActionButton: React.FC<ActionButtonProps> = ({
       color: CSS_COLORS.textSecondary,
     },
     danger: {
-      backgroundColor: '#ff4d4f',
-      borderColor: '#ff4d4f',
+      backgroundColor: CSS_COLORS.error,
+      borderColor: CSS_COLORS.error,
       color: '#ffffff',
     },
     text: {

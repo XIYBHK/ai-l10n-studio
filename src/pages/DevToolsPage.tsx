@@ -4,6 +4,7 @@
  */
 import React, { useRef, useEffect } from 'react';
 import { Input, Button, Space, Tabs, App } from 'antd';
+import { useTranslation } from 'react-i18next';
 import {
   CopyOutlined,
   ClearOutlined,
@@ -33,6 +34,7 @@ const { TextArea } = Input;
 export function DevToolsPage() {
   const { message } = App.useApp();
   const { colors } = useTheme();
+  const { t } = useTranslation();
 
   // 使用全局日志 Store
   const { backendLogs, backendEnabled, promptLogs } = useGlobalLogStore();
@@ -57,27 +59,27 @@ export function DevToolsPage() {
   // 暂停/继续日志收集
   const handleToggleBackendLog = () => {
     toggleBackendLogEnabled();
-    message.info(backendEnabled ? '后端日志已暂停' : '后端日志已继续');
+    message.info(backendEnabled ? t('messages.backendLogsPaused') : t('messages.backendLogsResumed'));
   };
 
   // 清空日志
   const handleClearBackendLogs = async () => {
     try {
       await clearBackendLogs();
-      message.success('后端日志已清空');
+      message.success(t('messages.backendLogsCleared'));
     } catch (error) {
       console.error('[DevToolsPage] 清空后端日志失败:', error);
-      message.error('清空失败');
+      message.error(t('errors.clearFailed'));
     }
   };
 
   const handleClearPromptLogs = async () => {
     try {
       await clearPromptLogs();
-      message.success('提示词日志已清空');
+      message.success(t('messages.promptLogsCleared'));
     } catch (error) {
       console.error('[DevToolsPage] 清空提示词日志失败:', error);
-      message.error('清空失败');
+      message.error(t('errors.clearFailed'));
     }
   };
 
@@ -111,10 +113,10 @@ export function DevToolsPage() {
     navigator.clipboard
       .writeText(backendLogText)
       .then(() => {
-        message.success('日志已复制到剪贴板');
+        message.success(t('messages.logsCopied'));
       })
       .catch(() => {
-        message.error('复制失败');
+        message.error(t('errors.copyFailed'));
       });
   };
 
@@ -131,10 +133,10 @@ export function DevToolsPage() {
       link.click();
       document.body.removeChild(link);
       URL.revokeObjectURL(url);
-      message.success(`后端日志已导出: ${filename}`);
+      message.success(t('messages.backendLogsExported', { filename }));
     } catch (error) {
       console.error('[DevToolsPage] 导出日志失败:', error);
-      message.error('导出失败');
+      message.error(t('errors.exportFailed'));
     }
   };
 
@@ -157,7 +159,7 @@ export function DevToolsPage() {
             key: 'logs',
             label: (
               <span>
-                <BugOutlined /> 后端日志
+                <BugOutlined /> {t('devTools.backendLogsTab')}
               </span>
             ),
             children: (
@@ -169,21 +171,21 @@ export function DevToolsPage() {
                       onClick={handleToggleBackendLog}
                       type={backendEnabled ? 'primary' : 'default'}
                     >
-                      {backendEnabled ? '暂停' : '继续'}
+                      {backendEnabled ? t('devTools.pause') : t('devTools.resume')}
                     </Button>
                     <Button icon={<ClearOutlined />} onClick={handleClearBackendLogs}>
-                      清空
+                      {t('devTools.clear')}
                     </Button>
                     <span style={{ fontSize: '12px', color: colors.textSecondary }}>
-                      {backendEnabled ? '(每2秒更新)' : '(已暂停)'}
+                      {backendEnabled ? t('devTools.updateInterval') : t('devTools.paused')}
                     </span>
                   </Space>
                   <Space>
                     <Button icon={<DownloadOutlined />} onClick={handleExportBackendLogs}>
-                      导出
+                      {t('devTools.export')}
                     </Button>
                     <Button icon={<CopyOutlined />} onClick={handleCopy} type="primary">
-                      复制
+                      {t('devTools.copy')}
                     </Button>
                   </Space>
                 </Space>
@@ -193,7 +195,7 @@ export function DevToolsPage() {
                   value={backendLogText}
                   readOnly
                   rows={25}
-                  placeholder="暂无后端日志"
+                  placeholder={t('devTools.backendLogsEmpty')}
                   style={logTextAreaStyle}
                 />
 
@@ -206,9 +208,13 @@ export function DevToolsPage() {
                     justifyContent: 'space-between',
                   }}
                 >
-                  <span>日志行数: {backendLogText.split('\n').filter((l) => l.trim()).length}</span>
-                  <span>字符数: {backendLogText.length}</span>
-                  <span>最后更新: {formatTime()}</span>
+                  <span>
+                    {t('devTools.linesCount', {
+                      count: backendLogText.split('\n').filter((l) => l.trim()).length,
+                    })}
+                  </span>
+                  <span>{t('devTools.charsCount', { count: backendLogText.length })}</span>
+                  <span>{t('devTools.lastUpdate', { time: formatTime() })}</span>
                 </div>
               </div>
             ),
@@ -217,7 +223,7 @@ export function DevToolsPage() {
             key: 'prompt-logs',
             label: (
               <span>
-                <FileTextOutlined /> AI 提示词日志
+                <FileTextOutlined /> {t('devTools.promptLogsTab')}
               </span>
             ),
             children: (
@@ -225,10 +231,10 @@ export function DevToolsPage() {
                 <Space style={{ marginBottom: 12, width: '100%', justifyContent: 'space-between' }}>
                   <Space>
                     <Button icon={<ClearOutlined />} onClick={handleClearPromptLogs}>
-                      清空
+                      {t('devTools.clear')}
                     </Button>
                     <span style={{ fontSize: '12px', color: colors.textSecondary }}>
-                      {backendEnabled ? '(每2秒更新)' : '(已暂停)'}
+                      {backendEnabled ? t('devTools.updateInterval') : t('devTools.paused')}
                     </span>
                   </Space>
                   <Space>
@@ -238,15 +244,15 @@ export function DevToolsPage() {
                         navigator.clipboard
                           .writeText(promptLogs)
                           .then(() => {
-                            message.success('提示词日志已复制到剪贴板');
+                            message.success(t('messages.promptLogsCopied'));
                           })
                           .catch(() => {
-                            message.error('复制失败');
+                            message.error(t('errors.copyFailed'));
                           });
                       }}
                       type="primary"
                     >
-                      复制
+                      {t('devTools.copy')}
                     </Button>
                   </Space>
                 </Space>
@@ -260,13 +266,10 @@ export function DevToolsPage() {
                     background: 'var(--color-bgSecondary)',
                     borderRadius: 4,
                     border: '1px solid var(--color-borderSecondary)',
+                    whiteSpace: 'pre-wrap',
                   }}
                 >
-                  捕获精翻（Contextual Refine）和批量翻译时发送给 AI 的提示词及响应
-                  <br />
-                  每个日志包含：时间、类型、完整提示词、AI响应、元数据
-                  <br />
-                  最多保留最近 100 条记录，可手动清空
+                  {t('devTools.promptLogsHelp')}
                 </div>
 
                 <TextArea
@@ -274,11 +277,7 @@ export function DevToolsPage() {
                   value={promptLogText}
                   readOnly
                   rows={25}
-                  placeholder="等待提示词日志输出…
-提示:
-- 执行精翻或批量翻译时会自动记录
-- 包含完整的输入提示词和AI响应
-- 便于调试和优化翻译质量"
+                  placeholder={t('devTools.promptLogsEmpty')}
                   style={{
                     ...logTextAreaStyle,
                     whiteSpace: 'pre-wrap',
@@ -294,9 +293,13 @@ export function DevToolsPage() {
                     justifyContent: 'space-between',
                   }}
                 >
-                  <span>日志行数: {promptLogText.split('\n').filter((l) => l.trim()).length}</span>
-                  <span>字符数: {promptLogText.length}</span>
-                  <span>最后更新: {formatTime()}</span>
+                  <span>
+                    {t('devTools.linesCount', {
+                      count: promptLogText.split('\n').filter((l) => l.trim()).length,
+                    })}
+                  </span>
+                  <span>{t('devTools.charsCount', { count: promptLogText.length })}</span>
+                  <span>{t('devTools.lastUpdate', { time: formatTime() })}</span>
                 </div>
               </div>
             ),

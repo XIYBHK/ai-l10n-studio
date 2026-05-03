@@ -120,7 +120,15 @@ export function createSkipToContentLink(targetId: string) {
 }
 
 /**
- * 管理焦点锁定的工具（用于模态框）
+ * 焦点锁定工具
+ *
+ * 注意：Ant Design Modal (v5+) 已内置焦点陷阱（focus trap + restore + Tab 循环 + Esc 关闭），
+ * 本项目所有模态框均使用 Antd Modal，无需叠加此工具，否则会导致双重焦点管理冲突。
+ *
+ * 仅在以下场景使用此类：
+ * - 自定义非 Modal 的悬浮层（如 Drawer、Popover 带表单）
+ * - 某个复杂 UI 需要把焦点锁在某个区域内（例如向导步骤）
+ * - 第三方组件缺少焦点管理时
  */
 export class FocusTrap {
   private container: HTMLElement | null = null;

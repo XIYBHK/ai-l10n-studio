@@ -10,17 +10,22 @@
  * 5. 实现渐进式上屏队列机制（0.33秒间隔）
  */
 
-import { useState, useEffect, useCallback, useRef } from 'react';
+import { useState, useEffect, useCallback, useRef, startTransition } from 'react';
 import { listen } from '@tauri-apps/api/event';
 import { message as msg } from 'antd';
+import { useTranslation } from 'react-i18next';
 import { useChannelTranslation } from './useChannelTranslation';
 import {
   useEntries,
   useCurrentEntry,
   useCurrentFilePath,
+  useSourceLanguage,
+  useTargetLanguage,
   useSetEntries,
   useSetCurrentEntry,
   useSetCurrentFilePath,
+  useSetSourceLanguage,
+  useSetTargetLanguage,
   useUpdateEntry,
   useGetEntryIndex,
   useIsTranslating,
@@ -33,7 +38,6 @@ import {
 } from '../store';
 import { useAsync } from './useAsync';
 import { POEntry, TranslationStats, TranslationQueueItem } from '../types/tauri';
-import type { LanguageInfo } from '../types/generated/LanguageInfo';
 import { poFileCommands, dialogCommands } from '../services/fileCommands';
 import { i18nCommands, translatorCommands } from '../services/translationCommands';
 import { createModuleLogger } from '../utils/logger';
@@ -41,16 +45,19 @@ import { createModuleLogger } from '../utils/logger';
 const log = createModuleLogger('useTranslationFlow');
 
 export function useTranslationFlow() {
-  // Store 状态 - 使用原子化 hooks
+  const { t } = useTranslation();
   const entries = useEntries();
   const currentEntry = useCurrentEntry();
   const currentFilePath = useCurrentFilePath();
   const isTranslating = useIsTranslating();
+  const sourceLanguage = useSourceLanguage();
+  const targetLanguage = useTargetLanguage();
 
-  // Actions
   const setEntries = useSetEntries();
   const setCurrentEntry = useSetCurrentEntry();
   const setCurrentFilePath = useSetCurrentFilePath();
+  const setSourceLanguage = useSetSourceLanguage();
+  const setTargetLanguage = useSetTargetLanguage();
   const updateEntry = useUpdateEntry();
   const getEntryIndex = useGetEntryIndex();
   const setTranslating = useSetTranslating();
@@ -60,10 +67,7 @@ export function useTranslationFlow() {
   const updateSessionStats = useUpdateSessionStats();
   const updateCumulativeStats = useUpdateCumulativeStatsAction();
 
-  // UI 状态
   const [translationStats, setTranslationStats] = useState<TranslationStats | null>(null);
-  const [sourceLanguage, setSourceLanguage] = useState<string>('');
-  const [targetLanguage, setTargetLanguage] = useState<string>('zh-CN');
 
   // 渐进式上屏队列
   const updateQueue = useRef<TranslationQueueItem[]>([]);
@@ -72,7 +76,8 @@ export function useTranslationFlow() {
 
   // Hooks
   const { execute: parsePOFile } = useAsync(poFileCommands.parse);
-  const channelTranslation = useChannelTranslation();
+  // 解构出稳定的函数引用，避免把整个 channelTranslation 对象放进 useCallback deps
+  const { translateBatch, cancelTranslation: cancelBatchTranslation } = useChannelTranslation();
 
   useEffect(() => {
     resetSessionStats();
@@ -214,13 +219,19 @@ export function useTranslationFlow() {
           if (filePath.toLowerCase().endsWith('.po')) {
             try {
               const newEntries = (await parsePOFile(filePath)) as POEntry[];
-              setEntries(newEntries);
-              setCurrentFilePath(filePath);
+              startTransition(() => {
+                setEntries(newEntries);
+                setCurrentFilePath(filePath);
+              });
               await detectAndSetLanguages(newEntries);
               log.info('通过拖放导入文件成功', { filePath });
             } catch (error) {
               log.logError(error, '解析拖放文件失败');
-              msg.error(`文件导入失败：${error instanceof Error ? error.message : '未知错误'}`);
+              msg.error(
+                t('errors.importFailed', {
+                  error: error instanceof Error ? error.message : t('errors.unknown'),
+                })
+              );
             }
           }
         }
@@ -274,39 +285,49 @@ export function useTranslationFlow() {
       const filePath = await dialogCommands.openFile();
       if (filePath) {
         const newEntries = (await parsePOFile(filePath)) as POEntry[];
-        setEntries(newEntries);
-        setCurrentFilePath(filePath);
+        startTransition(() => {
+          setEntries(newEntries);
+          setCurrentFilePath(filePath);
+        });
         await detectAndSetLanguages(newEntries);
         log.info('文件加载成功', { filePath, entryCount: newEntries.length });
       }
     } catch (error) {
       log.logError(error, '打开文件失败');
-      msg.error(`打开文件失败：${error instanceof Error ? error.message : '未知错误'}`);
+      msg.error(
+        t('errors.openFailed', {
+          error: error instanceof Error ? error.message : t('errors.unknown'),
+        })
+      );
     }
   };
 
   const saveFile = async () => {
     if (!currentFilePath) {
-      msg.warning('没有打开的文件，请使用"另存为"');
+      msg.warning(t('messages.noFileToSave'));
       return;
     }
     if (isTranslating) {
-      msg.warning('翻译进行中，请等待完成后再保存');
+      msg.warning(t('messages.translatingCannotSave'));
       return;
     }
     try {
       await poFileCommands.save(currentFilePath, entries);
-      msg.success('保存成功！');
+      msg.success(t('messages.saveSuccess'));
       log.info('文件保存成功', { filePath: currentFilePath });
     } catch (error) {
       log.logError(error, '保存文件失败');
-      msg.error(`保存失败：${error instanceof Error ? error.message : '未知错误'}`);
+      msg.error(
+        t('errors.saveFailed', {
+          error: error instanceof Error ? error.message : t('errors.unknown'),
+        })
+      );
     }
   };
 
   const saveAsFile = async () => {
     if (isTranslating) {
-      msg.warning('翻译进行中，请等待完成后再保存');
+      msg.warning(t('messages.translatingCannotSave'));
       return;
     }
     try {
@@ -314,12 +335,16 @@ export function useTranslationFlow() {
       if (filePath) {
         await poFileCommands.save(filePath, entries);
         setCurrentFilePath(filePath);
-        msg.success('保存成功！');
+        msg.success(t('messages.saveSuccess'));
         log.info('文件另存为成功', { filePath });
       }
     } catch (error) {
       log.logError(error, '另存为失败');
-      msg.error(`保存失败：${error instanceof Error ? error.message : '未知错误'}`);
+      msg.error(
+        t('errors.saveFailed', {
+          error: error instanceof Error ? error.message : t('errors.unknown'),
+        })
+      );
     }
   };
 
@@ -333,7 +358,7 @@ export function useTranslationFlow() {
 
       log.info('开始翻译', { count: texts.length });
 
-      const result = await channelTranslation.translateBatch(texts, targetLanguage, {
+      const result = await translateBatch(texts, targetLanguage, {
         onProgress: (current, _total, percentage) => {
           setProgress(percentage);
           completedCount = current;
@@ -448,7 +473,7 @@ export function useTranslationFlow() {
       .filter((e: POEntry | undefined): e is POEntry => e !== undefined && !!e.msgid && !e.msgstr);
 
     if (selectedEntries.length === 0) {
-      msg.info('选中的条目都已翻译');
+      msg.info(t('messages.allSelectedTranslated'));
       return;
     }
 
@@ -462,7 +487,7 @@ export function useTranslationFlow() {
       .map(({ index, entry }) => ({ index, entry: entry as POEntry }));
 
     if (selectedEntries.length === 0) {
-      msg.info('选中的条目中没有待确认的项');
+      msg.info(t('messages.noRefinableSelected'));
       return;
     }
 
@@ -509,20 +534,12 @@ export function useTranslationFlow() {
     updateEntry(index, updates);
   };
 
-  // 移除不必要的 useCallback
-  const handleTargetLanguageChange = (langCode: string, langInfo: LanguageInfo | undefined) => {
-    setTargetLanguage(langCode);
-    if (langInfo) {
-      log.info('切换目标语言', { code: langInfo.code, name: langInfo.display_name });
-    }
-  };
-
   // 包装取消翻译，确保清空队列
   const cancelTranslation = useCallback(() => {
     clearQueue();
-    channelTranslation.cancelTranslation();
+    cancelBatchTranslation();
     log.info('翻译已取消，队列已清空');
-  }, [channelTranslation, clearQueue]);
+  }, [cancelBatchTranslation, clearQueue]);
 
   return {
     entries,
@@ -541,7 +558,6 @@ export function useTranslationFlow() {
     handleContextualRefine,
     handleEntrySelect,
     handleEntryUpdate,
-    handleTargetLanguageChange,
     cancelTranslation,
     resetTranslationStats: () => setTranslationStats(null),
   };

@@ -4,6 +4,7 @@
  */
 
 import { Modal, Tabs } from 'antd';
+import { useTranslation } from 'react-i18next';
 import {
   ApiOutlined,
   FileTextOutlined,
@@ -23,6 +24,7 @@ interface SettingsModalProps {
 }
 
 export function SettingsModal({ visible, onClose }: SettingsModalProps) {
+  const { t } = useTranslation();
   const tabItems = [
     {
       key: 'ai-config',
@@ -35,7 +37,7 @@ export function SettingsModal({ visible, onClose }: SettingsModalProps) {
             fontSize: 'var(--font-size-base)',
           }}
         >
-          <ApiOutlined /> AI 配置
+          <ApiOutlined /> {t('settings.tabs.ai')}
         </span>
       ),
       children: <AIConfigTab />,
@@ -51,7 +53,7 @@ export function SettingsModal({ visible, onClose }: SettingsModalProps) {
             fontSize: 'var(--font-size-base)',
           }}
         >
-          <FileTextOutlined /> 系统提示词
+          <FileTextOutlined /> {t('settings.tabs.systemPrompt')}
         </span>
       ),
       children: <SystemPromptTab />,
@@ -67,7 +69,7 @@ export function SettingsModal({ visible, onClose }: SettingsModalProps) {
             fontSize: 'var(--font-size-base)',
           }}
         >
-          <BgColorsOutlined /> 外观
+          <BgColorsOutlined /> {t('settings.tabs.appearance')}
         </span>
       ),
       children: <AppearanceTab />,
@@ -83,7 +85,7 @@ export function SettingsModal({ visible, onClose }: SettingsModalProps) {
             fontSize: 'var(--font-size-base)',
           }}
         >
-          <BellOutlined /> 通知
+          <BellOutlined /> {t('settings.tabs.notification')}
         </span>
       ),
       children: <NotificationTab />,
@@ -99,7 +101,7 @@ export function SettingsModal({ visible, onClose }: SettingsModalProps) {
             fontSize: 'var(--font-size-base)',
           }}
         >
-          <InfoCircleOutlined /> 日志
+          <InfoCircleOutlined /> {t('settings.tabs.logs')}
         </span>
       ),
       children: <LogsTab />,
@@ -108,7 +110,7 @@ export function SettingsModal({ visible, onClose }: SettingsModalProps) {
 
   return (
     <Modal
-      title="设置"
+      title={t('settings.title')}
       open={visible}
       onCancel={onClose}
       footer={null}

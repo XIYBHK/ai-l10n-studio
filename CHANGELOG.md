@@ -2,6 +2,43 @@
 
 ## [未发布]
 
+### 前端设计审查修复（2026-05-04）
+
+**P0 健壮性**:
+
+- 修复 `useTranslationFlow` 稳定闭包缺陷：解构 `useChannelTranslation` 返回值，避免 `cancelTranslation` 每次渲染重建
+- 修复 `useTranslationMemory` / `useTermLibrary` 异步监听器竞态：加 `isActive` flag 防止卸载后 `mutate` 和泄漏
+- 迁移 **60+ 处硬编码中文消息**到 i18n（`messages` / `errors` / `errorBoundary` / `app` 四个新命名空间），覆盖 11 个文件
+- `ErrorBoundary`（class component）用 `i18n.t()` 静态访问
+
+**P1 债务**:
+
+- 补 4 个真正 icon-only 按钮 `aria-label`（`TermLibraryManager` / `AIConfigTab` 的 edit/delete）
+- `AppShell` 加 `<h1 className="sr-only">` 提供 a11y 标题
+- 抽出 `useTermDetection` hook：`EditorPane` 331→220 LOC，术语检测逻辑出 UI
+- `MenuBar` 去 prop drilling：14→9 props，theme 用 `useTheme`、source/target language 下沉到 `useTranslationStore`
+- `AIWorkspace` 拆分：710→178 LOC，子组件移到 `components/aiWorkspace/`（StatCard / TokenCard / CostBreakdown / CacheInfo / EfficiencyTip / SessionStatsSection / CumulativeStatsSection / TermLibrarySection）
+- `EntryList` 拆分：799→417 LOC，抽出 `useEntrySelection` hook（97 LOC）+ `VirtualizedColumn`（288 LOC）+ `BatchActions`（77 LOC）到 `components/entryList/`
+
+**P2 打磨**:
+
+- DevToolsModal/DevToolsPage UI 标签 i18n：新增 `devTools` 命名空间（17 key），25 处 UI 文字迁移
+- EmptyState 完整 i18n：空状态配置和默认快捷键从常量改为运行时 `t()` 构建，`emptyState` 命名空间
+- `FocusTrap` 工具类加导引注释：Antd Modal 已内置焦点陷阱，禁止叠加
+- React 19 性能优化：MemoryManager 搜索用 `useDeferredValue` + `useMemo`；`useTranslationFlow` 大文件加载用 `startTransition`
+- `EntryList` 进一步拆分：417→251 LOC，抽 `StatusColumns`（170 LOC，封装三栏分组和渲染）
+
+**视觉审美修复**:
+
+- 合并设计 token 冲突：`index.css` 成为唯一 SSOT，删除 `App.css` 中冲突的 radius / shadow / duration 定义（避免同名 token 两套值）
+- `App.css` 大瘦身：444→150 行（-66%），删除重复 `fadeIn`、未用的 `slideInUp`/`menu-bar-stagger`/`.animate-*`/`.hover-lift`/`.gpu-accelerated` 等 dead CSS，以及 9 处 emoji 注释
+- 状态色系统统一：`待确认` 从 Catppuccin Blue 改为 Peach `#fab387`，符合"需关注"语义（原蓝色与"正常"语义冲突）；`palette.accent` 与 `palette.needsReview` 解耦
+- 新增警示色 token：`--color-warning`、`--color-warningBg`、`--color-error`、`--color-errorBg`、`--color-flashGlow`（Catppuccin 一致）
+- `unsavedBadge` 改 warning peach + 深色文字：紫色（"新特性"语义）→ 琥珀（"未保存警告"语义），对比度从 1.2:1 提升到 ~9:1
+- `StatCard` 新增 `size="large"`：`CumulativeStatsSection` 将 `总计翻译` 作为主指标独占一行 + 品牌色 + 28px bold 字号
+- 替换全部硬编码色值：`ActionButton.danger`、`EntryList` highlight-flash、`ErrorBoundary`、`InfoCard`、`AppShell` initError 横幅均改用 token（Catppuccin 统一）
+- `AppShell` initError 横幅升级：加 `role="alert"`、语义 token、精致按钮样式
+
 ### 新增 - 翻译流程渐进式上屏机制（2026-02-03）
 
 **优化目标**: 避免大量翻译结果瞬间上屏导致界面卡顿和统计区跳变

@@ -22,6 +22,10 @@ export type CssColors = {
   statusUntranslated: string;
   statusNeedsReview: string;
   statusTranslated: string;
+  warning: string;
+  warningBg: string;
+  error: string;
+  errorBg: string;
   selectedBg: string;
   hoverBg: string;
   activeBg: string;
@@ -60,6 +64,10 @@ export const CSS_COLORS: CssColors = {
   statusUntranslated: 'var(--color-statusUntranslated)',
   statusNeedsReview: 'var(--color-statusNeedsReview)',
   statusTranslated: 'var(--color-statusTranslated)',
+  warning: 'var(--color-warning)',
+  warningBg: 'var(--color-warningBg)',
+  error: 'var(--color-error)',
+  errorBg: 'var(--color-errorBg)',
   selectedBg: 'var(--color-selectedBg)',
   hoverBg: 'var(--color-hoverBg)',
   activeBg: 'var(--color-activeBg)',
