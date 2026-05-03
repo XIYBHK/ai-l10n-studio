@@ -1,5 +1,5 @@
 import userEvent from '@testing-library/user-event';
-import { fireEvent, screen, waitFor, within } from '@testing-library/react';
+import { screen, waitFor, within } from '@testing-library/react';
 import { renderWithProviders } from '../../../test/renderWithProviders';
 import { AIConfigTab } from '../../../components/settings/AIConfigTab';
 
@@ -75,7 +75,7 @@ describe('AIConfigTab', () => {
     await user.click(screen.getByTestId('ai-config-add-button'));
 
     const providerField = screen.getByTestId('ai-config-provider');
-    fireEvent.mouseDown(providerField);
+    await user.pointer({ target: providerField, keys: '[MouseLeft]' });
 
     const option = await within(document.body).findByText('DeepSeek');
     await user.click(option);

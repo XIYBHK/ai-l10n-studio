@@ -6,8 +6,15 @@
 
 import { Store } from '@tauri-apps/plugin-store';
 
+interface TauriRuntimeWindow extends Window {
+  __TAURI__?: {
+    invoke?: unknown;
+  };
+}
+
 const isTauriRuntime =
-  typeof window !== 'undefined' && typeof (window as any).__TAURI__?.invoke === 'function';
+  typeof window !== 'undefined' &&
+  typeof (window as TauriRuntimeWindow).__TAURI__?.invoke === 'function';
 
 /**
  * Store 数据类型定义

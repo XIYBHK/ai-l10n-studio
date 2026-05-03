@@ -15,6 +15,7 @@ import { createModuleLogger } from '../utils/logger';
 import { useTranslationMemory } from '../hooks/useTranslationMemory';
 import { useSupportedLanguages } from '../hooks/useLanguage';
 import { useStatsStore } from '../store';
+import type { TranslationMemory } from '../types/tauri';
 
 const log = createModuleLogger('MemoryManager');
 
@@ -30,6 +31,15 @@ const buildMemoryKey = (source: string, language?: string): string => {
     return `${source}|${language}`;
   }
   return source;
+};
+
+const isTranslationMemory = (value: unknown): value is TranslationMemory => {
+  if (typeof value !== 'object' || value === null || !('memory' in value)) {
+    return false;
+  }
+
+  const memory = (value as { memory: unknown }).memory;
+  return typeof memory === 'object' && memory !== null;
 };
 
 interface MemoryManagerProps {
@@ -73,6 +83,17 @@ export function MemoryManager({ visible, onClose }: MemoryManagerProps) {
     [languageConfig]
   );
 
+  const entriesFromMemory = (memory: TranslationMemory): MemoryEntry[] =>
+    Object.entries(memory.memory).map(([memoryKey, target], index) => {
+      const { source, language } = parseMemoryKey(memoryKey);
+      return {
+        key: `${index}`,
+        source,
+        target,
+        language,
+      };
+    });
+
   useEffect(() => {
     if (visible) {
       mutate();
@@ -82,25 +103,15 @@ export function MemoryManager({ visible, onClose }: MemoryManagerProps) {
 
   useEffect(() => {
     if (visible) {
-      if (tm && (tm as any).memory) {
-        const entries: MemoryEntry[] = Object.entries((tm as any).memory).map(
-          ([memoryKey, target], index) => {
-            const { source, language } = parseMemoryKey(memoryKey);
-            return {
-              key: `${index}`,
-              source,
-              target: target as string,
-              language,
-            };
-          }
-        );
+      if (tm) {
+        const entries = entriesFromMemory(tm);
         setMemories(entries);
         log.info('记忆库加载成功', { count: entries.length });
       } else if (!loadingTM) {
         setMemories([]);
       }
     }
-  }, [visible, tm, loadingTM]);
+  }, [visible, tm, loadingTM, parseMemoryKey]);
 
   useEffect(() => {
     let rafId: number | null = null;
@@ -217,18 +228,8 @@ export function MemoryManager({ visible, onClose }: MemoryManagerProps) {
 
       await mutate(freshTM, false);
 
-      if (freshTM && (freshTM as any).memory) {
-        const entries: MemoryEntry[] = Object.entries((freshTM as any).memory).map(
-          ([memoryKey, target], index) => {
-            const { source, language } = parseMemoryKey(memoryKey);
-            return {
-              key: `${index}`,
-              source,
-              target: target as string,
-              language,
-            };
-          }
-        );
+      if (freshTM) {
+        const entries = entriesFromMemory(freshTM);
         setMemories(entries);
         log.info('记忆库界面已更新', { count: entries.length });
       }
@@ -292,20 +293,10 @@ export function MemoryManager({ visible, onClose }: MemoryManagerProps) {
 
       if (filePath && typeof filePath === 'string') {
         const content = await readTextFile(filePath);
-        const data = JSON.parse(content);
+        const data: unknown = JSON.parse(content);
 
-        if (data.memory) {
-          const entries: MemoryEntry[] = Object.entries(data.memory).map(
-            ([memoryKey, target], index) => {
-              const { source, language } = parseMemoryKey(memoryKey);
-              return {
-                key: `${index}`,
-                source,
-                target: target as string,
-                language,
-              };
-            }
-          );
+        if (isTranslationMemory(data)) {
+          const entries = entriesFromMemory(data);
           setMemories(entries);
           message.success(`已导入 ${entries.length} 条记忆`);
         }
@@ -392,7 +383,7 @@ export function MemoryManager({ visible, onClose }: MemoryManagerProps) {
       title: '操作',
       key: 'action',
       width: '15%',
-      render: (_: any, record: MemoryEntry) => (
+      render: (_: unknown, record: MemoryEntry) => (
         <Popconfirm
           title="确定删除这条记忆吗？"
           onConfirm={() => handleDelete(record.key)}

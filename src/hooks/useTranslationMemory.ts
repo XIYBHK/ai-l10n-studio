@@ -2,16 +2,21 @@ import { useEffect } from 'react';
 import useSWR from 'swr';
 import { listen } from '@tauri-apps/api/event';
 import { translationMemoryCommands } from '../services/termCommands';
+import type { TranslationMemory } from '../types/tauri';
 
 const TM_KEY = 'translation_memory';
 
 export function useTranslationMemory() {
-  const { data, error, isLoading, mutate } = useSWR(TM_KEY, () => translationMemoryCommands.get(), {
-    keepPreviousData: true,
-    revalidateOnFocus: false,
-    revalidateOnReconnect: false,
-    dedupingInterval: 2000,
-  });
+  const { data, error, isLoading, mutate } = useSWR<TranslationMemory>(
+    TM_KEY,
+    () => translationMemoryCommands.get(),
+    {
+      keepPreviousData: true,
+      revalidateOnFocus: false,
+      revalidateOnReconnect: false,
+      dedupingInterval: 2000,
+    }
+  );
 
   useEffect(() => {
     let unlisten: (() => void) | undefined;
@@ -28,7 +33,7 @@ export function useTranslationMemory() {
   }, [mutate]);
 
   return {
-    tm: data as any,
+    tm: data,
     error,
     isLoading: !!isLoading,
     refresh: () => mutate(),

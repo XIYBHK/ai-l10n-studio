@@ -102,7 +102,12 @@ export const useChannelTranslation = () => {
           }
 
           const monotonicCurrent = Math.max(progress.current ?? 0, currentRaw);
-          const normalized = { current: monotonicCurrent, total, percentage, text } as any;
+          const normalized: BatchProgressEvent = {
+            current: monotonicCurrent,
+            total,
+            percentage,
+            text,
+          };
           log.debug('进度更新:', normalized);
           setProgress(normalized);
 

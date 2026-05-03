@@ -8,7 +8,7 @@ const log = createModuleLogger('useAppStore');
 
 // Phase 9: 支持三种主题模式
 type ThemeMode = 'light' | 'dark' | 'system';
-type Language = 'zh-CN' | 'en-US';
+export type Language = 'zh-CN' | 'en-US';
 
 function normalizeLanguage(language: string | null | undefined): Language {
   if (!language) {

@@ -610,7 +610,7 @@ export const AIWorkspace = memo(function AIWorkspace({
     fontWeight: 600,
   };
 
-  const cardStyles = {
+  const cardStyles: Record<'header' | 'body', React.CSSProperties> = {
     header: {
       backgroundColor: CSS_COLORS.bgSecondary,
       borderBottom: `1px solid ${CSS_COLORS.borderSecondary}`,
@@ -663,7 +663,6 @@ export const AIWorkspace = memo(function AIWorkspace({
           backgroundColor: CSS_COLORS.bgSecondary,
           borderRadius: 0,
         }}
-        // @ts-ignore - Ant Design 5.5+ styles 属性类型定义问题
         styles={cardStyles}
         role="complementary"
         aria-label="AI工作区统计信息"

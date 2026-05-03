@@ -154,6 +154,9 @@ export const EditorToolbar: React.FC<EditorToolbarProps> = ({
           <Button
             size="small"
             icon={<CloseOutlined />}
+            onMouseDown={(event) => {
+              event.preventDefault();
+            }}
             onClick={onCancel}
             aria-label="取消修改 (Esc)"
           >
