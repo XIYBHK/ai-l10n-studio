@@ -7,7 +7,7 @@ import { announceToScreenReader } from '../utils/accessibility';
 import styles from './EntryList.module.css';
 
 import { useEntrySelection } from '../hooks/useEntrySelection';
-import { StatusColumns, BatchActions, ColumnType, IndexedEntry } from './entryList';
+import { StatusColumns, BatchActions, ColumnType, IndexedEntry } from './entryListParts';
 
 const log = createModuleLogger('EntryList');
 
@@ -69,17 +69,14 @@ export const EntryList = memo(function EntryList({
   // 当前激活列
   const [activeColumn, setActiveColumn] = useState<ColumnType | null>(null);
 
-  const {
-    selectedIndices,
-    setSelectedIndices,
-    clearSelection,
-    handleRowClick,
-  } = useEntrySelection({
-    entries,
-    groupedEntries,
-    activeColumn,
-    onEntrySelect,
-  });
+  const { selectedIndices, setSelectedIndices, clearSelection, handleRowClick } = useEntrySelection(
+    {
+      entries,
+      groupedEntries,
+      activeColumn,
+      onEntrySelect,
+    }
+  );
 
   // 确认翻译
   const handleConfirm = useCallback(
