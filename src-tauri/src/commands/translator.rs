@@ -345,8 +345,8 @@ pub async fn translate_directory(
         draft.data().system_prompt.clone()
     };
 
-    let mut batch_translator = BatchTranslator::new(api_key, base_url, custom_prompt)
-        .map_err(|e| e.to_string())?;
+    let mut batch_translator =
+        BatchTranslator::new(api_key, base_url, custom_prompt).map_err(|e| e.to_string())?;
     batch_translator
         .translate_directory(directory_path, None)
         .await
