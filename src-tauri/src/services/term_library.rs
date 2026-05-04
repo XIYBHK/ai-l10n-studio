@@ -238,7 +238,7 @@ impl TermLibrary {
 
         // 按频率排序，只取前30个高频术语
         let mut sorted_terms = self.terms.clone();
-        sorted_terms.sort_by(|a, b| b.frequency.cmp(&a.frequency));
+        sorted_terms.sort_by_key(|b| std::cmp::Reverse(b.frequency));
 
         prompt.push_str("【术语对照】\n");
         for (idx, term) in sorted_terms.iter().take(30).enumerate() {
