@@ -28,24 +28,24 @@ src/
 
 ## WHERE TO LOOK
 
-| Feature                | Location                                                   | Notes                                            |
-| :--------------------- | :--------------------------------------------------------- | :----------------------------------------------- |
-| 3-column layout        | `components/TranslationWorkspace.tsx`                      | Resizable panels                                 |
-| Virtualized list       | `components/entryList/VirtualizedColumn.tsx`               | @tanstack/react-virtual                          |
-| 3-column status group  | `components/entryList/StatusColumns.tsx`                   | Groups entries by status, renders 3 VirtualColumns |
-| Batch actions toolbar  | `components/entryList/BatchActions.tsx`                    | Translate/confirm/refine selected                |
-| Entry selection state  | `hooks/useEntrySelection.ts`                               | Set-based, with range select                     |
-| AI workspace sub-UI    | `components/aiWorkspace/*.tsx`                             | StatCard (supports `size="large"`), Stats, Term   |
-| Editor term detection  | `hooks/useTermDetection.ts`                                | Extracted from EditorPane                        |
-| Lazy components        | `MemoryManager`, `SettingsModal`, `TermLibraryManager`     | Code-split via Suspense                          |
-| Logic engine           | `hooks/useTranslationFlow.ts`                              | 555 lines, updateQueue, uses `startTransition`   |
-| Config access          | `hooks/useConfig.ts`                                       | SWR-based (useAppData, etc)                      |
-| Streaming IPC          | `hooks/useChannelTranslation.ts`                           | Tauri Channel API                                |
-| IPC client             | `services/apiClient.ts`                                    | Error handling, retries                          |
-| IPC wrapper            | `services/tauriInvoke.ts`                                  | Logging, sensitive masking                       |
-| Design tokens (SSOT)   | `src/index.css`                                            | Never redefine in `App.css` or module CSS        |
-| Theme config           | `src/theme/config.ts`                                      | `palette.needsReview` decoupled from `accent`    |
-| Generated types        | `types/generated/`                                         | Auto-sync with Rust types (ts-rs)                |
+| Feature               | Location                                               | Notes                                              |
+| :-------------------- | :----------------------------------------------------- | :------------------------------------------------- |
+| 3-column layout       | `components/TranslationWorkspace.tsx`                  | Resizable panels                                   |
+| Virtualized list      | `components/entryListParts/VirtualizedColumn.tsx`      | @tanstack/react-virtual                            |
+| 3-column status group | `components/entryListParts/StatusColumns.tsx`          | Groups entries by status, renders 3 VirtualColumns |
+| Batch actions toolbar | `components/entryListParts/BatchActions.tsx`           | Translate/confirm/refine selected                  |
+| Entry selection state | `hooks/useEntrySelection.ts`                           | Set-based, with range select                       |
+| AI workspace sub-UI   | `components/aiWorkspaceSections/*.tsx`                 | StatCard (supports `size="large"`), Stats, Term    |
+| Editor term detection | `hooks/useTermDetection.ts`                            | Extracted from EditorPane                          |
+| Lazy components       | `MemoryManager`, `SettingsModal`, `TermLibraryManager` | Code-split via Suspense                            |
+| Logic engine          | `hooks/useTranslationFlow.ts`                          | 555 lines, updateQueue, uses `startTransition`     |
+| Config access         | `hooks/useConfig.ts`                                   | SWR-based (useAppData, etc)                        |
+| Streaming IPC         | `hooks/useChannelTranslation.ts`                       | Tauri Channel API                                  |
+| IPC client            | `services/apiClient.ts`                                | Error handling, retries                            |
+| IPC wrapper           | `services/tauriInvoke.ts`                              | Logging, sensitive masking                         |
+| Design tokens (SSOT)  | `src/index.css`                                        | Never redefine in `App.css` or module CSS          |
+| Theme config          | `src/theme/config.ts`                                  | `palette.needsReview` decoupled from `accent`      |
+| Generated types       | `types/generated/`                                     | Auto-sync with Rust types (ts-rs)                  |
 
 ## STORE DESIGN
 
@@ -57,19 +57,19 @@ src/
 
 ## HOOK CATALOG
 
-| Hook                       | Role                                                                               |
-| :------------------------- | :--------------------------------------------------------------------------------- |
-| `useTranslationFlow`       | Aggregates file ops, translation execution, event listeners, progressive queue     |
-| `useChannelTranslation`    | Streaming batch translation via Tauri Channel API (destructure for stable refs)    |
-| `useConfig`                | Centralized SWR access (app config, AI configs, system prompt)                     |
-| `useTheme`                 | Theme mode + system preference + Antd theme config (used directly, no Context)     |
-| `useTranslationMemory`     | TM fetch with event-driven refresh (has `isActive` race guard)                     |
-| `useTermLibrary`           | Term library fetch (has `isActive` race guard)                                     |
-| `useTermDetection`         | Term difference analysis + confirmation modal state (extracted from EditorPane)    |
-| `useEntrySelection`        | Selection state: set-based, range-select, keyboard-friendly                        |
-| `useAsync`                 | Generic async state helper                                                          |
-| `useCssColors`             | CSS variable constants export (no Hook overhead)                                   |
-| `useSupportedLanguages`    | Supported languages list from backend                                              |
+| Hook                    | Role                                                                            |
+| :---------------------- | :------------------------------------------------------------------------------ |
+| `useTranslationFlow`    | Aggregates file ops, translation execution, event listeners, progressive queue  |
+| `useChannelTranslation` | Streaming batch translation via Tauri Channel API (destructure for stable refs) |
+| `useConfig`             | Centralized SWR access (app config, AI configs, system prompt)                  |
+| `useTheme`              | Theme mode + system preference + Antd theme config (used directly, no Context)  |
+| `useTranslationMemory`  | TM fetch with event-driven refresh (has `isActive` race guard)                  |
+| `useTermLibrary`        | Term library fetch (has `isActive` race guard)                                  |
+| `useTermDetection`      | Term difference analysis + confirmation modal state (extracted from EditorPane) |
+| `useEntrySelection`     | Selection state: set-based, range-select, keyboard-friendly                     |
+| `useAsync`              | Generic async state helper                                                      |
+| `useCssColors`          | CSS variable constants export (no Hook overhead)                                |
+| `useSupportedLanguages` | Supported languages list from backend                                           |
 
 ### Hook Authoring Rules
 

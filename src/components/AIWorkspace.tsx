@@ -14,7 +14,7 @@ import {
   CumulativeStatsSection,
   SessionStatsSection,
   TermLibrarySection,
-} from './aiWorkspace';
+} from './aiWorkspaceSections';
 
 const log = createModuleLogger('AIWorkspace');
 const MemoryManager = lazy(() =>
