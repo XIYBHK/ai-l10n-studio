@@ -2,6 +2,7 @@ import { useState, useCallback, useRef } from 'react';
 import { Channel } from '@tauri-apps/api/core';
 import { invoke } from '../services/tauriInvoke';
 import { createModuleLogger } from '../utils/logger';
+import type { TranslationStats, TokenStats } from '../types/tauri';
 
 const log = createModuleLogger('useChannelTranslation');
 
@@ -31,21 +32,7 @@ export interface TokenStatsEvent {
   cost: number;
 }
 
-export interface TokenStats {
-  input_tokens: number;
-  output_tokens: number;
-  total_tokens: number;
-  cost: number;
-}
-
-export interface TranslationStats {
-  total: number;
-  tm_hits: number;
-  deduplicated: number;
-  ai_translated: number;
-  token_stats: TokenStats;
-  tm_learned: number;
-}
+export type { TranslationStats, TokenStats };
 
 export interface BatchResult {
   translations: string[];
@@ -91,7 +78,7 @@ export const useChannelTranslation = () => {
       setCurrentTaskId(null);
       callbacksRef.current = callbacks || {};
 
-      log.info('🚀 开始 Channel 批量翻译', {
+      log.info('开始 Channel 批量翻译', {
         total: texts.length,
         targetLanguage,
       });
@@ -100,13 +87,13 @@ export const useChannelTranslation = () => {
         const progressChannel = new Channel<BatchProgressEvent>();
         const statsChannel = new Channel<BatchStatsEvent>();
 
-        progressChannel.onmessage = (progressEvent: any) => {
-          const currentRaw = (progressEvent.current ?? progressEvent.processed ?? 0) as number;
-          const total = (progressEvent.total ?? 0) as number;
-          const percentage = (progressEvent.percentage ?? 0) as number;
-          const text = (progressEvent.text ?? progressEvent.current_item) as string | undefined;
-          const index = (progressEvent.index ?? null) as number | null;
-          const taskId = (progressEvent.task_id ?? null) as number | null;
+        progressChannel.onmessage = (progressEvent: BatchProgressEvent) => {
+          const currentRaw = progressEvent.current;
+          const total = progressEvent.total;
+          const percentage = progressEvent.percentage;
+          const text = progressEvent.text;
+          const index: number | null = null;
+          const taskId = progressEvent.task_id ?? null;
 
           // 如果事件中包含任务ID，立即保存（用于取消翻译）
           if (taskId !== null && taskId !== undefined) {
@@ -115,8 +102,13 @@ export const useChannelTranslation = () => {
           }
 
           const monotonicCurrent = Math.max(progress.current ?? 0, currentRaw);
-          const normalized = { current: monotonicCurrent, total, percentage, text } as any;
-          log.debug('📊 进度更新:', normalized);
+          const normalized: BatchProgressEvent = {
+            current: monotonicCurrent,
+            total,
+            percentage,
+            text,
+          };
+          log.debug('进度更新:', normalized);
           setProgress(normalized);
 
           if (callbacksRef.current.onProgress) {
@@ -151,7 +143,7 @@ export const useChannelTranslation = () => {
         // 保存任务 ID 以便后续取消
         setCurrentTaskId(result.task_id);
 
-        log.info('✅ 批量翻译完成', {
+        log.info('批量翻译完成', {
           taskId: result.task_id,
           translated: result.translations.length,
           tm_hits: result.stats.tm_hits,
@@ -161,26 +153,27 @@ export const useChannelTranslation = () => {
 
         return result;
       } catch (error) {
-        log.error('❌ 批量翻译失败:', error);
+        log.error('批量翻译失败:', error);
         throw error;
       } finally {
         setIsTranslating(false);
         setCurrentTaskId(null);
       }
     },
+    // 所有外部依赖通过 ref 访问，参数通过调用时传入，故依赖数组为空
     []
   );
 
   const cancelTranslation = useCallback(async () => {
     if (currentTaskId !== null) {
-      log.info('🛑 取消翻译任务', { taskId: currentTaskId });
+      log.info('取消翻译任务', { taskId: currentTaskId });
       try {
         await invoke('cancel_translation', { taskId: currentTaskId });
         setIsTranslating(false);
         setCurrentTaskId(null);
-        log.info('✅ 翻译任务已取消');
+        log.info('翻译任务已取消');
       } catch (error) {
-        log.error('❌ 取消翻译失败:', error);
+        log.error('取消翻译失败:', error);
         throw error;
       }
     }

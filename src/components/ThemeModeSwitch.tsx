@@ -67,6 +67,7 @@ export const ThemeModeSwitch = memo(function ThemeModeSwitch({
 
   return (
     <Segmented
+      data-testid="theme-mode-switch"
       style={style}
       className={className}
       options={options}

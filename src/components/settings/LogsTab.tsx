@@ -1,15 +1,15 @@
 import { useEffect, useState } from 'react';
 import { Card, Form, Select, InputNumber, Button, message } from 'antd';
 import { InfoCircleOutlined } from '@ant-design/icons';
-import { configCommands } from '../../services/commands';
+import { useTranslation } from 'react-i18next';
+import { configCommands } from '../../services/configCommands';
 import { createModuleLogger } from '../../utils/logger';
 import { CSS_COLORS } from '../../hooks/useCssColors';
 
 const log = createModuleLogger('LogsTab');
 
-interface LogsTabProps {}
-
 export function LogsTab() {
+  const { t } = useTranslation();
   const [form] = Form.useForm();
   const [loading, setLoading] = useState(false);
 
@@ -45,7 +45,7 @@ export function LogsTab() {
         logMaxSize: values.log_max_size,
         logMaxCount: values.log_max_count,
       });
-      message.success('日志设置已保存');
+      message.success(t('messages.logSettingsSaved'));
       log.info('日志设置已保存', values);
     } catch (error) {
       const errorMsg = error instanceof Error ? error.message : '保存失败';

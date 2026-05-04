@@ -1,8 +1,9 @@
-import { ThemeConfig } from 'antd';
+import type { ThemeConfig } from 'antd';
 
 const palette = {
   primary: '#cba6f7',
   accent: '#89b4fa',
+  needsReview: '#fab387',
   successLight: '#166534',
   successDark: '#a6e3a1',
   warning: '#f9e2af',
@@ -195,7 +196,7 @@ export const semanticColors = {
     borderPrimary: palette.light.border,
     borderSecondary: palette.light.borderSecondary,
     statusUntranslated: palette.primary,
-    statusNeedsReview: palette.accent,
+    statusNeedsReview: palette.needsReview,
     statusTranslated: palette.successLight,
     hoverBg: palette.light.bgElevated,
     activeBg: 'rgba(203, 166, 247, 0.1)',
@@ -216,7 +217,7 @@ export const semanticColors = {
     borderPrimary: palette.dark.border,
     borderSecondary: palette.dark.borderSecondary,
     statusUntranslated: palette.primary,
-    statusNeedsReview: palette.accent,
+    statusNeedsReview: palette.needsReview,
     statusTranslated: palette.successDark,
     hoverBg: 'rgba(203, 166, 247, 0.08)',
     activeBg: 'rgba(203, 166, 247, 0.15)',

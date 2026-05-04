@@ -26,40 +26,41 @@ const log = createModuleLogger('useTranslationStore');
 // State & Actions 定义
 // ============================================
 interface TranslationState {
-  // 条目状态
   entries: POEntry[];
-  entryIndexMap: Map<POEntry, number>; // O(1) 索引映射
+  entryIndexMap: Map<POEntry, number>;
   currentEntry: POEntry | null;
   currentIndex: number;
 
-  // 文件路径
   currentFilePath: string | null;
 
-  // Actions - 条目管理
+  sourceLanguage: string;
+  targetLanguage: string;
+
   setEntries: (entries: POEntry[]) => void;
   setCurrentEntry: (entry: POEntry | null) => void;
   setCurrentIndex: (index: number) => void;
   updateEntry: (index: number, updates: Partial<POEntry>) => void;
   setCurrentFilePath: (path: string | null) => void;
 
-  // Actions - 高效索引查找
+  setSourceLanguage: (language: string) => void;
+  setTargetLanguage: (language: string) => void;
+
   getEntryIndex: (entry: POEntry) => number;
 
-  // Actions - 导航
   nextEntry: () => void;
   previousEntry: () => void;
 
-  // Actions - 重置
   reset: () => void;
 }
 
-// 初始状态
 const initialState = {
   entries: [],
   entryIndexMap: new Map<POEntry, number>(),
   currentEntry: null,
   currentIndex: -1,
   currentFilePath: null,
+  sourceLanguage: '',
+  targetLanguage: 'zh-CN',
 };
 
 // ============================================
@@ -129,10 +130,19 @@ export const useTranslationStore = create<TranslationState>()(
         }
       },
 
-      // 设置当前文件路径
       setCurrentFilePath: (path) => {
         log.info('设置文件路径', { path });
         set({ currentFilePath: path });
+      },
+
+      setSourceLanguage: (language) => {
+        log.debug('设置源语言', { language });
+        set({ sourceLanguage: language });
+      },
+
+      setTargetLanguage: (language) => {
+        log.info('设置目标语言', { language });
+        set({ targetLanguage: language });
       },
 
       // O(1) 获取条目索引
@@ -182,17 +192,19 @@ export const useTranslationStore = create<TranslationState>()(
 // 使用这些 selectors 可以避免不必要重渲染
 // ============================================
 
-// 基础状态 Selectors
 export const selectEntries = (state: TranslationState) => state.entries;
 export const selectCurrentEntry = (state: TranslationState) => state.currentEntry;
 export const selectCurrentIndex = (state: TranslationState) => state.currentIndex;
 export const selectCurrentFilePath = (state: TranslationState) => state.currentFilePath;
+export const selectSourceLanguage = (state: TranslationState) => state.sourceLanguage;
+export const selectTargetLanguage = (state: TranslationState) => state.targetLanguage;
 
-// Actions Selectors
 export const selectSetEntries = (state: TranslationState) => state.setEntries;
 export const selectSetCurrentEntry = (state: TranslationState) => state.setCurrentEntry;
 export const selectUpdateEntry = (state: TranslationState) => state.updateEntry;
 export const selectSetCurrentFilePath = (state: TranslationState) => state.setCurrentFilePath;
+export const selectSetSourceLanguage = (state: TranslationState) => state.setSourceLanguage;
+export const selectSetTargetLanguage = (state: TranslationState) => state.setTargetLanguage;
 export const selectGetEntryIndex = (state: TranslationState) => state.getEntryIndex;
 export const selectNextEntry = (state: TranslationState) => state.nextEntry;
 export const selectPreviousEntry = (state: TranslationState) => state.previousEntry;
@@ -205,17 +217,19 @@ export const selectIsFirstEntry = (state: TranslationState) => state.currentInde
 export const selectIsLastEntry = (state: TranslationState) =>
   state.currentIndex === state.entries.length - 1;
 
-// 便捷 Hooks（推荐在组件中使用）
 export const useEntries = () => useTranslationStore(selectEntries);
 export const useCurrentEntry = () => useTranslationStore(selectCurrentEntry);
 export const useCurrentIndex = () => useTranslationStore(selectCurrentIndex);
 export const useCurrentFilePath = () => useTranslationStore(selectCurrentFilePath);
 export const useEntryCount = () => useTranslationStore(selectEntryCount);
 export const useHasEntries = () => useTranslationStore(selectHasEntries);
+export const useSourceLanguage = () => useTranslationStore(selectSourceLanguage);
+export const useTargetLanguage = () => useTranslationStore(selectTargetLanguage);
 
-// Actions Hooks
 export const useSetEntries = () => useTranslationStore(selectSetEntries);
 export const useSetCurrentEntry = () => useTranslationStore(selectSetCurrentEntry);
 export const useSetCurrentFilePath = () => useTranslationStore(selectSetCurrentFilePath);
+export const useSetSourceLanguage = () => useTranslationStore(selectSetSourceLanguage);
+export const useSetTargetLanguage = () => useTranslationStore(selectSetTargetLanguage);
 export const useUpdateEntry = () => useTranslationStore(selectUpdateEntry);
 export const useGetEntryIndex = () => useTranslationStore(selectGetEntryIndex);

@@ -6,7 +6,6 @@
 pub mod ai_translator;
 pub mod batch_translator;
 pub mod config_draft;
-pub mod config_manager;
 pub mod po_parser;
 pub mod translation_stats;
 pub mod translation_task;
@@ -35,7 +34,7 @@ pub mod tests;
 // 核心类型
 pub use ai_translator::{AIConfig, AITranslator, ProxyConfig};
 pub use config_draft::ConfigDraft;
-pub use config_manager::{AppConfig, ConfigManager, ConfigVersionInfo};
+pub use config_draft::{AppConfig, ConfigVersionInfo};
 pub use translation_stats::TokenStats;
 
 // 批量翻译

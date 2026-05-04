@@ -15,7 +15,7 @@ pub fn get_zhipuai_models() -> Vec<ModelInfo> {
             provider: "智谱AI".to_string(),
             context_window: 200000, // 200K 上下文
             max_output_tokens: 131072,
-            // 💰 免费（开源模型）
+            // 免费（开源模型）
             input_price: 0.0,
             output_price: 0.0,
             cache_reads_price: Some(0.0),
@@ -31,7 +31,7 @@ pub fn get_zhipuai_models() -> Vec<ModelInfo> {
             provider: "智谱AI".to_string(),
             context_window: 131072, // 128K 上下文
             max_output_tokens: 98304,
-            // 💰 免费（开源模型）
+            // 免费（开源模型）
             input_price: 0.0,
             output_price: 0.0,
             cache_reads_price: Some(0.0),
@@ -47,7 +47,7 @@ pub fn get_zhipuai_models() -> Vec<ModelInfo> {
             provider: "智谱AI".to_string(),
             context_window: 128000,
             max_output_tokens: 32768,
-            // 💰 免费（开源视觉模型）
+            // 免费（开源视觉模型）
             input_price: 0.0,
             output_price: 0.0,
             cache_reads_price: None,
@@ -64,7 +64,7 @@ pub fn get_zhipuai_models() -> Vec<ModelInfo> {
             provider: "智谱AI".to_string(),
             context_window: 131072,
             max_output_tokens: 98304,
-            // 💰 USD per 1M tokens
+            // USD per 1M tokens
             input_price: 0.2,
             output_price: 1.1,
             cache_reads_price: Some(0.03), // 节省 85%
@@ -81,7 +81,7 @@ pub fn get_zhipuai_models() -> Vec<ModelInfo> {
             provider: "智谱AI".to_string(),
             context_window: 204800, // 200K 上下文
             max_output_tokens: 131072,
-            // 💰 USD per 1M tokens
+            // USD per 1M tokens
             input_price: 0.6,
             output_price: 2.2,
             cache_reads_price: Some(0.11),
@@ -97,7 +97,7 @@ pub fn get_zhipuai_models() -> Vec<ModelInfo> {
             provider: "智谱AI".to_string(),
             context_window: 204800,
             max_output_tokens: 131072,
-            // 💰 USD per 1M tokens
+            // USD per 1M tokens
             input_price: 0.6,
             output_price: 2.2,
             cache_reads_price: Some(0.11),
@@ -113,7 +113,7 @@ pub fn get_zhipuai_models() -> Vec<ModelInfo> {
             provider: "智谱AI".to_string(),
             context_window: 131072,
             max_output_tokens: 98304,
-            // 💰 USD per 1M tokens
+            // USD per 1M tokens
             input_price: 0.6,
             output_price: 2.2,
             cache_reads_price: Some(0.11),
@@ -130,7 +130,7 @@ pub fn get_zhipuai_models() -> Vec<ModelInfo> {
             provider: "智谱AI".to_string(),
             context_window: 128000,
             max_output_tokens: 32768,
-            // 💰 USD per 1M tokens
+            // USD per 1M tokens
             input_price: 0.3,
             output_price: 0.9,
             cache_reads_price: None,
@@ -146,7 +146,7 @@ pub fn get_zhipuai_models() -> Vec<ModelInfo> {
             provider: "智谱AI".to_string(),
             context_window: 64000,
             max_output_tokens: 16384,
-            // 💰 USD per 1M tokens
+            // USD per 1M tokens
             input_price: 0.6,
             output_price: 1.8,
             cache_reads_price: None,

@@ -15,7 +15,7 @@ pub fn get_moonshot_models() -> Vec<ModelInfo> {
             provider: "Moonshot AI".to_string(),
             context_window: 131072, // 128K 上下文
             max_output_tokens: 16384,
-            // 💰 USD per 1M tokens
+            // USD per 1M tokens
             input_price: 0.6,
             output_price: 2.5,
             cache_reads_price: Some(0.15),  // 90% 节省
@@ -31,7 +31,7 @@ pub fn get_moonshot_models() -> Vec<ModelInfo> {
             provider: "Moonshot AI".to_string(),
             context_window: 262144, // 256K 上下文
             max_output_tokens: 262144,
-            // 💰 USD per 1M tokens
+            // USD per 1M tokens
             input_price: 0.6,
             output_price: 2.5,
             cache_reads_price: Some(0.15),  // 90% 节省
@@ -48,7 +48,7 @@ pub fn get_moonshot_models() -> Vec<ModelInfo> {
             provider: "Moonshot AI".to_string(),
             context_window: 262144,
             max_output_tokens: 262144,
-            // 💰 USD per 1M tokens
+            // USD per 1M tokens
             input_price: 0.6,
             output_price: 2.5,
             cache_reads_price: Some(0.15),
@@ -64,7 +64,7 @@ pub fn get_moonshot_models() -> Vec<ModelInfo> {
             provider: "Moonshot AI".to_string(),
             context_window: 262144,
             max_output_tokens: 262144,
-            // 💰 USD per 1M tokens
+            // USD per 1M tokens
             input_price: 1.15,
             output_price: 8.0,
             cache_reads_price: Some(0.15),
@@ -81,7 +81,7 @@ pub fn get_moonshot_models() -> Vec<ModelInfo> {
             provider: "Moonshot AI".to_string(),
             context_window: 262144,
             max_output_tokens: 262144,
-            // 💰 USD per 1M tokens
+            // USD per 1M tokens
             input_price: 2.4,
             output_price: 10.0,
             cache_reads_price: Some(0.6),

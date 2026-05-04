@@ -197,7 +197,6 @@
   font-family: var(--mono-font);
 }
 
-/* 未保存提示徽标 */
 .unsavedBadge {
   position: absolute;
   bottom: var(--space-5);
@@ -206,8 +205,8 @@
   align-items: center;
   gap: var(--space-1);
   padding: var(--space-1) var(--space-3);
-  background-color: var(--color-statusUntranslated);
-  color: #ffffff;
+  background-color: var(--color-warning);
+  color: #1e1e2e;
   border-radius: var(--radius-full);
   font-size: var(--font-size-xs);
   font-weight: var(--font-weight-semibold);
@@ -221,7 +220,7 @@
   width: 6px;
   height: 6px;
   border-radius: 50%;
-  background-color: #ffffff;
+  background-color: #1e1e2e;
 }
 
 /* 工具栏 */

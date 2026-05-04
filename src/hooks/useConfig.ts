@@ -1,6 +1,7 @@
 import useSWR from 'swr';
-import type { AIConfig } from '../types/aiProvider';
-import { configCommands, aiConfigCommands, systemPromptCommands } from '../services/commands';
+import type { AIConfigSummary } from '../types/aiProvider';
+import { configCommands } from '../services/configCommands';
+import { aiConfigCommands, systemPromptCommands } from '../services/aiCommands';
 
 // 应用配置（整体）
 const APP_CONFIG_KEY = 'app_config';
@@ -13,7 +14,7 @@ const SYSTEM_PROMPT_KEY = 'system_prompt';
 export function useAppConfig() {
   const { data, error, isLoading, mutate } = useSWR(
     APP_CONFIG_KEY,
-    () => configCommands.get(), // ✅ 迁移到统一命令层
+    () => configCommands.get(), // 迁移到统一命令层
     {
       keepPreviousData: true,
       revalidateOnFocus: false, // 配置不需要聚焦刷新
@@ -26,7 +27,7 @@ export function useAppConfig() {
 export function useAIConfigs() {
   const all = useSWR(
     AI_CONFIGS_KEY,
-    () => aiConfigCommands.getAll(), // ✅ 迁移到统一命令层
+    () => aiConfigCommands.getAll(), // 迁移到统一命令层
     {
       keepPreviousData: true,
       revalidateOnFocus: false, // AI配置不需要聚焦刷新
@@ -35,7 +36,7 @@ export function useAIConfigs() {
   );
   const active = useSWR(
     ACTIVE_AI_CONFIG_KEY,
-    () => aiConfigCommands.getActive(), // ✅ 迁移到统一命令层
+    () => aiConfigCommands.getActive(), // 迁移到统一命令层
     {
       keepPreviousData: true,
       revalidateOnFocus: false,
@@ -43,10 +44,10 @@ export function useAIConfigs() {
     }
   );
   return {
-    configs: (all.data as AIConfig[] | undefined) ?? [],
+    configs: (all.data as AIConfigSummary[] | undefined) ?? [],
     loading: !!all.isLoading || !!active.isLoading,
     error: all.error || active.error,
-    active: (active.data as AIConfig | null | undefined) ?? null,
+    active: (active.data as AIConfigSummary | null | undefined) ?? null,
     mutateAll: all.mutate,
     mutateActive: active.mutate,
   } as const;
@@ -55,7 +56,7 @@ export function useAIConfigs() {
 export function useSystemPrompt() {
   const { data, error, isLoading, mutate } = useSWR(
     SYSTEM_PROMPT_KEY,
-    () => systemPromptCommands.get(), // ✅ 迁移到统一命令层
+    () => systemPromptCommands.get(), // 迁移到统一命令层
     {
       revalidateOnFocus: false, // 系统提示词不需要聚焦刷新
       revalidateOnReconnect: false,

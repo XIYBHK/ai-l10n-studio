@@ -1,5 +1,6 @@
 import { useEffect, useRef } from 'react';
 import { Modal, Input, Button, Space, Tabs, App } from 'antd';
+import { useTranslation } from 'react-i18next';
 import {
   CopyOutlined,
   ClearOutlined,
@@ -10,6 +11,7 @@ import {
   PauseCircleOutlined,
 } from '@ant-design/icons';
 import Draggable from 'react-draggable';
+import { formatTime } from '../utils/formatters';
 import {
   useGlobalLogStore,
   toggleBackendLogEnabled,
@@ -29,6 +31,7 @@ interface DevToolsModalProps {
 }
 
 export function DevToolsModal({ visible, onClose }: DevToolsModalProps) {
+  const { t } = useTranslation();
   const { message } = App.useApp();
   const { backendLogs, backendEnabled, promptLogs } = useGlobalLogStore();
 
@@ -40,26 +43,28 @@ export function DevToolsModal({ visible, onClose }: DevToolsModalProps) {
 
   function handleToggleBackendLog() {
     toggleBackendLogEnabled();
-    message.info(backendEnabled ? '后端日志已暂停' : '后端日志已继续');
+    message.info(
+      backendEnabled ? t('messages.backendLogsPaused') : t('messages.backendLogsResumed')
+    );
   }
 
   async function handleClearBackendLogs() {
     try {
       await clearBackendLogs();
-      message.success('后端日志已清空');
+      message.success(t('messages.backendLogsCleared'));
     } catch (error) {
       console.error('[DevToolsModal] 清空后端日志失败:', error);
-      message.error('清空失败');
+      message.error(t('errors.clearFailed'));
     }
   }
 
   async function handleClearPromptLogs() {
     try {
       await clearPromptLogs();
-      message.success('提示词日志已清空');
+      message.success(t('messages.promptLogsCleared'));
     } catch (error) {
       console.error('[DevToolsModal] 清空提示词日志失败:', error);
-      message.error('清空失败');
+      message.error(t('errors.clearFailed'));
     }
   }
 
@@ -96,10 +101,10 @@ export function DevToolsModal({ visible, onClose }: DevToolsModalProps) {
     navigator.clipboard
       .writeText(backendLogText)
       .then(() => {
-        message.success('日志已复制到剪贴板');
+        message.success(t('messages.logsCopied'));
       })
       .catch(() => {
-        message.error('复制失败');
+        message.error(t('errors.copyFailed'));
       });
   }
 
@@ -116,10 +121,10 @@ export function DevToolsModal({ visible, onClose }: DevToolsModalProps) {
       link.click();
       document.body.removeChild(link);
       URL.revokeObjectURL(url);
-      message.success(`后端日志已导出: ${filename}`);
+      message.success(t('messages.backendLogsExported', { filename }));
     } catch (error) {
       console.error('[DevToolsModal] 导出日志失败:', error);
-      message.error('导出失败');
+      message.error(t('errors.exportFailed'));
     }
   }
 
@@ -132,18 +137,17 @@ export function DevToolsModal({ visible, onClose }: DevToolsModalProps) {
             cursor: 'move',
           }}
         >
-          开发者工具
+          {t('devTools.modalTitle')}
         </div>
       }
       open={visible}
       onCancel={onClose}
-      width={900}
-      style={{ top: 20 }}
+      width={960}
+      centered
       destroyOnClose
-      mask={false}
       footer={[
         <Button key="close" onClick={onClose}>
-          关闭
+          {t('common.close')}
         </Button>,
       ]}
       modalRender={(modal) => (
@@ -162,7 +166,7 @@ export function DevToolsModal({ visible, onClose }: DevToolsModalProps) {
             key: 'logs',
             label: (
               <span>
-                <BugOutlined /> 后端日志
+                <BugOutlined /> {t('devTools.backendLogsTab')}
               </span>
             ),
             children: (
@@ -174,21 +178,21 @@ export function DevToolsModal({ visible, onClose }: DevToolsModalProps) {
                       onClick={handleToggleBackendLog}
                       type={backendEnabled ? 'primary' : 'default'}
                     >
-                      {backendEnabled ? '暂停' : '继续'}
+                      {backendEnabled ? t('devTools.pause') : t('devTools.resume')}
                     </Button>
                     <Button icon={<ClearOutlined />} onClick={handleClearBackendLogs}>
-                      清空
+                      {t('devTools.clear')}
                     </Button>
                     <span style={{ fontSize: '12px', color: '#999' }}>
-                      {backendEnabled ? '(每2秒更新)' : '(已暂停)'}
+                      {backendEnabled ? t('devTools.updateInterval') : t('devTools.paused')}
                     </span>
                   </Space>
                   <Space>
                     <Button icon={<DownloadOutlined />} onClick={handleExportBackendLogs}>
-                      导出
+                      {t('devTools.export')}
                     </Button>
                     <Button icon={<CopyOutlined />} onClick={handleCopy} type="primary">
-                      复制
+                      {t('devTools.copy')}
                     </Button>
                   </Space>
                 </Space>
@@ -198,7 +202,7 @@ export function DevToolsModal({ visible, onClose }: DevToolsModalProps) {
                   value={backendLogText}
                   readOnly
                   rows={20}
-                  placeholder="暂无后端日志"
+                  placeholder={t('devTools.backendLogsEmpty')}
                   style={{
                     fontFamily: 'Consolas, Monaco, "Courier New", monospace',
                     fontSize: '12px',
@@ -216,9 +220,13 @@ export function DevToolsModal({ visible, onClose }: DevToolsModalProps) {
                     justifyContent: 'space-between',
                   }}
                 >
-                  <span>日志行数: {backendLogText.split('\n').filter((l) => l.trim()).length}</span>
-                  <span>字符数: {backendLogText.length}</span>
-                  <span>最后更新: {new Date().toLocaleTimeString()}</span>
+                  <span>
+                    {t('devTools.linesCount', {
+                      count: backendLogText.split('\n').filter((l) => l.trim()).length,
+                    })}
+                  </span>
+                  <span>{t('devTools.charsCount', { count: backendLogText.length })}</span>
+                  <span>{t('devTools.lastUpdate', { time: formatTime() })}</span>
                 </div>
               </div>
             ),
@@ -227,7 +235,7 @@ export function DevToolsModal({ visible, onClose }: DevToolsModalProps) {
             key: 'prompt-logs',
             label: (
               <span>
-                <FileTextOutlined /> AI 提示词日志
+                <FileTextOutlined /> {t('devTools.promptLogsTab')}
               </span>
             ),
             children: (
@@ -235,10 +243,10 @@ export function DevToolsModal({ visible, onClose }: DevToolsModalProps) {
                 <Space style={{ marginBottom: 12, width: '100%', justifyContent: 'space-between' }}>
                   <Space>
                     <Button icon={<ClearOutlined />} onClick={handleClearPromptLogs}>
-                      清空
+                      {t('devTools.clear')}
                     </Button>
                     <span style={{ fontSize: '12px', color: '#999' }}>
-                      {backendEnabled ? '(每2秒更新)' : '(已暂停)'}
+                      {backendEnabled ? t('devTools.updateInterval') : t('devTools.paused')}
                     </span>
                   </Space>
                   <Space>
@@ -248,15 +256,15 @@ export function DevToolsModal({ visible, onClose }: DevToolsModalProps) {
                         navigator.clipboard
                           .writeText(promptLogs)
                           .then(() => {
-                            message.success('提示词日志已复制到剪贴板');
+                            message.success(t('messages.logsCopied'));
                           })
                           .catch(() => {
-                            message.error('复制失败');
+                            message.error(t('errors.copyFailed'));
                           });
                       }}
                       type="primary"
                     >
-                      复制
+                      {t('devTools.copy')}
                     </Button>
                   </Space>
                 </Space>
@@ -270,13 +278,10 @@ export function DevToolsModal({ visible, onClose }: DevToolsModalProps) {
                     background: '#e6fffb',
                     borderRadius: 4,
                     border: '1px solid #87e8de',
+                    whiteSpace: 'pre-wrap',
                   }}
                 >
-                  捕获精翻（Contextual Refine）和批量翻译时发送给 AI 的提示词及响应
-                  <br />
-                  每个日志包含：时间、类型、完整提示词、AI响应、元数据
-                  <br />
-                  最多保留最近 100 条记录，可手动清空
+                  {t('devTools.promptLogsHelp')}
                 </div>
 
                 <TextArea
@@ -284,11 +289,7 @@ export function DevToolsModal({ visible, onClose }: DevToolsModalProps) {
                   value={promptLogText}
                   readOnly
                   rows={20}
-                  placeholder="等待提示词日志输出...
-提示:
-- 执行精翻或批量翻译时会自动记录
-- 包含完整的输入提示词和AI响应
-- 便于调试和优化翻译质量"
+                  placeholder={t('devTools.promptLogsEmpty')}
                   style={{
                     fontFamily: 'Consolas, Monaco, "Courier New", monospace',
                     fontSize: '12px',
@@ -307,9 +308,13 @@ export function DevToolsModal({ visible, onClose }: DevToolsModalProps) {
                     justifyContent: 'space-between',
                   }}
                 >
-                  <span>日志行数: {promptLogText.split('\n').filter((l) => l.trim()).length}</span>
-                  <span>字符数: {promptLogText.length}</span>
-                  <span>最后更新: {new Date().toLocaleTimeString()}</span>
+                  <span>
+                    {t('devTools.linesCount', {
+                      count: promptLogText.split('\n').filter((l) => l.trim()).length,
+                    })}
+                  </span>
+                  <span>{t('devTools.charsCount', { count: promptLogText.length })}</span>
+                  <span>{t('devTools.lastUpdate', { time: formatTime() })}</span>
                 </div>
               </div>
             ),

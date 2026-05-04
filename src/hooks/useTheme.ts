@@ -1,5 +1,4 @@
 import { useEffect, useMemo } from 'react';
-import { theme as antTheme } from 'antd';
 import { useAppStore } from '../store/useAppStore';
 import { lightTheme, darkTheme, semanticColors } from '../theme/config';
 import { emit } from '@tauri-apps/api/event';
@@ -11,18 +10,33 @@ type Theme = 'light' | 'dark' | 'system';
 
 export const useTheme = () => {
   const themeMode = useAppStore((state) => state.theme);
+  const systemTheme = useAppStore((state) => state.systemTheme);
   const setThemeMode = useAppStore((state) => state.setTheme);
-
-  const getSystemTheme = (): 'light' | 'dark' => {
-    if (typeof window === 'undefined' || !window.matchMedia) {
-      return 'light';
-    }
-    return window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
-  };
+  const setSystemTheme = useAppStore((state) => state.setSystemTheme);
 
   const appliedTheme = useMemo((): 'light' | 'dark' => {
-    return themeMode === 'system' ? getSystemTheme() : themeMode;
-  }, [themeMode]);
+    return themeMode === 'system' ? systemTheme : themeMode;
+  }, [systemTheme, themeMode]);
+
+  useEffect(() => {
+    if (typeof window === 'undefined' || !window.matchMedia) {
+      return;
+    }
+
+    const mediaQuery = window.matchMedia('(prefers-color-scheme: dark)');
+    const syncSystemTheme = (matches: boolean) => {
+      setSystemTheme(matches ? 'dark' : 'light');
+    };
+
+    syncSystemTheme(mediaQuery.matches);
+
+    const handleChange = (event: MediaQueryListEvent) => {
+      syncSystemTheme(event.matches);
+    };
+
+    mediaQuery.addEventListener('change', handleChange);
+    return () => mediaQuery.removeEventListener('change', handleChange);
+  }, [setSystemTheme]);
 
   useEffect(() => {
     if (typeof window === 'undefined') {
@@ -32,49 +46,24 @@ export const useTheme = () => {
     const root = window.document.documentElement;
     const body = window.document.body;
 
-    // 确定实际应用的主题
-    const effectiveTheme = themeMode === 'system' ? getSystemTheme() : themeMode;
+    root.setAttribute('data-theme', appliedTheme);
+    body.setAttribute('data-theme', appliedTheme);
 
-    // 使用 data-theme 属性触发 CSS 变量切换（性能优化）
-    root.setAttribute('data-theme', effectiveTheme);
-    body.setAttribute('data-theme', effectiveTheme);
-
-    // 为兼容性保留 class（某些组件可能依赖）
     root.classList.remove('light', 'dark');
-    root.classList.add(effectiveTheme);
+    root.classList.add(appliedTheme);
 
-    // 本地存储
-    window.localStorage.setItem('theme', themeMode);
-
-    // 发送事件通知
-    emit('theme:changed', { theme: themeMode }).catch((err) => {
+    emit('theme:changed', { theme: themeMode, appliedTheme }).catch((err) => {
       console.error('[useTheme] 发送主题变更事件失败:', err);
     });
 
-    log.debug('主题已切换', { themeMode, effectiveTheme });
+    log.debug('主题已切换', { themeMode, appliedTheme });
   }, [themeMode, appliedTheme]);
 
-  useEffect(() => {
-    if (themeMode !== 'system' || typeof window === 'undefined') {
-      return;
-    }
-
-    const mediaQuery = window.matchMedia('(prefers-color-scheme: dark)');
-    const handleChange = () => {
-      setThemeMode('system');
-    };
-
-    handleChange();
-    mediaQuery.addEventListener('change', handleChange);
-    return () => mediaQuery.removeEventListener('change', handleChange);
-  }, [themeMode, setThemeMode]);
-
-  const { themeConfig, colors, algorithm } = useMemo(() => {
+  const { themeConfig, colors } = useMemo(() => {
     const isDark = appliedTheme === 'dark';
     return {
       themeConfig: isDark ? darkTheme : lightTheme,
       colors: isDark ? semanticColors.dark : semanticColors.light,
-      algorithm: isDark ? antTheme.darkAlgorithm : antTheme.defaultAlgorithm,
     };
   }, [appliedTheme]);
 
@@ -92,7 +81,6 @@ export const useTheme = () => {
     appliedTheme,
     themeConfig,
     colors,
-    algorithm,
     toggleTheme,
     setTheme,
     isDark: appliedTheme === 'dark',

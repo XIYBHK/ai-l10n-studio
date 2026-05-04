@@ -9,6 +9,7 @@ use crate::services::batch_translator::{
 use crate::services::translation_stats::TokenStats;
 
 #[cfg(test)]
+#[allow(clippy::unwrap_used, clippy::expect_used, clippy::clone_on_ref_ptr)]
 mod tests {
     use super::*;
 
@@ -16,7 +17,7 @@ mod tests {
 
     #[test]
     fn test_batch_translator_new() {
-        let translator = BatchTranslator::new("test_key".to_string(), None);
+        let translator = BatchTranslator::new("test_key".to_string(), None, None);
 
         assert!(translator.is_ok());
         let t = translator.unwrap();
@@ -28,6 +29,7 @@ mod tests {
         let translator = BatchTranslator::new(
             "test_key".to_string(),
             Some("https://api.test.com".to_string()),
+            None,
         );
 
         assert!(translator.is_ok());
@@ -35,7 +37,7 @@ mod tests {
 
     #[test]
     fn test_batch_translator_new_with_empty_api_key() {
-        let translator = BatchTranslator::new("".to_string(), None);
+        let translator = BatchTranslator::new("".to_string(), None, None);
 
         // 空 API key 应该也能创建
         assert!(translator.is_ok());
@@ -45,7 +47,7 @@ mod tests {
 
     #[test]
     fn test_get_reports() {
-        let translator = BatchTranslator::new("test_key".to_string(), None).unwrap();
+        let translator = BatchTranslator::new("test_key".to_string(), None, None).unwrap();
 
         let reports = translator.get_reports();
         assert_eq!(reports.len(), 0);
@@ -53,7 +55,7 @@ mod tests {
 
     #[test]
     fn test_get_translation_memory() {
-        let translator = BatchTranslator::new("test_key".to_string(), None).unwrap();
+        let translator = BatchTranslator::new("test_key".to_string(), None, None).unwrap();
 
         let tm = translator.get_translation_memory();
         // 翻译记忆库应该存在（可能包含内置短语）
@@ -209,7 +211,7 @@ mod tests {
     #[test]
     fn test_deduplicate_entries() {
         // 测试去重逻辑（手动模拟）
-        let entries = vec![
+        let entries = [
             POEntry {
                 comments: vec![],
                 msgctxt: String::new(),
@@ -269,7 +271,7 @@ mod tests {
     #[test]
     fn test_deduplicate_all_unique() {
         // 测试全部唯一的情况
-        let entries = vec![
+        let entries = [
             POEntry {
                 comments: vec![],
                 msgctxt: String::new(),
@@ -295,7 +297,7 @@ mod tests {
     #[test]
     fn test_deduplicate_all_duplicates() {
         // 测试全部重复的情况
-        let entries = vec![
+        let entries = [
             POEntry {
                 comments: vec![],
                 msgctxt: String::new(),
@@ -369,7 +371,7 @@ mod tests {
             content.push_str(&format!("msgid \"Text {}\"\nmsgstr \"\"\n\n", i));
         }
 
-        assert!(content.len() > 0);
+        assert!(!content.is_empty());
     }
 
     #[test]
@@ -403,7 +405,7 @@ mod tests {
     #[test]
     fn test_unicode_in_translations() {
         // 测试 Unicode 支持
-        let translations = vec![("你好", "世界"), ("テスト", "日本語")];
+        let translations = [("你好", "世界"), ("テスト", "日本語")];
 
         assert_eq!(translations.len(), 2);
         assert_eq!(translations[0].0, "你好");

@@ -15,9 +15,10 @@
 //! ```rust
 //! use crate::services::batch_translator::BatchTranslator;
 //!
-//! // 创建批量翻译器
+//! // 创建批量翻译器（custom_prompt 由调用方从配置中读取并传入）
 //! let mut translator = BatchTranslator::new(
 //!     "your-api-key".to_string(),
+//!     None,
 //!     None,
 //! )?;
 //!
@@ -159,6 +160,8 @@ impl BatchTranslator {
     ///
     /// - `api_key`: API 密钥
     /// - `base_url`: 可选的自定义 API 地址
+    /// - `custom_prompt`: 可选的自定义系统提示词（由调用方从当前配置读取并传入，
+    ///   避免在此构造一次性的 `ConfigDraft`，保证批量/单条翻译路径读取同一个配置源）
     ///
     /// # 返回
     ///
@@ -170,16 +173,15 @@ impl BatchTranslator {
     /// let translator = BatchTranslator::new(
     ///     "your-api-key".to_string(),
     ///     None,
+    ///     None,
     /// )?;
     /// ```
-    pub fn new(api_key: String, base_url: Option<String>) -> Result<Self, AppError> {
+    pub fn new(
+        api_key: String,
+        base_url: Option<String>,
+        custom_prompt: Option<String>,
+    ) -> Result<Self, AppError> {
         let parser = POParser::new()?;
-
-        // Phase 3: 从配置获取自定义系统提示词
-        use crate::services::ConfigManager;
-        let custom_prompt = ConfigManager::new(None)
-            .ok()
-            .and_then(|manager| manager.get_config().system_prompt.clone());
 
         // Phase 5: 批处理翻译器暂不支持目标语言（可在后续扩展）
         let translator =
@@ -227,7 +229,7 @@ impl BatchTranslator {
                     }
                 }
                 Err(e) => {
-                    eprintln!("翻译文件失败 {}: {}", file_path.display(), e);
+                    log::error!("翻译文件失败 {}: {}", file_path.display(), e);
                     reports.push(Self::create_failed_report(file_path));
                 }
             }
@@ -274,7 +276,7 @@ impl BatchTranslator {
         // 使用翻译记忆库预翻译
         for text in unique_texts {
             tm_queries += 1;
-            // 🔧 修复：BatchTranslator 不支持目标语言，使用 None 降级到兼容模式
+            // 修复：BatchTranslator 不支持目标语言，使用 None 降级到兼容模式
             if let Some(translation) = self.translation_memory.get_translation(text, None) {
                 translations_map.insert(text.clone(), translation);
                 tm_hits += 1;
@@ -310,7 +312,7 @@ impl BatchTranslator {
         // 更新翻译记忆库
         for (original, translation) in &translations_map {
             if is_simple_phrase(original) && translation.len() <= 50 {
-                // 🔧 修复：BatchTranslator 不支持目标语言，使用 None 降级到兼容模式
+                // 修复：BatchTranslator 不支持目标语言，使用 None 降级到兼容模式
                 self.translation_memory.add_translation(
                     original.clone(),
                     translation.clone(),
@@ -528,7 +530,7 @@ impl BatchTranslator {
         }
 
         fs::write(&report_file, content)?;
-        println!("翻译报告已保存到: {}", report_file.display());
+        log::info!("翻译报告已保存到: {}", report_file.display());
 
         Ok(())
     }

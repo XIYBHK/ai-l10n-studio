@@ -32,7 +32,7 @@ jobs:
         run: echo "dir=$(npm config get cache)" >> ${GITHUB_OUTPUT}
 
       - name: Cache npm dependencies
-        uses: actions/cache@v4
+        uses: actions/cache@v5
         id: npm-cache
         with:
           path: ${{ steps.npm-cache-dir.outputs.dir }}
@@ -53,7 +53,7 @@ jobs:
         if: matrix.platform == 'ubuntu-22.04'
         run: |
           sudo apt-get update
-          sudo apt-get install -y libgtk-3-dev libwebkit2gtk-4.0-dev libappindicator3-dev librsvg2-dev patchelf
+          sudo apt-get install -y libgtk-3-dev libwebkit2gtk-4.1-dev libappindicator3-dev librsvg2-dev patchelf libsoup-3.0-dev
 
       - name: Install NSIS (Windows only)
         if: matrix.platform == 'windows-latest'
@@ -84,7 +84,11 @@ jobs:
           New-Item -ItemType Directory -Force -Path release
           Get-ChildItem -Path src-tauri/target/release/bundle/msi -Filter *.msi | Copy-Item -Destination release/
           Get-ChildItem -Path src-tauri/target/release/bundle/nsis -Filter *.exe | Copy-Item -Destination release/
-          Copy-Item src-tauri/target/release/PO-Translator.exe release/PO-Translator-Portable.exe
+          if (Test-Path "src-tauri/target/release/PO-Translator.exe") {
+            Copy-Item src-tauri/target/release/PO-Translator.exe release/PO-Translator-Portable.exe
+          } elseif (Test-Path "src-tauri/target/release/po-translator-gui.exe") {
+            Copy-Item src-tauri/target/release/po-translator-gui.exe release/PO-Translator-Portable.exe
+          }
 
       - name: Prepare release files (macOS)
         if: matrix.platform == 'macos-latest'
@@ -100,7 +104,7 @@ jobs:
           cp src-tauri/target/release/bundle/deb/*.deb release/ || true
 
       - name: Upload release assets
-        uses: softprops/action-gh-release@v2
+        uses: softprops/action-gh-release@v3
         with:
           files: release/*
           draft: true

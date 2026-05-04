@@ -15,7 +15,7 @@ pub fn get_minimax_models() -> Vec<ModelInfo> {
             provider: "MiniMax".to_string(),
             context_window: 204800, // 204K 上下文
             max_output_tokens: 131072,
-            // 💰 USD per 1M tokens
+            // USD per 1M tokens
             input_price: 0.3,
             output_price: 1.2,
             cache_reads_price: None,
@@ -31,7 +31,7 @@ pub fn get_minimax_models() -> Vec<ModelInfo> {
             provider: "MiniMax".to_string(),
             context_window: 196608, // 196K 上下文
             max_output_tokens: 128000,
-            // 💰 USD per 1M tokens
+            // USD per 1M tokens
             input_price: 0.3,
             output_price: 1.2,
             cache_reads_price: None,

@@ -125,11 +125,12 @@ impl TaskGuard {
     }
 
     /// 获取取消令牌
-    #[allow(clippy::expect_used)]
-    pub fn token(&self) -> Arc<tokio_util::sync::CancellationToken> {
+    pub fn token(
+        &self,
+    ) -> Result<Arc<tokio_util::sync::CancellationToken>, crate::error::AppError> {
         get_task_manager()
             .get_task_token(self.id)
-            .expect("任务令牌不存在")
+            .ok_or_else(|| crate::error::AppError::Config(format!("任务令牌不存在: {}", self.id)))
     }
 
     /// 检查是否被取消
@@ -151,6 +152,7 @@ impl Drop for TaskGuard {
 }
 
 #[cfg(test)]
+#[allow(clippy::unwrap_used, clippy::expect_used, clippy::clone_on_ref_ptr)]
 mod tests {
     use super::*;
 

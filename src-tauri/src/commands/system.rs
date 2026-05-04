@@ -89,7 +89,7 @@ pub fn open_log_directory() -> Result<(), String> {
     paths::ensure_dir(&log_dir).map_err(|e| format!("创建日志目录失败: {}", e))?;
 
     open_in_file_manager(&log_dir)?;
-    app_log!("[系统] ✅ 日志目录已打开");
+    app_log!("[系统] 日志目录已打开");
     Ok(())
 }
 
@@ -131,7 +131,7 @@ fn open_in_file_manager(path: &std::path::Path) -> Result<(), String> {
 
 #[tauri::command]
 pub fn get_native_system_theme() -> Result<String, String> {
-    app_log!("[系统主题] 🔍 使用原生API检测系统主题...");
+    app_log!("[系统主题] 使用原生API检测系统主题...");
 
     #[cfg(target_os = "windows")]
     {
@@ -150,7 +150,7 @@ pub fn get_native_system_theme() -> Result<String, String> {
 
     #[cfg(not(any(target_os = "windows", target_os = "macos", target_os = "linux")))]
     {
-        app_log!("[系统主题] ⚠️  不支持的平台，使用默认浅色主题");
+        app_log!("[系统主题] 不支持的平台，使用默认浅色主题");
         Ok("light".to_string())
     }
 }
@@ -175,19 +175,19 @@ fn detect_windows_theme() -> Result<String, String> {
 
             if stdout.contains("AppsUseLightTheme") {
                 if stdout.contains("0x0") || stdout.contains("REG_DWORD    0") {
-                    app_log!("[系统主题] ✅ Windows原生检测: 深色模式");
+                    app_log!("[系统主题] Windows原生检测: 深色模式");
                     Ok("dark".to_string())
                 } else {
-                    app_log!("[系统主题] ✅ Windows原生检测: 浅色模式");
+                    app_log!("[系统主题] Windows原生检测: 浅色模式");
                     Ok("light".to_string())
                 }
             } else {
-                app_log!("[系统主题] ⚠️  无法解析注册表输出，使用默认浅色");
+                app_log!("[系统主题] 无法解析注册表输出，使用默认浅色");
                 Ok("light".to_string())
             }
         }
         Err(e) => {
-            app_log!("[系统主题] ❌ 注册表查询失败: {}", e);
+            app_log!("[系统主题] 注册表查询失败: {}", e);
             Err(format!("Windows注册表查询失败: {}", e))
         }
     }
@@ -209,15 +209,15 @@ fn detect_macos_theme() -> Result<String, String> {
             app_log!("[系统主题] macOS系统主题: {}", stdout);
 
             if stdout.contains("dark") {
-                app_log!("[系统主题] ✅ macOS原生检测: 深色模式");
+                app_log!("[系统主题] macOS原生检测: 深色模式");
                 Ok("dark".to_string())
             } else {
-                app_log!("[系统主题] ✅ macOS原生检测: 浅色模式");
+                app_log!("[系统主题] macOS原生检测: 浅色模式");
                 Ok("light".to_string())
             }
         }
         Err(_) => {
-            app_log!("[系统主题] ✅ macOS原生检测: 浅色模式（默认）");
+            app_log!("[系统主题] macOS原生检测: 浅色模式（默认）");
             Ok("light".to_string())
         }
     }
@@ -239,15 +239,15 @@ fn detect_linux_theme() -> Result<String, String> {
             app_log!("[系统主题] Linux系统主题: {}", stdout);
 
             if stdout.contains("dark") || stdout.contains("adwaita-dark") {
-                app_log!("[系统主题] ✅ Linux原生检测: 深色模式");
+                app_log!("[系统主题] Linux原生检测: 深色模式");
                 Ok("dark".to_string())
             } else {
-                app_log!("[系统主题] ✅ Linux原生检测: 浅色模式");
+                app_log!("[系统主题] Linux原生检测: 浅色模式");
                 Ok("light".to_string())
             }
         }
         Err(e) => {
-            app_log!("[系统主题] ❌ Linux主题检测失败: {}", e);
+            app_log!("[系统主题] Linux主题检测失败: {}", e);
             Err(format!("Linux主题检测失败: {}", e))
         }
     }

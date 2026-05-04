@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { Modal, Table, Button, Space, message, Popconfirm, Tag, Input, Tooltip } from 'antd';
+import { useTranslation } from 'react-i18next';
 import {
   DeleteOutlined,
   EditOutlined,
@@ -12,7 +13,9 @@ import { useTermLibrary } from '../hooks/useTermLibrary';
 import { useCssColors } from '../hooks/useCssColors';
 import { useAppData } from '../hooks/useConfig';
 import { createModuleLogger } from '../utils/logger';
-import { termLibraryCommands } from '../services/commands'; // ✅ 迁移到统一命令层
+import { termLibraryCommands } from '../services/termCommands';
+import { formatDateTime } from '../utils/formatters';
+import { useAppStore } from '../store/useAppStore';
 
 const { TextArea } = Input;
 const log = createModuleLogger('TermLibraryManager');
@@ -28,8 +31,10 @@ interface EditingTerm {
 }
 
 export function TermLibraryManager({ visible, onClose }: TermLibraryManagerProps) {
+  const { t } = useTranslation();
   const { activeAIConfig } = useAppData();
   const { termLibrary: library, refresh, mutate } = useTermLibrary({ enabled: visible });
+  const language = useAppStore((state) => state.language);
   const [loading, setLoading] = useState(false);
   const [editingKey, setEditingKey] = useState<string>('');
   const [editingTerm, setEditingTerm] = useState<EditingTerm | null>(null);
@@ -45,11 +50,11 @@ export function TermLibraryManager({ visible, onClose }: TermLibraryManagerProps
   const handleDelete = async (source: string) => {
     try {
       await termLibraryCommands.removeTerm(source);
-      message.success('术语已删除');
+      message.success(t('messages.termDeleted'));
       await mutate();
     } catch (error) {
       log.logError(error, '删除术语失败');
-      message.error('删除术语失败');
+      message.error(t('errors.termDeleteFailed'));
     }
   };
 
@@ -77,13 +82,13 @@ export function TermLibraryManager({ visible, onClose }: TermLibraryManagerProps
         context: original.context || null,
       });
 
-      message.success('术语已更新');
+      message.success(t('messages.termUpdated'));
       setEditingKey('');
       setEditingTerm(null);
       await mutate();
     } catch (error) {
       log.logError(error, '更新术语失败');
-      message.error('更新术语失败');
+      message.error(t('errors.termUpdateFailed'));
     }
   };
 
@@ -95,7 +100,7 @@ export function TermLibraryManager({ visible, onClose }: TermLibraryManagerProps
 
   const handleGenerateStyleSummary = async () => {
     if (!activeAIConfig) {
-      message.error('请先设置并启用 AI 配置');
+      message.error(t('messages.aiConfigRequired'));
       return;
     }
 
@@ -105,11 +110,15 @@ export function TermLibraryManager({ visible, onClose }: TermLibraryManagerProps
       const summary = await termLibraryCommands.generateStyleSummary();
       const summaryText = typeof summary === 'string' ? summary : String(summary);
       log.info('风格总结生成成功', { summary: summaryText.substring(0, 50) + '...' });
-      message.success('风格总结已生成');
+      message.success(t('messages.styleSummaryGenerated'));
       await mutate();
     } catch (error) {
       log.logError(error, '生成风格总结失败');
-      message.error(`生成失败：${error instanceof Error ? error.message : String(error)}`);
+      message.error(
+        t('errors.generateFailed', {
+          error: error instanceof Error ? error.message : t('errors.unknown'),
+        })
+      );
     } finally {
       setLoading(false);
     }
@@ -188,14 +197,19 @@ export function TermLibraryManager({ visible, onClose }: TermLibraryManagerProps
           </Space>
         ) : (
           <Space size="small">
-            <Button size="small" icon={<EditOutlined />} onClick={() => handleEdit(record)} />
+            <Button
+              size="small"
+              icon={<EditOutlined />}
+              onClick={() => handleEdit(record)}
+              aria-label={t('common.edit')}
+            />
             <Popconfirm
               title="确定删除此术语？"
               onConfirm={() => handleDelete(record.source)}
               okText="确定"
               cancelText="取消"
             >
-              <Button size="small" danger icon={<DeleteOutlined />} />
+              <Button size="small" danger icon={<DeleteOutlined />} aria-label={t('common.delete')} />
             </Popconfirm>
           </Space>
         );
@@ -217,9 +231,9 @@ export function TermLibraryManager({ visible, onClose }: TermLibraryManagerProps
       }
       open={visible}
       onCancel={onClose}
-      width={1000}
+      width={1040}
+      centered
       destroyOnClose={true}
-      mask={false}
       footer={[
         <Button key="refresh" icon={<ReloadOutlined />} onClick={() => refresh()}>
           刷新
@@ -256,7 +270,7 @@ export function TermLibraryManager({ visible, onClose }: TermLibraryManagerProps
             lineHeight: '1.6',
           }}
         >
-          💡 <strong style={{ color: cssColors.textPrimary }}>风格提示词自动生成规则：</strong>
+          <strong style={{ color: cssColors.textPrimary }}>风格提示词自动生成规则：</strong>
           首次添加或每新增5条术语时自动生成，也可随时点击下方按钮手动生成
         </div>
       </div>
@@ -279,7 +293,7 @@ export function TermLibraryManager({ visible, onClose }: TermLibraryManagerProps
               color: cssColors.textPrimary,
             }}
           >
-            📝 当前风格总结 (v{library.style_summary.version})
+            当前风格总结 (v{library.style_summary.version})
           </div>
           <div
             style={{
@@ -298,7 +312,7 @@ export function TermLibraryManager({ visible, onClose }: TermLibraryManagerProps
             }}
           >
             基于 {library.style_summary.based_on_terms} 条术语 · 最后更新:{' '}
-            {new Date(library.style_summary.generated_at).toLocaleString('zh-CN')}
+            {formatDateTime(library.style_summary.generated_at, language)}
           </div>
         </div>
       )}
@@ -314,7 +328,8 @@ export function TermLibraryManager({ visible, onClose }: TermLibraryManagerProps
           showSizeChanger: true,
           showTotal: (total) => `共 ${total} 条术语`,
         }}
-        size="small"
+        size="middle"
+        scroll={{ x: 960 }}
         locale={{
           emptyText: '暂无术语数据',
         }}

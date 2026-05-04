@@ -2,7 +2,7 @@ import { useEffect } from 'react';
 import useSWR from 'swr';
 import { listen } from '@tauri-apps/api/event';
 import type { TermLibrary } from '../types/termLibrary';
-import { termLibraryCommands } from '../services/commands';
+import { termLibraryCommands } from '../services/termCommands';
 
 const KEY = 'term_library';
 
@@ -26,16 +26,22 @@ export function useTermLibrary(options?: UseTermLibraryOptions) {
   useEffect(() => {
     if (!enabled) return;
 
-    let unlisten: (() => void) | undefined;
+    let unlistenFn: (() => void) | null = null;
+    let isActive = true;
 
     listen('translation:after', () => {
-      mutate();
+      if (isActive) mutate();
     }).then((fn) => {
-      unlisten = fn;
+      if (isActive) {
+        unlistenFn = fn;
+      } else {
+        fn();
+      }
     });
 
     return () => {
-      unlisten?.();
+      isActive = false;
+      unlistenFn?.();
     };
   }, [enabled, mutate]);
 

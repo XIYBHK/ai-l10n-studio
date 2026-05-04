@@ -1,17 +1,21 @@
 import { Card, Form, Select, Row, Col } from 'antd';
 import { BgColorsOutlined } from '@ant-design/icons';
 import { useLanguage, useSetLanguageAction } from '../../store';
+import type { Language } from '../../store/useAppStore';
 import { ThemeModeSwitch } from '../ThemeModeSwitch';
 
-interface AppearanceTabProps {}
+const languageOptions: Array<{ value: Language; label: string }> = [
+  { value: 'zh-CN', label: '简体中文' },
+  { value: 'en-US', label: 'English' },
+];
 
-export function AppearanceTab({}: AppearanceTabProps) {
+export function AppearanceTab() {
   const language = useLanguage();
   const setLanguage = useSetLanguageAction();
   const [form] = Form.useForm();
 
-  const handleLanguageChange = (value: string) => {
-    setLanguage(value as any);
+  const handleLanguageChange = (value: Language) => {
+    setLanguage(value);
   };
 
   return (
@@ -40,11 +44,11 @@ export function AppearanceTab({}: AppearanceTabProps) {
               style={{ marginBottom: 0 }}
             >
               <Select value={language} onChange={handleLanguageChange} style={{ minWidth: 0 }}>
-                <Select.Option value="zh-CN">简体中文</Select.Option>
-                <Select.Option value="en-US">English</Select.Option>
-                <Select.Option value="zh-TW">繁體中文</Select.Option>
-                <Select.Option value="ja-JP">日本語</Select.Option>
-                <Select.Option value="ko-KR">한국어</Select.Option>
+                {languageOptions.map((option) => (
+                  <Select.Option key={option.value} value={option.value}>
+                    {option.label}
+                  </Select.Option>
+                ))}
               </Select>
             </Form.Item>
           </Col>

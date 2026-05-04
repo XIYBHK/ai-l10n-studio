@@ -1,5 +1,5 @@
-import { memo, useState, useEffect, CSSProperties } from 'react';
-import { Tooltip, Divider, Typography } from 'antd';
+import { memo, useState, useEffect, useCallback, CSSProperties } from 'react';
+import { Tooltip, Typography } from 'antd';
 import {
   FolderOpenOutlined,
   SaveOutlined,
@@ -18,15 +18,17 @@ import { LanguageSelector } from './LanguageSelector';
 import type { LanguageInfo } from '../types/generated/LanguageInfo';
 import { useAppData } from '../hooks/useConfig';
 import { useSupportedLanguages } from '../hooks/useLanguage';
+import { useTheme } from '../hooks/useTheme';
+import { useSourceLanguage, useTargetLanguage, useSetTargetLanguage } from '../store';
+import { createModuleLogger } from '../utils/logger';
 
 const { Text } = Typography;
 
-// 容器高度常量
-const MENU_HEIGHT = '48px';
-const MENU_PADDING_X = 'var(--space-4)'; // 16px
-const MENU_GAP = 'var(--space-3)'; // 12px
+const log = createModuleLogger('MenuBar');
 
-// ==================== Props Interfaces ====================
+const MENU_HEIGHT = '56px';
+const MENU_PADDING_X = 'var(--space-5)';
+const MENU_GAP = 'var(--space-4)';
 
 interface MenuBarProps {
   onOpenFile: () => void;
@@ -37,11 +39,6 @@ interface MenuBarProps {
   onDevTools?: () => void;
   isTranslating: boolean;
   hasEntries: boolean;
-  isDarkMode?: boolean;
-  onThemeToggle?: () => void;
-  sourceLanguage?: string;
-  targetLanguage?: string;
-  onTargetLanguageChange?: (langCode: string, langInfo: LanguageInfo | undefined) => void;
   onCancelTranslation?: () => void;
 }
 
@@ -90,22 +87,16 @@ const LogoSection = memo(function LogoSection({ compact }: LogoSectionProps) {
   return (
     <div
       style={{
-        fontSize: compact ? '20px' : '22px',
-        fontWeight: 800,
+        fontSize: compact ? '18px' : '20px',
+        fontWeight: 700,
         fontFamily: 'var(--display-font)',
-        background: CSS_COLORS.brandPrimary,
-        WebkitBackgroundClip: 'text',
-        WebkitTextFillColor: 'transparent',
-        backgroundClip: 'text',
-        marginRight: 'var(--space-4)',
+        color: CSS_COLORS.brandPrimary,
         display: 'flex',
         alignItems: 'center',
         gap: 'var(--space-2)',
-        letterSpacing: '-0.5px',
+        letterSpacing: '-0.02em',
         flexShrink: 0,
         whiteSpace: 'nowrap',
-        cursor: 'pointer',
-        transition: 'opacity var(--duration-base) ease',
       }}
     >
       <GlobalOutlined
@@ -128,7 +119,15 @@ const FileActions = memo(function FileActions({
 }: FileActionsProps) {
   return (
     <div
-      style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-2)' }}
+      style={{
+        display: 'flex',
+        alignItems: 'center',
+        gap: 'var(--space-2)',
+        padding: 'var(--space-1)',
+        backgroundColor: CSS_COLORS.bgTertiary,
+        border: `1px solid ${CSS_COLORS.borderSecondary}`,
+        borderRadius: 'var(--radius-full)',
+      }}
       role="group"
       aria-label="文件操作"
     >
@@ -175,7 +174,7 @@ const FileActions = memo(function FileActions({
 });
 
 /**
- * 翻译主按钮 - 更突出的视觉层次
+ * 翻译主按钮 - 更突出的视觉层级
  */
 const TranslateAction = memo(function TranslateAction({
   onTranslateAll,
@@ -246,7 +245,7 @@ const LanguageSelectorSection = memo(function LanguageSelectorSection({
         alignItems: 'center',
         backgroundColor: CSS_COLORS.bgTertiary,
         padding: 'var(--space-1) var(--space-3)',
-        borderRadius: 'var(--radius-md)',
+        borderRadius: 'var(--radius-full)',
         border: `1px solid ${CSS_COLORS.borderSecondary}`,
         flexShrink: 0,
         whiteSpace: 'nowrap',
@@ -288,7 +287,15 @@ const SystemActions = memo(function SystemActions({
 }: SystemActionsProps) {
   return (
     <div
-      style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-1)' }}
+      style={{
+        display: 'flex',
+        alignItems: 'center',
+        gap: 'var(--space-1)',
+        padding: 'var(--space-1)',
+        backgroundColor: CSS_COLORS.bgTertiary,
+        border: `1px solid ${CSS_COLORS.borderSecondary}`,
+        borderRadius: 'var(--radius-full)',
+      }}
       role="group"
       aria-label="系统操作"
     >
@@ -299,6 +306,7 @@ const SystemActions = memo(function SystemActions({
             size="small"
             icon={isDarkMode ? <BulbFilled /> : <BulbOutlined />}
             onClick={onThemeToggle}
+            data-testid="menu-theme-toggle"
             aria-label={isDarkMode ? '切换到亮色模式' : '切换到暗色模式'}
             aria-pressed={isDarkMode}
             style={{ color: CSS_COLORS.textSecondary }}
@@ -312,6 +320,7 @@ const SystemActions = memo(function SystemActions({
           size="small"
           icon={<SettingOutlined />}
           onClick={onSettings}
+          data-testid="menu-settings-button"
           aria-label="打开设置"
           style={{ color: CSS_COLORS.textSecondary }}
         />
@@ -345,9 +354,9 @@ const AIConfigPrompt = memo(function AIConfigPrompt({ isDarkMode }: { isDarkMode
         description="请先配置 AI 服务"
         style={{
           padding: 'var(--space-2) var(--space-3)',
-          fontSize: 'var(--font-size-xs)',
-          borderRadius: 'var(--radius-lg)',
-          backgroundColor: isDarkMode ? 'rgba(250, 173, 20, 0.15)' : '#fff7e6',
+          fontSize: 'var(--font-size-sm)',
+          borderRadius: 'var(--radius-full)',
+          backgroundColor: isDarkMode ? 'rgba(250, 173, 20, 0.12)' : 'rgba(250, 173, 20, 0.10)',
           border: `1px solid ${CSS_COLORS.statusNeedsReview}`,
         }}
       />
@@ -379,29 +388,38 @@ export const MenuBar = memo(function MenuBar({
   onDevTools,
   isTranslating,
   hasEntries,
-  isDarkMode = false,
-  onThemeToggle,
-  sourceLanguage,
-  targetLanguage,
-  onTargetLanguageChange,
   onCancelTranslation,
 }: MenuBarProps) {
   const { activeAIConfig } = useAppData();
   const windowWidth = useWindowWidth();
+  const { isDark: isDarkMode, toggleTheme } = useTheme();
+  const sourceLanguage = useSourceLanguage();
+  const targetLanguage = useTargetLanguage();
+  const setTargetLanguage = useSetTargetLanguage();
+
+  const handleTargetLanguageChange = useCallback(
+    (langCode: string, langInfo: LanguageInfo | undefined) => {
+      setTargetLanguage(langCode);
+      if (langInfo) {
+        log.info('切换目标语言', { code: langInfo.code, name: langInfo.display_name });
+      }
+    },
+    [setTargetLanguage]
+  );
 
   // 响应式断点
-  const isCompact = windowWidth < 1024;
-  const isMinimal = windowWidth < 768;
+  const isCompact = windowWidth < 1280;
+  const isMinimal = windowWidth < 900;
 
   const containerStyles: CSSProperties = {
     display: 'flex',
     alignItems: 'center',
     padding: `0 ${MENU_PADDING_X}`,
-    backgroundColor: CSS_COLORS.bgSecondary,
-    borderBottom: `1px solid ${CSS_COLORS.borderPrimary}`,
+    backgroundColor: CSS_COLORS.bgPrimary,
+    borderBottom: `1px solid ${CSS_COLORS.borderSecondary}`,
     gap: MENU_GAP,
     height: MENU_HEIGHT,
-    boxShadow: isDarkMode ? 'none' : '0 1px 2px rgba(0,0,0,0.03)',
+    boxShadow: 'none',
     zIndex: 10,
   };
 
@@ -409,74 +427,32 @@ export const MenuBar = memo(function MenuBar({
   if (isMinimal) {
     return (
       <nav style={containerStyles} aria-label="主菜单">
-        <LogoSection compact />
-
-        <div
-          style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-2)' }}
-          role="group"
-          aria-label="文件操作"
-        >
-          <Tooltip title="打开 PO 文件 (Ctrl+O)">
-            <ActionButton
-              variant="ghost"
-              size="small"
-              icon={<FolderOpenOutlined />}
-              onClick={onOpenFile}
-              aria-label="打开 PO 文件 (Ctrl+O)"
-            />
-          </Tooltip>
-
-          <Tooltip title="保存 (Ctrl+S)">
-            <ActionButton
-              variant="ghost"
-              size="small"
-              icon={<SaveOutlined />}
-              onClick={onSaveFile}
-              disabled={!hasEntries}
-              aria-label={hasEntries ? '保存 (Ctrl+S)' : '保存（请先打开文件）'}
-              aria-disabled={!hasEntries}
-            />
-          </Tooltip>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-3)', minWidth: 0 }}>
+          <LogoSection compact />
+          <FileActions
+            onOpenFile={onOpenFile}
+            onSaveFile={onSaveFile}
+            onSaveAsFile={onSaveAsFile}
+            hasEntries={hasEntries}
+            compact
+          />
         </div>
 
-        <Tooltip
-          title={!activeAIConfig ? '请先配置 AI 服务' : isTranslating ? '停止翻译' : '批量翻译'}
-        >
-          <ActionButton
-            variant={isTranslating ? 'secondary' : 'primary'}
-            size="small"
-            icon={isTranslating ? <StopOutlined /> : <TranslationOutlined />}
-            onClick={isTranslating ? onCancelTranslation : onTranslateAll}
-            disabled={!activeAIConfig || !hasEntries}
-            danger={isTranslating}
-            aria-label={
-              !activeAIConfig
-                ? '批量翻译（请先配置 AI 服务）'
-                : !hasEntries
-                  ? '批量翻译（请先打开文件）'
-                  : isTranslating
-                    ? '停止翻译'
-                    : '批量翻译所有未翻译条目'
-            }
-            aria-disabled={!activeAIConfig || !hasEntries}
-            aria-busy={isTranslating}
+        <div style={{ flex: 1, display: 'flex', justifyContent: 'center' }}>
+          <TranslateAction
+            onTranslateAll={onTranslateAll}
+            isTranslating={isTranslating}
+            hasEntries={hasEntries}
+            hasAIConfig={!!activeAIConfig}
+            onCancelTranslation={onCancelTranslation}
           />
-        </Tooltip>
-
-        <div style={{ flex: 1 }} />
-
-        {!activeAIConfig && (
-          <BulbFilled
-            style={{ color: CSS_COLORS.statusNeedsReview }}
-            aria-label="请先配置 AI 服务"
-          />
-        )}
+        </div>
 
         <SystemActions
           isDarkMode={isDarkMode}
-          onThemeToggle={onThemeToggle}
+          onThemeToggle={toggleTheme}
           onSettings={onSettings}
-          onDevTools={onDevTools}
+          onDevTools={undefined}
         />
       </nav>
     );
@@ -484,64 +460,68 @@ export const MenuBar = memo(function MenuBar({
 
   return (
     <nav style={containerStyles} aria-label="主菜单">
-      {/* Logo */}
-      <LogoSection compact={isCompact} />
+      <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-4)', minWidth: 0 }}>
+        <LogoSection compact={isCompact} />
+        <FileActions
+          onOpenFile={onOpenFile}
+          onSaveFile={onSaveFile}
+          onSaveAsFile={onSaveAsFile}
+          hasEntries={hasEntries}
+          compact={isCompact}
+        />
+      </div>
 
-      {/* 文件操作 */}
-      <FileActions
-        onOpenFile={onOpenFile}
-        onSaveFile={onSaveFile}
-        onSaveAsFile={onSaveAsFile}
-        hasEntries={hasEntries}
-        compact={isCompact}
-      />
-
-      {/* 分隔线 */}
-      <Divider
-        type="vertical"
+      <div
         style={{
-          height: '20px',
-          margin: '0',
-          borderColor: CSS_COLORS.borderSecondary,
+          flex: 1,
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          gap: 'var(--space-3)',
+          minWidth: 0,
         }}
-      />
+      >
+        <TranslateAction
+          onTranslateAll={onTranslateAll}
+          isTranslating={isTranslating}
+          hasEntries={hasEntries}
+          hasAIConfig={!!activeAIConfig}
+          onCancelTranslation={onCancelTranslation}
+        />
 
-      {/* 翻译按钮 */}
-      <TranslateAction
-        onTranslateAll={onTranslateAll}
-        isTranslating={isTranslating}
-        hasEntries={hasEntries}
-        hasAIConfig={!!activeAIConfig}
-        onCancelTranslation={onCancelTranslation}
-      />
+        <LanguageSelectorSection
+          sourceLanguage={sourceLanguage}
+          targetLanguage={targetLanguage}
+          onTargetLanguageChange={handleTargetLanguageChange}
+          hasEntries={hasEntries}
+          isTranslating={isTranslating}
+          compact={isCompact}
+        />
+      </div>
 
-      {/* 语言选择器 */}
-      <LanguageSelectorSection
-        sourceLanguage={sourceLanguage}
-        targetLanguage={targetLanguage}
-        onTargetLanguageChange={onTargetLanguageChange}
-        hasEntries={hasEntries}
-        isTranslating={isTranslating}
-        compact={isCompact}
-      />
+      <div
+        style={{
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'flex-end',
+          gap: 'var(--space-3)',
+          minWidth: 0,
+        }}
+      >
+        {!activeAIConfig && !isCompact && <AIConfigPrompt isDarkMode={isDarkMode} />}
+        {!activeAIConfig && isCompact && (
+          <Tooltip title="请先配置 AI 服务">
+            <BulbFilled style={{ color: CSS_COLORS.statusNeedsReview, fontSize: '16px' }} />
+          </Tooltip>
+        )}
 
-      <div style={{ flex: 1 }} />
-
-      {/* AI配置提示 */}
-      {!activeAIConfig && !isCompact && <AIConfigPrompt isDarkMode={isDarkMode} />}
-      {!activeAIConfig && isCompact && (
-        <Tooltip title="请先配置 AI 服务">
-          <BulbFilled style={{ color: CSS_COLORS.statusNeedsReview, fontSize: '16px' }} />
-        </Tooltip>
-      )}
-
-      {/* 系统操作 */}
-      <SystemActions
-        isDarkMode={isDarkMode}
-        onThemeToggle={onThemeToggle}
-        onSettings={onSettings}
-        onDevTools={onDevTools}
-      />
+        <SystemActions
+          isDarkMode={isDarkMode}
+          onThemeToggle={toggleTheme}
+          onSettings={onSettings}
+          onDevTools={onDevTools}
+        />
+      </div>
     </nav>
   );
 });

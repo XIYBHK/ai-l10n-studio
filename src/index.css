@@ -1,4 +1,5 @@
 :root {
+  color-scheme: light;
   /* 字体系统 */
   --display-font:
     system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI Variable', 'Segoe UI',
@@ -37,8 +38,18 @@
 
   /* 状态颜色 */
   --color-statusUntranslated: #cba6f7;
-  --color-statusNeedsReview: #89b4fa;
+  --color-statusNeedsReview: #fab387;
   --color-statusTranslated: #166534;
+
+  /* 警示色（警告 / 错误） */
+  --color-warning: #fab387;
+  --color-warningBg: rgba(250, 179, 135, 0.15);
+  --color-error: #ed8796;
+  --color-errorBg: rgba(237, 135, 150, 0.15);
+
+  /* 高亮闪烁（使用品牌次要色） */
+  --color-flashGlow: rgba(137, 180, 250, 0.4);
+  --color-flashGlowSoft: rgba(137, 180, 250, 0.3);
 
   /* 交互状态 */
   --color-selectedBg: rgba(203, 166, 247, 0.15);
@@ -65,13 +76,13 @@
   /* ============================================
      设计系统规范 - 字体层级
      ============================================ */
-  --font-size-xs: 11px; /* 辅助文字、标签 */
-  --font-size-sm: 12px; /* 正文、按钮 */
-  --font-size-base: 13px; /* 列表标题、菜单 */
-  --font-size-md: 14px; /* 编辑器正文 */
-  --font-size-lg: 16px; /* 小标题 */
-  --font-size-xl: 20px; /* 标题 */
-  --font-size-2xl: 24px; /* Logo */
+  --font-size-xs: 12px; /* 辅助文字、标签 */
+  --font-size-sm: 13px; /* 正文、按钮 */
+  --font-size-base: 14px; /* 列表标题、菜单 */
+  --font-size-md: 15px; /* 编辑器正文 */
+  --font-size-lg: 18px; /* 小标题 */
+  --font-size-xl: 22px; /* 标题 */
+  --font-size-2xl: 28px; /* Logo */
 
   --font-weight-normal: 400;
   --font-weight-medium: 500;
@@ -121,6 +132,7 @@
    暗色主题 CSS 变量
    ============================================ */
 [data-theme='dark'] {
+  color-scheme: dark;
   --color-bgPrimary: #1e1e2e;
   --color-bgSecondary: #1e1e2e;
   --color-bgTertiary: #313244;
@@ -133,8 +145,18 @@
 
   /* 状态颜色 - 暗色模式更亮 */
   --color-statusUntranslated: #cba6f7;
-  --color-statusNeedsReview: #89b4fa;
+  --color-statusNeedsReview: #fab387;
   --color-statusTranslated: #a6e3a1;
+
+  /* 警示色（暗色模式） */
+  --color-warning: #fab387;
+  --color-warningBg: rgba(250, 179, 135, 0.2);
+  --color-error: #ed8796;
+  --color-errorBg: rgba(237, 135, 150, 0.2);
+
+  /* 高亮闪烁（暗色模式增强） */
+  --color-flashGlow: rgba(137, 180, 250, 0.5);
+  --color-flashGlowSoft: rgba(137, 180, 250, 0.4);
 
   /* 交互状态 - 暗色模式降低透明度 */
   --color-selectedBg: rgba(203, 166, 247, 0.2);
@@ -170,6 +192,8 @@ body {
   min-width: 320px;
   min-height: 100vh;
   /* 移除 flex 布局，由应用组件控制布局 */
+  line-height: 1.5;
+  text-rendering: optimizeLegibility;
 }
 
 h1 {
@@ -188,6 +212,10 @@ button:focus-visible {
   transition-property: background-color, border-color, color;
   transition-duration: var(--duration-base);
   transition-timing-function: var(--ease-out);
+}
+
+.tabular-nums {
+  font-variant-numeric: tabular-nums;
 }
 
 /* 禁用某些元素的过渡动画（性能优化） */

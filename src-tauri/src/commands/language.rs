@@ -6,7 +6,7 @@ use crate::services::language_detector::{
 pub fn detect_text_language(text: String) -> Result<LanguageInfo, String> {
     detect_language(&text).map(|lang| lang.into()).map_err(|e| {
         let error_msg = format!("检测语言失败: {}", e);
-        crate::app_log!("❌ {}", error_msg);
+        crate::app_log!(" {}", error_msg);
         error_msg
     })
 }
@@ -14,7 +14,7 @@ pub fn detect_text_language(text: String) -> Result<LanguageInfo, String> {
 #[tauri::command]
 pub fn get_default_target_lang(source_lang_code: String) -> Result<LanguageInfo, String> {
     let source_lang = Language::from_code(&source_lang_code).ok_or_else(|| {
-        crate::app_log!("❌ [语言检测] 不支持的语言代码: {}", source_lang_code);
+        crate::app_log!("[语言检测] 不支持的语言代码: {}", source_lang_code);
         format!("不支持的语言代码: {}", source_lang_code)
     })?;
 
@@ -22,7 +22,7 @@ pub fn get_default_target_lang(source_lang_code: String) -> Result<LanguageInfo,
     let target_info: LanguageInfo = target_lang.into();
 
     crate::app_log!(
-        "✅ [语言检测] 推荐目标语言: {} ({})",
+        "[语言检测] 推荐目标语言: {} ({})",
         target_info.display_name,
         target_info.code
     );

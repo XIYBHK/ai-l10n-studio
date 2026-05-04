@@ -1,22 +1,26 @@
 import { useState } from 'react';
 import { Card, Form, Switch, Button, message } from 'antd';
 import { BellOutlined } from '@ant-design/icons';
+import { useTranslation } from 'react-i18next';
 import { notificationManager } from '../../utils/notificationManager';
 import { createModuleLogger } from '../../utils/logger';
 import { CSS_COLORS } from '../../hooks/useCssColors';
 
 const log = createModuleLogger('NotificationTab');
 
-interface NotificationTabProps {}
-
 export function NotificationTab() {
+  const { t } = useTranslation();
   const [notificationEnabled, setNotificationEnabled] = useState(notificationManager.isEnabled());
   const [form] = Form.useForm();
 
   function handleNotificationToggle(checked: boolean) {
     try {
       notificationManager.setEnabled(checked);
-      message.success(`通知已${checked ? '启用' : '禁用'}`);
+      message.success(
+        t('messages.notificationToggled', {
+          status: checked ? t('messages.notificationEnabled') : t('messages.notificationDisabled'),
+        })
+      );
       setNotificationEnabled(checked);
       log.info('通知设置已更改', { enabled: checked });
     } catch (error) {
@@ -28,10 +32,10 @@ export function NotificationTab() {
     try {
       const granted = await notificationManager.requestPermission();
       if (granted) {
-        message.success('通知权限已授予');
+        message.success(t('messages.notificationPermissionGranted'));
         log.info('通知权限已授予');
       } else {
-        message.warning('通知权限被拒绝');
+        message.warning(t('messages.notificationPermissionDenied'));
         log.info('通知权限被拒绝');
       }
     } catch (error) {

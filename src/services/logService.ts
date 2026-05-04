@@ -9,7 +9,7 @@
  */
 
 import { create } from 'zustand';
-import { logCommands } from './commands';
+import { logCommands } from './logCommands';
 
 const MAX_LOG_NUM = 1000;
 

@@ -20,8 +20,9 @@ import {
   CheckOutlined,
   ApiOutlined,
 } from '@ant-design/icons';
-import { aiConfigCommands, aiModelCommands, aiProviderCommands } from '../../services/commands';
-import { AIConfig } from '../../types/aiProvider';
+import { useTranslation } from 'react-i18next';
+import { aiConfigCommands, aiModelCommands, aiProviderCommands } from '../../services/aiCommands';
+import type { AIConfig } from '../../types/aiProvider';
 import { createModuleLogger } from '../../utils/logger';
 import { useAIConfigs } from '../../hooks/useConfig';
 import type { ProviderInfo } from '../../types/generated/ProviderInfo';
@@ -49,6 +50,7 @@ interface AIConfigTabProps {
 }
 
 export function AIConfigTab({ onProviderChange }: AIConfigTabProps) {
+  const { t } = useTranslation();
   const [form] = Form.useForm();
   const { configs, active, mutateAll, mutateActive } = useAIConfigs();
   const [activeIndex, setActiveIndex] = useState<number | null>(null);
@@ -63,6 +65,7 @@ export function AIConfigTab({ onProviderChange }: AIConfigTabProps) {
   const providerConfigs: ProviderConfig[] = useMemo(() => {
     return dynamicProviders.map(mapProviderInfoToConfig);
   }, [dynamicProviders]);
+  const isEditingExisting = editingIndex !== null && !isAddingNew;
 
   useEffect(() => {
     setProvidersLoading(true);
@@ -82,9 +85,7 @@ export function AIConfigTab({ onProviderChange }: AIConfigTabProps) {
 
   useEffect(() => {
     if (active) {
-      const idx = configs.findIndex(
-        (c) => c.providerId === active.providerId && c.apiKey === active.apiKey
-      );
+      const idx = configs.findIndex((config) => config.index === active.index);
       setActiveIndex(idx >= 0 ? idx : null);
     } else {
       setActiveIndex(null);
@@ -110,7 +111,7 @@ export function AIConfigTab({ onProviderChange }: AIConfigTabProps) {
       const models = await aiModelCommands.getProviderModels(providerId);
       const modelIds = models.map((m) => m.id);
       setAvailableModels(modelIds);
-      log.info('已加载模型列表', { providerId, count: modelIds.length });
+      log.info('加载动态模型列表', { providerId, count: modelIds.length });
 
       // 触发回调
       onProviderChange?.(providerId);
@@ -120,13 +121,19 @@ export function AIConfigTab({ onProviderChange }: AIConfigTabProps) {
     }
   }
 
-  async function handleTestConnection(values: any) {
+  async function handleTestConnection(values: AIConfig) {
+    const apiKey = values.apiKey?.trim();
+    if (!apiKey) {
+      message.warning(t('messages.reTypeApiKeyBeforeTest'));
+      return;
+    }
+
     setTesting(true);
     try {
       const testConfig: AIConfig = {
         providerId: values.providerId,
-        apiKey: values.apiKey,
-        baseUrl: values.baseUrl || undefined,
+        apiKey,
+        baseUrl: values.baseUrl || null,
         model: values.model,
         proxy: values.proxy?.enabled
           ? {
@@ -141,7 +148,7 @@ export function AIConfigTab({ onProviderChange }: AIConfigTabProps) {
         testConfig.apiKey,
         testConfig.baseUrl || undefined
       );
-      message.success('连接测试成功！');
+      message.success(t('messages.connectionTestSuccess'));
       log.info('连接测试成功', { providerId: values.providerId });
     } catch (error) {
       const errorMsg = error instanceof Error ? error.message : '测试失败';
@@ -165,7 +172,10 @@ export function AIConfigTab({ onProviderChange }: AIConfigTabProps) {
     setEditingIndex(index);
     setIsAddingNew(false);
     form.setFieldsValue({
-      ...config,
+      providerId: config.providerId,
+      baseUrl: config.baseUrl,
+      model: config.model,
+      apiKey: '',
       proxy: config.proxy || { enabled: false, host: '', port: '' },
     });
   }
@@ -177,17 +187,17 @@ export function AIConfigTab({ onProviderChange }: AIConfigTabProps) {
       log.info('[删除] 调用删除命令');
       await aiConfigCommands.delete(String(index));
       log.info('[删除] 命令执行成功');
-      message.success('配置已删除');
+      message.success(t('messages.configDeleted'));
       mutateAll();
       mutateActive();
       log.info('[删除] 配置删除成功', { index });
     } catch (error) {
-      const errorMsg = error instanceof Error ? error.message : '删除失败';
-      message.error(`删除配置失败: ${errorMsg}`);
+      const errorMsg = error instanceof Error ? error.message : t('errors.unknown');
+      message.error(t('errors.configDeleteFailed', { error: errorMsg }));
       log.error('[删除] 删除配置失败', { error, index, total: configs.length });
     } finally {
       setDeletingIndex(null);
-      log.info('[删除] 清除删除状态');
+      log.info('[delete] cleared deleting state');
     }
   }
 
@@ -195,22 +205,28 @@ export function AIConfigTab({ onProviderChange }: AIConfigTabProps) {
     try {
       log.info('设置启用配置', { index, total: configs.length });
       await aiConfigCommands.setActive(String(index));
-      message.success('配置已启用');
+      message.success(t('messages.configEnabled'));
       mutateActive();
       log.info('设置启用配置成功', { index });
     } catch (error) {
-      const errorMsg = error instanceof Error ? error.message : '启用失败';
-      message.error(`启用配置失败: ${errorMsg}`);
+      const errorMsg = error instanceof Error ? error.message : t('errors.unknown');
+      message.error(t('errors.configEnableFailed', { error: errorMsg }));
       log.error('启用配置失败', { error, index, total: configs.length });
     }
   }
 
-  async function handleSave(values: any) {
+  async function handleSave(values: AIConfig) {
     try {
+      const apiKey = values.apiKey?.trim() ?? '';
+      if (isAddingNew && !apiKey) {
+        message.error(t('messages.apiKeyRequired'));
+        return;
+      }
+
       // 确保空字符串转换为 null
       const config: AIConfig = {
         providerId: values.providerId,
-        apiKey: values.apiKey,
+        apiKey,
         baseUrl: values.baseUrl?.trim() || null,
         model: values.model?.trim() || null,
         proxy: values.proxy?.enabled
@@ -226,10 +242,10 @@ export function AIConfigTab({ onProviderChange }: AIConfigTabProps) {
 
       if (isAddingNew) {
         await aiConfigCommands.add(config);
-        message.success('配置已添加');
+        message.success(t('messages.configAdded'));
       } else if (editingIndex !== null) {
         await aiConfigCommands.update(editingIndex, config);
-        message.success('配置已更新');
+        message.success(t('messages.configUpdated'));
       }
 
       setIsAddingNew(false);
@@ -251,7 +267,7 @@ export function AIConfigTab({ onProviderChange }: AIConfigTabProps) {
   }
 
   return (
-    <Col span={24}>
+    <Col span={24} data-testid="ai-config-tab">
       <Card
         title={
           <span>
@@ -296,6 +312,7 @@ export function AIConfigTab({ onProviderChange }: AIConfigTabProps) {
                       }}
                     >
                       <div>模型: {config.model || '(未设置)'}</div>
+                      <div>密钥: {config.apiKeyPreview || '(未设置)'}</div>
                       {config.proxy?.enabled && (
                         <div>
                           代理: {config.proxy.host}:{config.proxy.port}
@@ -318,7 +335,8 @@ export function AIConfigTab({ onProviderChange }: AIConfigTabProps) {
                       type="link"
                       icon={<EditOutlined />}
                       onClick={() => handleEdit(index)}
-                      title="编辑"
+                      title={t('common.edit')}
+                      aria-label={t('common.edit')}
                     />
                     <Popconfirm
                       title="确认删除此配置？"
@@ -332,7 +350,8 @@ export function AIConfigTab({ onProviderChange }: AIConfigTabProps) {
                         type="link"
                         danger
                         icon={<DeleteOutlined />}
-                        title="删除"
+                        title={t('common.delete')}
+                        aria-label={t('common.delete')}
                         loading={deletingIndex === index}
                         disabled={deletingIndex !== null && deletingIndex !== index}
                       />
@@ -358,11 +377,15 @@ export function AIConfigTab({ onProviderChange }: AIConfigTabProps) {
         >
           <Form form={form} layout="vertical" size="small" onFinish={handleSave}>
             <Form.Item
-              label="服务提供商"
+              label="Provider"
               name="providerId"
-              rules={[{ required: true, message: '请选择服务提供商' }]}
+              rules={[{ required: true, message: 'Please select a provider' }]}
             >
-              <Select onChange={handleProviderChange} loading={providersLoading}>
+              <Select
+                data-testid="ai-config-provider"
+                onChange={handleProviderChange}
+                loading={providersLoading}
+              >
                 {providerConfigs.map((p) => (
                   <Select.Option key={p.value} value={p.value}>
                     {p.label}
@@ -374,30 +397,47 @@ export function AIConfigTab({ onProviderChange }: AIConfigTabProps) {
             <Form.Item
               label="API Key"
               name="apiKey"
-              rules={[{ required: true, message: '请输入 API Key' }]}
+              rules={
+                isEditingExisting
+                  ? []
+                  : [{ required: true, whitespace: true, message: 'Please enter an API Key' }]
+              }
+              extra={
+                isEditingExisting
+                  ? 'Leave blank to keep the current key; re-enter it before testing.'
+                  : undefined
+              }
             >
-              <Input.Password placeholder="请输入 API Key" />
+              <Input.Password
+                data-testid="ai-config-api-key"
+                placeholder={
+                  isEditingExisting
+                    ? 'Leave blank to keep the current key'
+                    : 'Please enter an API Key'
+                }
+              />
             </Form.Item>
 
-            <Form.Item label="基础 URL" name="baseUrl">
-              <Input placeholder="可选，留空则使用默认值" />
+            <Form.Item label="Base URL" name="baseUrl">
+              <Input placeholder="Optional, uses the provider default when empty" />
             </Form.Item>
 
             <Form.Item
-              label="模型"
+              label="Model"
               name="model"
-              rules={[{ required: true, message: '请输入或选择模型' }]}
+              rules={[{ required: true, message: 'Please enter or select a model' }]}
               extra={
                 availableModels.length > 0
-                  ? `该供应商支持 ${availableModels.length} 个模型，可从下拉列表选择或手动输入`
-                  : '请输入模型名称'
+                  ? `This provider exposes ${availableModels.length} models; choose one or type manually`
+                  : 'Please enter a model name'
               }
             >
               <AutoComplete
+                data-testid="ai-config-model"
                 placeholder={
                   availableModels.length > 0
-                    ? '从列表选择或手动输入模型名称'
-                    : '例如：gpt-3.5-turbo'
+                    ? 'Select from the list or type a model name'
+                    : 'e.g. gpt-3.5-turbo'
                 }
                 options={availableModels.map((model) => ({ value: model, label: model }))}
                 filterOption={(inputValue, option) =>
@@ -414,6 +454,7 @@ export function AIConfigTab({ onProviderChange }: AIConfigTabProps) {
                 </Button>
                 <Button onClick={handleCancel}>取消</Button>
                 <Button
+                  data-testid="ai-config-test-connection"
                   onClick={() => form.validateFields().then(handleTestConnection)}
                   loading={testing}
                 >
@@ -425,6 +466,7 @@ export function AIConfigTab({ onProviderChange }: AIConfigTabProps) {
         </Card>
       ) : (
         <Button
+          data-testid="ai-config-add-button"
           type="primary"
           icon={<PlusOutlined />}
           onClick={handleAddNew}

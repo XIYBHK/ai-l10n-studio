@@ -21,11 +21,12 @@ export type { TranslationPair } from './generated/TranslationPair';
  * POEntry 类型（前端扩展版本）
  * 合并后端生成的 POEntry 与前端特有的运行时状态字段
  *
- * 注意：在与后端通信时，需要排除 needsReview 和 translationSource 字段
+ * 注意：在与后端通信时，需要排除 needsReview、translationSource 和 justUpdated 字段
  */
 export interface POEntry extends BasePOEntry {
   needsReview?: boolean;
   translationSource?: 'tm' | 'dedup' | 'ai';
+  justUpdated?: boolean;
 }
 
 /**
@@ -43,4 +44,25 @@ export interface MemoryStats {
 export interface TranslationMemory {
   memory: Record<string, string>;
   stats: MemoryStats;
+}
+
+/**
+ * 渐进式上屏队列项
+ */
+export interface TranslationQueueItem {
+  index: number;
+  translation: string;
+  source: 'tm' | 'ai';
+  incrementalStats?: {
+    tmHits?: number;
+    deduplicated?: number;
+    aiTranslated?: number;
+    tmLearned?: number;
+    tokenStats?: {
+      inputTokens: number;
+      outputTokens: number;
+      totalTokens: number;
+      cost: number;
+    };
+  };
 }

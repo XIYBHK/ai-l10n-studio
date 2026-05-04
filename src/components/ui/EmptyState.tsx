@@ -1,4 +1,4 @@
-import React, { CSSProperties } from 'react';
+import React, { CSSProperties, useMemo } from 'react';
 import {
   FileTextOutlined,
   InboxOutlined,
@@ -6,99 +6,27 @@ import {
   FileSearchOutlined,
   KeyOutlined,
 } from '@ant-design/icons';
+import { useTranslation } from 'react-i18next';
 import { CSS_COLORS } from '../../hooks/useCssColors';
 
-/**
- * 空状态类型
- */
 export type EmptyStateType = 'no-file' | 'no-entries' | 'column-empty' | 'default';
 
-/**
- * 快捷键项
- */
 export interface ShortcutItem {
-  /** 快捷键 */
   key: string;
-  /** 功能描述 */
   description: string;
 }
 
-/**
- * EmptyState 组件属性
- */
 export interface EmptyStateProps {
-  /** 空状态类型 */
   type?: EmptyStateType;
-  /** 自定义图标 */
   icon?: React.ReactNode;
-  /** 标题 */
   title?: string;
-  /** 描述 */
   description?: string;
-  /** 操作按钮 */
   action?: React.ReactNode;
-  /** 显示快捷键指南 */
   showShortcuts?: boolean;
-  /** 快捷键列表 */
   shortcuts?: ShortcutItem[];
-  /** 自定义样式 */
   style?: CSSProperties;
 }
 
-/**
- * 默认快捷键列表
- */
-const defaultShortcuts: ShortcutItem[] = [
-  { key: '↑/↓', description: '切换条目' },
-  { key: 'Enter', description: '确认编辑' },
-  { key: 'Tab', description: '下一个字段' },
-  { key: 'Esc', description: '取消编辑' },
-];
-
-/**
- * 预定义的空状态配置
- */
-const emptyStateConfig: Record<
-  EmptyStateType,
-  { icon: React.ReactNode; title: string; description: string }
-> = {
-  'no-file': {
-    icon: <FileTextOutlined />,
-    title: '未选择文件',
-    description: '请在左侧文件列表中选择一个本地化文件开始编辑',
-  },
-  'no-entries': {
-    icon: <InboxOutlined />,
-    title: '暂无条目',
-    description: '当前文件没有可显示的翻译条目',
-  },
-  'column-empty': {
-    icon: <DatabaseOutlined />,
-    title: '该列暂无数据',
-    description: '选择其他列或添加新的翻译内容',
-  },
-  default: {
-    icon: <FileSearchOutlined />,
-    title: '暂无数据',
-    description: '当前没有可显示的内容',
-  },
-};
-
-/**
- * 空状态组件（增强版）
- *
- * 用于展示空状态界面，支持多种预设类型、自定义图标、标题、描述和操作按钮。
- * 可选显示快捷键指南面板。
- *
- * @example
- * ```tsx
- * <EmptyState
- *   type="no-file"
- *   action={<Button>打开文件</Button>}
- *   showShortcuts
- * />
- * ```
- */
 export const EmptyState: React.FC<EmptyStateProps> = ({
   type = 'default',
   icon,
@@ -106,13 +34,52 @@ export const EmptyState: React.FC<EmptyStateProps> = ({
   description,
   action,
   showShortcuts = false,
-  shortcuts = defaultShortcuts,
+  shortcuts,
   style,
 }) => {
-  const config = emptyStateConfig[type];
-  const displayIcon = icon || config.icon;
-  const displayTitle = title || config.title;
-  const displayDescription = description || config.description;
+  const { t } = useTranslation();
+
+  const config = useMemo<Record<EmptyStateType, { icon: React.ReactNode; title: string; description: string }>>(
+    () => ({
+      'no-file': {
+        icon: <FileTextOutlined />,
+        title: t('emptyState.title.noFile'),
+        description: t('emptyState.description.noFile'),
+      },
+      'no-entries': {
+        icon: <InboxOutlined />,
+        title: t('emptyState.title.noEntries'),
+        description: t('emptyState.description.noEntries'),
+      },
+      'column-empty': {
+        icon: <DatabaseOutlined />,
+        title: t('emptyState.title.columnEmpty'),
+        description: t('emptyState.description.columnEmpty'),
+      },
+      default: {
+        icon: <FileSearchOutlined />,
+        title: t('emptyState.title.default'),
+        description: t('emptyState.description.default'),
+      },
+    }),
+    [t]
+  );
+
+  const defaultShortcuts = useMemo<ShortcutItem[]>(
+    () => [
+      { key: '↑/↓', description: t('emptyState.shortcuts.switchEntry') },
+      { key: 'Enter', description: t('emptyState.shortcuts.confirmEdit') },
+      { key: 'Tab', description: t('emptyState.shortcuts.nextField') },
+      { key: 'Esc', description: t('emptyState.shortcuts.cancelEdit') },
+    ],
+    [t]
+  );
+
+  const current = config[type];
+  const displayIcon = icon || current.icon;
+  const displayTitle = title || current.title;
+  const displayDescription = description || current.description;
+  const displayShortcuts = shortcuts || defaultShortcuts;
 
   const containerStyles: CSSProperties = {
     display: 'flex',
@@ -202,10 +169,10 @@ export const EmptyState: React.FC<EmptyStateProps> = ({
         <div style={shortcutsContainerStyles}>
           <div style={shortcutsHeaderStyles}>
             <KeyOutlined />
-            <span>快捷键指南</span>
+            <span>{t('emptyState.shortcuts.header')}</span>
           </div>
           <div style={shortcutsListStyles}>
-            {shortcuts.map((shortcut, index) => (
+            {displayShortcuts.map((shortcut, index) => (
               <React.Fragment key={index}>
                 <span style={shortcutKeyStyles}>{shortcut.key}</span>
                 <span style={shortcutDescStyles}>{shortcut.description}</span>

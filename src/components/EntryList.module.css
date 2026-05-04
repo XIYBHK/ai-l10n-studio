@@ -222,6 +222,32 @@
   background-color: var(--color-hoverBg);
 }
 
+.virtualItem.justUpdated {
+  animation: highlight-flash 0.5s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+@keyframes highlight-flash {
+  0% {
+    background-color: var(--color-activeBg);
+    transform: translateX(0) scale(1);
+    box-shadow: 0 0 0 0 var(--color-flashGlow);
+  }
+  25% {
+    background-color: var(--color-activeBg);
+    transform: translateX(4px) scale(1.01);
+    box-shadow: 0 0 12px 2px var(--color-flashGlowSoft);
+  }
+  50% {
+    background-color: var(--color-selectedBg);
+    transform: translateX(2px) scale(1.005);
+  }
+  100% {
+    background-color: transparent;
+    transform: translateX(0) scale(1);
+    box-shadow: 0 0 0 0 transparent;
+  }
+}
+
 /* 焦点样式 - 无障碍支持 */
 .virtualItem:focus-visible {
   outline: 2px solid var(--color-brandPrimary);

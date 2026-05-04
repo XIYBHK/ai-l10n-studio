@@ -1,5 +1,6 @@
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect, useMemo, useDeferredValue } from 'react';
 import { Modal, Table, Input, Button, message, Space, Popconfirm, Tag } from 'antd';
+import { useTranslation } from 'react-i18next';
 import {
   DeleteOutlined,
   PlusOutlined,
@@ -10,11 +11,12 @@ import {
 } from '@ant-design/icons';
 import { save, open } from '@tauri-apps/plugin-dialog';
 import { writeTextFile, readTextFile } from '@tauri-apps/plugin-fs';
-import { translationMemoryCommands } from '../services/commands';
+import { translationMemoryCommands } from '../services/termCommands';
 import { createModuleLogger } from '../utils/logger';
 import { useTranslationMemory } from '../hooks/useTranslationMemory';
 import { useSupportedLanguages } from '../hooks/useLanguage';
 import { useStatsStore } from '../store';
+import type { TranslationMemory } from '../types/tauri';
 
 const log = createModuleLogger('MemoryManager');
 
@@ -32,16 +34,26 @@ const buildMemoryKey = (source: string, language?: string): string => {
   return source;
 };
 
+const isTranslationMemory = (value: unknown): value is TranslationMemory => {
+  if (typeof value !== 'object' || value === null || !('memory' in value)) {
+    return false;
+  }
+
+  const memory = (value as { memory: unknown }).memory;
+  return typeof memory === 'object' && memory !== null;
+};
+
 interface MemoryManagerProps {
   visible: boolean;
   onClose: () => void;
 }
 
 export function MemoryManager({ visible, onClose }: MemoryManagerProps) {
+  const { t } = useTranslation();
   const [memories, setMemories] = useState<MemoryEntry[]>([]);
   const [loading, setLoading] = useState(false);
   const { tm, isLoading: loadingTM, mutate } = useTranslationMemory();
-  const { languages } = useSupportedLanguages(); // 🔧 从后端动态获取语言列表
+  const { languages } = useSupportedLanguages(); // 从后端动态获取语言列表
   const [searchText, setSearchText] = useState('');
   const [newSource, setNewSource] = useState('');
   const [newTarget, setNewTarget] = useState('');
@@ -73,6 +85,17 @@ export function MemoryManager({ visible, onClose }: MemoryManagerProps) {
     [languageConfig]
   );
 
+  const entriesFromMemory = (memory: TranslationMemory): MemoryEntry[] =>
+    Object.entries(memory.memory).map(([memoryKey, target], index) => {
+      const { source, language } = parseMemoryKey(memoryKey);
+      return {
+        key: `${index}`,
+        source,
+        target,
+        language,
+      };
+    });
+
   useEffect(() => {
     if (visible) {
       mutate();
@@ -82,29 +105,18 @@ export function MemoryManager({ visible, onClose }: MemoryManagerProps) {
 
   useEffect(() => {
     if (visible) {
-      if (tm && (tm as any).memory) {
-        const entries: MemoryEntry[] = Object.entries((tm as any).memory).map(
-          ([memoryKey, target], index) => {
-            const { source, language } = parseMemoryKey(memoryKey);
-            return {
-              key: `${index}`,
-              source,
-              target: target as string,
-              language,
-            };
-          }
-        );
+      if (tm) {
+        const entries = entriesFromMemory(tm);
         setMemories(entries);
         log.info('记忆库加载成功', { count: entries.length });
       } else if (!loadingTM) {
         setMemories([]);
       }
     }
-  }, [visible, tm, loadingTM]);
+  }, [visible, tm, loadingTM, parseMemoryKey]);
 
   useEffect(() => {
     let rafId: number | null = null;
-    let lastWidth = window.innerWidth;
 
     const updateTableHeight = () => {
       const windowHeight = window.innerHeight;
@@ -116,7 +128,6 @@ export function MemoryManager({ visible, onClose }: MemoryManagerProps) {
         modalContentHeight - operationAreaHeight - paginationHeight
       );
       setTableHeight(newTableHeight);
-      lastWidth = window.innerWidth;
     };
 
     const handleResize = () => {
@@ -157,7 +168,7 @@ export function MemoryManager({ visible, onClose }: MemoryManagerProps) {
         last_updated: new Date().toISOString(),
       });
 
-      message.success('记忆库已保存');
+      message.success(t('messages.memorySaved'));
       await mutate();
       onClose();
     } catch (error) {
@@ -191,13 +202,14 @@ export function MemoryManager({ visible, onClose }: MemoryManagerProps) {
 
       await mutate(freshTM, false);
 
+      // getState() 为非响应式调用：此处只需读取当前值以执行一次性重置，不需要订阅变化
       const { cumulativeStats, setCumulativeStats } = useStatsStore.getState();
       setCumulativeStats({
         ...cumulativeStats,
         tm_learned: 0,
       });
 
-      message.success('已清空所有记忆');
+      message.success(t('messages.memoryCleared'));
     } catch (error) {
       log.logError(error, '清空记忆库失败');
       await mutate();
@@ -218,26 +230,20 @@ export function MemoryManager({ visible, onClose }: MemoryManagerProps) {
 
       await mutate(freshTM, false);
 
-      if (freshTM && (freshTM as any).memory) {
-        const entries: MemoryEntry[] = Object.entries((freshTM as any).memory).map(
-          ([memoryKey, target], index) => {
-            const { source, language } = parseMemoryKey(memoryKey);
-            return {
-              key: `${index}`,
-              source,
-              target: target as string,
-              language,
-            };
-          }
-        );
+      if (freshTM) {
+        const entries = entriesFromMemory(freshTM);
         setMemories(entries);
         log.info('记忆库界面已更新', { count: entries.length });
       }
 
-      message.success(`已加载内置词库，新增 ${addedCount} 条短语`);
+      message.success(t('messages.builtinLoaded', { count: addedCount }));
     } catch (error) {
       log.logError(error, '加载内置词库失败');
-      message.error(`加载失败: ${error instanceof Error ? error.message : '未知错误'}`);
+      message.error(
+        t('errors.loadFailed', {
+          error: error instanceof Error ? error.message : t('errors.unknown'),
+        })
+      );
     } finally {
       setLoading(false);
     }
@@ -272,7 +278,7 @@ export function MemoryManager({ visible, onClose }: MemoryManagerProps) {
         };
 
         await writeTextFile(filePath, JSON.stringify(exportData, null, 2));
-        message.success('记忆库已导出');
+        message.success(t('messages.memoryExported'));
       }
     } catch (error) {
       log.logError(error, '导出记忆库失败');
@@ -293,22 +299,12 @@ export function MemoryManager({ visible, onClose }: MemoryManagerProps) {
 
       if (filePath && typeof filePath === 'string') {
         const content = await readTextFile(filePath);
-        const data = JSON.parse(content);
+        const data: unknown = JSON.parse(content);
 
-        if (data.memory) {
-          const entries: MemoryEntry[] = Object.entries(data.memory).map(
-            ([memoryKey, target], index) => {
-              const { source, language } = parseMemoryKey(memoryKey);
-              return {
-                key: `${index}`,
-                source,
-                target: target as string,
-                language,
-              };
-            }
-          );
+        if (isTranslationMemory(data)) {
+          const entries = entriesFromMemory(data);
           setMemories(entries);
-          message.success(`已导入 ${entries.length} 条记忆`);
+          message.success(t('messages.memoryImported', { count: entries.length }));
         }
       }
     } catch (error) {
@@ -318,7 +314,7 @@ export function MemoryManager({ visible, onClose }: MemoryManagerProps) {
 
   const handleAdd = () => {
     if (!newSource || !newTarget) {
-      message.warning('请输入原文和译文');
+      message.warning(t('messages.requireSourceAndTarget'));
       return;
     }
 
@@ -331,7 +327,7 @@ export function MemoryManager({ visible, onClose }: MemoryManagerProps) {
     setMemories([...memories, newEntry]);
     setNewSource('');
     setNewTarget('');
-    message.success('已添加');
+    message.success(t('messages.entryAdded'));
   };
 
   const handleEdit = (key: string, field: 'source' | 'target', value: string) => {
@@ -340,11 +336,15 @@ export function MemoryManager({ visible, onClose }: MemoryManagerProps) {
     );
   };
 
-  const filteredMemories = memories.filter(
-    (entry) =>
-      entry.source.toLowerCase().includes(searchText.toLowerCase()) ||
-      entry.target.toLowerCase().includes(searchText.toLowerCase())
-  );
+  const deferredSearchText = useDeferredValue(searchText);
+  const filteredMemories = useMemo(() => {
+    const lower = deferredSearchText.toLowerCase();
+    if (!lower) return memories;
+    return memories.filter(
+      (entry) =>
+        entry.source.toLowerCase().includes(lower) || entry.target.toLowerCase().includes(lower)
+    );
+  }, [memories, deferredSearchText]);
 
   const columns = [
     {
@@ -393,7 +393,7 @@ export function MemoryManager({ visible, onClose }: MemoryManagerProps) {
       title: '操作',
       key: 'action',
       width: '15%',
-      render: (_: any, record: MemoryEntry) => (
+      render: (_: unknown, record: MemoryEntry) => (
         <Popconfirm
           title="确定删除这条记忆吗？"
           onConfirm={() => handleDelete(record.key)}
@@ -414,12 +414,12 @@ export function MemoryManager({ visible, onClose }: MemoryManagerProps) {
       open={visible}
       onCancel={onClose}
       onOk={handleSave}
-      width={900}
+      width={960}
+      centered
       okText="保存"
       cancelText="取消"
       confirmLoading={loading}
       destroyOnClose
-      mask={false}
       style={{ top: 20 }}
       styles={{
         body: {
@@ -460,7 +460,7 @@ export function MemoryManager({ visible, onClose }: MemoryManagerProps) {
         </Space>
 
         <Input
-          placeholder="搜索原文或译文..."
+          placeholder="搜索原文或译文…"
           prefix={<SearchOutlined />}
           value={searchText}
           onChange={(e) => setSearchText(e.target.value)}
@@ -490,14 +490,14 @@ export function MemoryManager({ visible, onClose }: MemoryManagerProps) {
         columns={columns}
         dataSource={filteredMemories}
         loading={loading}
-        size="small"
+        size="middle"
         pagination={{
           pageSize: 10,
           showSizeChanger: true,
           showTotal: (total) => `共 ${total} 条记忆`,
           position: ['bottomCenter'],
         }}
-        scroll={{ y: tableHeight }}
+        scroll={{ x: 900, y: tableHeight }}
       />
     </Modal>
   );

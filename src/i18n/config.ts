@@ -122,7 +122,7 @@ export async function getInitialLanguage(): Promise<string> {
  * 预加载主要语言，避免动态导入延迟
  */
 export async function changeLanguage(language: string): Promise<void> {
-  // 💡 优化：预加载的语言直接切换，未预加载的懒加载
+  // 优化：预加载的语言直接切换，未预加载的懒加载
   if (!i18n.hasResourceBundle(language, 'translation')) {
     console.log('[i18n] Loading language resources:', language);
     const resources = await loadLanguage(language);
@@ -139,18 +139,18 @@ export async function changeLanguage(language: string): Promise<void> {
  */
 async function preloadLanguageResources(): Promise<void> {
   try {
-    // 💡 优化：预加载主要语言（zh-CN 和 en-US）
+    // 优化：预加载主要语言（zh-CN 和 en-US）
     const primaryLanguages = ['zh-CN', 'en-US'];
 
-    console.log('[i18n] 🚀 开始预加载主要语言资源...');
+    console.log('[i18n] 开始预加载主要语言资源...');
 
     for (const lang of primaryLanguages) {
       try {
         const resources = await loadLanguage(lang);
         i18n.addResourceBundle(lang, 'translation', resources);
-        console.log(`[i18n] ✅ 已预加载: ${lang}`);
+        console.log(`[i18n] 已预加载: ${lang}`);
       } catch (error) {
-        console.warn(`[i18n] ⚠️ 预加载失败: ${lang}`, error);
+        console.warn(`[i18n] 预加载失败: ${lang}`, error);
       }
     }
   } catch (error) {

@@ -7,19 +7,25 @@
  * 2. 使用 O(1) 索引查找替代 O(n) indexOf
  * 3. 移除不必要的 useCallback
  * 4. 修复 Tauri 事件监听的竞态条件
+ * 5. 实现渐进式上屏队列机制（0.33秒间隔）
  */
 
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef, startTransition } from 'react';
 import { listen } from '@tauri-apps/api/event';
 import { message as msg } from 'antd';
+import { useTranslation } from 'react-i18next';
 import { useChannelTranslation } from './useChannelTranslation';
 import {
   useEntries,
   useCurrentEntry,
   useCurrentFilePath,
+  useSourceLanguage,
+  useTargetLanguage,
   useSetEntries,
   useSetCurrentEntry,
   useSetCurrentFilePath,
+  useSetSourceLanguage,
+  useSetTargetLanguage,
   useUpdateEntry,
   useGetEntryIndex,
   useIsTranslating,
@@ -31,29 +37,27 @@ import {
   useUpdateCumulativeStatsAction,
 } from '../store';
 import { useAsync } from './useAsync';
-import { POEntry, TranslationStats } from '../types/tauri';
-import type { LanguageInfo } from '../types/generated/LanguageInfo';
-import {
-  poFileCommands,
-  dialogCommands,
-  i18nCommands,
-  translatorCommands,
-} from '../services/commands';
+import { POEntry, TranslationStats, TranslationQueueItem } from '../types/tauri';
+import { poFileCommands, dialogCommands } from '../services/fileCommands';
+import { i18nCommands, translatorCommands } from '../services/translationCommands';
 import { createModuleLogger } from '../utils/logger';
 
 const log = createModuleLogger('useTranslationFlow');
 
 export function useTranslationFlow() {
-  // Store 状态 - 使用原子化 hooks
+  const { t } = useTranslation();
   const entries = useEntries();
   const currentEntry = useCurrentEntry();
   const currentFilePath = useCurrentFilePath();
   const isTranslating = useIsTranslating();
+  const sourceLanguage = useSourceLanguage();
+  const targetLanguage = useTargetLanguage();
 
-  // Actions
   const setEntries = useSetEntries();
   const setCurrentEntry = useSetCurrentEntry();
   const setCurrentFilePath = useSetCurrentFilePath();
+  const setSourceLanguage = useSetSourceLanguage();
+  const setTargetLanguage = useSetTargetLanguage();
   const updateEntry = useUpdateEntry();
   const getEntryIndex = useGetEntryIndex();
   const setTranslating = useSetTranslating();
@@ -63,19 +67,112 @@ export function useTranslationFlow() {
   const updateSessionStats = useUpdateSessionStats();
   const updateCumulativeStats = useUpdateCumulativeStatsAction();
 
-  // UI 状态
   const [translationStats, setTranslationStats] = useState<TranslationStats | null>(null);
-  const [sourceLanguage, setSourceLanguage] = useState<string>('');
-  const [targetLanguage, setTargetLanguage] = useState<string>('zh-CN');
+
+  // 渐进式上屏队列
+  const updateQueue = useRef<TranslationQueueItem[]>([]);
+  const isProcessingQueue = useRef(false);
+  const queueTimerRef = useRef<number | null>(null);
 
   // Hooks
   const { execute: parsePOFile } = useAsync(poFileCommands.parse);
-  const channelTranslation = useChannelTranslation();
+  // 解构出稳定的函数引用，避免把整个 channelTranslation 对象放进 useCallback deps
+  const { translateBatch, cancelTranslation: cancelBatchTranslation } = useChannelTranslation();
 
   useEffect(() => {
     resetSessionStats();
-    log.info('🔄 翻译流程初始化，会话统计已重置');
+    log.info('翻译流程初始化，会话统计已重置');
   }, [resetSessionStats]);
+
+  // 队列消费器 - 自适应间隔
+  const processUpdateQueue = useCallback(() => {
+    if (isProcessingQueue.current || updateQueue.current.length === 0) return;
+
+    isProcessingQueue.current = true;
+
+    const processNext = () => {
+      const item = updateQueue.current.shift();
+      if (!item) {
+        isProcessingQueue.current = false;
+        return;
+      }
+
+      // 更新条目并标记为刚更新（触发动画）
+      updateEntry(item.index, {
+        msgstr: item.translation,
+        needsReview: item.source === 'ai',
+        justUpdated: true,
+      });
+
+      // 500ms 后移除高亮标记（动画完成）
+      setTimeout(() => {
+        updateEntry(item.index, { justUpdated: false });
+      }, 500);
+
+      // 刷新统计（如果有增量统计）
+      if (item.incrementalStats) {
+        const stats: TranslationStats = {
+          total: 1,
+          tm_hits: item.incrementalStats.tmHits || 0,
+          deduplicated: item.incrementalStats.deduplicated || 0,
+          ai_translated: item.incrementalStats.aiTranslated || 0,
+          tm_learned: item.incrementalStats.tmLearned || 0,
+          token_stats: {
+            input_tokens: item.incrementalStats.tokenStats?.inputTokens || 0,
+            output_tokens: item.incrementalStats.tokenStats?.outputTokens || 0,
+            total_tokens: item.incrementalStats.tokenStats?.totalTokens || 0,
+            cost: item.incrementalStats.tokenStats?.cost || 0,
+          },
+        };
+        updateSessionStats(stats);
+      }
+
+      // 自适应间隔：队列越长，间隔越短
+      if (updateQueue.current.length > 0) {
+        const queueLength = updateQueue.current.length;
+        let interval: number;
+
+        if (queueLength > 100) {
+          interval = 50; // 超过100条：50ms（快速处理）
+        } else if (queueLength > 50) {
+          interval = 100; // 50-100条：100ms（中速）
+        } else if (queueLength > 20) {
+          interval = 200; // 20-50条：200ms（适中）
+        } else {
+          interval = 300; // 少于20条：300ms（慢速，便于观察）
+        }
+
+        queueTimerRef.current = window.setTimeout(processNext, interval);
+      } else {
+        isProcessingQueue.current = false;
+        log.info('队列处理完成');
+      }
+    };
+
+    processNext();
+  }, [setEntries, updateSessionStats, updateEntry]);
+
+  // 入队函数
+  const enqueueUpdate = useCallback(
+    (item: TranslationQueueItem) => {
+      updateQueue.current.push(item);
+      if (!isProcessingQueue.current) {
+        processUpdateQueue();
+      }
+    },
+    [processUpdateQueue]
+  );
+
+  // 清空队列（切换文件/停止翻译时）
+  const clearQueue = useCallback(() => {
+    updateQueue.current = [];
+    if (queueTimerRef.current) {
+      clearTimeout(queueTimerRef.current);
+      queueTimerRef.current = null;
+    }
+    isProcessingQueue.current = false;
+    log.info('上屏队列已清空');
+  }, []);
 
   // 翻译统计事件监听 - 修复竞态条件
   useEffect(() => {
@@ -86,7 +183,7 @@ export function useTranslationFlow() {
       const unlisten = await listen<{ stats: TranslationStats }>('translation:after', (event) => {
         if (!isActive) return;
         const stats = event.payload.stats;
-        log.info('📊 收到翻译统计', stats);
+        log.info('收到翻译统计', stats);
 
         updateSessionStats(stats);
         updateCumulativeStats(stats);
@@ -99,7 +196,7 @@ export function useTranslationFlow() {
       }
     };
 
-    setupListener();
+    setupListener().catch((err) => log.logError(err, '注册翻译统计监听失败'));
 
     return () => {
       isActive = false;
@@ -122,14 +219,19 @@ export function useTranslationFlow() {
           if (filePath.toLowerCase().endsWith('.po')) {
             try {
               const newEntries = (await parsePOFile(filePath)) as POEntry[];
-              // 使用 getState 获取最新状态
-              setEntries(newEntries);
-              setCurrentFilePath(filePath);
+              startTransition(() => {
+                setEntries(newEntries);
+                setCurrentFilePath(filePath);
+              });
               await detectAndSetLanguages(newEntries);
               log.info('通过拖放导入文件成功', { filePath });
             } catch (error) {
               log.logError(error, '解析拖放文件失败');
-              msg.error(`文件导入失败：${error instanceof Error ? error.message : '未知错误'}`);
+              msg.error(
+                t('errors.importFailed', {
+                  error: error instanceof Error ? error.message : t('errors.unknown'),
+                })
+              );
             }
           }
         }
@@ -142,7 +244,7 @@ export function useTranslationFlow() {
       }
     };
 
-    setupListener();
+    setupListener().catch((err) => log.logError(err, '注册文件拖放监听失败'));
 
     return () => {
       isActive = false;
@@ -177,47 +279,72 @@ export function useTranslationFlow() {
 
   const openFile = async () => {
     try {
+      // 切换文件时清空队列
+      clearQueue();
+
       const filePath = await dialogCommands.openFile();
       if (filePath) {
         const newEntries = (await parsePOFile(filePath)) as POEntry[];
-        setEntries(newEntries);
-        setCurrentFilePath(filePath);
+        startTransition(() => {
+          setEntries(newEntries);
+          setCurrentFilePath(filePath);
+        });
         await detectAndSetLanguages(newEntries);
         log.info('文件加载成功', { filePath, entryCount: newEntries.length });
       }
     } catch (error) {
       log.logError(error, '打开文件失败');
-      msg.error(`打开文件失败：${error instanceof Error ? error.message : '未知错误'}`);
+      msg.error(
+        t('errors.openFailed', {
+          error: error instanceof Error ? error.message : t('errors.unknown'),
+        })
+      );
     }
   };
 
   const saveFile = async () => {
     if (!currentFilePath) {
-      msg.warning('没有打开的文件，请使用"另存为"');
+      msg.warning(t('messages.noFileToSave'));
+      return;
+    }
+    if (isTranslating) {
+      msg.warning(t('messages.translatingCannotSave'));
       return;
     }
     try {
       await poFileCommands.save(currentFilePath, entries);
-      msg.success('保存成功！');
+      msg.success(t('messages.saveSuccess'));
       log.info('文件保存成功', { filePath: currentFilePath });
     } catch (error) {
       log.logError(error, '保存文件失败');
-      msg.error(`保存失败：${error instanceof Error ? error.message : '未知错误'}`);
+      msg.error(
+        t('errors.saveFailed', {
+          error: error instanceof Error ? error.message : t('errors.unknown'),
+        })
+      );
     }
   };
 
   const saveAsFile = async () => {
+    if (isTranslating) {
+      msg.warning(t('messages.translatingCannotSave'));
+      return;
+    }
     try {
       const filePath = await dialogCommands.saveFile();
       if (filePath) {
         await poFileCommands.save(filePath, entries);
         setCurrentFilePath(filePath);
-        msg.success('保存成功！');
+        msg.success(t('messages.saveSuccess'));
         log.info('文件另存为成功', { filePath });
       }
     } catch (error) {
       log.logError(error, '另存为失败');
-      msg.error(`保存失败：${error instanceof Error ? error.message : '未知错误'}`);
+      msg.error(
+        t('errors.saveFailed', {
+          error: error instanceof Error ? error.message : t('errors.unknown'),
+        })
+      );
     }
   };
 
@@ -229,9 +356,9 @@ export function useTranslationFlow() {
       setTranslating(true);
       setProgress(0);
 
-      log.info('🚀 开始翻译', { count: texts.length });
+      log.info('开始翻译', { count: texts.length });
 
-      const result = await channelTranslation.translateBatch(texts, targetLanguage, {
+      const result = await translateBatch(texts, targetLanguage, {
         onProgress: (current, _total, percentage) => {
           setProgress(percentage);
           completedCount = current;
@@ -249,40 +376,48 @@ export function useTranslationFlow() {
             },
           } as TranslationStats;
           setTranslationStats(convertedStats);
+
+          // 批量统计到达后，分配到队列中的每一项作为增量统计
+          const aiQueueItems = updateQueue.current.filter((item) => item.source === 'ai');
+          const queueLength = aiQueueItems.length;
+          if (queueLength > 0) {
+            const incrementalStats = {
+              tmHits: 0,
+              deduplicated: 0,
+              aiTranslated: Math.ceil(stats.ai_translated / queueLength),
+              tmLearned: Math.ceil(stats.tm_learned / queueLength),
+              tokenStats: {
+                inputTokens: Math.ceil(stats.token_stats.prompt_tokens / queueLength),
+                outputTokens: Math.ceil(stats.token_stats.completion_tokens / queueLength),
+                totalTokens: Math.ceil(stats.token_stats.total_tokens / queueLength),
+                cost: stats.token_stats.cost / queueLength,
+              },
+            };
+
+            // 仅为AI翻译项添加增量统计
+            aiQueueItems.forEach((item) => {
+              if (!item.incrementalStats) {
+                item.incrementalStats = incrementalStats;
+              }
+            });
+          }
         },
         onItem: (index, translation) => {
           const entry = entriesToTranslate[index];
-          // ✅ 使用 O(1) 查找替代 O(n) indexOf
           const entryIndex = getEntryIndex(entry);
           if (entryIndex >= 0) {
-            updateEntry(entryIndex, {
-              msgstr: translation,
-              needsReview: true,
+            // 入队而非立即更新
+            enqueueUpdate({
+              index: entryIndex,
+              translation,
+              source: 'ai',
             });
           }
         },
       });
 
-      entriesToTranslate.forEach((entry, localIndex) => {
-        // ✅ 使用 O(1) 查找替代 O(n) indexOf
-        const entryIndex = getEntryIndex(entry);
-        if (entryIndex >= 0 && localIndex < result.translations.length) {
-          const translation = result.translations[localIndex];
-          const source = (result.translation_sources && result.translation_sources[localIndex]) as
-            | 'tm'
-            | 'dedup'
-            | 'ai'
-            | undefined;
-
-          if (translation) {
-            updateEntry(entryIndex, {
-              msgstr: translation,
-              needsReview: true,
-              translationSource: source,
-            });
-          }
-        }
-      });
+      // 注意：由于使用渐进式上屏，不在这里立即更新条目
+      // 所有更新都通过 onItem 回调入队处理
 
       if (result.stats) {
         const finalStats: TranslationStats = {
@@ -299,13 +434,10 @@ export function useTranslationFlow() {
           tm_learned: result.stats.tm_learned || 0,
         };
 
-        updateSessionStats(finalStats);
-        updateCumulativeStats(finalStats);
-
-        log.info('📊 统计已更新', finalStats);
+        log.info('统计已更新', finalStats);
       }
 
-      log.info('✅ 翻译完成', { count: completedCount });
+      log.info('翻译完成', { count: completedCount });
       return true;
     } catch (error) {
       log.logError(error, '翻译失败');
@@ -315,6 +447,8 @@ export function useTranslationFlow() {
     } finally {
       setTranslating(false);
       setProgress(0);
+      // 翻译完成后等待队列处理完毕
+      log.info('翻译完成，等待队列处理', { queueLength: updateQueue.current.length });
     }
   };
 
@@ -339,7 +473,7 @@ export function useTranslationFlow() {
       .filter((e: POEntry | undefined): e is POEntry => e !== undefined && !!e.msgid && !e.msgstr);
 
     if (selectedEntries.length === 0) {
-      msg.info('选中的条目都已翻译');
+      msg.info(t('messages.allSelectedTranslated'));
       return;
     }
 
@@ -353,7 +487,7 @@ export function useTranslationFlow() {
       .map(({ index, entry }) => ({ index, entry: entry as POEntry }));
 
     if (selectedEntries.length === 0) {
-      msg.info('选中的条目中没有待确认的项');
+      msg.info(t('messages.noRefinableSelected'));
       return;
     }
 
@@ -390,23 +524,22 @@ export function useTranslationFlow() {
     }
   };
 
-  // ✅ 移除不必要的 useCallback
+  // 移除不必要的 useCallback
   const handleEntrySelect = (entry: POEntry) => {
     setCurrentEntry(entry);
   };
 
-  // ✅ 移除不必要的 useCallback
+  // 移除不必要的 useCallback
   const handleEntryUpdate = (index: number, updates: Partial<POEntry>) => {
     updateEntry(index, updates);
   };
 
-  // ✅ 移除不必要的 useCallback
-  const handleTargetLanguageChange = (langCode: string, langInfo: LanguageInfo | undefined) => {
-    setTargetLanguage(langCode);
-    if (langInfo) {
-      log.info('切换目标语言', { code: langInfo.code, name: langInfo.display_name });
-    }
-  };
+  // 包装取消翻译，确保清空队列
+  const cancelTranslation = useCallback(() => {
+    clearQueue();
+    cancelBatchTranslation();
+    log.info('翻译已取消，队列已清空');
+  }, [cancelBatchTranslation, clearQueue]);
 
   return {
     entries,
@@ -425,8 +558,7 @@ export function useTranslationFlow() {
     handleContextualRefine,
     handleEntrySelect,
     handleEntryUpdate,
-    handleTargetLanguageChange,
-    cancelTranslation: channelTranslation.cancelTranslation,
+    cancelTranslation,
     resetTranslationStats: () => setTranslationStats(null),
   };
 }

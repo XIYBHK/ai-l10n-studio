@@ -8,7 +8,6 @@ import {
 } from '@ant-design/icons';
 import { Button, Badge } from 'antd';
 import { CSS_COLORS } from '../../hooks/useCssColors';
-import { SectionHeader } from '../ui/SectionHeader';
 
 interface EditorToolbarProps {
   hasUnsavedChanges: boolean;
@@ -155,6 +154,9 @@ export const EditorToolbar: React.FC<EditorToolbarProps> = ({
           <Button
             size="small"
             icon={<CloseOutlined />}
+            onMouseDown={(event) => {
+              event.preventDefault();
+            }}
             onClick={onCancel}
             aria-label="取消修改 (Esc)"
           >

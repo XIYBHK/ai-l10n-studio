@@ -30,7 +30,7 @@ pub struct ModelInfo {
 
     // ========== 定价（USD per million tokens）==========
     //
-    // ⚠️ 重要：所有价格单位统一为 USD per million tokens
+    // 重要：所有价格单位统一为 USD per million tokens
     // 示例：0.15 = $0.15/1M = $0.00015/1K
     /// 输入价格（USD per 1M tokens）
     pub input_price: f64,

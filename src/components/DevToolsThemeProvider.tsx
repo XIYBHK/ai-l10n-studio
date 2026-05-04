@@ -36,12 +36,7 @@ export function DevToolsThemeProvider({ children }: DevToolsThemeProviderProps) 
   }, [themeData.setTheme]);
 
   return (
-    <ConfigProvider
-      theme={{
-        ...themeData.themeConfig,
-        algorithm: themeData.algorithm,
-      }}
-    >
+    <ConfigProvider theme={themeData.themeConfig}>
       <div
         data-theme={themeData.isDark ? 'dark' : 'light'}
         style={{

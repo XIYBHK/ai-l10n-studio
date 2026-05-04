@@ -15,7 +15,7 @@ pub fn get_deepseek_models() -> Vec<ModelInfo> {
             provider: "DeepSeek".to_string(),
             context_window: 128000,
             max_output_tokens: 8192,
-            // 💰 USD per 1M tokens (基于 1 USD = 7.15 CNY)
+            // USD per 1M tokens (基于 1 USD = 7.15 CNY)
             // 性价比之王！官方价格：输入2元，输出3元，缓存0.2元
             input_price: 0.28,              // 2 CNY ≈ $0.28/1M tokens
             output_price: 0.42,             // 3 CNY ≈ $0.42/1M tokens
@@ -32,7 +32,7 @@ pub fn get_deepseek_models() -> Vec<ModelInfo> {
             provider: "DeepSeek".to_string(),
             context_window: 128000,
             max_output_tokens: 128000, // 更新：2025-01-28 (原65536)
-            // 💰 USD per 1M tokens (思考模式，价格同 deepseek-chat)
+            // USD per 1M tokens (思考模式，价格同 deepseek-chat)
             input_price: 0.28,              // 2 CNY ≈ $0.28/1M tokens
             output_price: 0.42,             // 3 CNY ≈ $0.42/1M tokens
             cache_reads_price: Some(0.028), // 0.2 CNY ≈ $0.028/1M tokens
