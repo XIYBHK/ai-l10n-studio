@@ -59,7 +59,10 @@ use ts_rs::TS;
 /// 包含单个 PO 文件的翻译结果和统计信息。
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[cfg_attr(feature = "ts-rs", derive(TS))]
-#[cfg_attr(feature = "ts-rs", ts(export, export_to = "../../src/types/generated/"))]
+#[cfg_attr(
+    feature = "ts-rs",
+    ts(export, export_to = "../../src/types/generated/")
+)]
 pub struct TranslationReport {
     /// 文件路径
     pub file: String,
@@ -86,7 +89,10 @@ pub struct TranslationReport {
 /// 表示一个原文和译文的对应关系。
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[cfg_attr(feature = "ts-rs", derive(TS))]
-#[cfg_attr(feature = "ts-rs", ts(export, export_to = "../../src/types/generated/"))]
+#[cfg_attr(
+    feature = "ts-rs",
+    ts(export, export_to = "../../src/types/generated/")
+)]
 pub struct TranslationPair {
     /// 原文
     pub original: String,
@@ -101,7 +107,10 @@ pub struct TranslationPair {
 /// 记录批量翻译中的去重效果。
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[cfg_attr(feature = "ts-rs", derive(TS))]
-#[cfg_attr(feature = "ts-rs", ts(export, export_to = "../../src/types/generated/"))]
+#[cfg_attr(
+    feature = "ts-rs",
+    ts(export, export_to = "../../src/types/generated/")
+)]
 pub struct DeduplicationStats {
     /// 唯一条目数
     pub unique_entries: usize,
@@ -116,7 +125,10 @@ pub struct DeduplicationStats {
 /// 记录翻译记忆库的使用情况。
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[cfg_attr(feature = "ts-rs", derive(TS))]
-#[cfg_attr(feature = "ts-rs", ts(export, export_to = "../../src/types/generated/"))]
+#[cfg_attr(
+    feature = "ts-rs",
+    ts(export, export_to = "../../src/types/generated/")
+)]
 pub struct TranslationMemoryStats {
     /// 缓存命中次数
     pub cache_hits: usize,

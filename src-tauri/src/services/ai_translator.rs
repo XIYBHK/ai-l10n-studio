@@ -84,7 +84,10 @@ pub use crate::services::prompt_builder::DEFAULT_SYSTEM_PROMPT;
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")] // 序列化时使用 camelCase 命名，与前端保持一致
 #[cfg_attr(feature = "ts-rs", derive(TS))]
-#[cfg_attr(feature = "ts-rs", ts(export, export_to = "../../src/types/generated/"))]
+#[cfg_attr(
+    feature = "ts-rs",
+    ts(export, export_to = "../../src/types/generated/")
+)]
 pub struct ProxyConfig {
     pub host: String,
     pub port: u16,
@@ -123,7 +126,10 @@ pub struct ProxyConfig {
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")] // 序列化时使用 camelCase 命名，与前端保持一致
 #[cfg_attr(feature = "ts-rs", derive(TS))]
-#[cfg_attr(feature = "ts-rs", ts(export, export_to = "../../src/types/generated/"))]
+#[cfg_attr(
+    feature = "ts-rs",
+    ts(export, export_to = "../../src/types/generated/")
+)]
 pub struct AIConfig {
     /// 供应商ID（如 "openai", "deepseek", "moonshot"）
     pub provider_id: String,

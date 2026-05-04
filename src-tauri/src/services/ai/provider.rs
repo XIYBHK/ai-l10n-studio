@@ -51,7 +51,10 @@ pub trait AIProvider: Send + Sync {
 /// 供应商信息结构
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[cfg_attr(feature = "ts-rs", derive(TS))]
-#[cfg_attr(feature = "ts-rs", ts(export, export_to = "../../src/types/generated/"))]
+#[cfg_attr(
+    feature = "ts-rs",
+    ts(export, export_to = "../../src/types/generated/")
+)]
 pub struct ProviderInfo {
     pub id: String,
     pub display_name: String,

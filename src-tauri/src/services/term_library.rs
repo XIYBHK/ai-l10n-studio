@@ -23,7 +23,10 @@ pub struct TermLibrary {
 /// 术语条目
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[cfg_attr(feature = "ts-rs", derive(TS))]
-#[cfg_attr(feature = "ts-rs", ts(export, export_to = "../../src/types/generated/"))]
+#[cfg_attr(
+    feature = "ts-rs",
+    ts(export, export_to = "../../src/types/generated/")
+)]
 pub struct TermEntry {
     /// 原文术语
     pub source: String,
@@ -48,7 +51,10 @@ pub struct TermEntry {
 /// 风格总结
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[cfg_attr(feature = "ts-rs", derive(TS))]
-#[cfg_attr(feature = "ts-rs", ts(export, export_to = "../../src/types/generated/"))]
+#[cfg_attr(
+    feature = "ts-rs",
+    ts(export, export_to = "../../src/types/generated/")
+)]
 pub struct StyleSummary {
     /// 风格提示词文本
     pub prompt: String,

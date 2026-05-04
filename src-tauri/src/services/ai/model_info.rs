@@ -9,7 +9,10 @@ use ts_rs::TS;
 /// 简化原则：跳过推理预算、分层定价等高级特性
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[cfg_attr(feature = "ts-rs", derive(TS))]
-#[cfg_attr(feature = "ts-rs", ts(export, export_to = "../../src/types/generated/"))]
+#[cfg_attr(
+    feature = "ts-rs",
+    ts(export, export_to = "../../src/types/generated/")
+)]
 pub struct ModelInfo {
     // ========== 基础信息 ==========
     /// 模型ID（如 "gpt-4o-mini"）
