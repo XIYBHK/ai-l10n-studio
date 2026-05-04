@@ -31,7 +31,7 @@ use ts_rs::TS;
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 #[cfg_attr(feature = "ts-rs", derive(TS))]
-#[cfg_attr(feature = "ts-rs", ts(export, export_to = "../src/types/generated/"))]
+#[cfg_attr(feature = "ts-rs", ts(export, export_to = "../../src/types/generated/"))]
 pub struct ConfigVersionInfo {
     pub version: u64,
     pub timestamp: String,
@@ -42,7 +42,7 @@ pub struct ConfigVersionInfo {
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 #[cfg_attr(feature = "ts-rs", derive(TS))]
-#[cfg_attr(feature = "ts-rs", ts(export, export_to = "../src/types/generated/"))]
+#[cfg_attr(feature = "ts-rs", ts(export, export_to = "../../src/types/generated/"))]
 pub struct AppConfig {
     pub api_key: String,
     pub provider: String,

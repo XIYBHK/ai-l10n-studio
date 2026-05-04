@@ -4,4 +4,45 @@ import type { TokenStats } from "./TokenStats";
 import type { TranslationMemoryStats } from "./TranslationMemoryStats";
 import type { TranslationPair } from "./TranslationPair";
 
-export interface TranslationReport { file: string, total_entries: number, need_translation: number, translated: number, failed: number, translations: Array<TranslationPair>, token_stats: TokenStats, deduplication: DeduplicationStats | null, tm_stats: TranslationMemoryStats | null, }
+/**
+ * 翻译报告
+ *
+ * 包含单个 PO 文件的翻译结果和统计信息。
+ */
+export type TranslationReport = { 
+/**
+ * 文件路径
+ */
+file: string, 
+/**
+ * 总条目数
+ */
+total_entries: number, 
+/**
+ * 需要翻译的条目数
+ */
+need_translation: number, 
+/**
+ * 翻译成功的条目数
+ */
+translated: number, 
+/**
+ * 翻译失败的条目数
+ */
+failed: number, 
+/**
+ * 翻译对列表
+ */
+translations: Array<TranslationPair>, 
+/**
+ * Token 统计
+ */
+token_stats: TokenStats, 
+/**
+ * 去重统计（可选）
+ */
+deduplication: DeduplicationStats | null, 
+/**
+ * 翻译记忆库统计（可选）
+ */
+tm_stats: TranslationMemoryStats | null, };

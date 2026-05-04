@@ -11,7 +11,7 @@ use ts_rs::TS;
 /// Token 统计信息
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[cfg_attr(feature = "ts-rs", derive(TS))]
-#[cfg_attr(feature = "ts-rs", ts(export, export_to = "../src/types/generated/"))]
+#[cfg_attr(feature = "ts-rs", ts(export, export_to = "../../src/types/generated/"))]
 pub struct TokenStats {
     pub input_tokens: u32,
     pub output_tokens: u32,

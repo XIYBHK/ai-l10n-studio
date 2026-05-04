@@ -13,7 +13,7 @@ use ts_rs::TS;
 /// 批量翻译进度事件
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[cfg_attr(feature = "ts-rs", derive(TS))]
-#[cfg_attr(feature = "ts-rs", ts(export, export_to = "../src/types/generated/"))]
+#[cfg_attr(feature = "ts-rs", ts(export, export_to = "../../src/types/generated/"))]
 pub struct BatchProgressEvent {
     /// 已处理数量
     pub processed: usize,
@@ -86,7 +86,7 @@ impl BatchProgressEvent {
 /// 批量翻译统计事件
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[cfg_attr(feature = "ts-rs", derive(TS))]
-#[cfg_attr(feature = "ts-rs", ts(export, export_to = "../src/types/generated/"))]
+#[cfg_attr(feature = "ts-rs", ts(export, export_to = "../../src/types/generated/"))]
 pub struct BatchStatsEvent {
     /// TM命中数
     pub tm_hits: usize,
@@ -100,7 +100,7 @@ pub struct BatchStatsEvent {
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[cfg_attr(feature = "ts-rs", derive(TS))]
-#[cfg_attr(feature = "ts-rs", ts(export, export_to = "../src/types/generated/"))]
+#[cfg_attr(feature = "ts-rs", ts(export, export_to = "../../src/types/generated/"))]
 pub struct TokenStatsEvent {
     pub prompt_tokens: usize,
     pub completion_tokens: usize,
