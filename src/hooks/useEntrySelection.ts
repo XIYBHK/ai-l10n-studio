@@ -1,4 +1,4 @@
-import { useState, useCallback, useMemo } from 'react';
+import { useState, useCallback } from 'react';
 import { POEntry } from '../types/tauri';
 
 type ColumnType = 'untranslated' | 'needsReview' | 'translated';

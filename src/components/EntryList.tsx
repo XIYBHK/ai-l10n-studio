@@ -2,7 +2,6 @@ import React, { useState, useEffect, useRef, memo, useCallback, useMemo } from '
 import { Progress } from 'antd';
 import { POEntry } from '../types/tauri';
 import { useUpdateEntry } from '../store';
-import { CSS_COLORS } from '../hooks/useCssColors';
 import { createModuleLogger } from '../utils/logger';
 import { announceToScreenReader } from '../utils/accessibility';
 import styles from './EntryList.module.css';

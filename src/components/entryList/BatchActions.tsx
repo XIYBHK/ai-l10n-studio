@@ -1,4 +1,4 @@
-import React, { memo } from 'react';
+import { memo } from 'react';
 import { Button } from 'antd';
 import { CheckOutlined, ThunderboltOutlined } from '@ant-design/icons';
 import { POEntry } from '../../types/tauri';
