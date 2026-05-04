@@ -26,22 +26,22 @@ serde = { version = "1.0", features = ["derive"] }
 serde_json = "1.0"
 tokio = { version = "1.0", features = ["full"] }
 tokio-util = "0.7"  # CancellationToken for task cancellation
-reqwest = { version = "0.12", features = ["json"] }
+reqwest = { version = "0.13", features = ["json"] }
 regex = "1.0"
 uuid = { version = "1.0", features = ["v4"] }
 chrono = { version = "0.4", features = ["serde"] }
 anyhow = "1.0"
-thiserror = "1.0"
+thiserror = "2.0"
 nom = "7.0"
 encoding_rs = "0.8"
 dirs = "5.0"
 indexmap = { version = "2.0", features = ["serde"] }
 lazy_static = "1.4"
-toml = "0.8"  # Phase 3: 插件配置解析
+toml = "1.1"  # Phase 3: 插件配置解析
 # 日志系统
 tracing = "0.1"
 tracing-subscriber = { version = "0.3", features = ["env-filter", "fmt", "time"] }
-console-subscriber = { version = "0.4", optional = true }
+console-subscriber = { version = "0.5", optional = true }
 # Phase 5: 语言检测
 whatlang = "0.16"
 # Phase 6: 系统语言检测
@@ -53,7 +53,7 @@ log = "0.4"                # 日志门面
 dunce = "1.0"              # 路径规范化
 parking_lot = "0.12"       # Draft 配置管理（RwLock）
 # 类型生成自动化
-ts-rs = { version = "7.1", optional = true }
+ts-rs = { version = "12.0", optional = true }
 
 [features]
 # this feature is used for production builds or when `devPath` points to the filesystem

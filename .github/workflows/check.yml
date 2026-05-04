@@ -31,7 +31,7 @@ jobs:
         run: echo "dir=$(npm config get cache)" >> ${GITHUB_OUTPUT}
 
       - name: Cache npm dependencies
-        uses: actions/cache@v4
+        uses: actions/cache@v5
         id: npm-cache
         with:
           path: ${{ steps.npm-cache-dir.outputs.dir }}
@@ -117,6 +117,14 @@ jobs:
       - name: Run Rust tests
         working-directory: ./src-tauri
         run: cargo test --quiet
+
+      - name: Verify ts-rs generated types are in sync
+        working-directory: ./src-tauri
+        run: |
+          cargo test --features ts-rs --quiet
+          # ts-rs 写入 ../src/types/generated/；若仓库副本陈旧即失败
+          cd ..
+          git diff --exit-code -- src/types/generated/
 
       - name: Run Rust clippy
         working-directory: ./src-tauri

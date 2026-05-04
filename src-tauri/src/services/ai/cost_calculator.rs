@@ -9,7 +9,10 @@ use ts_rs::TS;
 /// 提供详细的成本分解，包括缓存节省信息
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[cfg_attr(feature = "ts-rs", derive(TS))]
-#[cfg_attr(feature = "ts-rs", ts(export, export_to = "../src/types/generated/"))]
+#[cfg_attr(
+    feature = "ts-rs",
+    ts(export, export_to = "../../src/types/generated/")
+)]
 pub struct CostBreakdown {
     // ========== Token 统计 ==========
     /// 输入 token 数量（包含缓存）
