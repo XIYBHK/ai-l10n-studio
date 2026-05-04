@@ -2,7 +2,13 @@ import React, { memo } from 'react';
 import { CSS_COLORS } from '../../hooks/useCssColors';
 
 // Token统计卡片组件
-export const TokenCard = memo(function TokenCard({ label, value }: { label: string; value: string }) {
+export const TokenCard = memo(function TokenCard({
+  label,
+  value,
+}: {
+  label: string;
+  value: string;
+}) {
   const containerStyle: React.CSSProperties = {
     textAlign: 'center',
     padding: 'var(--space-2)',
