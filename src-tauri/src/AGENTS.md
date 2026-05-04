@@ -2,13 +2,13 @@
 
 ## OVERVIEW
 
-Tauri 2.x backend (Rust 2024). 39 commands across 9 modules, 15 services, unified AppError.
+Tauri 2.x backend (Rust 2024). 56 commands across 9 modules, 15 services, unified AppError.
 
 ## STRUCTURE
 
 ```
 src/
-├── main.rs          # Tauri builder, invoke_handler (39 cmds), plugins: dialog/fs/store/notification
+├── main.rs          # Tauri builder, invoke_handler (56 cmds), plugins: dialog/fs/store/notification
 ├── lib.rs           # Re-exports commands, services, error, utils
 ├── error.rs         # Unified AppError (From<serde/io/reqwest/walkdir>)
 ├── commands/        # 9 modules (bridge layer: frontend -> services)

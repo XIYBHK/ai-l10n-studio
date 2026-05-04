@@ -339,8 +339,14 @@ pub async fn translate_directory(
     api_key: String,
     base_url: Option<String>,
 ) -> Result<Vec<TranslationReport>, String> {
-    let mut batch_translator =
-        BatchTranslator::new(api_key, base_url).map_err(|e| e.to_string())?;
+    // 从全局配置读取自定义系统提示词，保持与单条翻译路径（translate_entry）一致
+    let custom_prompt = {
+        let draft = ConfigDraft::global().await;
+        draft.data().system_prompt.clone()
+    };
+
+    let mut batch_translator = BatchTranslator::new(api_key, base_url, custom_prompt)
+        .map_err(|e| e.to_string())?;
     batch_translator
         .translate_directory(directory_path, None)
         .await

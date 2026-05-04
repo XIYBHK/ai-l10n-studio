@@ -17,7 +17,7 @@ mod tests {
 
     #[test]
     fn test_batch_translator_new() {
-        let translator = BatchTranslator::new("test_key".to_string(), None);
+        let translator = BatchTranslator::new("test_key".to_string(), None, None);
 
         assert!(translator.is_ok());
         let t = translator.unwrap();
@@ -29,6 +29,7 @@ mod tests {
         let translator = BatchTranslator::new(
             "test_key".to_string(),
             Some("https://api.test.com".to_string()),
+            None,
         );
 
         assert!(translator.is_ok());
@@ -36,7 +37,7 @@ mod tests {
 
     #[test]
     fn test_batch_translator_new_with_empty_api_key() {
-        let translator = BatchTranslator::new("".to_string(), None);
+        let translator = BatchTranslator::new("".to_string(), None, None);
 
         // 空 API key 应该也能创建
         assert!(translator.is_ok());
@@ -46,7 +47,7 @@ mod tests {
 
     #[test]
     fn test_get_reports() {
-        let translator = BatchTranslator::new("test_key".to_string(), None).unwrap();
+        let translator = BatchTranslator::new("test_key".to_string(), None, None).unwrap();
 
         let reports = translator.get_reports();
         assert_eq!(reports.len(), 0);
@@ -54,7 +55,7 @@ mod tests {
 
     #[test]
     fn test_get_translation_memory() {
-        let translator = BatchTranslator::new("test_key".to_string(), None).unwrap();
+        let translator = BatchTranslator::new("test_key".to_string(), None, None).unwrap();
 
         let tm = translator.get_translation_memory();
         // 翻译记忆库应该存在（可能包含内置短语）
