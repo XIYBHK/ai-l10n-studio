@@ -187,5 +187,3 @@
     "promptLogsHelp": "Captures prompts and responses sent to AI during contextual refine and batch translation.\nEach log contains: time, type, full prompt, AI response, metadata.\nKeeps last 100 records, can be cleared manually."
   }
 }
-  }
-}
