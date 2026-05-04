@@ -9,8 +9,8 @@ React 19 + Vite frontend for Tauri 2.x. Orchestrates translation state, IPC flow
 ```
 src/
 ├── components/
-│   ├── aiWorkspace/     # AIWorkspace sub-components (StatCard, SessionStats, etc.)
-│   ├── entryList/       # EntryList sub-components (VirtualizedColumn, StatusColumns, BatchActions)
+│   ├── aiWorkspaceSections/  # AIWorkspace sub-components (StatCard, SessionStats, etc.)
+│   ├── entryListParts/       # EntryList sub-components (VirtualizedColumn, StatusColumns, BatchActions)
 │   ├── editor/          # EditorPane sub-components (Source/TargetSection, Toolbar, StatusBar)
 │   ├── settings/        # 5 tab components (AI/SystemPrompt/Appearance/Notification/Logs)
 │   ├── ui/              # Reusable primitives (ActionButton, EmptyState, InfoCard, SectionHeader)

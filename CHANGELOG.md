@@ -2,6 +2,23 @@
 
 ## [未发布]
 
+### 依赖升级与平台修复（2026-05-04）
+
+**基础设施**:
+
+- 修复 Windows 大小写冲突：重命名 `src/components/aiWorkspace/` → `aiWorkspaceSections/`、`entryList/` → `entryListParts/`，避免 macOS/Linux 大小写敏感文件系统与 Windows 不敏感文件系统之间的 casing 冲突（PR #65）
+
+**依赖升级**（18 个 dependabot PR 合并）:
+
+- 前端：`react-i18next` 16 → 17、`i18next` 25.8 → 26.2（PR #64）；`antd` 6.2.1 → 6.3.7、`swr` 2.3.8 → 2.4.1、`zustand` 5.0.10 → 5.0.11、`react-dom` 19.2.3 → 19.2.5、`@types/node` 25.0.10 → 25.6.0、`@tauri-apps/plugin-fs` 2.4.4 → 2.4.5、`@tauri-apps/plugin-store` 2.4.1 → 2.4.2、`prettier` 3.6.2 → 3.8.3
+- 后端 (cargo)：`reqwest` 0.12 → 0.13、`ts-rs` 7.1 → 12.0、`thiserror` 1.0 → 2.0、`toml` 0.8 → 1.1、`console-subscriber` 0.4 → 0.5
+- CI (GitHub Actions)：`actions/cache` 4 → 5、`actions/upload-artifact` 4 → 7、`softprops/action-gh-release` 2 → 3
+
+**P0 健壮性**:
+
+- 修复 `BatchTranslator::new` 静默降级：将 `custom_prompt` 改为依赖注入，消除构造期内部 `ConfigDraft::new(None)` 的隐式回退读取；调用方显式决定 prompt 来源
+- 修正 `AGENTS.md` 过时数字：命令总数 39 → 56（实际 handler 计数对齐）
+
 ### 前端设计审查修复（2026-05-04）
 
 **P0 健壮性**:

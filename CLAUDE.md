@@ -187,6 +187,6 @@ Cargo.toml 配置了严格的 Clippy lint（`[lints.clippy]`）：
 
 ## 技术栈
 
-**前端**: React 19, TypeScript 5.9, Ant Design 6, Zustand 5, Vite 7.3, i18next 25.8, SWR 2.3, @tanstack/react-virtual 3.x, immer 11.x
+**前端**: React 19, TypeScript 5.9, Ant Design 6, Zustand 5, Vite 7.3, i18next 26.x (react-i18next 17), SWR 2.4, @tanstack/react-virtual 3.x, immer 11.x
 
-**后端**: Tauri 2.9, Rust Edition 2024, Tokio 1.x, reqwest 0.12, serde, nom 7.x, flexi_logger 0.31, parking_lot 0.12, tokio-util 0.7 (CancellationToken)
+**后端**: Tauri 2.9, Rust Edition 2024, Tokio 1.x, reqwest 0.13, serde, nom 7.x, flexi_logger 0.31, parking_lot 0.12, tokio-util 0.7 (CancellationToken), ts-rs 12, thiserror 2, toml 1.x

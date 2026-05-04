@@ -5,22 +5,22 @@
 
 ## 核心技术栈
 
-| 层 | 技术 |
-|---|---|
-| 前端框架 | React 19 + TypeScript + Vite |
-| UI 库 | Ant Design 6 |
-| 状态管理 | Zustand 5（4 stores，原子 selector） |
-| 数据获取 | SWR |
-| 虚拟化 | @tanstack/react-virtual |
-| i18n | react-i18next（14 命名空间） |
-| 桌面壳 | Tauri 2.x |
-| 后端语言 | Rust 2024 edition |
-| 异步运行时 | Tokio |
-| 解析器 | nom（PO 文件） |
-| 序列化 | serde（camelCase ↔ snake_case 自动） |
-| 类型生成 | ts-rs（Rust → TypeScript） |
-| 并发原语 | parking_lot::RwLock |
-| 持久化 | tauri-plugin-store（JSON，应用数据目录） |
+| 层         | 技术                                     |
+| ---------- | ---------------------------------------- |
+| 前端框架   | React 19 + TypeScript + Vite             |
+| UI 库      | Ant Design 6                             |
+| 状态管理   | Zustand 5（4 stores，原子 selector）     |
+| 数据获取   | SWR                                      |
+| 虚拟化     | @tanstack/react-virtual                  |
+| i18n       | react-i18next（14 命名空间）             |
+| 桌面壳     | Tauri 2.x                                |
+| 后端语言   | Rust 2024 edition                        |
+| 异步运行时 | Tokio                                    |
+| 解析器     | nom（PO 文件）                           |
+| 序列化     | serde（camelCase ↔ snake_case 自动）     |
+| 类型生成   | ts-rs（Rust → TypeScript）               |
+| 并发原语   | parking_lot::RwLock                      |
+| 持久化     | tauri-plugin-store（JSON，应用数据目录） |
 
 ## 设计原则
 
@@ -35,7 +35,7 @@
 ```
 ai-l10n-studio/
 ├── src/                  # React frontend（详见 src/AGENTS.md）
-│   ├── components/       # editor/, settings/, ui/, aiWorkspace/, entryList/
+│   ├── components/       # editor/, settings/, ui/, aiWorkspaceSections/, entryListParts/
 │   ├── hooks/            # 核心业务 hook + 抽离的 useTermDetection/useEntrySelection
 │   ├── store/            # 4 Zustand stores（原子 selector）
 │   ├── services/         # Command modules + apiClient + tauriInvoke
@@ -105,12 +105,12 @@ TranslationMemory / TermLibrary （记忆库/术语库）
 
 ### P1（架构）
 
-| 文件 | 改前 | 改后 |
-|---|---:|---:|
-| `AIWorkspace.tsx` | 710 | **178**（抽出 9 个子组件到 `aiWorkspace/`） |
-| `EntryList.tsx` | 799 | **251**（抽出 `VirtualizedColumn` / `StatusColumns` / `BatchActions` + `useEntrySelection` hook） |
-| `EditorPane.tsx` | 331 | **220**（抽出 `useTermDetection` hook） |
-| `MenuBar.tsx` props | 14 | **9**（theme → `useTheme`；source/target language → `useTranslationStore`） |
+| 文件                | 改前 |                                                                                              改后 |
+| ------------------- | ---: | ------------------------------------------------------------------------------------------------: |
+| `AIWorkspace.tsx`   |  710 |                                               **178**（抽出 9 个子组件到 `aiWorkspaceSections/`） |
+| `EntryList.tsx`     |  799 | **251**（抽出 `VirtualizedColumn` / `StatusColumns` / `BatchActions` + `useEntrySelection` hook） |
+| `EditorPane.tsx`    |  331 |                                                           **220**（抽出 `useTermDetection` hook） |
+| `MenuBar.tsx` props |   14 |                       **9**（theme → `useTheme`；source/target language → `useTranslationStore`） |
 
 ### P2（打磨）
 
@@ -149,12 +149,12 @@ TranslationMemory / TermLibrary （记忆库/术语库）
 
 ## CI 工作流（`.github/workflows/`）
 
-| 工作流 | 触发 | 内容 |
-|---|---|---|
-| `check.yml` | push / PR | Prettier 检查、Vitest 单测、Cargo test、Cargo clippy |
-| `ui-e2e.yml` | push main | WebDriverIO + MidScene 视觉测试（Windows-only） |
-| `build.yml` | 手动 | 各平台 Tauri build |
-| `release.yml` | tag `v*` | 构建产物 + GitHub Release |
+| 工作流        | 触发      | 内容                                                 |
+| ------------- | --------- | ---------------------------------------------------- |
+| `check.yml`   | push / PR | Prettier 检查、Vitest 单测、Cargo test、Cargo clippy |
+| `ui-e2e.yml`  | push main | WebDriverIO + MidScene 视觉测试（Windows-only）      |
+| `build.yml`   | 手动      | 各平台 Tauri build                                   |
+| `release.yml` | tag `v*`  | 构建产物 + GitHub Release                            |
 
 ## 参考
 

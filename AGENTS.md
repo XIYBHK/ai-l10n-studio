@@ -25,20 +25,20 @@ ai-l10n-studio/
 
 ## WHERE TO LOOK
 
-| Task                    | Location                                                                              | Notes                                                        |
-| ----------------------- | ------------------------------------------------------------------------------------- | ------------------------------------------------------------ |
-| Add Tauri command       | `src-tauri/src/commands/` + register in `main.rs` + frontend wrapper in `src/services/` | 3-step process                                               |
-| Add AI provider         | `src-tauri/src/services/ai/providers/` + `models/` + register in `mod.rs`             | Trait-based plugin                                           |
-| Add React hook          | `src/hooks/`                                                                          | Follow `useTranslationFlow` pattern; extract UI logic early  |
-| Extract logic from UI   | Create a hook (see `useTermDetection`, `useEntrySelection` for reference)             | Keep components as orchestrators                             |
-| Add component           | `src/components/` + subdir pattern                                                    | `editor/`, `settings/`, `ui/`, `aiWorkspace/`, `entryList/`  |
-| Add store state         | `src/store/`                                                                          | 4 stores by responsibility, atomic selectors required        |
-| Add design token        | `src/index.css` (SSOT)                                                                | Never define tokens in `App.css` or component CSS            |
-| Add i18n key            | `src/i18n/locales/{zh-CN,en-US}.json`                                                 | 14 namespaces; run `npm run i18n:check` after                |
-| Fix translation bug     | `src-tauri/src/services/ai_translator.rs` or `batch_translator.rs`                    | Core engine                                                  |
-| Fix UI bug              | `src/components/` + `src/hooks/`                                                      | Hook extracts logic, component renders                       |
-| Debug config            | `src-tauri/src/services/config_draft.rs`                                              | ConfigDraft read/draft/apply pattern                         |
-| Update error catalog    | `docs/ERRORS.md`                                                                      | Required when solving new errors                             |
+| Task                  | Location                                                                                | Notes                                                                    |
+| --------------------- | --------------------------------------------------------------------------------------- | ------------------------------------------------------------------------ |
+| Add Tauri command     | `src-tauri/src/commands/` + register in `main.rs` + frontend wrapper in `src/services/` | 3-step process                                                           |
+| Add AI provider       | `src-tauri/src/services/ai/providers/` + `models/` + register in `mod.rs`               | Trait-based plugin                                                       |
+| Add React hook        | `src/hooks/`                                                                            | Follow `useTranslationFlow` pattern; extract UI logic early              |
+| Extract logic from UI | Create a hook (see `useTermDetection`, `useEntrySelection` for reference)               | Keep components as orchestrators                                         |
+| Add component         | `src/components/` + subdir pattern                                                      | `editor/`, `settings/`, `ui/`, `aiWorkspaceSections/`, `entryListParts/` |
+| Add store state       | `src/store/`                                                                            | 4 stores by responsibility, atomic selectors required                    |
+| Add design token      | `src/index.css` (SSOT)                                                                  | Never define tokens in `App.css` or component CSS                        |
+| Add i18n key          | `src/i18n/locales/{zh-CN,en-US}.json`                                                   | 14 namespaces; run `npm run i18n:check` after                            |
+| Fix translation bug   | `src-tauri/src/services/ai_translator.rs` or `batch_translator.rs`                      | Core engine                                                              |
+| Fix UI bug            | `src/components/` + `src/hooks/`                                                        | Hook extracts logic, component renders                                   |
+| Debug config          | `src-tauri/src/services/config_draft.rs`                                                | ConfigDraft read/draft/apply pattern                                     |
+| Update error catalog  | `docs/ERRORS.md`                                                                        | Required when solving new errors                                         |
 
 ## CONVENTIONS
 
@@ -58,19 +58,19 @@ ai-l10n-studio/
 
 ## ANTI-PATTERNS (THIS PROJECT)
 
-| Pattern                                    | Why forbidden                                         | Reference                |
-| ------------------------------------------ | ----------------------------------------------------- | ------------------------ |
-| `catch(e) {}` empty blocks                 | Silent failures                                       | CLAUDE.md                |
-| `\|\| true` in CI                          | Bypasses lint/test gates                              | docs/ERRORS.md           |
-| Type shim files (`*.d.ts` for libs)        | Destroys type inference                               | docs/ERRORS.md           |
-| `unwrap()` / `expect()` in Rust            | Clippy warn; use `?` operator                         | Cargo.toml lints         |
-| Direct `std::sync::RwLock`                 | Deadlock risk; use parking_lot                        | CLAUDE.md                |
-| `fireEvent` in tests                       | Use `userEvent.setup()` instead                       | Test conventions         |
-| Hardcoded Chinese in `message.*()` / JSX   | Breaks en-US locale                                   | docs/COLOR_SYSTEM.md     |
-| Redefining design tokens in multiple files | Causes silent visual drift (same name, different val) | docs/COLOR_SYSTEM.md     |
-| Custom focus trap over Antd Modal          | Antd v5+ has built-in; double-trap conflicts         | src/utils/accessibility.ts |
-| Async listener without `isActive` flag     | Race condition on unmount                             | src/hooks/useTranslationFlow.ts |
-| Destructuring unstable object in useCallback deps | Re-creates callback every render               | P0 fix reference         |
+| Pattern                                           | Why forbidden                                         | Reference                       |
+| ------------------------------------------------- | ----------------------------------------------------- | ------------------------------- |
+| `catch(e) {}` empty blocks                        | Silent failures                                       | CLAUDE.md                       |
+| `\|\| true` in CI                                 | Bypasses lint/test gates                              | docs/ERRORS.md                  |
+| Type shim files (`*.d.ts` for libs)               | Destroys type inference                               | docs/ERRORS.md                  |
+| `unwrap()` / `expect()` in Rust                   | Clippy warn; use `?` operator                         | Cargo.toml lints                |
+| Direct `std::sync::RwLock`                        | Deadlock risk; use parking_lot                        | CLAUDE.md                       |
+| `fireEvent` in tests                              | Use `userEvent.setup()` instead                       | Test conventions                |
+| Hardcoded Chinese in `message.*()` / JSX          | Breaks en-US locale                                   | docs/COLOR_SYSTEM.md            |
+| Redefining design tokens in multiple files        | Causes silent visual drift (same name, different val) | docs/COLOR_SYSTEM.md            |
+| Custom focus trap over Antd Modal                 | Antd v5+ has built-in; double-trap conflicts          | src/utils/accessibility.ts      |
+| Async listener without `isActive` flag            | Race condition on unmount                             | src/hooks/useTranslationFlow.ts |
+| Destructuring unstable object in useCallback deps | Re-creates callback every render                      | P0 fix reference                |
 
 ## COMMANDS
 
