@@ -35,7 +35,7 @@
     "@tauri-apps/plugin-updater": "^2.9.0",
     "antd": "^6.3.7",
     "i18next": "^26.0.8",
-    "react": "^19.2.5",
+    "react": "^19.2.6",
     "react-dom": "^19.2.5",
     "react-draggable": "^4.5.0",
     "react-i18next": "^17.0.6",
