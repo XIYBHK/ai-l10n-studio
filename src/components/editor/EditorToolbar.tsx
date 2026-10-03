@@ -80,7 +80,7 @@ export const EditorToolbar: React.FC<EditorToolbarProps> = ({
             backgroundColor: CSS_COLORS.statusTranslated,
           }}
         />
-        {t('workspace.editor.saved')}
+        {t('workspace.editor.draftSynchronized')}
       </span>
     );
   };
@@ -179,7 +179,7 @@ export const EditorToolbar: React.FC<EditorToolbarProps> = ({
           onClick={onSave}
           loading={saving}
           disabled={!hasUnsavedChanges}
-          aria-label={t('workspace.editor.saveTranslation')}
+          aria-label={t('workspace.editor.confirmTranslation')}
           style={
             hasUnsavedChanges
               ? {
@@ -189,7 +189,7 @@ export const EditorToolbar: React.FC<EditorToolbarProps> = ({
               : undefined
           }
         >
-          {t('workspace.editor.saveTranslation')}
+          {t('workspace.editor.confirmTranslation')}
         </Button>
       </div>
     </div>

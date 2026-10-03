@@ -2,6 +2,8 @@ import { act, screen } from '@testing-library/react';
 import ReactDOM from 'react-dom/client';
 import type { Root } from 'react-dom/client';
 import type { ReactNode } from 'react';
+// Resolve the component library during collection, outside the bootstrap behavior timeout.
+import 'antd';
 import i18n from '../../i18n/config';
 
 vi.mock('../../store/useAppStore', () => ({

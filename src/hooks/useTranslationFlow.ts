@@ -62,7 +62,7 @@ export function useTranslationFlow() {
   const saving = useRef(false);
   const leavePrompt = useRef<Promise<boolean> | null>(null);
   const prepareLeave = useRef<() => Promise<boolean>>(async () => true);
-  const allowClose = useRef(false);
+  const closing = useRef(false);
   const {
     translateBatch,
     cancelTranslation: cancelBatchTranslation,
@@ -253,23 +253,22 @@ export function useTranslationFlow() {
     const window = getCurrentWebviewWindow();
     void window
       .onCloseRequested((event) => {
-        if (!active || allowClose.current) return;
+        if (!active) return;
         event.preventDefault();
+        if (closing.current) return;
+        closing.current = true;
         void prepareLeave
           .current()
           .then(async (proceed) => {
             if (!active || !proceed) return;
-            allowClose.current = true;
-            try {
-              await window.close();
-            } catch (error) {
-              allowClose.current = false;
-              throw error;
-            }
+            await window.destroy();
           })
           .catch((error) => {
             log.logError(error, 'Close window failed');
-            msg.error(String(error));
+            msg.error(t('errors.closeFailed', { error: String(error) }));
+          })
+          .finally(() => {
+            closing.current = false;
           });
       })
       .then((cleanup) => {

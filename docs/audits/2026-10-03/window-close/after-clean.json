@@ -1,0 +1,13 @@
+{
+  "scenario": "clean",
+  "requests": [
+    {
+      "title": "PO 翻译工具",
+      "handle": 8193724,
+      "pid": 79576,
+      "command": "SC_CLOSE"
+    }
+  ],
+  "processExited": true,
+  "forcedCleanupBeforeCheck": false
+}

@@ -224,6 +224,7 @@ async function main() {
           ...driverEnv,
           TAURI_APP_PATH: fixture.appPath,
           TAURI_E2E_PO_PATH: fixture.poPath,
+          TAURI_E2E_OWNER: fixture.token,
           TAURI_DRIVER_PORT: tauriDriverPort,
         },
         shell: false,

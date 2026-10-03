@@ -23,7 +23,8 @@
     "fmt": "cargo fmt --manifest-path ./src-tauri/Cargo.toml",
     "lint:all": "npm run format:check && npm run fmt -- --check",
     "test:e2e:build": "npm run tauri:build -- --no-bundle",
-    "test:e2e": "npm run test:e2e:build && npm --prefix e2e-tests run test"
+    "test:e2e:close": "node e2e-tests/scripts/window-close-suite.cjs",
+    "test:e2e": "npm run test:e2e:build && npm --prefix e2e-tests run test && npm run test:e2e:close"
   },
   "dependencies": {
     "@ant-design/icons": "^6.1.0",

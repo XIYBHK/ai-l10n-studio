@@ -73,7 +73,7 @@ export const StatusBar: React.FC<StatusBarProps> = ({ lineNumber, charCount, isT
         <div style={shortcutStyles}>
           <span>
             <kbd style={kbdStyles}>Ctrl</kbd> + <kbd style={kbdStyles}>Enter</kbd>{' '}
-            {t('common.save')}
+            {t('common.confirm')}
           </span>
           <span>
             <kbd style={kbdStyles}>Esc</kbd> {t('common.cancel')}

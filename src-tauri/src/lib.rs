@@ -32,6 +32,11 @@ pub fn run() {
             tauri::async_runtime::block_on(utils::init::init_app(Some(&resource_dir)))?;
             Ok(())
         })
+        .on_window_event(|window, event| {
+            if window.label() == "main" && matches!(event, tauri::WindowEvent::Destroyed) {
+                window.app_handle().exit(0);
+            }
+        })
         .plugin(tauri_plugin_dialog::init())
         .plugin(tauri_plugin_fs::init())
         .plugin(tauri_plugin_store::Builder::new().build()) // Tauri 2.x: Store Plugin

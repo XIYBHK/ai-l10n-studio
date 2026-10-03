@@ -1,0 +1,22 @@
+{
+  "scenario": "save",
+  "requests": [
+    {
+      "title": "PO 翻译工具",
+      "pid": 54292,
+      "handle": 33034308,
+      "command": "SC_CLOSE"
+    },
+    {
+      "command": "SC_CLOSE",
+      "title": "PO 翻译工具",
+      "handle": 33034308,
+      "pid": 54292
+    }
+  ],
+  "saveFailurePreservedWork": true,
+  "saveFailureLabelsAccurate": true,
+  "saveRetryPersistedDraft": true,
+  "processExited": true,
+  "forcedCleanupBeforeCheck": false
+}

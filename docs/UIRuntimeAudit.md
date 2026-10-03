@@ -1,6 +1,6 @@
 # 生产界面问题核查
 
-核验日期：2026-10-03。用户反馈亮暗切换时文字闪烁、设置按钮无响应、开发工具布局像未加载样式。此前仅验证应用启动及 webview handle 的 smoke 不足以验收这些可见操作；本轮改为直接检查 release exe 的真实 DOM、CSSOM、窗口和文件输出。
+核验日期：2026-10-03。用户反馈亮暗切换时文字闪烁、设置按钮无响应、开发工具布局像未加载样式。此前仅验证应用启动及 webview handle 的 smoke 不足以验收这些可见操作；本轮改为直接检查 release exe 的真实 DOM、CSSOM、窗口和文件输出。随后新增的关闭缺陷与专项验收见 [WindowCloseAudit.md](WindowCloseAudit.md)，本报告的修复后证据已用包含关闭修复的最终 exe 更新。
 
 ## 结论与修复
 
@@ -33,18 +33,19 @@ Tauri 的 CSP 处理和 Ant Design nonce/context API 与上述实测一致，参
 
 | 验证                                                         | 结果                                                                              |
 | ------------------------------------------------------------ | --------------------------------------------------------------------------------- |
-| Vitest 全量                                                  | 26 个文件、88 项通过                                                              |
+| Vitest 全量                                                  | 26 个文件、92 项通过                                                              |
 | 打包/隔离脚本回归                                            | 6 项通过                                                                          |
 | Rust `--locked --features ts-rs`                             | 161 项通过                                                                        |
 | Clippy `--locked --all-features --lib --bins -- -D warnings` | 通过                                                                              |
 | 真实 release WebView2                                        | 6 组通过                                                                          |
+| 原生 `SC_CLOSE`                                              | 4 个独立场景通过，清理前确认进程退出                                              |
 | `tauri:build -- --no-bundle`                                 | 构建成功，包含 TypeScript 检查                                                    |
 | 便携 ZIP                                                     | 8 个白名单条目：exe、6 个插件 TOML、新 PORTABLE 标记；内置 exe 哈希与受测文件相同 |
 | 格式与国际化                                                 | Prettier / cargo fmt 通过；i18n 检查完成，保留动态键候选                          |
 
-受测 exe 构建时间为 2026-10-03 20:08:08（Asia/Shanghai），SHA-256 为 `803433E98A010816F777C63FBFB1B9BBD093FA665102D17E7FC463767B8F8EB8`。便携包 SHA-256 为 `73C4ECC97AE973E5318451C149814BC782D6243D50A22608442F37D158D04668`。直接运行此 release exe 可测试这些已编译修复；修改源码后须重新构建，旧 exe 不会自动包含新代码。
+受测 exe 构建时间为 2026-10-03 20:49:25（Asia/Shanghai），SHA-256 为 `937A65657B041099359547C9154B9D6456CB50888EFD487C13A3AF4164246228`。便携包 SHA-256 为 `FF9A55BCBD047C33E6063C9112A6F38BCD512BAADD16615D66F7D13E8D2A9899`。直接运行此 release exe 可测试这些已编译修复；修改源码后须重新构建，旧 exe 不会自动包含新代码。
 
-PO 导入通过已有 `tauri://drag-drop` 事件驱动正常处理器，未实测 OS 文件对话框和鼠标拖放。原生通知、供应商配置保存/联网、完整翻译/确认、窗口关闭保护、大文件性能和其他机器 DPI/分辨率仍属于专项覆盖，不能从本报告推断全部通过。错误重试、窗口创建失败、日志迟到响应和偏好路径另有 Vitest 回归；mock 不代表真实系统权限故障已复现。
+PO 导入通过已有 `tauri://drag-drop` 事件驱动正常处理器，未实测 OS 文件对话框和鼠标拖放。关闭专项覆盖无修改、取消/放弃、保存失败重试及子窗口退出；真实供应商请求期间退出仍未实测。原生通知、供应商配置保存/联网、完整翻译/确认、大文件性能和其他机器 DPI/分辨率不能从本报告推断全部通过。错误重试、窗口创建失败、日志迟到响应和偏好路径另有 Vitest 回归；mock 不代表真实系统权限故障已复现。
 
 本仓库图谱建立未成功，覆盖检查返回未索引；本轮结论来自对应源码、回归测试和原生测量，不以图谱作完整性证明。
 
@@ -55,11 +56,11 @@ PO 导入通过已有 `tauri://drag-drop` 事件驱动正常处理器，未实�
 - [修复后设置](audits/2026-10-03/ui-runtime/after-settings.png)、[记忆库](audits/2026-10-03/ui-runtime/after-open-memory-manager.png)、[术语库](audits/2026-10-03/ui-runtime/after-open-term-manager.png)。
 - [修复后开发工具](audits/2026-10-03/ui-runtime/after-devtools.png)、[编辑保存](audits/2026-10-03/ui-runtime/after-editor.png)。
 - [主题帧 0](audits/2026-10-03/ui-runtime/theme-frames-0.json)、[帧 1](audits/2026-10-03/ui-runtime/theme-frames-1.json)、[帧 2](audits/2026-10-03/ui-runtime/theme-frames-2.json)、[帧 3](audits/2026-10-03/ui-runtime/theme-frames-3.json)。
-- [实际生产 CSP](audits/2026-10-03/ui-runtime/production-csp.txt)、[验证与构建摘要](audits/2026-10-03/ui-runtime/validation.json)。命令完整输出保存在同目录 `.log`，按仓库规则不纳入 Git。
+- [实际生产 CSP](audits/2026-10-03/ui-runtime/production-csp.txt)、[验证与构建摘要](audits/2026-10-03/ui-runtime/validation.json)。最终版本的命令完整输出保存在 `audits/2026-10-03/window-close/*.log`，按仓库规则不纳入 Git。
 - [暗色占位文字对比度](audits/2026-10-03/ui-runtime/placeholder-contrast-dark.json)、[亮色对比度](audits/2026-10-03/ui-runtime/placeholder-contrast-light.json)、[修复前低对比度截图](audits/2026-10-03/ui-runtime/before-contrast.png)。
 
 ## 个人偏好隔离与恢复
 
 早期测试副本已经隔离 Rust 配置、记忆和术语数据，但旧 Store 相对路径仍访问普通 AppData，实际影响了个人主题/语言。恢复前保留 `C:/Users/xiybh/AppData/Local/Temp/ai-l10n-ui-test-preferences-20261003.json`，仅恢复 `theme=dark`、`language=zh-CN`，其他字段保留。该恢复对应已知的中文深色外观，不能声称恢复了无法确认的原始 theme 模式或原文件字节。
 
-恢复后普通偏好 SHA-256 为 `3184540C1AF33E9BEE7E03B4782D65E904A2BA286CE5C5769019D9A1A4E1C4FA`；修复后的原生 runner 检查前后哈希一致。测试副本及自建驱动进程按所有权清理，个人恢复备份保留。
+修复后的原生 runner 检查普通偏好文件前后哈希一致；可提交报告只记录校验结果，不保存个人文件哈希。测试副本及自建驱动进程按所有权清理，个人恢复备份保留。

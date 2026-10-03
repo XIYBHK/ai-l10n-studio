@@ -20,7 +20,7 @@ const mocks = vi.hoisted(() => ({
   mutate: vi.fn(),
   unsaved: vi.fn(),
   target: vi.fn(),
-  close: vi.fn(),
+  destroy: vi.fn(),
   closeHandler: null as null | ((event: { preventDefault: () => void }) => void),
 }));
 vi.mock('swr', async (original) => ({
@@ -52,7 +52,7 @@ vi.mock('../../components/UnsavedDocumentDialog', () => ({
 vi.mock('@tauri-apps/api/webviewWindow', () => ({
   getCurrentWebviewWindow: () => ({
     onDragDropEvent: async () => vi.fn(),
-    close: mocks.close,
+    destroy: mocks.destroy,
     onCloseRequested: async (handler: typeof mocks.closeHandler) => {
       mocks.closeHandler = handler;
       return vi.fn();
@@ -126,6 +126,7 @@ describe('document lifecycle regressions', () => {
     mocks.unsaved.mockResolvedValue('cancel');
     mocks.target.mockResolvedValue(true);
     mocks.cancel.mockResolvedValue(undefined);
+    mocks.destroy.mockReset().mockResolvedValue(undefined);
   });
 
   it('saves text still focused in the real editor and retains drafts across entry navigation', async () => {
@@ -263,13 +264,95 @@ describe('document lifecycle regressions', () => {
       await Promise.resolve();
     });
     expect(preventDefault).toHaveBeenCalledOnce();
-    expect(mocks.close).not.toHaveBeenCalled();
+    expect(mocks.destroy).not.toHaveBeenCalled();
     mocks.unsaved.mockResolvedValue('save');
     await act(async () => {
       mocks.closeHandler?.({ preventDefault });
       await new Promise((resolve) => setTimeout(resolve, 0));
     });
-    expect(mocks.close).toHaveBeenCalledOnce();
+    expect(mocks.destroy).toHaveBeenCalledOnce();
     expect(mocks.save.mock.calls[0][1].entries[0].msgstr).toBe('Keep me');
+  });
+
+  it('destroys a clean window without a second close request', async () => {
+    renderHook(useTranslationFlow, { wrapper: TestProviders });
+    const preventDefault = vi.fn();
+    await act(async () => {
+      mocks.closeHandler?.({ preventDefault });
+    });
+    expect(preventDefault).toHaveBeenCalledOnce();
+    expect(mocks.unsaved).not.toHaveBeenCalled();
+    expect(mocks.destroy).toHaveBeenCalledOnce();
+  });
+
+  it('prevents repeated close requests from bypassing a pending unsaved prompt', async () => {
+    useTranslationStore.getState().setDraft(0, null, 'Keep me');
+    let choose!: (choice: 'cancel' | 'discard') => void;
+    mocks.unsaved.mockImplementationOnce(
+      () =>
+        new Promise<'cancel' | 'discard'>((resolve) => {
+          choose = resolve;
+        })
+    );
+    renderHook(useTranslationFlow, { wrapper: TestProviders });
+    const preventDefault = vi.fn();
+    await act(async () => {
+      mocks.closeHandler?.({ preventDefault });
+      mocks.closeHandler?.({ preventDefault });
+    });
+    expect(preventDefault).toHaveBeenCalledTimes(2);
+    expect(mocks.unsaved).toHaveBeenCalledOnce();
+    expect(mocks.destroy).not.toHaveBeenCalled();
+    await act(async () => choose('cancel'));
+    expect(Object.values(useTranslationStore.getState().drafts)[0].value).toBe('Keep me');
+    expect(mocks.destroy).not.toHaveBeenCalled();
+    mocks.unsaved.mockResolvedValueOnce('discard');
+    await act(async () => mocks.closeHandler?.({ preventDefault }));
+    expect(mocks.destroy).toHaveBeenCalledOnce();
+  });
+
+  it('shows a native destroy failure and permits retry instead of silently allowing a close', async () => {
+    mocks.destroy.mockRejectedValueOnce(new Error('native close denied'));
+    renderHook(useTranslationFlow, { wrapper: TestProviders });
+    const preventDefault = vi.fn();
+    await act(async () => mocks.closeHandler?.({ preventDefault }));
+    expect(await screen.findByText(/native close denied/)).toBeInTheDocument();
+    await act(async () => mocks.closeHandler?.({ preventDefault }));
+    expect(preventDefault).toHaveBeenCalledTimes(2);
+    expect(mocks.destroy).toHaveBeenCalledTimes(2);
+  });
+
+  it('waits for cancellation of a running translation before destroying the window', async () => {
+    let finish!: (value: BatchResultWithTaskId) => void;
+    mocks.translate.mockImplementationOnce(
+      () =>
+        new Promise<BatchResultWithTaskId>((resolve) => {
+          finish = resolve;
+        })
+    );
+    let releaseCancellation!: () => void;
+    mocks.cancel.mockImplementationOnce(
+      () =>
+        new Promise<void>((resolve) => {
+          releaseCancellation = () => {
+            finish(batchResult);
+            resolve();
+          };
+        })
+    );
+    const { result } = renderHook(useTranslationFlow, { wrapper: TestProviders });
+    let translating!: Promise<void>;
+    act(() => {
+      translating = result.current.handleTranslateSelected([0]);
+    });
+    const preventDefault = vi.fn();
+    await act(async () => mocks.closeHandler?.({ preventDefault }));
+    expect(mocks.cancel).toHaveBeenCalledOnce();
+    expect(mocks.destroy).not.toHaveBeenCalled();
+    await act(async () => {
+      releaseCancellation();
+      await translating;
+    });
+    expect(mocks.destroy).toHaveBeenCalledOnce();
   });
 });

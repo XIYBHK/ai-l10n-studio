@@ -26,6 +26,7 @@
     "system": "System"
   },
   "document": {
+    "unsaved": "File not saved",
     "unsavedTitle": "Save changes to the current file?",
     "unsavedDescription": "This file contains unsaved translations or editor drafts.",
     "discard": "Discard changes",
@@ -193,12 +194,12 @@
       "sourceMemory": "Translation memory",
       "sourceDedup": "Deduplicated",
       "unsavedChanges": "Unsaved changes",
-      "saved": "Saved",
+      "draftSynchronized": "Editor content synchronized",
       "navigation": "Navigation",
       "copySource": "Copy source to clipboard",
       "copySourceShort": "Copy source",
       "cancelEdit": "Cancel edit (Esc)",
-      "saveTranslation": "Save translation (Ctrl+Enter)",
+      "confirmTranslation": "Confirm translation (Ctrl+Enter)",
       "lineNumber": "Line: {{count}}",
       "translated": "Translated",
       "untranslated": "Untranslated",
@@ -277,6 +278,7 @@
   "errors": {
     "invalidPluralForms": "Valid Plural-Forms metadata is required to translate plural entries.",
     "openFailed": "Failed to open file: {{error}}",
+    "closeFailed": "Could not exit: {{error}}",
     "saveFailed": "Failed to save: {{error}}",
     "importFailed": "Failed to import file: {{error}}",
     "loadFailed": "Load failed: {{error}}",

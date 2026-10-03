@@ -26,6 +26,7 @@
     "system": "跟随系统"
   },
   "document": {
+    "unsaved": "文件尚未保存",
     "unsavedTitle": "保存当前文件的修改？",
     "unsavedDescription": "当前文件包含未保存的译文或编辑草稿。",
     "discard": "放弃修改",
@@ -193,12 +194,12 @@
       "sourceMemory": "记忆库",
       "sourceDedup": "去重",
       "unsavedChanges": "有未保存的修改",
-      "saved": "已保存",
+      "draftSynchronized": "编辑内容已同步",
       "navigation": "导航",
       "copySource": "复制原文到剪贴板",
       "copySourceShort": "复制原文",
       "cancelEdit": "取消修改 (Esc)",
-      "saveTranslation": "保存译文 (Ctrl+Enter)",
+      "confirmTranslation": "确认译文 (Ctrl+Enter)",
       "lineNumber": "行: {{count}}",
       "translated": "已翻译",
       "untranslated": "未翻译",
@@ -277,6 +278,7 @@
   "errors": {
     "invalidPluralForms": "文件缺少有效的 Plural-Forms 规则，无法自动翻译复数条目。",
     "openFailed": "打开文件失败：{{error}}",
+    "closeFailed": "无法退出：{{error}}",
     "saveFailed": "保存失败：{{error}}",
     "importFailed": "文件导入失败：{{error}}",
     "loadFailed": "加载失败：{{error}}",

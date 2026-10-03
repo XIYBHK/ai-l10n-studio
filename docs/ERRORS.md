@@ -37,6 +37,14 @@
 
 ## 近期问题（保留作为 recent reference）
 
+### 2026-10-03 - 右上角关闭无响应与销毁权限缺失
+
+原生 `SC_CLOSE` 复现 `Command plugin:window|destroy not allowed by ACL`。Tauri 的 `onCloseRequested` 最终调用 `destroy()`，原主窗口只允许 `close`，失败又发生在框架监听器中。仅模拟 `close()` 的测试漏掉了真实权限失败。
+
+主窗口增加限定窗口的 `allow-destroy`；应用先阻止事件并完成取消/未保存保护，再直接等待销毁，重复请求不会绕过确认，失败可见且可重试。主窗口实际销毁后 Rust 结束整个进程，单独关闭开发工具保留主程序。
+
+默认桌面回归新增四个独立原生关闭场景：无修改、取消/放弃、只读 PO 保存失败后重试、开发工具与主窗口退出。检查进程在 runner 强制清理之前自行结束，保存结果直接读取磁盘。详见 [WindowCloseAudit.md](WindowCloseAudit.md)。
+
 ### 2026-10-03 - 生产 CSP 拦截动态样式与主题闪烁
 
 用户反馈设置无响应、调试窗口像无样式 HTML、亮暗切换文字闪烁。真实 release WebView2 证明设置内容已经挂载，但 Ant Design 注入的 style 没有 Tauri nonce，`style.sheet` 为 null；Modal 无定位样式，内容落到视口下方。开发工具同样缺少组件样式。编辑器静态 `message` 又创建独立 React 根，绕过窗口的 CSP/主题上下文。

@@ -64,4 +64,4 @@ Run checks appropriate to the change; do not add tests that only mirror reversib
 - Provider keys are write-only through IPC, stored by stable ID in a separate local JSON file.
 - Theme/language are Tauri-store preferences, not Rust AppConfig settings.
 - Portable ZIP excludes user data and credentials. Native updater remains unregistered.
-- Desktop E2E uses the release binary for CSP, settings, theme, library dialogs, editor save and developer-window regression. It is bounded UI coverage, not full business-flow coverage.
+- Desktop E2E uses the release binary for CSP, settings, theme, library dialogs, editor save, developer windows and native close (clean, cancel/discard, save failure/retry, child windows). Verify process exit before runner cleanup. It is bounded UI coverage, not full business-flow coverage.

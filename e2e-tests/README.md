@@ -9,6 +9,14 @@ npm run test:e2e
 
 根命令先构建 `src-tauri/target/release/po-translator-gui.exe`。启动脚本把 exe 和插件复制到 `src-tauri/target/e2e/run-*`，在副本旁创建全新的 `.config/PORTABLE` 和单条 PO 样本。前端偏好通过 `get_app_settings_path` 使用副本的应用目录。退出时只删除带本次所有权标记的测试目录；测试前后比较普通模式偏好文件 SHA-256，变化即失败。
 
+根命令随后执行六组界面回归和四个独立原生关闭场景。已有最新 release 时可单独运行关闭套件：
+
+```powershell
+npm run test:e2e:close
+```
+
+`window-close.e2e.cjs` 通过 Win32 `SC_CLOSE` 检查无修改退出、重复关闭与取消/放弃、只读 PO 保存失败后重试，以及开发工具单独关闭和随主窗口退出。helper 只控制带所有权标记、完整 exe 路径和 PID 匹配的隔离副本；每个场景在 runner 强制清理前验证进程自行结束。它不替代人工鼠标命中测试，也不调用真实供应商。证据见 [WindowCloseAudit.md](../docs/WindowCloseAudit.md)。
+
 已有最新 release 可直接运行，不重复构建，也不调用 MidScene 或 AI 服务：
 
 ```powershell

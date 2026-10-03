@@ -2,7 +2,7 @@
 
 exports.config = {
   runner: 'local',
-  specs: ['./specs/**/*.e2e.cjs'],
+  specs: ['./specs/ui.e2e.cjs'],
   maxInstances: 1,
   logLevel: 'warn',
   bail: 0,

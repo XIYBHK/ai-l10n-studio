@@ -1,0 +1,21 @@
+{
+  "scenario": "devtools",
+  "requests": [
+    {
+      "title": "开发者工具",
+      "command": "SC_CLOSE",
+      "handle": 11411184,
+      "pid": 72352
+    },
+    {
+      "title": "PO 翻译工具",
+      "command": "SC_CLOSE",
+      "handle": 5316362,
+      "pid": 72352
+    }
+  ],
+  "childCloseKeptMain": true,
+  "mainExitClosedChild": true,
+  "processExited": true,
+  "forcedCleanupBeforeCheck": false
+}

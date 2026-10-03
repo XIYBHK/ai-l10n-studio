@@ -1,0 +1,11 @@
+{
+  "requested": {
+    "handle": 10422798,
+    "command": "SC_CLOSE",
+    "pid": 22292,
+    "title": "PO ���빤��"
+  },
+  "errors": ["Command plugin:window|destroy not allowed by ACL"],
+  "count": 1,
+  "running": true
+}
