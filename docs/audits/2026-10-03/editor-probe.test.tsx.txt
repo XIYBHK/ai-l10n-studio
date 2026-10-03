@@ -1,0 +1,118 @@
+import { screen } from '@testing-library/react';
+import userEvent from '@testing-library/user-event';
+import { EditorPane } from '../../components/EditorPane';
+import {
+  useCurrentEntry,
+  useTranslationStore,
+  useUpdateEntry,
+} from '../../store/useTranslationStore';
+import { renderWithProviders } from '../../test/renderWithProviders';
+import type { POEntry } from '../../types/tauri';
+
+vi.mock('../../hooks/useConfig', () => ({
+  useAppData: () => ({ activeAIConfig: null }),
+}));
+
+vi.mock('../../hooks/useTermLibrary', () => ({
+  useTermLibrary: () => ({ refresh: vi.fn() }),
+}));
+
+const createEntry = (msgid: string, msgstr: string): POEntry => ({
+  comments: [],
+  translator_comments: '',
+  msgid_plural: null,
+  msgstr_plural: [],
+  flags: [],
+  occurrences: [],
+  obsolete: false,
+  previous_msgid: null,
+  previous_msgid_plural: null,
+  previous_msgctxt: null,
+  msgctxt: '',
+  msgid,
+  msgstr,
+  line_start: 1,
+});
+
+function EditorStoreHarness() {
+  const currentEntry = useCurrentEntry();
+  const nextEntry = useTranslationStore((state) => state.nextEntry);
+  const setCurrentIndex = useTranslationStore((state) => state.setCurrentIndex);
+  const updateEntry = useUpdateEntry();
+
+  return (
+    <EditorPane
+      entry={currentEntry}
+      onEntryUpdate={updateEntry}
+      onNavigateNext={nextEntry}
+      onNavigatePrev={() => setCurrentIndex(0)}
+      canNavigateNext={true}
+      canNavigatePrev={true}
+    />
+  );
+}
+
+function EditorWithExternalSaveHarness({ onSnapshot }: { onSnapshot: (value: string) => void }) {
+  const currentEntry = useCurrentEntry();
+  const updateEntry = useUpdateEntry();
+
+  return (
+    <>
+      <button type="button" onClick={() => onSnapshot(useTranslationStore.getState().entries[0].msgstr)}>
+        Save file snapshot
+      </button>
+      <EditorPane entry={currentEntry} onEntryUpdate={updateEntry} />
+    </>
+  );
+}
+
+describe('EditorPane navigation audit probes', () => {
+  beforeEach(() => {
+    useTranslationStore.getState().reset();
+    useTranslationStore
+      .getState()
+      .setEntries([createEntry('First entry', 'Original first'), createEntry('Second entry', 'Second')]);
+  });
+
+  it('reproduces draft loss when clicking toolbar next item', async () => {
+    const user = userEvent.setup();
+    renderWithProviders(<EditorStoreHarness />);
+
+    const translationInput = screen.getByDisplayValue('Original first');
+    await user.clear(translationInput);
+    await user.type(translationInput, 'Draft first');
+    await user.click(screen.getByRole('button', { name: /下一项/ }));
+    await user.click(screen.getByRole('button', { name: /上一项/ }));
+
+    expect(useTranslationStore.getState().entries[0].msgstr).toBe('Original first');
+    expect(screen.getByDisplayValue('Original first')).toBeInTheDocument();
+  });
+
+  it('reproduces draft loss when pressing Ctrl+ArrowDown', async () => {
+    const user = userEvent.setup();
+    renderWithProviders(<EditorStoreHarness />);
+
+    const translationInput = screen.getByDisplayValue('Original first');
+    await user.clear(translationInput);
+    await user.type(translationInput, 'Draft first');
+    await user.keyboard('{Control>}{ArrowDown}{/Control}');
+    await user.keyboard('{Control>}{ArrowUp}{/Control}');
+
+    expect(useTranslationStore.getState().entries[0].msgstr).toBe('Original first');
+    expect(screen.getByDisplayValue('Original first')).toBeInTheDocument();
+  });
+
+  it('shows an external save button reading a stale Store snapshot while draft remains local', async () => {
+    const user = userEvent.setup();
+    const onSnapshot = vi.fn();
+    renderWithProviders(<EditorWithExternalSaveHarness onSnapshot={onSnapshot} />);
+
+    const translationInput = screen.getByDisplayValue('Original first');
+    await user.clear(translationInput);
+    await user.type(translationInput, 'Draft first');
+    await user.click(screen.getByRole('button', { name: 'Save file snapshot' }));
+
+    expect(onSnapshot).toHaveBeenCalledWith('Original first');
+    expect(screen.getByDisplayValue('Draft first')).toBeInTheDocument();
+  });
+});

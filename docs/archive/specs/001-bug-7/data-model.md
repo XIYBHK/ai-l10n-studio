@@ -297,7 +297,7 @@ RuntimeState (运行时状态 - 不持久化)
   "id": "550e8400-e29b-41d4-a716-446655440000",
   "name": "Moonshot Default",
   "provider": "Moonshot",
-  "api_key": "sk-aBcDeFgHiJkLmNoPqRsTuVwXyZ123456",
+  "api_key": "<API_KEY>",
   "model": "moonshot-v1-8k",
   "base_url": null,
   "is_active": true,

@@ -1,55 +1,36 @@
 # RUST BACKEND KNOWLEDGE BASE
 
-## OVERVIEW
+Tauri 2 / Rust 2024. Startup, plugins and command registration are in lib.rs::run; main.rs delegates and retains the Windows subsystem attribute.
 
-Tauri 2.x backend (Rust 2024). 56 commands across 9 modules, 15 services, unified AppError.
+## Boundaries
 
-## STRUCTURE
+- commands/ bridges IPC to services; modules include translator, ai_config, ai_model_commands, config_sync, file_format, language, log, prompt_log and system.
+- services/ implements domain logic and DTOs; utils/init.rs handles app paths, logging and catalog initialization.
+- services/ai/ contains provider metadata registry, TOML catalog, model info and cost calculation. HTTP protocols execute in AITranslator.
+- All new service errors use AppError and `?`. Some existing command boundaries return String; do not add silent success paths.
+- Use parking_lot::RwLock and short lock lifetimes. Never hold library/config locks across remote AI awaits.
 
-```
-src/
-├── main.rs          # Tauri builder, invoke_handler (56 cmds), plugins: dialog/fs/store/notification
-├── lib.rs           # Re-exports commands, services, error, utils
-├── error.rs         # Unified AppError (From<serde/io/reqwest/walkdir>)
-├── commands/        # 9 modules (bridge layer: frontend -> services)
-├── services/        # 15 modules + ai/ subsystem (see services/AGENTS.md)
-└── utils/           # 10 helpers (init.rs: flexi_logger, path, string, IO)
-```
+## Contracts and persistence
 
-## COMMAND REGISTRATION (9 modules in commands/)
+Add a command in commands/, export from commands/mod.rs, register in lib.rs and expose through a frontend service.
+Serializable payloads use serde and ts-rs export annotations. Respect each DTO's field naming and Option/null/omitted-field semantics.
+ConfigDraft.transaction is the only mutation API. Validate, persist and publish while holding one config lock.
+Credentials live in config.secrets.json keyed by stable provider ID and are not serialized through query DTOs.
+TM/terms use one shared short-lived disk lock, revision checks and atomic replacement.
 
-| Module               | Commands                                               | Scope                          |
-| -------------------- | ------------------------------------------------------ | ------------------------------ |
-| translator.rs        | parse, translate, batch, refine, TM, term, file_dialog | Core translation + related ops |
-| ai_config.rs         | CRUD, set_active, test_connection                      | AI provider management         |
-| config_sync.rs       | get, update, validate, get_version                     | Config read/write/sync         |
-| ai_model_commands.rs | provider/model queries, cost estimation                | Frontend dropdown data         |
-| language.rs          | detect, default_target, supported, system_lang/locale  | Language detection             |
-| file_format.rs       | detect, get_metadata                                   | File format handling           |
-| system.rs            | log_dir, open_logs, native_theme                       | System utilities               |
-| prompt_log.rs        | get, clear                                             | AI request/response history    |
+## Translation and plugins
 
-## ERROR HANDLING
+Channel batches are the current translation entry. Keep early cancellation, indexed items, final result and cumulative usage semantics.
+Record reported usage before validating content; failures may still consume tokens.
+plugins/\*/plugin.toml is the sole bundled provider/model/price catalog. No dynamic compilation of provider.rs/models.rs.
+Strict catalog parsing rejects unused legacy extra_config/models.overrides fields.
+Missing cache price falls back to input price; explicit zero remains zero.
+Do not restore BatchTranslator, directory-translation IPC, old provider/model trees or file_chunker.
 
-- `AppError` in error.rs: unified type, implements `From<>` for serde/io/reqwest/walkdir
-- Commands: `Result<T, String>` via `.map_err(|e| e.to_string())` at Tauri boundary
-- Propagation: `?` operator through service -> command -> frontend
-- Logger: flexi_logger in utils/init.rs with `WriteMode::BufferAndFlush`
-- Catalog: new errors must be documented in `docs/ERRORS.md`
+## Validation
 
-## TESTING
-
-- Location: `services/tests/` (NOT inline `#[cfg(test)]`)
-- 3 files: ai_translator_tests, po_parser_tests, batch_translator_simple_tests
-- Fixtures: `tempfile` crate for isolated file-based tests
-- Tests may `#[allow(clippy::unwrap_used)]` where appropriate
-
-## CONVENTIONS
-
-- Services stay platform-agnostic; Tauri-specific code only in commands/ and main.rs
-- Command args: simple serializable types; use structs for complex inputs
-- Prefer Tauri plugins (dialog, fs, store) over custom implementations
-- Serde for all Rust <-> TypeScript data transfer
-- Use absolute paths; avoid relative path assumptions (cross-platform)
-- Throttle progress events to prevent frontend flooding
-- Keep main.rs clean: init logic in utils/init.rs, commands in commands/mod.rs
+Tests live inline for module internals and in services/tests for shared translation/PO fixtures.
+Use tempfile for isolated files and local HTTP mocks for protocol tests. Test unwrap allowances are scoped.
+Run cargo test --locked --features ts-rs and cargo clippy --locked --all-features --lib --bins -- -D warnings.
+Regenerate TypeScript DTOs after Rust schema changes, then run the frontend type check.
+New recurring errors belong in docs/ERRORS.md.

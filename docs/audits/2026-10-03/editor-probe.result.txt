@@ -1,0 +1,20 @@
+Editor audit probe result (2026-10-03)
+
+Command: npm run test:run -- src/__tests__/components/EditorAuditProbe.test.tsx
+Exit code: 0
+Vitest: 1 test file passed; 3 tests passed.
+
+Observed behavior:
+- Toolbar next then previous: the first entry remains `Original first`; the typed `Draft first` is lost on return.
+- Ctrl+ArrowDown then Ctrl+ArrowUp: the first entry remains `Original first`; the typed `Draft first` is lost on return.
+- External ordinary button snapshot: the button reads `Original first` from `Store.entries` while the editor still displays local `Draft first`.
+
+Interpretation:
+- The first two are component-level potential reuse paths. `TranslationWorkspace.tsx` currently does not pass `onNavigatePrev`/`onNavigateNext` to `EditorPane`, so they are not asserted as reachable through the current main shell.
+- The external button probe models a main-shell save action reading the store before the editor draft is committed; it demonstrates a stale store snapshot.
+
+Relevant source locations:
+- `src/components/editor/TargetSection.tsx:83-90`: blur skips `onBlur` when related target is a button or select.
+- `src/components/EditorPane.tsx:140-149`: Ctrl+Arrow navigation calls navigation callbacks directly.
+- `src/components/EditorPane.tsx:180-190`: toolbar receives navigation callbacks directly.
+- `src/components/TranslationWorkspace.tsx:132`: current main shell passes only `entry` and `onEntryUpdate` to `EditorPane`.

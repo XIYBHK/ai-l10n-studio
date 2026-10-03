@@ -1,0 +1,326 @@
+use anyhow::{Result, ensure};
+use po_translator_gui::services::{
+    ai_translator::{AIConfig, AITranslator},
+    batch_progress_channel::{TranslationInput, TranslationSource},
+    model_config::ModelApi,
+    po_parser::POParser,
+    po_translation::untranslated_slots,
+    term_library::TermLibrary,
+    translation_memory::{ConfirmedTranslation, TranslationMemory},
+};
+use po_translator_gui::utils::{path_validator::SafePathValidator, paths};
+use serde_json::{Value, json};
+use std::{
+    fs,
+    io::Write,
+    path::{Path, PathBuf},
+};
+
+fn write_atomic(path: &Path, bytes: &[u8]) -> Result<()> {
+    let mut file = tempfile::NamedTempFile::new_in(
+        path.parent()
+            .ok_or_else(|| anyhow::anyhow!("Missing parent"))?,
+    )?;
+    file.write_all(bytes)?;
+    file.as_file().sync_all()?;
+    file.persist(path)?;
+    Ok(())
+}
+
+fn rebuild() -> Result<Value> {
+    let _ = paths::PORTABLE_FLAG.set(false);
+    let root = paths::app_data_dir()?;
+    fs::create_dir_all(&root)?;
+    let backup = root.join("library-backups").join(format!(
+        "{}-{}",
+        chrono::Utc::now().format("%Y%m%dT%H%M%SZ"),
+        uuid::Uuid::new_v4()
+    ));
+    fs::create_dir_all(&backup)?;
+    let staging = tempfile::tempdir_in(&root)?;
+    let memory_name = "translation_memory.json";
+    let terms_name = "term_library.json";
+    let memory = TranslationMemory::new().save_to_file(staging.path().join(memory_name))?;
+    let (terms, ()) = TermLibrary::transaction(staging.path().join(terms_name), None, |_| Ok(()))?;
+    let mut old_files = Vec::new();
+    for name in [memory_name, terms_name] {
+        let target = root.join(name);
+        if target.is_file() {
+            fs::copy(&target, backup.join(name))?;
+            ensure!(
+                fs::read(&target)? == fs::read(backup.join(name))?,
+                "Backup verification failed"
+            );
+            old_files.push(name);
+        }
+    }
+    for name in [memory_name, terms_name] {
+        write_atomic(&root.join(name), &fs::read(staging.path().join(name))?)?;
+    }
+    let loaded_memory = TranslationMemory::new_from_file(root.join(memory_name))?;
+    let loaded_terms = TermLibrary::load_from_file(root.join(terms_name))?;
+    ensure!(loaded_memory.memory.len() == memory.memory.len() && loaded_memory.revision == 1);
+    ensure!(loaded_terms.terms.is_empty() && loaded_terms.revision == 1);
+    Ok(
+        json!({"status":"passed", "dataDirectory":root, "backupDirectory":backup,
+        "backedUpFiles":old_files, "memoryEntries":memory.memory.len(), "terms":terms.terms.len(),
+        "memoryRevision":loaded_memory.revision, "termRevision":loaded_terms.revision,
+        "migratedOldEntries":false}),
+    )
+}
+
+struct FixtureRoot(PathBuf);
+impl Drop for FixtureRoot {
+    fn drop(&mut self) {
+        if let Err(error) = fs::remove_dir_all(&self.0) {
+            eprintln!("Fixture cleanup failed: {error}");
+        }
+    }
+}
+
+fn configuration(key: &str) -> AIConfig {
+    AIConfig {
+        provider_id: "deepseek-live-test".into(),
+        catalog_provider_id: None,
+        api_key: key.into(),
+        api: ModelApi::OpenaiCompletions,
+        base_url: "https://api.deepseek.com".into(),
+        model: "deepseek-flash".into(),
+        max_tokens: Some(4096),
+        proxy: None,
+    }
+}
+
+async fn live_test(key: &str, evidence: &Path) -> Result<Value> {
+    let executable_parent = dunce::canonicalize(std::env::current_exe()?)?
+        .parent()
+        .ok_or_else(|| anyhow::anyhow!("Missing executable directory"))?
+        .to_owned();
+    let _ = paths::PORTABLE_FLAG.set(true);
+    let fixture_path = paths::app_home_dir()?;
+    ensure!(
+        fixture_path.starts_with(&executable_parent),
+        "Fixture outside executable directory"
+    );
+    ensure!(
+        !fixture_path.exists(),
+        "Refusing to overwrite an existing fixture directory"
+    );
+    fs::create_dir_all(&fixture_path)?;
+    let _fixture = FixtureRoot(fixture_path);
+    let data = paths::app_data_dir()?;
+    fs::create_dir_all(&data)?;
+    let memory_path = paths::get_translation_memory_path();
+    let terms_path = paths::get_term_library_path();
+    TranslationMemory::new().save_to_file(&memory_path)?;
+    TermLibrary::transaction(&terms_path, None, |_| Ok(()))?;
+    let initial_memory = fs::read(&memory_path)?;
+    let input_path = data.join("sample.po");
+    fs::write(
+        &input_path,
+        r#"msgid ""
+msgstr ""
+"Content-Type: text/plain; charset=UTF-8\n"
+"Language: zh_CN\n"
+"Plural-Forms: nplurals=1; plural=0;\n"
+
+msgctxt "project"
+msgid "Save this project to {path}."
+msgstr ""
+
+msgctxt "project"
+msgid "Save this project to {path}."
+msgstr ""
+
+msgctxt "network"
+msgid "Retry failed connection."
+msgstr ""
+
+msgctxt "errors"
+msgid "Found {count} error"
+msgid_plural "Found {count} errors"
+msgstr[0] ""
+"#,
+    )?;
+    let parser = POParser::new()?;
+    let mut document = parser.parse_file(&input_path)?;
+    let slots = untranslated_slots(&document)?;
+    ensure!(slots.len() == 4, "Unexpected slot count");
+    let mut translator =
+        AITranslator::new_with_config(configuration(key), true, None, Some("zh-CN".into()))?;
+    let items = translator
+        .translate_inputs(slots.iter().map(|slot| slot.input.clone()).collect())
+        .await?;
+    ensure!(items.len() == slots.len(), "Missing translated slots");
+    ensure!(
+        items[0].source == TranslationSource::Ai && items[1].source == TranslationSource::Dedup,
+        "Duplicate translation was not reused"
+    );
+    ensure!(
+        items[0].translation == items[1].translation,
+        "Duplicate results differ"
+    );
+    ensure!(
+        items[0].translation.contains("{path}") && items[3].translation.contains("{count}"),
+        "Placeholder lost"
+    );
+    ensure!(
+        fs::read(&memory_path)? == initial_memory,
+        "Unconfirmed AI output changed persisted memory"
+    );
+    ensure!(
+        translator
+            .get_translation_memory()
+            .map(|tm| tm.memory.len())
+            == Some(TranslationMemory::new().memory.len()),
+        "Unconfirmed AI output entered in-memory memory"
+    );
+    let batch_usage = translator.get_token_stats().clone();
+    ensure!(
+        batch_usage.total_tokens > 0 && batch_usage.unpriced_requests == 1,
+        "Missing real usage accounting"
+    );
+    for item in &items {
+        let slot = &slots[item.index];
+        let entry = &mut document.entries[slot.entry];
+        match slot.plural {
+            Some(index) => entry.msgstr_plural[index] = item.translation.clone(),
+            None => entry.msgstr = item.translation.clone(),
+        }
+        if !entry.flags.iter().any(|flag| flag == "fuzzy") {
+            entry.flags.push("fuzzy".into());
+        }
+    }
+    let output_path = data.join("fresh-output.zh-CN.po");
+    SafePathValidator::new().validate_output_path(
+        output_path
+            .to_str()
+            .ok_or_else(|| anyhow::anyhow!("Output path is not UTF-8"))?,
+    )?;
+    parser.write_file(&output_path, &document)?;
+    let roundtrip = parser.parse_file(&output_path)?;
+    ensure!(
+        roundtrip.metadata == document.metadata && roundtrip.entries.len() == 4,
+        "PO metadata changed"
+    );
+    ensure!(
+        roundtrip.entries[3].msgstr_plural == document.entries[3].msgstr_plural,
+        "Plural output changed"
+    );
+    let first = &slots[0].input;
+    TranslationMemory::confirm(
+        &memory_path,
+        vec![ConfirmedTranslation {
+            source: first.text.clone(),
+            translation: items[0].translation.clone(),
+            context: first.context.clone(),
+            language: "zh-CN".into(),
+        }],
+    )?;
+    let mut second =
+        AITranslator::new_with_config(configuration(key), true, None, Some("zh-Hans".into()))?;
+    let hits = second.translate_inputs(vec![first.clone()]).await?;
+    ensure!(
+        hits[0].source == TranslationSource::Tm && hits[0].translation == items[0].translation,
+        "Confirmed memory miss"
+    );
+    ensure!(
+        second.get_token_stats().total_tokens == 0,
+        "TM reuse consumed API tokens"
+    );
+    TermLibrary::transaction(&terms_path, None, |library| {
+        library.add_term(
+            "Retry failed connection.".into(),
+            "重试连接".into(),
+            "".into(),
+            None,
+            "zh-CN".into(),
+        )?;
+        library.add_term(
+            "Retry failed connection.".into(),
+            "重新尝试失败连接".into(),
+            "".into(),
+            Some("network".into()),
+            "zh-CN".into(),
+        )?;
+        library.add_term(
+            "Retry failed connection.".into(),
+            "再接続".into(),
+            "".into(),
+            Some("network".into()),
+            "ja".into(),
+        )?;
+        Ok(())
+    })?;
+    let mut third =
+        AITranslator::new_with_config(configuration(key), true, None, Some("zh-CN".into()))?;
+    let term_items = third
+        .translate_inputs(vec![TranslationInput {
+            text: "Retry failed connection.".into(),
+            context: Some("network".into()),
+        }])
+        .await?;
+    ensure!(
+        term_items[0].translation == "重新尝试失败连接",
+        "Scoped terminology not respected"
+    );
+    let term_usage = third.get_token_stats().clone();
+    ensure!(
+        term_usage.total_tokens > 0 && term_usage.unpriced_requests == 1,
+        "Missing term request usage"
+    );
+    fs::copy(input_path, evidence.join("real-deepseek-input.po"))?;
+    fs::copy(output_path, evidence.join("real-deepseek-output.zh-CN.po"))?;
+    Ok(
+        json!({"status":"passed", "provider":"DeepSeek", "model":"deepseek-flash",
+        "api":"openai-completions", "plannedRemoteRequests":2, "translatedSlots":items.len(),
+        "deduplicatedSlots":1, "batchUsage":batch_usage, "termUsage":term_usage,
+        "translations":items, "termTranslation":term_items[0].translation,
+        "checks":{"placeholders":true,"pluralRoundtrip":true,"newOutputPath":true,
+            "unconfirmedNotLearned":true,"confirmedMemoryReuseWithoutApi":true,
+            "terminologyContextPrecedence":true,"terminologyLanguageIsolation":true}}),
+    )
+}
+
+#[tokio::main]
+async fn main() -> Result<()> {
+    let args: Vec<_> = std::env::args().collect();
+    let mode = args
+        .get(1)
+        .ok_or_else(|| anyhow::anyhow!("Expected rebuild or test"))?;
+    let output = PathBuf::from(
+        args.get(2)
+            .ok_or_else(|| anyhow::anyhow!("Expected report path"))?,
+    );
+    let result = if mode == "rebuild" {
+        rebuild()
+    } else {
+        ensure!(mode == "test", "Unknown mode");
+        let mut key = String::new();
+        std::io::stdin().read_line(&mut key)?;
+        let key = key.trim();
+        ensure!(!key.is_empty(), "Missing test key on stdin");
+        live_test(
+            key,
+            output
+                .parent()
+                .ok_or_else(|| anyhow::anyhow!("Missing report parent"))?,
+        )
+        .await
+        .map_err(|error| anyhow::anyhow!(error.to_string().replace(key, "[redacted]")))
+    };
+    match result {
+        Ok(report) => {
+            fs::write(&output, serde_json::to_vec_pretty(&report)?)?;
+            println!("{}", report);
+            Ok(())
+        }
+        Err(error) => {
+            fs::write(
+                output,
+                serde_json::to_vec_pretty(&json!({"status":"failed","error":error.to_string()}))?,
+            )?;
+            Err(error)
+        }
+    }
+}

@@ -1,398 +1,100 @@
-# API 参考
+# IPC 与前端接口
 
-**Last Updated**: 2026-05-04
-**Scope**: Tauri IPC commands, frontend services, hooks, and stores
+核验日期：2026-10-03。注册入口是 `src-tauri/src/lib.rs::run`；此表按当前 handler 和命令源码整理。准确参数与返回值以 Rust 和生成类型为准，历史签名不继续兼容。
 
-## 架构总览
+## 已注册命令
 
-```
-React Component
-   │
-   ├─ Hook (useConfig / useTranslationFlow / ...)      ← 推荐入口
-   │   │
-   │   └─ Command Module (aiConfigCommands.add(), ...)
-   │
-   └─ Command Module (directly in event handler)       ← 次选
-       │
-       ├─ apiClient.invoke(name, args)                 ← 高层（错误 UI）
-       │   │
-       │   └─ tauriInvoke(name, args)                  ← 中间层（日志、PII 脱敏）
-       │       │
-       │       └─ @tauri-apps/api.invoke()             ← Tauri IPC
-       │
-       └─ Backend Rust Command                          ← 35+ handlers
-```
+| 命令模块               | IPC 名称                                                                                                                                                                                                                                                                                                                                                                                                                                                                                             |
+| ---------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `translator.rs`        | `parse_po_file`、`cancel_translation`、`cancel_all_translations`、`get_translation_memory`、`get_builtin_phrases`、`merge_builtin_phrases`、`save_translation_memory`、`confirm_translations`、`open_file_dialog`、`save_file_dialog`、`save_po_file`、`get_app_config`、`update_app_config`、`validate_config`、`get_term_library`、`add_term_to_library`、`remove_term_from_library`、`generate_style_summary`、`contextual_refine`、`should_update_style_summary`、`translate_batch_with_channel` |
+| `ai_config.rs`         | `get_model_configuration`、`save_model_provider`、`remove_model_provider`、`set_default_model`、`test_model_provider`、`discover_provider_models`、`get_system_prompt`、`update_system_prompt`、`reset_system_prompt`                                                                                                                                                                                                                                                                                |
+| `ai_model_commands.rs` | `get_provider_models`、`get_model_info`、`estimate_translation_cost`、`calculate_precise_cost`、`get_all_providers`、`get_all_models`、`find_provider_for_model`                                                                                                                                                                                                                                                                                                                                     |
+| `config_sync.rs`       | `get_config_version`                                                                                                                                                                                                                                                                                                                                                                                                                                                                                 |
+| `file_format.rs`       | `detect_file_format`、`get_file_metadata`                                                                                                                                                                                                                                                                                                                                                                                                                                                            |
+| `language.rs`          | `detect_text_language`、`get_default_target_lang`、`get_supported_langs`                                                                                                                                                                                                                                                                                                                                                                                                                             |
+| `log.rs`               | `get_app_logs`、`clear_app_logs`、`get_frontend_logs`                                                                                                                                                                                                                                                                                                                                                                                                                                                |
+| `prompt_log.rs`        | `get_prompt_logs`、`clear_prompt_logs`                                                                                                                                                                                                                                                                                                                                                                                                                                                               |
+| `system.rs`            | `get_system_language`、`get_log_directory_path`、`open_log_directory`、`get_native_system_theme`                                                                                                                                                                                                                                                                                                                                                                                                     |
+| `utils/i18n.rs`        | `get_system_locale`、`get_available_languages`                                                                                                                                                                                                                                                                                                                                                                                                                                                       |
 
-**两条铁律**：
+服务使用 `AppError` 分类并通过 `?` 传播；部分命令边界仍序列化为 String，前端以命令失败处理。日志清理失败会返回错误，不能显示为成功。
 
-1. 组件禁止直接调用 `invoke()`；必须经 `apiClient` 或 `tauriInvoke`
-2. 持久化数据必须通过 SWR hook 访问（`useConfig` / `useAIConfigs` / `useTranslationMemory` / `useTermLibrary`）
+## 前端调用
 
----
+`src/services/` 按功能提供命令对象：
 
-## 命令模块（`src/services/`）
+| 文件                   | 对象                                                                                  |
+| ---------------------- | ------------------------------------------------------------------------------------- |
+| aiCommands.ts          | modelConfigurationCommands、aiProviderCommands、aiModelCommands、systemPromptCommands |
+| configCommands.ts      | configCommands                                                                        |
+| fileCommands.ts        | poFileCommands、fileFormatCommands、dialogCommands                                    |
+| logCommands.ts         | logCommands                                                                           |
+| termCommands.ts        | translationMemoryCommands、termLibraryCommands                                        |
+| translationCommands.ts | i18nCommands                                                                          |
 
-13 个命令对象按功能分散在 6 个文件：
+普通命令经 `apiClient.invoke` 处理 UI 错误，再经 `tauriInvoke` 脱敏日志后调用 Tauri。options.silent/showErrorMessage 只控制 UI 提示，不控制传输或重试；没有自动重试包装器。Channel hook 直接使用脱敏传输层，由业务 flow 处理错误。
 
-| 文件 | 暴露的 Commands |
-|---|---|
-| `aiCommands.ts` | `aiConfigCommands`、`aiModelCommands`、`aiProviderCommands`、`systemPromptCommands` |
-| `configCommands.ts` | `configCommands` |
-| `fileCommands.ts` | `poFileCommands`、`fileFormatCommands`、`dialogCommands` |
-| `logCommands.ts` | `logCommands` |
-| `termCommands.ts` | `termLibraryCommands`、`translationMemoryCommands` |
-| `translationCommands.ts` | `translatorCommands`、`i18nCommands` |
+原生文件选择/保存使用 dialog 插件；读写 PO 必须传完整 PODocument。读取路径必须存在，输出路径允许新文件名但要求已有合法父目录。
 
-### 典型用法
+## 模型配置
 
 ```typescript
-import { aiConfigCommands } from '../services/aiCommands';
-import { poFileCommands } from '../services/fileCommands';
-
-const configs = await aiConfigCommands.getAll();
-const entries = await poFileCommands.parse(filePath);
+const configuration = await modelConfigurationCommands.get();
+await modelConfigurationCommands.saveProvider(profile, apiKey, defaultModelId);
+await modelConfigurationCommands.setDefault({ providerId, modelId });
+const result = await modelConfigurationCommands.testProvider(profile, apiKey, modelId);
+const models = await modelConfigurationCommands.discoverModels(profile, apiKey);
 ```
 
-### 核心命令对象
+apiKey 为 null 时保留已存密钥，空字符串清除。defaultModelId 可与保存供应商在同一事务中设为默认。查询只返回 profile 与 hasApiKey。
 
-#### `aiConfigCommands`（AI 提供商配置 CRUD）
+本地目录供应商从 TOML 发现模型，自定义服务使用所选协议的模型列表端点；Anthropic 列表支持分页。连接测试使用真实请求，保存预设本身不访问收费接口。测试编辑后的端点应重新输入密钥或先保存。协议、地址和类型见 [DataContract.md](DataContract.md)，快速预设见 [ModelPresets.md](ModelPresets.md)。
 
-```typescript
-aiConfigCommands.getAll(): Promise<AIConfig[]>
-aiConfigCommands.getActive(): Promise<AIConfig | null>
-aiConfigCommands.add(config: AIConfig): Promise<void>
-aiConfigCommands.update(index: string, config: AIConfig): Promise<void>
-aiConfigCommands.delete(index: string): Promise<void>
-aiConfigCommands.setActive(index: string): Promise<void>
-aiConfigCommands.testConnection(providerId, apiKey, baseUrl?, model?): Promise<void>
-```
+普通配置 update 仅接受 useTranslationMemory、logLevel、batchSize、timeoutSeconds、logRetentionDays、logMaxSize、logMaxCount。供应商和提示词使用专用命令，禁止通过普通 patch 修改。批次为 1–25，超时大于零；所有写入最终进入 ConfigDraft.transaction。
 
-#### `aiModelCommands`（模型信息 + 精确成本）
+## 配置 hooks 与主题
 
-```typescript
-aiModelCommands.getProviderModels(provider: string): Promise<ModelInfo[]>
-aiModelCommands.getModelInfo(provider: string, modelId: string): Promise<ModelInfo | null>
-aiModelCommands.calculatePreciseCost(
-  provider: string, modelId: string,
-  inputTokens: number, outputTokens: number,
-  cacheWriteTokens?: number, cacheReadTokens?: number
-): Promise<CostBreakdown>
-```
+| Hook                                  | 内容                                                        |
+| ------------------------------------- | ----------------------------------------------------------- |
+| useAppConfig                          | SWR app_config                                              |
+| useModelConfiguration                 | SWR model_configuration；configuration/loading/error/mutate |
+| useSystemPrompt                       | SWR system_prompt                                           |
+| useActiveAIConfig                     | 只订阅 model_configuration 并派生活动模型摘要               |
+| useTheme                              | 纯主题状态与 actions                                        |
+| useThemeRuntime                       | 主 AppShell 唯一的主题全局副作用                            |
+| useTranslationMemory / useTermLibrary | 库读取与刷新；管理器保留版本编辑快照                        |
 
-#### `aiProviderCommands`（动态供应商系统）
+初始化读取失败显示错误和重试；成功读取无默认模型时才自动打开设置。持久化初始化完成前不挂载主交互 UI。
+
+## Channel 翻译与取消
 
 ```typescript
-aiProviderCommands.getAll(): Promise<ProviderInfo[]>
-aiProviderCommands.getProvider(id: string): Promise<ProviderInfo | null>
-aiProviderCommands.findProviderForModel(modelId: string): Promise<ProviderInfo | null>
-aiProviderCommands.getAllModels(): Promise<ModelInfo[]>
-```
-
-#### `translatorCommands`（翻译执行）
-
-```typescript
-translatorCommands.translateSingle(text: string, targetLang: string): Promise<string>
-translatorCommands.contextualRefine(requests: RefineRequest[], targetLang: string): Promise<string[]>
-// 批量翻译用 useChannelTranslation hook（流式进度），不用此处
-```
-
-#### `poFileCommands` / `dialogCommands`（文件操作）
-
-```typescript
-poFileCommands.parse(filePath: string): Promise<POEntry[]>
-poFileCommands.save(filePath: string, entries: POEntry[]): Promise<void>
-dialogCommands.openFile(): Promise<string | null>
-dialogCommands.saveFile(): Promise<string | null>
-```
-
-#### `termLibraryCommands` / `translationMemoryCommands`（术语库 + 翻译记忆库）
-
-```typescript
-translationMemoryCommands.get(): Promise<TranslationMemory>
-translationMemoryCommands.save(memory: TranslationMemory): Promise<void>
-translationMemoryCommands.mergeBuiltinPhrases(): Promise<number>
-
-termLibraryCommands.get(): Promise<TermLibrary>
-termLibraryCommands.addTerm(data: TermInput): Promise<void>
-termLibraryCommands.shouldUpdateStyleSummary(): Promise<boolean>
-termLibraryCommands.generateStyleSummary(): Promise<void>
-```
-
-#### `i18nCommands`（语言检测）
-
-```typescript
-i18nCommands.detectLanguage(text: string): Promise<LanguageInfo>
-i18nCommands.getDefaultTargetLanguage(sourceCode: string): Promise<LanguageInfo>
-i18nCommands.getSupportedLanguages(): Promise<LanguageInfo[]>
-i18nCommands.getSystemLocale(): Promise<string>
-```
-
----
-
-## Hook API
-
-### 核心 Hooks
-
-| Hook | 用途 |
-|---|---|
-| `useTranslationFlow` | 主业务编排：文件操作、翻译执行、事件监听、渐进式队列 |
-| `useChannelTranslation` | Tauri Channel 流式批量翻译（解构使用以保持稳定函数引用） |
-| `useConfig` / `useAppData` | SWR 数据聚合（应用配置、AI 配置、系统提示词） |
-| `useAIConfigs` / `useSystemPrompt` | 细粒度 SWR 数据 hook |
-| `useTranslationMemory` / `useTermLibrary` | SWR + Tauri event-driven refresh（内置 `isActive` 竞态守卫） |
-| `useTheme` | 主题管理（明暗/系统，DOM `data-theme` 属性切换） |
-| `useTermDetection` | 术语差异分析 + 确认弹窗状态（从 EditorPane 抽出） |
-| `useEntrySelection` | 列表选择状态（Set 基础 + range 选择） |
-| `useAsync` | 通用异步状态（loading/error/data） |
-| `useCssColors` | CSS 变量常量（无 Hook 开销，`CSS_COLORS` 对象） |
-| `useSupportedLanguages` | 后端拉取支持语言列表 |
-
-### `useTranslationFlow` 返回值
-
-```typescript
-function useTranslationFlow(): {
-  entries: POEntry[];
-  currentEntry: POEntry | null;
-  currentFilePath: string | null;
-  isTranslating: boolean;
-  progress: number;
-  translationStats: TranslationStats | null;
-  sourceLanguage: string;   // ← 来自 useTranslationStore
-  targetLanguage: string;   // ← 来自 useTranslationStore
-  openFile: () => Promise<void>;
-  saveFile: () => Promise<void>;
-  saveAsFile: () => Promise<void>;
-  translateAll: () => Promise<void>;
-  handleTranslateSelected: (indices: number[]) => Promise<void>;
-  handleContextualRefine: (indices: number[]) => Promise<void>;
-  handleEntrySelect: (entry: POEntry) => void;
-  handleEntryUpdate: (index: number, updates: Partial<POEntry>) => void;
-  cancelTranslation: () => void;
-  resetTranslationStats: () => void;
-};
-```
-
-### `useChannelTranslation` 使用模式
-
-```typescript
-// 正确：解构出稳定函数引用
-const { translateBatch, cancelTranslation } = useChannelTranslation();
-
-await translateBatch(texts, targetLanguage, {
-  onProgress: (current, total, percentage) => setProgress(percentage),
-  onStats: (stats) => updateStats(stats),
-  onItem: (index, translation) => enqueueUpdate({ index, translation }),
+const { translateBatch, cancelTranslation, cancelAndWait, reset } = useChannelTranslation();
+const result = await translateBatch(inputs, targetLanguage, {
+  onItems: (items) => applyItems(items),
+  onStats: (stats) => receiveCumulativeSnapshot(stats),
+  onProgress: (processed, total, percentage) => updateProgress(percentage),
 });
 ```
 
-避免 `const ct = useChannelTranslation(); ct.cancelTranslation()` —— 返回对象每次渲染都是新引用。
+可选第四个参数 refineRequests 将同一传输流程用于 contextual_refine。结果 index 对应输入数组，重复原文及复数槽保持位置映射；最终返回值补偿漏到的 Channel items。取消可早于 task_id 到达，cancelAndWait 等待当前请求实际结束。reset 中止回写并请求取消，离开文档使用 cancelAndWait。
 
-### 异步监听器标准模式
+传输 hook 不返回第二套 progress/stats/isTranslating 状态。会话状态属于 useSessionStore，统计快照由 flow 按差值累加；累计统计属于 useStatsStore。
 
-所有订阅 `listen()` 的 hook 必须加 `isActive` 标志防竞态：
+## 库操作
 
-```typescript
-useEffect(() => {
-  let unlistenFn: (() => void) | null = null;
-  let isActive = true;
+- translationMemoryCommands.get/save 使用完整带 revision 的 TranslationMemory。
+- getBuiltinPhrases 仅返回 BuiltinPhrases.memory；加载到管理器属于草稿，保存时仍进行版本检查。
+- confirm 使用 ConfirmedTranslation[]，每项带 source/translation/context/language，后端读最新文件再事务修改。
+- termLibraryCommands.addTerm/removeTerm 传 source、context、language，可传 expectedRevision。
+- generateStyleSummary/shouldUpdateStyleSummary 使用指定语言与上下文，生成完成时检查库版本。
 
-  listen('event-name', (event) => {
-    if (isActive) handleEvent(event);
-  }).then((fn) => {
-    if (isActive) unlistenFn = fn;
-    else fn();  // 已卸载，立即清理
-  });
+AI 输出不自动学习。保存 PO 与确认入库的结果分别处理；入库失败保留审核状态，不能谎报成功。旧目录翻译、BatchTranslator 和 file chunker 不再是公开运行路径。
 
-  return () => {
-    isActive = false;
-    unlistenFn?.();
-  };
-}, [deps]);
-```
+## 格式、日志与错误
 
----
+FileFormat 为 PO/JSON/XLIFF/YAML。主编辑流程只处理 PO；JSON 元数据可读取，XLIFF/YAML 元数据返回不支持。FileMetadata 使用 total_entries 等生成字段；不要强制 cast 到 camelCase 镜像。
 
-## Zustand Store API
+logCommands.clear 截断日志文件内容并清内存缓冲区，枚举或写入失败返回错误。没有前端日志文件时返回空列表，由 UI 显示空状态。
 
-4 个 store 按责任拆分。全部使用原子 selector。
-
-### `useAppStore`（持久化）
-
-```typescript
-theme: 'light' | 'dark' | 'system';
-systemTheme: 'light' | 'dark';
-language: 'zh-CN' | 'en-US';
-config: AppConfig | null;
-setTheme(): void;
-setLanguage(): void;
-```
-
-Hooks：`useThemeMode()`、`useLanguage()`、`useSystemTheme()`、`useSetThemeAction()`、`useSetLanguageAction()`。
-
-### `useTranslationStore`（会话，非持久）
-
-```typescript
-entries: POEntry[];
-entryIndexMap: Map<POEntry, number>;  // O(1) 查找
-currentEntry: POEntry | null;
-currentIndex: number;
-currentFilePath: string | null;
-sourceLanguage: string;
-targetLanguage: string;
-setEntries / setCurrentEntry / updateEntry / setCurrentFilePath: action
-setSourceLanguage / setTargetLanguage: action
-getEntryIndex(entry): number;  // O(1) Map lookup
-nextEntry / previousEntry: action
-```
-
-Hooks：`useEntries()`、`useCurrentEntry()`、`useSourceLanguage()`、`useTargetLanguage()`、`useSetSourceLanguage()`、`useSetTargetLanguage()` 等。
-
-### `useSessionStore`（会话，非持久）
-
-```typescript
-isTranslating: boolean;
-progress: number;
-sessionStats: TranslationStats;
-setTranslating / setProgress / resetSessionStats / updateSessionStats: action
-```
-
-### `useStatsStore`（持久化，基于 `tauriStore`）
-
-```typescript
-cumulativeStats: TranslationStats;
-updateCumulativeStats(stats: Partial<TranslationStats>): void;
-resetCumulativeStats(): void;
-```
-
-### 原子 selector 规则
-
-```typescript
-// 正确：每个 hook 只订阅自己需要的字段
-const entries = useEntries();
-const currentEntry = useCurrentEntry();
-
-// 错误：bulk 订阅造成不必要重渲染
-const state = useTranslationStore();  // 禁止
-```
-
----
-
-## 后端 Rust 命令
-
-### 组织
-
-`src-tauri/src/commands/` 下 9 个命令模块，注册在 `main.rs` 的 `invoke_handler`：
-
-| 模块 | 命令主题 |
-|---|---|
-| `ai_config.rs` | AI 配置 CRUD |
-| `ai_model_commands.rs` | 模型信息、成本计算 |
-| `config_sync.rs` | 应用配置读写 |
-| `file_format.rs` | PO/JSON/XLIFF/YAML 格式检测 |
-| `language.rs` | 语言检测、系统 locale |
-| `prompt_log.rs` | 提示词日志 |
-| `system.rs` | 系统信息 |
-| `translator.rs` | 批量翻译、Channel 流式、取消 |
-| `mod.rs` | 模块汇总 |
-
-### 添加新命令（3 步）
-
-1. 在 `src-tauri/src/commands/*.rs` 中写 `#[tauri::command] pub async fn foo(...) -> Result<T, AppError>`
-2. 在 `main.rs` 的 `.invoke_handler(tauri::generate_handler![..., foo])` 注册
-3. 在 `src/services/*Commands.ts` 的对应命令对象加包装：`foo: (args) => apiClient.invoke('foo', { args })`
-
-### 错误处理
-
-所有 Rust 命令返回 `Result<T, AppError>`（`src-tauri/src/error.rs`）。`AppError` 枚举 10 类（Config / Translation / Io / Network / Serde / Proxy / Parse / Plugin / Validation / Generic）自动从 `anyhow` / `reqwest` / `std::io` / `serde_json` 转换。
-
-```rust
-use crate::error::AppError;
-
-#[tauri::command]
-async fn save_config(config: AppConfig) -> Result<(), AppError> {
-    let draft = ConfigDraft::global().await;
-    {
-        let mut data = draft.draft();
-        *data = config;
-    }
-    draft.apply()?;  // 保存到磁盘 + 发送 config:updated 事件
-    Ok(())
-}
-```
-
----
-
-## 配置 Draft 模式（`ConfigDraft`）
-
-**位置**: `src-tauri/src/services/config_draft.rs`
-
-### 原则
-
-- **全局单例**：`ConfigDraft::global().await`
-- **原子更新**：`draft()` 返回可写克隆 → 修改 → `apply()` 一次性写盘并发事件
-- **并发安全**：`parking_lot::RwLock`，读者多线程并发，写者排他
-- **Guard 不跨 await**：所有 read/write guard 必须在 `await` 前释放
-
-```rust
-// 正确
-let draft = ConfigDraft::global().await;
-{
-    let mut cfg = draft.draft();
-    cfg.log_level = Some("debug".into());
-}  // guard 释放
-draft.apply()?;
-
-// 错误（编译失败：guard not Send）
-let cfg = draft.data();
-some_async_fn().await;  // guard 跨 await 点
-```
-
-### 数据流
-
-```
-Frontend: configCommands.update(config)
-   ↓ Tauri IPC (camelCase → snake_case via serde)
-Backend: #[tauri::command] update_app_config(config)
-   ↓
-ConfigDraft::global().draft() → 写入 → apply()
-   ↓
-1. 序列化到磁盘 `app_config.json`
-2. Tauri emit('config:updated', config)
-   ↓ listen
-Frontend: SWR mutate('app_config')
-```
-
----
-
-## 流式批量翻译（Channel API）
-
-**用途**：批量翻译百条以上条目时保持 UI 响应。
-
-```typescript
-const { translateBatch, cancelTranslation } = useChannelTranslation();
-
-const result = await translateBatch(texts, targetLanguage, {
-  onProgress: (current, total, percentage) => {/* 进度条 */},
-  onStats: (stats) => {/* 实时统计 */},
-  onItem: (index, translation) => {
-    enqueueUpdate({ index, translation, source: 'ai' });  // 入队渐进式上屏
-  },
-});
-
-// 需取消时：
-await cancelTranslation();
-```
-
-后端 `translator.rs::translate_batch_with_channel` 通过双 Channel 推送 `BatchProgressEvent` 和 `BatchStatsEvent`，前端无需轮询。
-
----
-
-## 参考
-
-- 数据契约与类型定义：`docs/DataContract.md`
-- 架构总览与演进：`docs/Architecture.md`
-- 主题与色彩：`docs/THEME.md`、`docs/COLOR_SYSTEM.md`
-- 安全与密钥存储：`docs/SECURITY_NOTES.md`
-- 错误排查：`docs/ERRORS.md`
-- 前端知识库：`src/AGENTS.md`
-- 项目根知识库：`AGENTS.md`
+关联：[架构](Architecture.md)、[数据契约](DataContract.md)、[错误目录](ERRORS.md)、[复查记录](ArchitectureReview.md)。

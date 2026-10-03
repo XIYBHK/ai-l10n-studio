@@ -1,118 +1,25 @@
 # 开发工具脚本
 
-本目录包含项目开发和发布的辅助脚本。
+## `check-unused-i18n.js`
 
-## 📋 脚本列表
+扫描 `src/` 与 `src-tauri/src/` 的引用，检查 `src/i18n/locales/*.json` 中未使用的叶子键。
 
-### 1. `check-unused-i18n.js` - i18n 键清理工具
-
-自动扫描源代码，检测并清理未使用的国际化翻译键。
-
-**用法：**
-
-```bash
+```powershell
 npm run i18n:check
+node --test scripts/scripts.test.js
 ```
 
-**功能：**
+使用 `--fix` 时会更新 locale 文件；运行前应检查 Git diff。动态 i18n 调用按脚本规则保守处理。
 
-- 扫描 `src/` 和 `src-tauri/` 目录的所有源代码文件
-- 检测 `src/i18n/locales/*.json` 中未被引用的键
-- 自动备份原文件为 `.old` 后缀
-- 生成清理后的精简 i18n 文件
+## `portable.js`
 
-**白名单：**
+为 Windows 生成便携 ZIP：
 
-- `theme.light`, `theme.dark`, `theme.system`
-- `common.ok`, `common.cancel`, `common.confirm`
-
-**示例输出：**
-
-```
-🔍 Checking unused i18n keys...
-
-📂 Found 2 i18n files: [ 'en.json', 'zh-CN.json' ]
-
-📝 Scanned 15432 lines of source code
-
-[en] Progress: 245/245 (100.0%)
-
-[en] Unused keys (12): ["old.feature", "deprecated.button", ...]
-[en] ✅ Cleaned i18n file written to src/i18n/locales/en.json
-[en] 📦 Original file backed up as en.json.old
-
-[zh-CN] Progress: 245/245 (100.0%)
-[zh-CN] ✅ No unused keys found. Skipping file update.
-
-✅ Done! Check the output above for details.
-```
-
----
-
-### 2. `portable.js` - Windows 便携版打包
-
-生成 Windows 便携版 (绿色版) zip 包，支持无需安装直接运行。
-
-**用法：**
-
-```bash
-# 先构建 Release 版本
+```powershell
 npm run tauri:build
-
-# 然后打包便携版
 npm run tauri:portable
-
-# 或指定目标架构
-node scripts/portable.js x86_64-pc-windows-msvc
 ```
 
-**功能：**
+输出包含主 exe、`_up_/plugins/<provider>/plugin.toml` 和 `.config/PORTABLE`。仅收录当前运行时使用的 catalog，忽略增量构建目录残留的 Rust 源码和 DLL；不读取或打包已有个人配置和密钥。架构参数可传入 `node scripts/portable.js x86_64-pc-windows-msvc`。
 
-- 自动创建 `.config/PORTABLE` 标志文件（启用便携模式）
-- 打包主程序 `po-translator-gui.exe`
-- 打包资源文件 `resources/`
-- 生成 `PO-Translator_{version}_{arch}_portable.zip`
-
-**输出示例：**
-
-```
-PO-Translator_1.0.0_x64_portable.zip
-├── po-translator-gui.exe
-├── resources/
-│   └── locales/
-│       ├── en.json
-│       └── zh-CN.json
-└── .config/
-    └── PORTABLE
-```
-
-**便携模式特性：**
-
-- 所有配置文件存储在程序目录下的 `.config/`
-- 翻译记忆库和日志存储在程序目录
-- 可直接复制到 U 盘或其他目录运行
-
----
-
-## 🛠️ 依赖
-
-这些脚本需要以下 npm 包（已在 `package.json` 中配置）：
-
-- `adm-zip` - ZIP 文件压缩
-
----
-
-## 📝 注意事项
-
-1. **i18n 检查**：运行前请确保提交所有更改，以便回滚
-2. **便携版打包**：仅支持 Windows 平台
-3. **架构支持**：
-   - `x64` (x86_64-pc-windows-msvc) - 64位 Intel/AMD
-   - `arm64` (aarch64-pc-windows-msvc) - ARM64
-   - `x86` (i686-pc-windows-msvc) - 32位 (不推荐)
-
----
-
-## 🔗 参考
-
-这些脚本改编自 [clash-verge-rev](https://github.com/clash-verge-rev/clash-verge-rev) 项目，已针对本项目进行适配和优化。
+脚本依赖以根目录 `package.json` 为准，当前便携打包使用 `adm-zip`。

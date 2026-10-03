@@ -1,0 +1,72 @@
+{
+  "date": "2026-10-03",
+  "scope": "whole-project review, architecture consolidation and current-documentation cleanup in uncommitted worktree",
+  "recordedAt": "2026-10-02T23:48:29.392Z",
+  "frontend": {
+    "command": "npm run test:run -- --reporter=dot",
+    "exitCode": 0,
+    "files": 22,
+    "tests": 77
+  },
+  "rust": {
+    "command": "cargo test --locked --features ts-rs --quiet",
+    "exitCode": 0,
+    "libTests": 161,
+    "binTests": 0,
+    "note": "binary delegates to library; duplicated module tests removed"
+  },
+  "scripts": {
+    "command": "npm run test:scripts",
+    "exitCode": 0,
+    "tests": 6
+  },
+  "nativeSmoke": {
+    "command": "npm --prefix e2e-tests run test -- --spec ./specs/app.e2e.cjs",
+    "exitCode": 0,
+    "tests": 1,
+    "webviewVersion": "154.0.4258.53",
+    "isolatedCopy": true,
+    "note": "startup, WebDriver session and webview handle only"
+  },
+  "checks": {
+    "typescriptExitCode": 0,
+    "clippyAllFeaturesExitCode": 0,
+    "fullLintExitCode": 0,
+    "gitDiffCheckExitCode": 0,
+    "i18nExitCode": 0,
+    "markdownLinksExitCode": 0
+  },
+  "build": {
+    "command": "npm run tauri:build -- --no-bundle",
+    "exitCode": 0,
+    "package": "src-tauri/target/release/PO-Translator_1.0.0_x64_portable.zip",
+    "packageBytes": 4167553,
+    "executableBytes": 8497664,
+    "executableSha256": "A12D450F8902BC02D06E6D07D041C5ADF57A38A0D4F9045E909710A8E404C476",
+    "archiveExecutableMatchesRelease": true,
+    "pluginCount": 6,
+    "catalogsMatchCurrentSource": true,
+    "files": [
+      ".config/PORTABLE",
+      "_up_/plugins/deepseek/plugin.toml",
+      "_up_/plugins/gemini-ai/plugin.toml",
+      "_up_/plugins/minimax/plugin.toml",
+      "_up_/plugins/moonshot/plugin.toml",
+      "_up_/plugins/openai/plugin.toml",
+      "_up_/plugins/zhipu/plugin.toml",
+      "po-translator-gui.exe"
+    ]
+  },
+  "graph": {
+    "indexed": false,
+    "note": "indexing aborted before publication; coverage reports project not indexed; bounded source and test evidence used"
+  },
+  "previousLiveAiEvidence": "real-deepseek.result.json",
+  "notMeasured": [
+    "full native editing/close-confirmation workflows",
+    "Windows notification delivery",
+    "large-file performance",
+    "other providers and refreshed catalog prices"
+  ],
+  "commitOrPushPerformed": false
+}

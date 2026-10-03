@@ -1,320 +1,89 @@
 # 数据契约
 
-**Last Updated**: 2026-05-04
-**Principle**: Rust 类型是单一事实源（SSOT），TypeScript 类型通过 `ts-rs` 自动生成或手动对齐。
+核验日期：2026-10-03。Rust 序列化定义和 `src/types/generated/` 是 IPC 契约来源；前端仅 re-export 或扩展运行时字段。
 
-## 核心约束
+## 生成与命名
 
-1. **单一真相源**：Rust struct 定义优先，TypeScript 类型同步
-2. **camelCase 传输**：`serde(rename_all = "camelCase")` 自动转换 `snake_case ↔ camelCase`
-3. **零转换成本**：前后端类型字段 1:1 对应，IPC 层不手工映射
-4. **强制验证**：serde 反序列化失败即命令失败；TypeScript 编译期检查
-
----
-
-## 类型生成机制
-
-### 自动生成（推荐）
-
-Rust struct 标注 `ts-rs` 特性：
-
-```rust
-#[cfg_attr(feature = "ts-rs", derive(TS))]
-#[cfg_attr(feature = "ts-rs", ts(export, export_to = "../src/types/generated/"))]
-pub struct ProviderInfo {
-    pub id: String,
-    pub display_name: String,
-    pub default_url: String,
-    pub default_model: String,
-}
+```powershell
+cd src-tauri
+cargo test --locked --features ts-rs --quiet
 ```
 
-输出到 `src/types/generated/ProviderInfo.ts`（禁止手动编辑）。
+带 `TS` derive 和 export 标注的 Rust 类型在测试时导出到 `src/types/generated/`；不要手写镜像或直接编辑生成文件。前端构建通过 TypeScript 检查消费端。
 
-### 手动同步
+命名按具体 serde 契约：配置 DTO 通常 camelCase，PO、Channel、文件元数据和库记录保留 snake_case。不要将返回的 `unknown` 强制转换成另一个字段命名的手写接口。
 
-部分类型（如 `AIConfig`）在 `src/types/aiProvider.ts` 手动定义，但字段与 Rust 端必须严格一致。
+| 来源                        | 生成类型                                                                      | 关键字段                                                           |
+| --------------------------- | ----------------------------------------------------------------------------- | ------------------------------------------------------------------ |
+| `model_config.rs`           | ModelProviderProfile / Summary / Configuration / Selection / Definition / Api | 稳定 provider ID、多模型、默认选择、协议                           |
+| `config_draft.rs`           | AppConfig / ConfigVersionInfo                                                 | 普通设置、版本、修改时间；无密钥                                   |
+| `po_parser.rs`              | PODocument / POEntry                                                          | metadata、注释、上下文、复数、flags、obsolete、previous 字段       |
+| `batch_progress_channel.rs` | TranslationInput / Item / Source / BatchProgressEvent / BatchResultWithTaskId | 有序输入索引、task_id、结果和累计统计                              |
+| `translation_stats.rs`      | TranslationStats / TokenStats                                                 | 翻译来源、token、已知成本、未知价格次数                            |
+| `translation_memory.rs`     | TranslationMemory / MemoryStats / ConfirmedTranslation                        | revision、memory、stats、目标语言与上下文                          |
+| `term_library.rs`           | TermLibrary / Metadata / TermEntry / StyleSummary                             | revision、作用域、词条、总结元数据                                 |
+| `file_format.rs`            | FileFormat / FileMetadata                                                     | format、total_entries、source_language、target_language、file_path |
+| `commands/translator.rs`    | BuiltinPhrases / ContextualRefineRequest                                      | 内置 memory 集合；优化上下文                                       |
 
-```rust
-#[derive(Serialize, Deserialize)]
-#[serde(rename_all = "camelCase")]
-pub struct AIConfig {
-    pub provider_id: String,       // → providerId
-    pub api_key: String,           // → apiKey
-    pub base_url: Option<String>,  // → baseUrl
-    pub model: Option<String>,
-    pub proxy: Option<ProxyConfig>,
-}
-```
+`BuiltinPhrases` 只有 `memory`，不伪装成含 revision/stats 的完整 TM。`FileMetadata` 的字段为 `total_entries` 等 snake_case；可选语言和路径字段缺失时省略。术语库的空总结/时间字段序列化为 `null`，不是可省略字段。
 
-```typescript
-export interface AIConfig {
-  providerId: string;
-  apiKey: string;
-  baseUrl?: string;
-  model?: string;
-  proxy?: ProxyConfig;
-}
-```
+## 供应商、默认模型与凭据
 
----
+公开 `ModelProviderProfile` 包含 `id/displayName/catalogProviderId/api/baseUrl/models/proxy`。内部 Rust `api_key` 不参与序列化。
 
-## 核心类型
+- `defaultModel` 为 `null` 或 `{ providerId, modelId }`，必须指向存在的供应商及其模型。
+- 保存时 `apiKey: null` 保留已存密钥，空字符串清除，其他字符串替换；凭据文件以稳定 ID 为键。
+- 查询返回 `ModelProviderSummary.hasApiKey`。测试改变后的端点时必须提供密钥或先保存，避免将旧凭据隐式发送到新地址。
+- `defaultModelId` 可在同一保存事务中设置默认模型；省略则保持原默认选择，删除其供应商/模型时清空失效选择。
+- Base URL 使用 HTTP(S) 基础地址，禁止凭据、query、fragment 和具体操作端点。HTTP 自动重定向禁用。
+- 三个协议值为 `openai-completions`、`openai-responses`、`anthropic-messages`。
 
-### 配置类型
+`AppConfig` 保存 modelProviders/defaultModel、useTranslationMemory、batchSize、timeoutSeconds、systemPrompt、日志参数、configVersion/lastModified。已移除无消费者的 translationMemoryPath、autoSave、maxConcurrent、themeMode、language；不再接受这些普通设置 patch。主题和界面语言属于 Tauri store。
 
-| 类型 | 生成方式 | 说明 |
-|---|---|---|
-| `AIConfig` | 手动同步 | AI 提供商配置（provider/key/url/model/proxy） |
-| `AppConfig` | 手动同步 | 应用全局配置（代理、日志、翻译并发） |
-| `ProxyConfig` | ts-rs 生成 | 代理设置（HTTP/SOCKS5） |
-| `ProviderInfo` | ts-rs 生成 | 供应商信息（id、display_name、default_url、default_model） |
+| 日志字段         | 默认值 | 生效                     |
+| ---------------- | ------ | ------------------------ |
+| logLevel         | info   | 保存后即时应用           |
+| logRetentionDays | 7      | 启动清理；0 不按年龄清理 |
+| logMaxSize       | 128 KB | 重启后用于轮转           |
+| logMaxCount      | 8      | 重启后用于轮转           |
 
-#### `AppConfig.logXxx` 字段
+配置事务失败不发布内存状态；版本只随成功持久化递增。单文件使用原子替换，公开配置写入失败恢复原凭据文件。旧未发布的平面配置不继续运行兼容层；首次保存前保留替换前备份。
 
-| 字段 | 类型 | 默认 | 说明 |
-|---|---|---|---|
-| `logLevel` | `string` | `'info'` | error / warn / info / debug / trace |
-| `logRetentionDays` | `number` | `7` | 保留天数（0 = 永久） |
-| `logMaxSize` | `number` | `128` | 单文件最大 KB |
-| `logMaxCount` | `number` | `8` | 保留文件数 |
+## 文档与翻译输入
 
----
+`PODocument` 保留 header、metadata、metadata_is_fuzzy 和完整 entries。`POEntry` 保留原文、译文、复数、注释、上下文、flags、occurrences、obsolete 和 previous 字段。前端 `needsReview/translationSource/justUpdated` 属于运行时状态，保存时不作为 PO 元数据输出。
 
-### AI 供应商类型
+编辑草稿按条目与复数槽存储。保存先合并草稿并取得内容快照；任务回写须匹配文档/条目版本，不能覆盖更晚人工编辑。翻译的 `TranslationInput` 是 `{ text, context }`，输入数组位置对应结果 `index`；复数槽映射由前端维护。
 
-```typescript
-interface ModelInfo {
-  id: string;
-  name: string;
-  provider: string;
-  context_window: number;
-  max_output_tokens: number;
-  input_price: number;           // USD per 1M tokens
-  output_price: number;
-  cache_reads_price?: number;
-  cache_writes_price?: number;
-  supports_cache: boolean;
-  supports_images: boolean;
-  description?: string;
-  recommended: boolean;
-}
+目标语言属于文档：新目标语言创建独立文档、清空旧译文、更新头部和复数规则，不修改原语言文件。有效复数元数据是翻译复数条目的前提。
 
-interface CostBreakdown {
-  input_tokens: number;
-  output_tokens: number;
-  cache_write_tokens: number;
-  cache_read_tokens: number;
-  input_cost: number;            // USD
-  output_cost: number;
-  cache_write_cost: number;
-  cache_read_cost: number;
-  total_cost: number;
-  cache_savings: number;
-  cache_hit_rate: number;        // 百分比
-}
-```
+## Channel 与统计
 
-**价格单位硬约束**：
+每个 progress event 含 task_id、processed、total、items、stats；返回值含 task_id、items、cancelled、stats。stats 是同一任务的累计快照，不能逐事件重复累加；flow 只计入差值。传输 hook 按 index 去重回写，并用最终返回值补偿漏到的 Channel 结果。
 
-- 价格 = USD per 1M tokens
-- 成本 = USD（不使用 CNY/¥）
-- UI 显示：`$X.XXXX`
+取消可在首个 task_id 到达前请求；获知 ID 后发送取消。离开文档等待任务完成，取消已产生结果和 usage 仍需统计。
 
-**成本计算路径**：`ModelInfo → CostCalculator → CostBreakdown → TranslationStats.token_stats.cost`。
+`TokenStats` 包含 input_tokens/output_tokens/total_tokens/cost/unpriced_requests。空响应失败仍保留响应报告的 usage，并在返回错误前发送累计统计。费用是本地目录估算，单位 USD/百万 token；无目录价格的请求增加 unpriced_requests，不把零展示值当成免费调用。
 
----
+模型目录缓存价格：缺失表示按常规输入价估算，显式 0 表示该成本项为零，两者不能混淆。
 
-### 翻译数据
+## 翻译记忆和术语库
 
-```typescript
-interface POEntry {
-  msgid: string;
-  msgstr: string;
-  msgctxt?: string | null;
-  comments: string[];
-  line_start: number;
-  line_end: number;
-  needsReview: boolean;          // AI 翻译后需人工确认
-  justUpdated?: boolean;         // 渐进式上屏动画触发
-  translationSource?: 'tm' | 'dedup' | 'ai';
-}
+TM 的 memory 键为 JSON tuple `[source, context, canonicalTargetLanguage]`。中文简体与繁体保持不同作用域；语言别名规范化，原文中的分隔符不会造成键碰撞。
 
-interface TranslationQueueItem {
-  index: number;
-  translation: string;
-  source: 'tm' | 'dedup' | 'ai';
-  incrementalStats?: {
-    tmHits?: number;
-    deduplicated?: number;
-    aiTranslated?: number;
-    tmLearned?: number;
-    tokenStats?: {
-      inputTokens: number;
-      outputTokens: number;
-      totalTokens: number;
-      cost: number;
-    };
-  };
-}
+- AI 结果不自动入库；人工明确确认后通过 confirm_translations 收录。
+- TM 整库编辑带 revision，过期版本拒绝保存；确认入库读取磁盘最新版本后事务修改。
+- 术语定位使用 source/context/language；修改/删除可携带 expectedRevision，防止编辑基线失效。
+- 精确短语规则进入提示词；风格总结使用同语言/上下文样例，写回时检查生成前版本。
+- 文件原子替换前校验，进程内读写共用短时锁。旧库格式不迁移；重建必须有数据处理授权。
+- 导出/导入使用真实库结构；后台刷新不丢弃管理器未保存草稿。
 
-interface TranslationStats {
-  total: number;
-  tm_hits: number;
-  deduplicated: number;
-  ai_translated: number;
-  tm_learned: number;
-  token_stats: TokenStats;
-}
+## 存储与日志
 
-interface TokenStats {
-  input_tokens: number;
-  output_tokens: number;
-  total_tokens: number;
-  cost: number;                  // USD
-}
-```
+普通运行数据目录来自 `utils/paths.rs`；Windows 为用户 Roaming 下 `com.potranslator.gui`。便携标记位于 exe 旁 `.config/PORTABLE`，首次运行数据写入 `.config/com.potranslator.gui`。
 
----
+便携 ZIP 只带程序、资源与标记，不带已有用户配置、密钥、TM 或术语库。Tauri store 保存偏好和累计统计并串行写入。
 
-### 翻译记忆库
+提示词日志包含发送给 AI 的原文/上下文及响应，用于调试；它不是价格账单或翻译记忆。IPC 参数日志递归脱敏敏感字段。日志清理保留文件、截断内容，I/O 失败返回错误。
 
-```typescript
-interface TranslationMemory {
-  memory: Record<string, string>;  // 源文本 → 目标译文
-  stats: MemoryStats;
-  last_updated: string;             // ISO 时间戳
-}
-
-interface MemoryStats {
-  total_entries: number;
-  hits: number;
-  misses: number;
-}
-```
-
-**核心行为**：
-
-- 首次运行：自动加载 83+ 条内置短语到 `memory`
-- 后续运行：只查询 `memory`，不再回退到内置短语
-- 用户删除：不会自动恢复
-- `merge_builtin_phrases()`：手动合并，不覆盖已有词条
-
----
-
-### 术语库
-
-```typescript
-interface TermEntry {
-  source: string;
-  userTranslation: string;
-  aiTranslation: string;
-  context: string | null;
-  tags: string[];
-  created_at: string;
-}
-
-interface TermLibrary {
-  terms: TermEntry[];
-  styleSummary: string | null;
-  metadata: {
-    total_terms: number;
-    last_updated: string;
-  };
-}
-```
-
-`styleSummary` 在累计添加 N 条后自动重生成（通过 AI 调用，异步）。
-
----
-
-## IPC 数据流
-
-### 请求路径
-
-```
-React component / hook
-   ↓ 调用命令对象
-aiConfigCommands.add(config)
-   ↓ apiClient.invoke('add_ai_config', { config })
-tauriInvoke middleware（日志 + PII 脱敏）
-   ↓
-@tauri-apps/api.invoke('add_ai_config', args)
-   ↓ IPC + serde JSON
-Rust #[tauri::command] fn add_ai_config(config: AIConfig) -> Result<(), AppError>
-   ↓ serde 反序列化 camelCase → snake_case
-业务逻辑
-   ↓ Result::Ok / Err
-serde 序列化
-   ↓ IPC 返回
-apiClient 抛出或返回 T
-```
-
-### 事件路径
-
-后端通过 `tauri::Window::emit` 推送：
-
-| 事件 | Payload | 触发时机 |
-|---|---|---|
-| `config:updated` | `AppConfig` | `ConfigDraft::apply()` 后 |
-| `translation:after` | `{ stats: TranslationStats }` | 批量翻译完成 |
-| `tauri://file-drop` | `string[]` (file paths) | 用户拖拽文件 |
-
-前端通过 `listen()` 订阅，必须使用 `isActive` 标志防竞态（详见 `API.md` 异步监听器模式）。
-
-### 流式进度（Channel API）
-
-批量翻译用 `Channel<T>` 推送，不走事件系统：
-
-```typescript
-const progressChannel = new Channel<BatchProgressEvent>();
-const statsChannel = new Channel<BatchStatsEvent>();
-
-progressChannel.onmessage = (event) => setProgress(event.percentage);
-statsChannel.onmessage = (event) => setStats(event);
-
-await invoke('translate_batch_with_channel', {
-  texts, targetLanguage, progressChannel, statsChannel,
-});
-```
-
----
-
-## Zustand Store 持久化
-
-| Store | 持久化 | 存储位置 | 用途 |
-|---|---|---|---|
-| `useAppStore` | 是 | `tauriStore` | 主题 / 语言 / app 配置摘要 |
-| `useTranslationStore` | 否 | 内存 | 条目 / 当前选中 / source+target language |
-| `useSessionStore` | 否 | 内存 | 进度 / 会话统计 |
-| `useStatsStore` | 是 | `tauriStore` | 累计统计（跨会话） |
-
-`tauriStore` 使用 `@tauri-apps/plugin-store`，数据写在 OS 应用数据目录。
-
----
-
-## 配置 Draft 模式
-
-详见 `docs/API.md §ConfigDraft`。核心约束：
-
-- 公开配置（`app_config.json`）与 secrets（`secrets.json`）分离持久化
-- 运行时读写优先 `ConfigDraft::global()`
-- `ConfigManager` 仅保留给导入/导出工具和老路径兼容
-- 前端读取 `AppConfig` 时，API Key 只返回掩码摘要；完整 Key 必须通过专用命令（带用户确认）
-
----
-
-## 版本兼容
-
-- 新增字段必须为 `Option<T>`（Rust）/ `?`（TS），旧数据反序列化时默认 `None`/`undefined`
-- 删除字段前先 deprecate 至少一个版本，清理 migration 后再删
-- `ConfigVersionInfo` 记录当前 schema 版本；不兼容变更需 migration 函数
-
----
-
-## 参考
-
-- API 参考：`docs/API.md`
-- 架构总览：`docs/Architecture.md`
-- 类型定义实际位置：`src/types/`（手动）、`src/types/generated/`（ts-rs 生成，不手编）
-- 前端知识库：`src/AGENTS.md`
+相关说明：[API](API.md)、[架构](Architecture.md)、[安全](SECURITY_NOTES.md)、[本轮复查](ArchitectureReview.md)。

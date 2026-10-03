@@ -1,168 +1,89 @@
 # 架构概览
 
-**Last Updated**: 2026-05-04
-**历史演进参考**: `archive/architecture-history.md`（2025-11 性能重构、2026-01 质量优化、Phase 10 虚拟滚动等完整历程）
+核验日期：2026-10-03。本文描述当前工作树。历史方案见 [archive](archive/README.md)，本轮变化和验证见 [ArchitectureReview.md](ArchitectureReview.md)。
 
-## 核心技术栈
+## 入口与边界
 
-| 层         | 技术                                     |
-| ---------- | ---------------------------------------- |
-| 前端框架   | React 19 + TypeScript + Vite             |
-| UI 库      | Ant Design 6                             |
-| 状态管理   | Zustand 5（4 stores，原子 selector）     |
-| 数据获取   | SWR                                      |
-| 虚拟化     | @tanstack/react-virtual                  |
-| i18n       | react-i18next（14 命名空间）             |
-| 桌面壳     | Tauri 2.x                                |
-| 后端语言   | Rust 2024 edition                        |
-| 异步运行时 | Tokio                                    |
-| 解析器     | nom（PO 文件）                           |
-| 序列化     | serde（camelCase ↔ snake_case 自动）     |
-| 类型生成   | ts-rs（Rust → TypeScript）               |
-| 并发原语   | parking_lot::RwLock                      |
-| 持久化     | tauri-plugin-store（JSON，应用数据目录） |
+- 前端：React 19、TypeScript、Vite、Ant Design 6、Zustand、SWR。
+- 后端：Tauri 2、Rust 2024、Tokio、serde、parking_lot。
+- `src/main.tsx` 等待偏好和累计统计初始化、应用持久化语言后挂载 UI，再显示窗口。
+- `src-tauri/src/main.rs` 仅调用 library 的 `run()`；模块、初始化和 handler 注册位于 `lib.rs`。可执行文件与测试使用同一服务实现。
+- 当前主编辑格式是 PO。JSON 支持检测和元数据；XLIFF/YAML 元数据解析明确返回不支持错误。
 
-## 设计原则
+## 前端状态所有权
 
-- **单一真相源**：Rust 类型先定义，前端通过 `ts-rs` 生成或手动对齐；设计 token 统一在 `src/index.css`
-- **运行时配置**：优先使用 `ConfigDraft`（全局单例 + 原子 apply）；`ConfigManager` 仅保留导入/导出与兼容
-- **密钥分离**：公开配置 + 独立 secrets 文件，详见 `SECURITY_NOTES.md`
-- **替换而非共存**：新代码落地即移除旧代码，避免 legacy wrapper
-- **框架优先**：新增功能先检查现有模块，避免临时补丁
+| 状态                                        | 所有者                          | 持久化                            |
+| ------------------------------------------- | ------------------------------- | --------------------------------- |
+| 文档、条目、复数槽、编辑草稿、文档/条目版本 | `useTranslationStore`           | 显式保存 PO                       |
+| 任务运行状态、进度、当前文档会话统计        | `useSessionStore`               | 不持久化                          |
+| 累计 token、费用、翻译统计                  | `useStatsStore`                 | Tauri store                       |
+| 主题、界面语言、系统明暗                    | `useAppStore`                   | 主题/语言持久化；系统明暗仅运行时 |
+| 供应商、默认模型、普通设置、系统提示词      | 配置 hooks + Rust `ConfigDraft` | Rust 配置文件                     |
+| 翻译记忆和术语管理草稿                      | 专用库 hooks + 管理器编辑快照   | 版本检查后提交                    |
 
-## 代码组织
+`useTranslationFlow` 编排文件操作、确认入库、目标语言切换、翻译与取消。`useChannelTranslation` 仅处理 Channel、结果补偿与取消生命周期，使用 ref 和 callbacks，不维护第二套 UI 状态。
 
-```
-ai-l10n-studio/
-├── src/                  # React frontend（详见 src/AGENTS.md）
-│   ├── components/       # editor/, settings/, ui/, aiWorkspaceSections/, entryListParts/
-│   ├── hooks/            # 核心业务 hook + 抽离的 useTermDetection/useEntrySelection
-│   ├── store/            # 4 Zustand stores（原子 selector）
-│   ├── services/         # Command modules + apiClient + tauriInvoke
-│   ├── theme/            # Catppuccin palette + Antd ThemeConfig
-│   ├── i18n/             # locale files + react-i18next 配置
-│   ├── styles/           # accessibility.css（WCAG 2.1 AA）
-│   ├── types/            # 手动类型 + generated/（ts-rs 生成，禁手编）
-│   └── test/             # Vitest + jsdom 设置
-├── src-tauri/
-│   └── src/
-│       ├── commands/     # 9 command modules（35+ Tauri handlers）
-│       └── services/     # 业务服务 + AI provider plugins
-├── plugins/              # 用户可见的 AI 提供商插件
-├── e2e-tests/            # WebDriverIO + MidScene（独立 npm 工程）
-├── scripts/              # portable.js、check-unused-i18n.js
-└── docs/                 # 当前参考文档 + archive/ 历史归档
+配置使用 `useAppConfig`、`useModelConfiguration`、`useSystemPrompt` 分别订阅 SWR key；仅读活动模型的组件使用 `useActiveAIConfig`。读取失败与成功读取空配置分开处理：失败可重试，空配置才自动打开设置。
+
+## 数据流
+
+```mermaid
+flowchart LR
+  UI[React UI] --> Flow[useTranslationFlow]
+  Flow --> Doc[Document store]
+  Flow --> Session[Session / cumulative stores]
+  Flow --> IPC[Command services / Channel transport]
+  IPC --> Cmd[Tauri commands]
+  Cmd --> AI[AITranslator]
+  Cmd --> PO[POParser]
+  Cmd --> Config[ConfigDraft transaction]
+  AI --> Wire[ModelApi request / response parsing]
+  AI --> Catalog[TOML model metadata]
+  Cmd --> Libraries[TM / terms disk transactions]
 ```
 
-## 分层与调用
+普通命令经 `apiClient` 提供错误 UI，再经 `tauriInvoke` 记录脱敏日志；Channel 传输直接使用后者，由 flow 处理失败与通知。不要从组件直接调用原生 `invoke`。
 
-### 前端组件 → 后端命令
+## 后端职责
 
-```
-React Component
-   ↓ (推荐) 通过 hook 间接调用
-Hook (useTranslationFlow / useConfig / ...)
-   ↓
-Command module object (aiConfigCommands / configCommands / ...)
-   ↓
-apiClient.invoke()           ← 错误处理 + 用户 UI 提示
-   ↓
-tauriInvoke()                ← console 日志 + PII 脱敏
-   ↓
-@tauri-apps/api.invoke()     ← Tauri IPC
-   ↓ serde
-Rust #[tauri::command]
-   ↓
-Backend service
-```
+| 位置                                                | 职责                                                         |
+| --------------------------------------------------- | ------------------------------------------------------------ |
+| `commands/translator.rs`                            | PO 读写、翻译/优化 Channel、确认入库、术语操作、普通配置入口 |
+| `commands/ai_config.rs`                             | 供应商与默认模型事务、连接测试、模型发现、系统提示词         |
+| `commands/log.rs`                                   | 应用/前端日志读取与清理；清理 I/O 错误向上传播               |
+| `services/ai_translator.rs`                         | 记忆命中、去重、提示词、三协议请求、响应解析与 usage         |
+| `services/po_parser.rs`                             | rspolib 解析、保留 PO 字段、UTF-8 原子输出                   |
+| `services/config_draft.rs`                          | 配置加载、校验、版本与事务持久化                             |
+| `services/translation_memory.rs`、`term_library.rs` | 语言/上下文作用域与短时磁盘事务                              |
+| `services/ai/`                                      | TOML 目录、供应商元数据注册表、价格与成本计算                |
 
-详见 `API.md`。
+请求协议是 `openai-completions`、`openai-responses`、`anthropic-messages`。供应商 trait 管理目录元数据，HTTP 执行由 `AITranslator` 按 `ModelApi` 选择；不会加载或编译插件中的 Rust 代码。
 
-### 后端命令 → 业务服务
+## 配置与插件
 
-```
-#[tauri::command] fn xxx() -> Result<T, AppError>
-   ↓
-ConfigDraft::global() （读写配置）
-AITranslator / batch_translator （翻译核心）
-PoFileParser （PO 解析）
-TranslationMemory / TermLibrary （记忆库/术语库）
-```
+`ConfigDraft::transaction` 在一个写锁内克隆当前配置、执行修改、校验、持久化，再发布内存状态。所有配置命令使用此入口；失败不发布新状态。旧 `draft/apply/update` API 已移除。
 
-错误统一类型：`src-tauri/src/error.rs::AppError`，10 种变体（Config/Translation/Io/Network/Serde/Proxy/Parse/Plugin/Validation/Generic），自动 From 常见错误。
+公开配置保存为 `config.json`，凭据保存为 `config.secrets.json` 并按稳定 provider ID 定位。查询仅提供 `hasApiKey`，不返回密钥。每个文件原子替换；配置写入失败时恢复原凭据文件。界面主题/语言的唯一持久化入口是 Tauri store。
 
-### 流式翻译（Channel API）
+插件目录是 `plugins/*/plugin.toml`。debug 从源码目录加载，release 从 `resource_dir/_up_/plugins` 加载。六个内置 TOML 目录与六个快速预设是不同集合，分别维护；预设详情见 [ModelPresets.md](ModelPresets.md)。目录价目仅用于本地估算，不表示在线供应商实时价格。
 
-大批量翻译时，后端通过 `Channel<T>` 向前端推送实时进度与统计，前端 `useChannelTranslation` hook 消费。避免事件风暴。
+目录只接受实际支持的配置字段，缓存价格缺失为 `None`，显式零价为 `Some(0)`。元数据方法借用配置字符串，不再泄漏永久字符串。移除未挂载的 providers/models 源码、旧目录翻译器和独立 file chunker；当前批次由 Channel 命令按配置分组，PO 解析仍完整读入文件。
 
-## 2026-05 前端审查响应（P0 → P2）
+## 文档与库的一致性
 
-### P0（健壮性）
+- 保存合并编辑草稿后取快照；迟到 AI 结果须匹配文档和条目版本。
+- 切换文件、关闭窗口、创建目标语言文档前处理未保存修改，并取消、等待任务结束。
+- 新目标语言文档清空译文，更新 Language 和 Plural-Forms，另存为新文件。
+- AI 译文进入文档时标记待审核；明确确认才写入 TM。库写入成功后清除对应状态，后续人工修改继续待审核。
+- TM 与术语库使用共享短时锁、revision 比较和原子替换，锁不跨 AI 请求。管理器刷新不会覆盖已有编辑快照。
+- 术语按原文、上下文、规范化语言定位；精确短语约束与风格总结使用同一作用域。
 
-- 修复 `useTranslationFlow` 稳定闭包：解构 `useChannelTranslation` 返回值避免 `cancelTranslation` 每次渲染重建
-- 给 `useTranslationMemory` / `useTermLibrary` 异步 `listen()` 加 `isActive` 竞态守卫
-- 迁移 60+ 硬编码中文字符串到 i18n，新增 `app` / `messages` / `errors` / `errorBoundary` / `emptyState` / `devTools` 6 个命名空间（总数 8 → 14）
+## 主题与类型
 
-### P1（架构）
+主窗口在 `AppShell` 调用一次 `useThemeRuntime` 处理系统主题监听、DOM 和跨窗口 emit。`useTheme` 只读状态并提供 actions。开发工具主题监听支持异步卸载清理。
 
-| 文件                | 改前 |                                                                                              改后 |
-| ------------------- | ---: | ------------------------------------------------------------------------------------------------: |
-| `AIWorkspace.tsx`   |  710 |                                               **178**（抽出 9 个子组件到 `aiWorkspaceSections/`） |
-| `EntryList.tsx`     |  799 | **251**（抽出 `VirtualizedColumn` / `StatusColumns` / `BatchActions` + `useEntrySelection` hook） |
-| `EditorPane.tsx`    |  331 |                                                           **220**（抽出 `useTermDetection` hook） |
-| `MenuBar.tsx` props |   14 |                       **9**（theme → `useTheme`；source/target language → `useTranslationStore`） |
+设计 token 的唯一来源是 `src/index.css`。所有 UI 文案通过 i18n；两个 locale 字典按逻辑分组，运行时使用默认 `translation` namespace。
 
-### P2（打磨）
+IPC payload 优先通过 Rust `ts-rs` 生成。PO、Channel、配置、文件元数据、术语库及内置短语响应直接使用生成类型；前端扩展仅保存运行时审核/草稿信息。见 [DataContract.md](DataContract.md)。
 
-- DevTools UI 标签 i18n（新增 `devTools` 命名空间 17 keys）
-- `EmptyState` 配置从常量改为运行时 `t()` 构建
-- `useDeferredValue` 优化 MemoryManager 搜索；`startTransition` 优化大文件加载
-- Antd Modal 内置焦点陷阱已足够，自定义 `FocusTrap` 类加导引注释防误用
-
-### 视觉 P0 + P1
-
-- 设计 token 冲突解决：`index.css` 成为 SSOT；`App.css` 从 444 → 150 行（-66%）
-- 清理重复动画、dead CSS 类、9 处 emoji 注释
-- 状态色 `needsReview` 从 Blue 改为 Peach `#fab387`（符合"需关注"语义）
-- `unsavedBadge` 从紫色（1.2:1 对比度）改为 Peach + 深文字（~9:1，AAA）
-- `StatCard` 支持 `size="large"`；`CumulativeStatsSection` 主指标独占 + 品牌色 + 28px bold
-- 新增 `--color-warning` / `--color-error` / `--color-flashGlow` token 家族
-- 所有硬编码 `#ff4d4f` / `rgba(22, 119, 255, ...)` 替换为 Catppuccin token
-
-## 性能关键点
-
-- **虚拟化列表**：`@tanstack/react-virtual` 渲染 5000+ 条目不卡顿
-- **渐进式上屏**：`useTranslationFlow` 的 `updateQueue` + 自适应间隔（50-300ms）在批量翻译时平滑更新
-- **React 19 特性**：`startTransition` 包裹大 `setEntries`；`useDeferredValue` 优化大列表过滤
-- **进度节流**：后端 `ProgressThrottler` 100ms 间隔，减少 90% 渲染开销
-- **Channel API**：流式进度替代事件轮询，响应 < 30ms
-- **原子 selector**：Zustand store 每个订阅只关心一个字段，避免全局重渲染
-- **CSS 变量 token**：主题切换零 JS 重算
-- **代码分割**：`AIWorkspace`、`MemoryManager`、`SettingsModal`、`DevToolsModal`、`TermLibraryManager` 全部 lazy import
-
-## 无障碍（WCAG 2.1 AA）
-
-- `src/styles/accessibility.css` 105 行：focus-visible 全局主色描边 / skip link / `prefers-reduced-motion` / `prefers-contrast` / `.sr-only` / progressbar 增强
-- AppShell 有 `<h1 className="sr-only">`；initError 横幅 `role="alert"`
-- 所有 icon-only 按钮有 `aria-label`
-- Tab 焦点循环由 Antd Modal 内置提供
-
-## CI 工作流（`.github/workflows/`）
-
-| 工作流        | 触发      | 内容                                                 |
-| ------------- | --------- | ---------------------------------------------------- |
-| `check.yml`   | push / PR | Prettier 检查、Vitest 单测、Cargo test、Cargo clippy |
-| `ui-e2e.yml`  | push main | WebDriverIO + MidScene 视觉测试（Windows-only）      |
-| `build.yml`   | 手动      | 各平台 Tauri build                                   |
-| `release.yml` | tag `v*`  | 构建产物 + GitHub Release                            |
-
-## 参考
-
-- API 契约：`API.md`
-- 数据契约：`DataContract.md`
-- 主题配置：`THEME.md`、`COLOR_SYSTEM.md`
-- 密钥存储：`SECURITY_NOTES.md`
-- 错误最佳实践：`ERRORS.md`
-- 前端知识库：`../src/AGENTS.md`
-- 项目根知识库：`../AGENTS.md`
-- **历史演进归档**：`archive/architecture-history.md`
+原生桌面关闭/通知、完整业务 E2E 和超大 PO 的性能边界以实际专项验证为准，不能由 mock 测试或目录中存在某个工具推断。

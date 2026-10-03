@@ -1,6 +1,6 @@
 # Implementation Plan: 关键用户界面和功能问题修复
 
-**Branch**: `001-bug-7` | **Date**: 2025-10-14 | **Spec**: [spec.md](./spec.md)  
+**Branch**: `001-bug-7` | **Date**: 2025-10-14 | **Spec**: [spec.md](spec.md)
 **Input**: Feature specification from `/specs/001-bug-7/spec.md`
 
 ## Summary

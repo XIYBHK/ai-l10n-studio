@@ -1,0 +1,93 @@
+import { act, renderHook } from '@testing-library/react';
+import { useTranslationFlow } from '../../hooks/useTranslationFlow';
+import { useTranslationStore } from '../../store/useTranslationStore';
+import { useSessionStore } from '../../store/useSessionStore';
+import type { PODocument, TranslationStats } from '../../types/tauri';
+import type { TranslationCallbacks } from '../../hooks/useChannelTranslation';
+
+// Diagnostic probes: passing assertions confirm existing defects, not acceptance criteria.
+const mocks = vi.hoisted(() => ({
+  save: vi.fn(), parse: vi.fn(), openFile: vi.fn(), translateBatch: vi.fn(),
+  reset: vi.fn(), cancel: vi.fn(), mutate: vi.fn(),
+}));
+vi.mock('swr', async (original) => ({
+  ...(await original<typeof import('swr')>()), useSWRConfig: () => ({ mutate: mocks.mutate }),
+}));
+vi.mock('../../services/fileCommands', () => ({
+  poFileCommands: { save: mocks.save, parse: mocks.parse },
+  dialogCommands: { openFile: mocks.openFile, saveFile: vi.fn() },
+}));
+vi.mock('../../hooks/useChannelTranslation', () => ({
+  useChannelTranslation: () => ({ translateBatch: mocks.translateBatch, reset: mocks.reset, cancelTranslation: mocks.cancel }),
+}));
+vi.mock('../../services/translationCommands', () => ({
+  i18nCommands: { detectLanguage: async () => ({ code: 'en', display_name: 'English' }) },
+}));
+vi.mock('@tauri-apps/api/webviewWindow', () => ({
+  getCurrentWebviewWindow: () => ({ onDragDropEvent: async () => vi.fn() }),
+}));
+
+const doc: PODocument = {
+  header: null, metadata: { Language: 'fr', 'Plural-Forms': 'nplurals=2; plural=n>1;' },
+  metadata_is_fuzzy: false,
+  entries: [{
+    comments: [], translator_comments: '', msgctxt: '', msgid: 'Open', msgstr: '',
+    line_start: 3, msgid_plural: null, msgstr_plural: [], flags: [], occurrences: [],
+    obsolete: false, previous_msgid: null, previous_msgid_plural: null, previous_msgctxt: null,
+  }],
+};
+const stats: TranslationStats = {
+  total: 1, tm_hits: 0, deduplicated: 0, ai_translated: 1, tm_learned: 0,
+  token_stats: { input_tokens: 2, output_tokens: 2, total_tokens: 4, cost: 0 },
+};
+
+beforeEach(() => {
+  vi.clearAllMocks();
+  useTranslationStore.getState().reset();
+  useTranslationStore.getState().setDocument(doc, 'original.po');
+  useSessionStore.getState().setTranslating(false);
+  useSessionStore.getState().resetSessionStats();
+  mocks.save.mockResolvedValue(undefined);
+});
+
+it('reproduces a late AI result overwriting a committed manual edit', async () => {
+  let callbacks!: TranslationCallbacks;
+  let finish!: (value: { stats: TranslationStats }) => void;
+  mocks.translateBatch.mockImplementation((_inputs, _language, cb) => {
+    callbacks = cb;
+    return new Promise<{ stats: TranslationStats }>((resolve) => { finish = resolve; });
+  });
+  const { result } = renderHook(useTranslationFlow);
+  let pending!: Promise<void>;
+  act(() => { pending = result.current.translateAll(); });
+  act(() => { result.current.handleEntryUpdate(0, { msgstr: 'Human translation', needsReview: false }); });
+  expect(result.current.entries[0].msgstr).toBe('Human translation');
+  await act(async () => {
+    callbacks.onItems?.([{ index: 0, translation: 'Late AI translation', source: 'ai' }]);
+    finish({ stats });
+    await pending;
+  });
+  expect(result.current.entries[0].msgstr).toBe('Late AI translation');
+  expect(result.current.entries[0].needsReview).toBe(true);
+});
+
+it('reproduces saving the previous Language header after changing target language', async () => {
+  const { result } = renderHook(useTranslationFlow);
+  act(() => { useTranslationStore.getState().setTargetLanguage('ja'); });
+  expect(result.current.targetLanguage).toBe('ja');
+  await act(() => result.current.saveFile());
+  const saved = mocks.save.mock.calls[0][1] as PODocument;
+  expect(saved.metadata.Language).toBe('fr');
+  expect(saved.metadata['Plural-Forms']).toBe('nplurals=2; plural=n>1;');
+});
+
+it('reproduces replacing unsaved committed entries when opening another file', async () => {
+  const { result } = renderHook(useTranslationFlow);
+  act(() => { result.current.handleEntryUpdate(0, { msgstr: 'Only in memory' }); });
+  mocks.openFile.mockResolvedValue('other.po');
+  mocks.parse.mockResolvedValue({ ...doc, entries: [{ ...doc.entries[0], msgid: 'Other' }] });
+  await act(() => result.current.openFile());
+  expect(result.current.currentFilePath).toBe('other.po');
+  expect(result.current.entries[0].msgid).toBe('Other');
+  expect(mocks.save).not.toHaveBeenCalled();
+});

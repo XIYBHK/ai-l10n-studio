@@ -1,0 +1,33 @@
+Logic audit probes, 2026-10-03, current working tree
+
+These probes assert observed defects. A passing probe confirms reproduction;
+it does not mean the product behavior is correct or the defect is fixed.
+No real AI requests were sent. No user PO/configuration files were modified.
+
+Frontend command:
+  npm run test:run -- src/__tests__/hooks/FlowAuditProbe.test.ts
+Exit code: 0
+Vitest 4.0.18: 1 test file passed; 3 tests passed; duration 2.34s.
+Observed:
+1. A committed `Human translation` was overwritten by `Late AI translation`
+   delivered through the real flow hook's callback; needsReview became true.
+2. Changing the target language from fr to ja did not change the saved
+   Language=fr header or its nplurals=2; plural=n>1 rule.
+3. Opening another mocked PO replaced an in-memory manual edit without calling
+   save. Source inspection found no dirty-document check or confirmation on
+   this path; this probe did not exercise a native close-window event.
+
+Rust command (cwd src-tauri):
+  cargo test --locked --features ts-rs --test path_audit_probe -- --nocapture
+Exit code: 0
+Result: 1 passed; 0 failed; test execution 0.00s; build 17.74s.
+Observed using the production SafePathValidator and a tempfile directory:
+  output.po rejected with `路径不存在`; new_output.po accepted.
+Neither output file was written. The tempfile directory was cleaned by RAII.
+
+Source copies:
+  flow-probe.test.ts.txt -> src/__tests__/hooks/FlowAuditProbe.test.ts
+  path-probe.rs.txt -> src-tauri/tests/path_audit_probe.rs
+Restore each copy to its indicated path to rerun, then remove that exact file.
+The temporary tests were removed after this audit so assertions of broken
+behavior do not become permanent acceptance tests.

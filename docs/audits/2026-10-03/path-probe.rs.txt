@@ -1,0 +1,15 @@
+use po_translator_gui::utils::path_validator::SafePathValidator;
+
+// Passing confirms the present defect; this is not an acceptance test.
+#[test]
+fn reproduces_name_dependent_new_output_validation() -> anyhow::Result<()> {
+    let directory = tempfile::tempdir()?;
+    let normal = directory.path().join("output.po");
+    let magic = directory.path().join("new_output.po");
+    let validator = SafePathValidator::new();
+    let rejected = validator.validate_file_path(&normal.to_string_lossy());
+    assert!(rejected.is_err());
+    assert!(validator.validate_file_path(&magic.to_string_lossy()).is_ok());
+    println!("output.po rejected: {}; new_output.po accepted", rejected.err().map(|error| error.to_string()).unwrap_or_default());
+    Ok(())
+}

@@ -1,0 +1,23 @@
+msgid ""
+msgstr "Content-Type: text/plain; charset=UTF-8\nLanguage: zh_CN\nPlural-Forms: nplurals=1; plural=0;\n"
+
+#, fuzzy
+msgctxt "project"
+msgid "Save this project to {path}."
+msgstr "将此项目保存到 {path}。"
+
+#, fuzzy
+msgctxt "project"
+msgid "Save this project to {path}."
+msgstr "将此项目保存到 {path}。"
+
+#, fuzzy
+msgctxt "network"
+msgid "Retry failed connection."
+msgstr "重试失败的连接。"
+
+#, fuzzy
+msgctxt "errors"
+msgid "Found {count} error"
+msgid_plural "Found {count} errors"
+msgstr[0] "找到 {count} 个错误"

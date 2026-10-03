@@ -1,0 +1,53 @@
+{
+  "date": "2026-10-03",
+  "scope": "logic fixes in current uncommitted working tree",
+  "frontend": {
+    "command": "npm run test:run -- --reporter=dot",
+    "exitCode": 0,
+    "files": 17,
+    "tests": 68
+  },
+  "rust": {
+    "command": "cargo test --locked --features ts-rs --quiet",
+    "exitCode": 0,
+    "libTests": 167,
+    "binTests": 167
+  },
+  "scripts": {
+    "command": "npm run test:scripts",
+    "exitCode": 0,
+    "tests": 4
+  },
+  "checks": {
+    "typescriptExitCode": 0,
+    "clippyExitCode": 0,
+    "cargoFmtExitCode": 0,
+    "changedFilesPrettierExitCode": 0,
+    "gitDiffCheckExitCode": 0,
+    "i18nExitCode": 0,
+    "fullLintExitCode": 1,
+    "fullLintUnchangedFiles": [
+      "docs/COLOR_SYSTEM.md",
+      "docs/README.md",
+      "docs/THEME.md",
+      "src/components/ui/EmptyState.tsx",
+      "src/pages/DevToolsPage.tsx"
+    ]
+  },
+  "build": {
+    "command": "npm run tauri:build -- --no-bundle",
+    "exitCode": 0,
+    "package": "src-tauri/target/release/PO-Translator_1.0.0_x64_portable.zip",
+    "packageBytes": 4168007,
+    "executableBytes": 8508928,
+    "executableSha256": "A420F76F35C48F46ED4F7256B1937A7C371674515F70D7163A5609A6E063FF90",
+    "archiveExecutableMatchesRelease": true,
+    "pluginCount": 6,
+    "configFiles": [".config/PORTABLE"]
+  },
+  "notMeasured": [
+    "real AI provider calls",
+    "native Windows close and notification delivery",
+    "large-file performance"
+  ]
+}

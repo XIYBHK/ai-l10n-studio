@@ -1,0 +1,22 @@
+msgid ""
+msgstr ""
+"Content-Type: text/plain; charset=UTF-8\n"
+"Language: zh_CN\n"
+"Plural-Forms: nplurals=1; plural=0;\n"
+
+msgctxt "project"
+msgid "Save this project to {path}."
+msgstr ""
+
+msgctxt "project"
+msgid "Save this project to {path}."
+msgstr ""
+
+msgctxt "network"
+msgid "Retry failed connection."
+msgstr ""
+
+msgctxt "errors"
+msgid "Found {count} error"
+msgid_plural "Found {count} errors"
+msgstr[0] ""

@@ -1,0 +1,55 @@
+{
+  "api": "openai-completions",
+  "batchUsage": {
+    "cost": 0.0,
+    "input_tokens": 350,
+    "output_tokens": 302,
+    "total_tokens": 652,
+    "unpriced_requests": 1
+  },
+  "checks": {
+    "confirmedMemoryReuseWithoutApi": true,
+    "newOutputPath": true,
+    "placeholders": true,
+    "pluralRoundtrip": true,
+    "terminologyContextPrecedence": true,
+    "terminologyLanguageIsolation": true,
+    "unconfirmedNotLearned": true
+  },
+  "deduplicatedSlots": 1,
+  "model": "deepseek-flash",
+  "plannedRemoteRequests": 2,
+  "provider": "DeepSeek",
+  "status": "passed",
+  "termTranslation": "重新尝试失败连接",
+  "termUsage": {
+    "cost": 0.0,
+    "input_tokens": 279,
+    "output_tokens": 56,
+    "total_tokens": 335,
+    "unpriced_requests": 1
+  },
+  "translatedSlots": 4,
+  "translations": [
+    {
+      "index": 0,
+      "source": "ai",
+      "translation": "将此项目保存到 {path}。"
+    },
+    {
+      "index": 1,
+      "source": "dedup",
+      "translation": "将此项目保存到 {path}。"
+    },
+    {
+      "index": 2,
+      "source": "ai",
+      "translation": "重试失败的连接。"
+    },
+    {
+      "index": 3,
+      "source": "ai",
+      "translation": "找到 {count} 个错误"
+    }
+  ]
+}
