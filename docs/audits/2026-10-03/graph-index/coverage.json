@@ -1,0 +1,181 @@
+{
+  "project": "ai-l10n-studio",
+  "signal": "best_effort",
+  "indexed_at": "2026-10-03T13:11:22Z",
+  "metadata": {
+    "generation": "2026-10-03T13:11:22Z",
+    "index_mode": "fast",
+    "recorded_at": "2026-10-03T13:11:22Z",
+    "recording_status": "complete",
+    "ignored_files_stored": 58,
+    "ignored_files_total": 58,
+    "hash_records_complete": true,
+    "coverage_version": 3,
+    "generation_matches": true
+  },
+  "paths": [
+    {
+      "requested_path": "src/AppShell.tsx",
+      "path": "src/AppShell.tsx",
+      "status": "no_recorded_issue",
+      "freshness": "metadata_changed",
+      "recommended_action": "read_source_and_reindex",
+      "coverage": []
+    },
+    {
+      "requested_path": "src/hooks/useTranslationFlow.ts",
+      "path": "src/hooks/useTranslationFlow.ts",
+      "status": "no_recorded_issue",
+      "freshness": "metadata_changed",
+      "recommended_action": "read_source_and_reindex",
+      "coverage": []
+    },
+    {
+      "requested_path": "src/hooks/useTheme.ts",
+      "path": "src/hooks/useTheme.ts",
+      "status": "no_recorded_issue",
+      "freshness": "metadata_changed",
+      "recommended_action": "read_source_and_reindex",
+      "coverage": []
+    },
+    {
+      "requested_path": "src/utils/styleCsp.ts",
+      "path": "src/utils/styleCsp.ts",
+      "status": "no_recorded_issue",
+      "freshness": "metadata_changed",
+      "recommended_action": "read_source_and_reindex",
+      "coverage": []
+    },
+    {
+      "requested_path": "src/utils/devToolsWindow.ts",
+      "path": "src/utils/devToolsWindow.ts",
+      "status": "no_recorded_issue",
+      "freshness": "metadata_changed",
+      "recommended_action": "read_source_and_reindex",
+      "coverage": []
+    },
+    {
+      "requested_path": "src/components/SettingsModal.tsx",
+      "path": "src/components/SettingsModal.tsx",
+      "status": "no_recorded_issue",
+      "freshness": "metadata_changed",
+      "recommended_action": "read_source_and_reindex",
+      "coverage": []
+    },
+    {
+      "requested_path": "src/components/editor/EditorToolbar.tsx",
+      "path": "src/components/editor/EditorToolbar.tsx",
+      "status": "no_recorded_issue",
+      "freshness": "metadata_changed",
+      "recommended_action": "read_source_and_reindex",
+      "coverage": []
+    },
+    {
+      "requested_path": "src/components/editor/StatusBar.tsx",
+      "path": "src/components/editor/StatusBar.tsx",
+      "status": "no_recorded_issue",
+      "freshness": "metadata_changed",
+      "recommended_action": "read_source_and_reindex",
+      "coverage": []
+    },
+    {
+      "requested_path": "src/store/useTranslationStore.ts",
+      "path": "src/store/useTranslationStore.ts",
+      "status": "no_recorded_issue",
+      "freshness": "metadata_changed",
+      "recommended_action": "read_source_and_reindex",
+      "coverage": []
+    },
+    {
+      "requested_path": "src-tauri/src/lib.rs",
+      "path": "src-tauri/src/lib.rs",
+      "status": "no_recorded_issue",
+      "freshness": "metadata_changed",
+      "recommended_action": "read_source_and_reindex",
+      "coverage": []
+    },
+    {
+      "requested_path": "src/pages/DevToolsPage.tsx",
+      "path": "src/pages/DevToolsPage.tsx",
+      "status": "no_recorded_issue",
+      "freshness": "metadata_changed",
+      "recommended_action": "read_source_and_reindex",
+      "coverage": []
+    },
+    {
+      "requested_path": "src/devtools.tsx",
+      "path": "src/devtools.tsx",
+      "status": "no_recorded_issue",
+      "freshness": "metadata_changed",
+      "recommended_action": "read_source_and_reindex",
+      "coverage": []
+    },
+    {
+      "requested_path": "e2e-tests/specs/window-close.e2e.cjs",
+      "path": "e2e-tests/specs/window-close.e2e.cjs",
+      "status": "no_recorded_issue",
+      "freshness": "metadata_changed",
+      "recommended_action": "read_source_and_reindex",
+      "coverage": []
+    }
+  ],
+  "path_total": 13,
+  "path_returned": 13,
+  "path_has_more": false,
+  "scopes": [
+    {
+      "requested_scope": "src",
+      "scope": "src",
+      "total": 6,
+      "returned": 6,
+      "truncated": false,
+      "entries": [
+        {
+          "path": "src/__tests__",
+          "kind": "not_indexed_dir",
+          "detail": "excluded subtree"
+        },
+        {
+          "path": "src/components/__tests__",
+          "kind": "not_indexed_dir",
+          "detail": "excluded subtree"
+        },
+        {
+          "path": "src/i18n",
+          "kind": "not_indexed_dir",
+          "detail": "excluded subtree"
+        },
+        {
+          "path": "src/types/generated",
+          "kind": "not_indexed_dir",
+          "detail": "excluded subtree"
+        },
+        {
+          "path": "src/utils/translationMemory.test.ts",
+          "kind": "not_indexed_file",
+          "detail": "fast-pattern"
+        },
+        {
+          "path": "src/vite-env.d.ts",
+          "kind": "not_indexed_file",
+          "detail": "fast-pattern"
+        }
+      ],
+      "status": "known_gaps"
+    },
+    {
+      "requested_scope": "src-tauri/src",
+      "scope": "src-tauri/src",
+      "total": 0,
+      "returned": 0,
+      "truncated": false,
+      "entries": [],
+      "status": "no_recorded_issue"
+    }
+  ],
+  "scope_total": 6,
+  "scope_returned": 6,
+  "scope_truncated": false,
+  "has_more": false,
+  "caveat": "Best-effort signal only. No recorded issue does not prove graph or source completeness; read flagged source and qualify claims when metadata is changed or unavailable."
+}

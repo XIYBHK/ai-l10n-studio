@@ -37,6 +37,12 @@
 
 ## 近期问题（保留作为 recent reference）
 
+### 2026-10-03 - 图谱索引被 Windows 保留名文件阻塞
+
+CBM `0.11.0` 返回 `aborted_previous_preserved`，仓库没有可用索引。根目录历史 `nul` 文件虽然已被 `.gitignore` 忽略，配置控制文件遍历仍先查询其属性；普通路径的 `GetFileAttributesExW` 实测返回错误 87，使清单构建中止。
+
+通过扩展文件路径将未跟踪的 83 字节文件移到仓库内诊断备份，核对内容完整。相同索引参数随后成功，图谱状态 `ready`，2,690 节点、8,160 关系。13 个源码文件另行核对哈希、大小和修改时间全部一致。覆盖检查的部分 `metadata_changed` 提示仍有误报，fast 排除范围也不能视作完整覆盖。详见 [GraphIndexAudit.md](GraphIndexAudit.md)。
+
 ### 2026-10-03 - 右上角关闭无响应与销毁权限缺失
 
 原生 `SC_CLOSE` 复现 `Command plugin:window|destroy not allowed by ACL`。Tauri 的 `onCloseRequested` 最终调用 `destroy()`，原主窗口只允许 `close`，失败又发生在框架监听器中。仅模拟 `close()` 的测试漏掉了真实权限失败。

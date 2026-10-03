@@ -1,0 +1,5 @@
+{
+  "project": "ai-l10n-studio",
+  "status": "aborted_previous_preserved",
+  "hint": "Indexing aborted before publication; the previous index is intact and still serving. Causes: files changed while the run was in flight, or a discovery/manifest phase failed transiently. Retry; if it repeats, check the run log."
+}

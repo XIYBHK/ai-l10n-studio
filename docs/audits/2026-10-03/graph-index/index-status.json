@@ -1,0 +1,68 @@
+{
+  "project": "ai-l10n-studio",
+  "nodes": 2690,
+  "edges": 8160,
+  "status": "ready",
+  "root_path": "F:/Github/ai-l10n-studio",
+  "indexed_at": "2026-10-03T13:11:22Z",
+  "git": {
+    "is_git": true,
+    "is_worktree": false,
+    "is_detached": false,
+    "root_exists": true,
+    "worktree_root": "F:/Github/ai-l10n-studio",
+    "git_dir": ".git",
+    "git_common_dir": ".git",
+    "canonical_root": "F:/Github/ai-l10n-studio",
+    "branch": "main",
+    "branch_slug": "main",
+    "head_sha": "e81782da8d1c1772a2e5879e0a05920ebb0af83a",
+    "base_sha": "e81782da8d1c1772a2e5879e0a05920ebb0af83a"
+  },
+  "parse_partial": {
+    "files": [],
+    "count": 0,
+    "truncated": false
+  },
+  "parse_unusable": {
+    "files": [],
+    "count": 0,
+    "truncated": false
+  },
+  "skipped": {
+    "files": [],
+    "count": 0,
+    "truncated": false
+  },
+  "not_indexed": {
+    "dirs": [".claude", ".cursor/rules", ".git", ".specify/scripts", ".vscode"],
+    "dirs_count": 20,
+    "files": [
+      {
+        "path": "CHANGELOG.md",
+        "reason": "skip-list"
+      },
+      {
+        "path": "LICENSE",
+        "reason": "skip-list"
+      },
+      {
+        "path": "PO-Translator_1.0.0_x64_portable.zip",
+        "reason": "ignored-suffix"
+      },
+      {
+        "path": "e2e-run.log",
+        "reason": "gitignore"
+      },
+      {
+        "path": "e2e-tests/package-lock.json",
+        "reason": "skip-list"
+      }
+    ],
+    "files_count": 58,
+    "truncated": true,
+    "dirs_omitted": 15,
+    "files_omitted": 53,
+    "note": "Purposely not indexed — excluded BY DESIGN via gitignore/.cbmignore/skip-lists (see each file's reason). Not an error: change the ignore rules and re-index to include them."
+  }
+}

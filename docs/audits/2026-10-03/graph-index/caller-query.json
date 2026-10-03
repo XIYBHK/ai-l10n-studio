@@ -1,0 +1,16 @@
+{
+  "function": "useTranslationFlow",
+  "direction": "inbound",
+  "callers_total": 1,
+  "callers_total_relation": "eq",
+  "callers": {
+    "qn_rule": "qn = qn_prefix == \"\" ? name : qn_prefix + \".\" + name",
+    "cols": ["name", "hop"],
+    "groups": [
+      {
+        "qn_prefix": "ai-l10n-studio.src.AppShell",
+        "rows": [["AppShellContent", 1]]
+      }
+    ]
+  }
+}

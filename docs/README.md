@@ -18,6 +18,7 @@
 | `ArchitectureReview.md` | 本轮架构收敛、测试和保留边界                 |
 | `UIRuntimeAudit.md`     | release 界面缺陷、同类问题修复与原生回归证据 |
 | `WindowCloseAudit.md`   | 原生关闭权限、未保存保护和进程退出证据       |
+| `GraphIndexAudit.md`    | 本地图谱索引失败原因、恢复和覆盖边界         |
 
 ## Recommended order
 

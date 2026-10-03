@@ -1,0 +1,85 @@
+{
+  "mode": "read-only SQLite and source verification",
+  "filesChecked": 13,
+  "allMatched": true,
+  "paths": [
+    {
+      "path": "src/AppShell.tsx",
+      "sha256Matches": true,
+      "sizeMatches": true,
+      "mtimeNsMatches": true
+    },
+    {
+      "path": "src/hooks/useTranslationFlow.ts",
+      "sha256Matches": true,
+      "sizeMatches": true,
+      "mtimeNsMatches": true
+    },
+    {
+      "path": "src/hooks/useTheme.ts",
+      "sha256Matches": true,
+      "sizeMatches": true,
+      "mtimeNsMatches": true
+    },
+    {
+      "path": "src/utils/styleCsp.ts",
+      "sha256Matches": true,
+      "sizeMatches": true,
+      "mtimeNsMatches": true
+    },
+    {
+      "path": "src/utils/devToolsWindow.ts",
+      "sha256Matches": true,
+      "sizeMatches": true,
+      "mtimeNsMatches": true
+    },
+    {
+      "path": "src/components/SettingsModal.tsx",
+      "sha256Matches": true,
+      "sizeMatches": true,
+      "mtimeNsMatches": true
+    },
+    {
+      "path": "src/components/editor/EditorToolbar.tsx",
+      "sha256Matches": true,
+      "sizeMatches": true,
+      "mtimeNsMatches": true
+    },
+    {
+      "path": "src/components/editor/StatusBar.tsx",
+      "sha256Matches": true,
+      "sizeMatches": true,
+      "mtimeNsMatches": true
+    },
+    {
+      "path": "src/store/useTranslationStore.ts",
+      "sha256Matches": true,
+      "sizeMatches": true,
+      "mtimeNsMatches": true
+    },
+    {
+      "path": "src-tauri/src/lib.rs",
+      "sha256Matches": true,
+      "sizeMatches": true,
+      "mtimeNsMatches": true
+    },
+    {
+      "path": "src/pages/DevToolsPage.tsx",
+      "sha256Matches": true,
+      "sizeMatches": true,
+      "mtimeNsMatches": true
+    },
+    {
+      "path": "src/devtools.tsx",
+      "sha256Matches": true,
+      "sizeMatches": true,
+      "mtimeNsMatches": true
+    },
+    {
+      "path": "e2e-tests/specs/window-close.e2e.cjs",
+      "sha256Matches": true,
+      "sizeMatches": true,
+      "mtimeNsMatches": true
+    }
+  ]
+}
