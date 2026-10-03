@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Modal, Table, Button, Space, message, Popconfirm, Tag, Input, Tooltip } from 'antd';
+import { App, Modal, Table, Button, Space, Popconfirm, Tag, Input, Tooltip } from 'antd';
 import { useTranslation } from 'react-i18next';
 import {
   DeleteOutlined,
@@ -39,6 +39,7 @@ const termKey = (term: TermEntry) => buildMemoryKey(term.source, term.context, t
 
 export function TermLibraryManager({ visible, onClose }: TermLibraryManagerProps) {
   const { t } = useTranslation();
+  const { message } = App.useApp();
   const { activeAIConfig } = useActiveAIConfig();
   const { termLibrary: library, refresh, mutate } = useTermLibrary({ enabled: visible });
   const language = useAppStore((state) => state.language);

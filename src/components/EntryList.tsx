@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef, memo, useCallback, useMemo } from 'react';
-import { Progress, message } from 'antd';
+import { App, Progress } from 'antd';
 import { useTranslation } from 'react-i18next';
 import { POEntry } from '../types/tauri';
 import { useTranslationStore } from '../store/useTranslationStore';
@@ -35,6 +35,7 @@ export const EntryList = memo(function EntryList({
   onConfirmEntries,
 }: EntryListProps) {
   const { t } = useTranslation();
+  const { message } = App.useApp();
   const clearTranslations = useTranslationStore((state) => state.clearTranslations);
   const document = useTranslationStore((state) => state.document);
 

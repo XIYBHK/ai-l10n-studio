@@ -1,4 +1,5 @@
 import { act, renderHook } from '@testing-library/react';
+import { TestProviders } from '../../test/renderWithProviders';
 import { useTranslationFlow } from '../../hooks/useTranslationFlow';
 import { useTranslationStore } from '../../store/useTranslationStore';
 import { useSessionStore } from '../../store/useSessionStore';
@@ -98,7 +99,7 @@ describe('useTranslationFlow document boundaries', () => {
       )
       .mockResolvedValueOnce(document('New'));
     mocks.openFile.mockResolvedValueOnce('old.po').mockResolvedValueOnce('new.po');
-    const { result } = renderHook(useTranslationFlow);
+    const { result } = renderHook(useTranslationFlow, { wrapper: TestProviders });
     let first!: Promise<void>;
     await act(async () => {
       first = result.current.openFile();
@@ -130,7 +131,7 @@ describe('useTranslationFlow document boundaries', () => {
         finish = resolve;
       });
     });
-    const { result } = renderHook(useTranslationFlow);
+    const { result } = renderHook(useTranslationFlow, { wrapper: TestProviders });
     let completion!: Promise<void>;
     act(() => {
       completion = result.current.translateAll();
@@ -202,7 +203,7 @@ describe('useTranslationFlow document boundaries', () => {
       callbacks.onStats(stats);
       return { task_id: 'task-1', items: [], cancelled: false, stats };
     });
-    const { result } = renderHook(useTranslationFlow);
+    const { result } = renderHook(useTranslationFlow, { wrapper: TestProviders });
     await act(() => result.current.handleContextualRefine([0]));
     expect(result.current.entries[0].msgstr).toBe('Fichier');
     expect(useSessionStore.getState().sessionStats).toEqual(stats);
@@ -217,7 +218,7 @@ describe('useTranslationFlow document boundaries', () => {
     doc.entries[0].msgstr = 'Ancienne';
     doc.entries[0].msgstr_plural = ['Ancienne', 'Anciennes'];
     useTranslationStore.getState().setDocument(doc, 'source.po');
-    const { result } = renderHook(useTranslationFlow);
+    const { result } = renderHook(useTranslationFlow, { wrapper: TestProviders });
 
     await act(async () => result.current.changeTargetLanguage('ja'));
 

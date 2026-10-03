@@ -8,6 +8,7 @@
 
 import { invoke as tauriInvoke } from './tauriInvoke';
 import { createModuleLogger } from '../utils/logger';
+import { reportUiError } from './uiFeedback';
 
 const log = createModuleLogger('APIClient');
 
@@ -39,8 +40,7 @@ export async function invoke<T>(
     log.logError(error, `API调用失败: ${command}`);
 
     if (showErrorMessage && !silent) {
-      const { message } = await import('antd');
-      message.error(displayMsg);
+      reportUiError(displayMsg);
     }
 
     throw error;

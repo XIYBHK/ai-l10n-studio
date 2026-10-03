@@ -4,75 +4,70 @@
  */
 
 import { WebviewWindow } from '@tauri-apps/api/webviewWindow';
+import i18n from '../i18n/config';
 
 const DEV_TOOLS_WINDOW_LABEL = 'devtools';
+let opening: Promise<void> | null = null;
 
-export async function openDevToolsWindow(): Promise<void> {
-  try {
-    console.log('[DevTools] 尝试打开开发者工具窗口...');
-
-    const existingWindow = await WebviewWindow.getByLabel(DEV_TOOLS_WINDOW_LABEL);
-
-    if (existingWindow) {
-      console.log('[DevTools] 窗口已存在，尝试聚焦...');
-      try {
-        await existingWindow.show();
-        console.log('[DevTools] show() 调用成功');
-
-        await existingWindow.setFocus();
-        console.log('[DevTools] setFocus() 调用成功');
-
-        await existingWindow.setAlwaysOnTop(true);
-        console.log('[DevTools] setAlwaysOnTop(true) 调用成功');
-
-        setTimeout(async () => {
-          try {
-            await existingWindow.setAlwaysOnTop(false);
-            console.log('[DevTools] setAlwaysOnTop(false) 调用成功');
-          } catch (err) {
-            console.error('[DevTools] 取消置顶失败:', err);
-          }
-        }, 100);
-      } catch (error) {
-        console.error('[DevTools] 窗口操作失败:', error);
-      }
-      return;
-    }
-
-    console.log('[DevTools] 创建新窗口...');
-
-    const isDev = window.location.hostname === 'localhost';
-    const url = isDev ? 'http://localhost:1420/devtools.html' : 'devtools.html';
-
-    console.log('[DevTools] 窗口 URL:', url);
-
-    const devToolsWindow = new WebviewWindow(DEV_TOOLS_WINDOW_LABEL, {
-      url,
-      title: '🛠️ 开发者工具',
-      width: 900,
-      height: 700,
-      minWidth: 700,
-      minHeight: 500,
-      resizable: true,
-      center: true,
-      decorations: true,
-      alwaysOnTop: false,
-      skipTaskbar: false,
-    });
-
-    devToolsWindow.once('tauri://created', () => {
-      console.log('[DevTools] 窗口已创建');
-    });
-
-    devToolsWindow.once('tauri://error', (e) => {
-      console.error('[DevTools] 窗口创建失败:', e);
-    });
-
-    console.log('[DevTools] 窗口创建成功');
-  } catch (error) {
-    console.error('[DevTools] 打开窗口时发生错误:', error);
-    throw error;
+async function openWindow(): Promise<void> {
+  const existingWindow = await WebviewWindow.getByLabel(DEV_TOOLS_WINDOW_LABEL);
+  if (existingWindow) {
+    await existingWindow.show();
+    await existingWindow.setFocus();
+    return;
   }
+
+  const devToolsWindow = new WebviewWindow(DEV_TOOLS_WINDOW_LABEL, {
+    url: 'devtools.html',
+    title: i18n.t('menu.devTools'),
+    width: 900,
+    height: 700,
+    minWidth: 700,
+    minHeight: 500,
+    resizable: true,
+    center: true,
+    decorations: true,
+  });
+
+  await new Promise<void>((resolve, reject) => {
+    let settled = false;
+    const disposers: Array<() => void> = [];
+    const finish = (error?: unknown) => {
+      if (settled) return;
+      settled = true;
+      clearTimeout(timeout);
+      disposers.forEach((dispose) => dispose());
+      if (error) reject(error);
+      else resolve();
+    };
+    const timeout = setTimeout(() => finish(new Error(i18n.t('devTools.openFailed'))), 15000);
+    const register = (registration: Promise<() => void>) => {
+      void registration
+        .then((dispose) => {
+          if (settled) dispose();
+          else disposers.push(dispose);
+        })
+        .catch(finish);
+    };
+    register(devToolsWindow.once('tauri://created', () => finish()));
+    register(
+      devToolsWindow.once('tauri://error', (event) =>
+        finish(
+          new Error(
+            typeof event.payload === 'string' ? event.payload : i18n.t('devTools.openFailed')
+          )
+        )
+      )
+    );
+  });
+}
+
+export function openDevToolsWindow(): Promise<void> {
+  if (!opening)
+    opening = openWindow().finally(() => {
+      opening = null;
+    });
+  return opening;
 }
 
 export async function closeDevToolsWindow(): Promise<void> {

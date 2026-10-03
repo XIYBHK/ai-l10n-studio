@@ -32,6 +32,7 @@ interface GlobalLogStore {
   // 后端日志
   backendLogs: string[]; // 原始日志行
   backendEnabled: boolean; // 后端日志是否启用
+  backendError: boolean;
 
   // 前端日志（内存）
   frontendLogs: LogItem[];
@@ -39,6 +40,8 @@ interface GlobalLogStore {
 
   // 提示词日志
   promptLogs: string;
+  promptEnabled: boolean;
+  promptError: boolean;
 
   // Actions
   setBackendLogs: (logs: string[]) => void;
@@ -57,9 +60,12 @@ export const useGlobalLogStore = create<GlobalLogStore>((set) => ({
   // 初始状态
   backendLogs: [],
   backendEnabled: false,
+  backendError: false,
   frontendLogs: [],
   frontendEnabled: false,
   promptLogs: '',
+  promptEnabled: false,
+  promptError: false,
 
   // 后端日志
   setBackendLogs: (logs) => set({ backendLogs: logs }),
@@ -85,42 +91,66 @@ export const useGlobalLogStore = create<GlobalLogStore>((set) => ({
 
 let backendPollingInterval: NodeJS.Timeout | null = null;
 let promptPollingInterval: NodeJS.Timeout | null = null;
+let backendGeneration = 0;
+let promptGeneration = 0;
 
-export const fetchBackendLogs = async () => {
+export const fetchBackendLogs = async (generation = backendGeneration): Promise<boolean> => {
   try {
     const logs = await logCommands.get();
+    if (generation !== backendGeneration) return false;
     useGlobalLogStore.getState().setBackendLogs(logs);
+    useGlobalLogStore.setState({ backendError: false, backendEnabled: true });
+    return true;
   } catch (error) {
     console.error('[LogService] 获取后端日志失败:', error);
+    if (generation === backendGeneration) {
+      useGlobalLogStore.setState({ backendError: true, backendEnabled: false });
+    }
+    return false;
   }
 };
 
-export const fetchPromptLogs = async () => {
+export const fetchPromptLogs = async (generation = promptGeneration): Promise<boolean> => {
   try {
     const logs = await logCommands.getPromptLogs();
+    if (generation !== promptGeneration) return false;
     useGlobalLogStore.getState().setPromptLogs(logs);
+    useGlobalLogStore.setState({ promptError: false, promptEnabled: true });
+    return true;
   } catch (error) {
     console.error('[LogService] 获取提示词日志失败:', error);
+    if (generation === promptGeneration) {
+      useGlobalLogStore.setState({ promptError: true, promptEnabled: false });
+    }
+    return false;
   }
 };
 
-export const startBackendLogMonitoring = () => {
-  const { setBackendEnabled } = useGlobalLogStore.getState();
-  setBackendEnabled(true);
-
-  fetchBackendLogs();
-
+export const startBackendLogMonitoring = async (): Promise<boolean> => {
+  const generation = ++backendGeneration;
   if (backendPollingInterval) {
     clearInterval(backendPollingInterval);
   }
-  backendPollingInterval = setInterval(fetchBackendLogs, 2000);
+  useGlobalLogStore.setState({ backendEnabled: true, backendError: false });
+  const success = await fetchBackendLogs(generation);
+  if (!success || generation !== backendGeneration) {
+    if (generation === backendGeneration) backendPollingInterval = null;
+    return false;
+  }
+  backendPollingInterval = setInterval(() => {
+    const pollingGeneration = backendGeneration;
+    void fetchBackendLogs(pollingGeneration).then((ok) => {
+      if (!ok && pollingGeneration === backendGeneration) stopBackendLogMonitoring();
+    });
+  }, 2000);
 
   console.log('[LogService] 后端日志监控已启动（每2秒）');
+  return true;
 };
 
 export const stopBackendLogMonitoring = () => {
-  const { setBackendEnabled } = useGlobalLogStore.getState();
-  setBackendEnabled(false);
+  ++backendGeneration;
+  useGlobalLogStore.setState({ backendEnabled: false });
 
   if (backendPollingInterval) {
     clearInterval(backendPollingInterval);
@@ -130,18 +160,31 @@ export const stopBackendLogMonitoring = () => {
   console.log('[LogService] 后端日志监控已停止');
 };
 
-export const startPromptLogMonitoring = () => {
-  fetchPromptLogs();
-
+export const startPromptLogMonitoring = async (): Promise<boolean> => {
+  const generation = ++promptGeneration;
   if (promptPollingInterval) {
     clearInterval(promptPollingInterval);
   }
-  promptPollingInterval = setInterval(fetchPromptLogs, 2000);
+  useGlobalLogStore.setState({ promptEnabled: true, promptError: false });
+  const success = await fetchPromptLogs(generation);
+  if (!success || generation !== promptGeneration) {
+    if (generation === promptGeneration) promptPollingInterval = null;
+    return false;
+  }
+  promptPollingInterval = setInterval(() => {
+    const pollingGeneration = promptGeneration;
+    void fetchPromptLogs(pollingGeneration).then((ok) => {
+      if (!ok && pollingGeneration === promptGeneration) stopPromptLogMonitoring();
+    });
+  }, 2000);
 
   console.log('[LogService] 提示词日志监控已启动（每2秒）');
+  return true;
 };
 
 export const stopPromptLogMonitoring = () => {
+  ++promptGeneration;
+  useGlobalLogStore.setState({ promptEnabled: false });
   if (promptPollingInterval) {
     clearInterval(promptPollingInterval);
     promptPollingInterval = null;
@@ -156,15 +199,15 @@ export const toggleBackendLogEnabled = () => {
   if (backendEnabled) {
     stopBackendLogMonitoring();
   } else {
-    startBackendLogMonitoring();
+    void startBackendLogMonitoring();
   }
 };
 
 export const clearBackendLogs = async () => {
   try {
-    useGlobalLogStore.getState().clearBackendLogs();
-
     await logCommands.clear();
+    ++backendGeneration;
+    useGlobalLogStore.getState().clearBackendLogs();
 
     console.log('[LogService] 后端日志已清空（继续监控，显示增量日志）');
   } catch (error) {
@@ -175,9 +218,9 @@ export const clearBackendLogs = async () => {
 
 export const clearPromptLogs = async () => {
   try {
-    useGlobalLogStore.getState().clearPromptLogs();
-
     await logCommands.clearPromptLogs();
+    ++promptGeneration;
+    useGlobalLogStore.getState().clearPromptLogs();
 
     console.log('[LogService] 提示词日志已清空');
   } catch (error) {

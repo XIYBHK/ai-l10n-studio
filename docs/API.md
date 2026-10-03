@@ -14,7 +14,7 @@
 | `language.rs`          | `detect_text_language`、`get_default_target_lang`、`get_supported_langs`                                                                                                                                                                                                                                                                                                                                                                                                                             |
 | `log.rs`               | `get_app_logs`、`clear_app_logs`、`get_frontend_logs`                                                                                                                                                                                                                                                                                                                                                                                                                                                |
 | `prompt_log.rs`        | `get_prompt_logs`、`clear_prompt_logs`                                                                                                                                                                                                                                                                                                                                                                                                                                                               |
-| `system.rs`            | `get_system_language`、`get_log_directory_path`、`open_log_directory`、`get_native_system_theme`                                                                                                                                                                                                                                                                                                                                                                                                     |
+| `system.rs`            | `get_app_settings_path`、`get_system_language`、`get_log_directory_path`、`open_log_directory`、`get_native_system_theme`                                                                                                                                                                                                                                                                                                                                                                            |
 | `utils/i18n.rs`        | `get_system_locale`、`get_available_languages`                                                                                                                                                                                                                                                                                                                                                                                                                                                       |
 
 服务使用 `AppError` 分类并通过 `?` 传播；部分命令边界仍序列化为 String，前端以命令失败处理。日志清理失败会返回错误，不能显示为成功。
@@ -32,7 +32,9 @@
 | termCommands.ts        | translationMemoryCommands、termLibraryCommands                                        |
 | translationCommands.ts | i18nCommands                                                                          |
 
-普通命令经 `apiClient.invoke` 处理 UI 错误，再经 `tauriInvoke` 脱敏日志后调用 Tauri。options.silent/showErrorMessage 只控制 UI 提示，不控制传输或重试；没有自动重试包装器。Channel hook 直接使用脱敏传输层，由业务 flow 处理错误。
+普通命令经 `apiClient.invoke` 处理 UI 错误，再经 `tauriInvoke` 脱敏日志后调用 Tauri。错误提示使用 `uiFeedback` 绑定的 `App.useApp()` 实例；初始化尚未挂载窗口时，失败由启动错误页处理。options.silent/showErrorMessage 只控制 UI 提示，不控制传输或重试；没有自动重试包装器。Channel hook 直接使用脱敏传输层，由业务 flow 处理错误。
+
+`configCommands.getSettingsPath()` 调用 `get_app_settings_path`，返回当前普通/便携模式下的偏好文件绝对路径；Tauri store 使用该路径，不再依赖插件默认的普通 AppData 根目录。开发工具仅拥有 store load/get 权限。
 
 原生文件选择/保存使用 dialog 插件；读写 PO 必须传完整 PODocument。读取路径必须存在，输出路径允许新文件名但要求已有合法父目录。
 
@@ -62,6 +64,7 @@ apiKey 为 null 时保留已存密钥，空字符串清除。defaultModelId 可�
 | useActiveAIConfig                     | 只订阅 model_configuration 并派生活动模型摘要               |
 | useTheme                              | 纯主题状态与 actions                                        |
 | useThemeRuntime                       | 主 AppShell 唯一的主题全局副作用                            |
+| useThemeDocument                      | 每个窗口绘制前同步自己的 DOM 主题并暂时禁用过渡             |
 | useTranslationMemory / useTermLibrary | 库读取与刷新；管理器保留版本编辑快照                        |
 
 初始化读取失败显示错误和重试；成功读取无默认模型时才自动打开设置。持久化初始化完成前不挂载主交互 UI。

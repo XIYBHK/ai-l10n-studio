@@ -1,0 +1,43 @@
+{
+  "verifiedAt": "2026-10-03T20:12:30.9724318+08:00",
+  "testedSource": {
+    "uncommittedFixes": true,
+    "baseCommit": "165f3a7d0b962ea755ed6fb2853bded0e5dd11be"
+  },
+  "release": {
+    "lastWriteTime": "2026-10-03T20:08:08.3643832+08:00",
+    "sha256": "803433E98A010816F777C63FBFB1B9BBD093FA665102D17E7FC463767B8F8EB8",
+    "path": "F:\\Github\\ai-l10n-studio\\src-tauri\\target\\release\\po-translator-gui.exe",
+    "bytes": 8494080
+  },
+  "portable": {
+    "entries": [
+      "_up_/plugins/deepseek/plugin.toml",
+      "_up_/plugins/gemini-ai/plugin.toml",
+      "_up_/plugins/minimax/plugin.toml",
+      "_up_/plugins/moonshot/plugin.toml",
+      "_up_/plugins/openai/plugin.toml",
+      "_up_/plugins/zhipu/plugin.toml",
+      ".config/PORTABLE",
+      "po-translator-gui.exe"
+    ],
+    "embeddedExeSha256": "803433e98a010816f777c63fbfb1b9bbd093fa665102d17e7fc463767b8f8eb8",
+    "sha256": "73C4ECC97AE973E5318451C149814BC782D6243D50A22608442F37D158D04668",
+    "path": "F:\\Github\\ai-l10n-studio\\PO-Translator_1.0.0_x64_portable.zip"
+  },
+  "tests": {
+    "frontendTests": 88,
+    "nativeUiGroups": 6,
+    "webview2": "154.0.4258.53",
+    "releaseBuild": "passed",
+    "themeSwitches": 4,
+    "rustTests": 161,
+    "frontendFiles": 26,
+    "clippy": "passed",
+    "themeFrames": 80,
+    "scriptTests": 6,
+    "lintAll": "passed",
+    "i18nCheck": "completed; dynamic-key candidates retained"
+  },
+  "personalPreferencesSha256": "3184540C1AF33E9BEE7E03B4782D65E904A2BA286CE5C5769019D9A1A4E1C4FA"
+}

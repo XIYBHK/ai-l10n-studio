@@ -6,6 +6,7 @@
 
 import { Store } from '@tauri-apps/plugin-store';
 import { isTauri } from '@tauri-apps/api/core';
+import { configCommands } from '../services/configCommands';
 
 /**
  * Store 数据类型定义
@@ -97,7 +98,8 @@ export class TauriStore {
           console.log('[TauriStore] 非 Tauri 环境，使用内存存储');
           return;
         }
-        this.store = await Store.load('app-settings.json');
+        const settingsPath = await configCommands.getSettingsPath();
+        this.store = await Store.load(settingsPath);
         this.initialized = true;
         console.log('[TauriStore] 初始化成功');
       } catch (error) {

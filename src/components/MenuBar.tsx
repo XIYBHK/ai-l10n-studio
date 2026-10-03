@@ -176,6 +176,7 @@ export const MenuBar = memo(function MenuBar({
               size="small"
               icon={<BugOutlined />}
               onClick={onDevTools}
+              data-testid="menu-devtools-button"
               aria-label={t('menu.devTools')}
             />
           </Tooltip>

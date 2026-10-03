@@ -4,7 +4,7 @@ import { useTranslationFlow } from '../../hooks/useTranslationFlow';
 import { useTranslationStore, selectDocumentDirty } from '../../store/useTranslationStore';
 import { confirmDocumentEntries } from '../../services/documentActions';
 import { EditorPane } from '../../components/EditorPane';
-import { renderWithProviders } from '../../test/renderWithProviders';
+import { renderWithProviders, TestProviders } from '../../test/renderWithProviders';
 import type { PODocument, TranslationStats } from '../../types/tauri';
 import type { TranslationCallbacks } from '../../hooks/useChannelTranslation';
 import type { BatchResultWithTaskId } from '../../types/generated/BatchResultWithTaskId';
@@ -130,7 +130,7 @@ describe('document lifecycle regressions', () => {
 
   it('saves text still focused in the real editor and retains drafts across entry navigation', async () => {
     const user = userEvent.setup();
-    const { result } = renderHook(useTranslationFlow);
+    const { result } = renderHook(useTranslationFlow, { wrapper: TestProviders });
     const entry = useTranslationStore.getState().entries[0];
     const view = renderWithProviders(
       <EditorPane entry={entry} onConfirmEntries={result.current.confirmEntries} />
@@ -157,7 +157,7 @@ describe('document lifecycle regressions', () => {
 
   it('keeps the original dirty document on cancel or failed save, and switches on discard', async () => {
     useTranslationStore.getState().updateEntry(0, { msgstr: 'Human edit' });
-    const { result } = renderHook(useTranslationFlow);
+    const { result } = renderHook(useTranslationFlow, { wrapper: TestProviders });
     await act(() => result.current.openFile());
     expect(result.current.currentFilePath).toBe('current.po');
     expect(mocks.parse).not.toHaveBeenCalled();
@@ -179,7 +179,7 @@ describe('document lifecycle regressions', () => {
           choose = resolve;
         })
     );
-    const { result } = renderHook(useTranslationFlow);
+    const { result } = renderHook(useTranslationFlow, { wrapper: TestProviders });
     let saved!: Promise<boolean>;
     act(() => {
       saved = result.current.saveAsFile();
@@ -216,7 +216,7 @@ describe('document lifecycle regressions', () => {
         finish = resolve;
       });
     });
-    const { result } = renderHook(useTranslationFlow);
+    const { result } = renderHook(useTranslationFlow, { wrapper: TestProviders });
     let running!: Promise<void>;
     act(() => {
       running = result.current.handleTranslateSelected([0]);
@@ -256,7 +256,7 @@ describe('document lifecycle regressions', () => {
 
   it('prevents closing a dirty window until the chosen save has succeeded', async () => {
     useTranslationStore.getState().setDraft(0, null, 'Keep me');
-    renderHook(useTranslationFlow);
+    renderHook(useTranslationFlow, { wrapper: TestProviders });
     const preventDefault = vi.fn();
     await act(async () => {
       mocks.closeHandler?.({ preventDefault });

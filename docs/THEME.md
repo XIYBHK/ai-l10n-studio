@@ -12,9 +12,11 @@
 
 `useTheme` 从 Zustand 读取 `light`、`dark` 或 `system`，计算 `appliedTheme` 并返回主题配置和 actions。它没有全局副作用，菜单和设置控件可同时使用。
 
-主窗口只在 `AppShell` 调用一次 `useThemeRuntime`：监听 `prefers-color-scheme`、更新 `<html>` 与 `<body>` 的 `data-theme`、更新根元素 class，并发送 `theme:changed`。独立开发工具窗口接收主题模式及实际明暗值；异步注册在卸载后完成时立即注销。
+主窗口只在 `AppShell` 调用一次 `useThemeRuntime`：监听 `prefers-color-scheme` 并发送 `theme:changed`。每个窗口通过 `useThemeDocument` 在 layout effect 中同步 `<html>`、`<body>` 的 `data-theme` 和根元素 class，在浏览器绘制前保持 React token 与 CSS token 一致。独立开发工具窗口只读加载持久化偏好，接收主题和语言事件，不向磁盘回写；异步注册在卸载后完成时立即注销。
 
-CSS 通过 `:root` 与 `[data-theme='dark']` 提供两套 `--color-*` 值；全局过渡和减少动画偏好也在 `src/index.css` 中定义。
+CSS 通过 `:root` 与 `[data-theme='dark']` 提供两套 `--color-*` 值。主题切换的两个绘制帧内统一禁用 CSS transition，避免文字/背景经过不同的中间颜色；普通按钮 hover 动画仍保留。减少动画偏好也在 `src/index.css` 中定义。
+
+`darkTheme` 使用 Ant Design 的 `darkAlgorithm`，再覆盖项目 palette；亮暗主题都明确设置占位文字颜色。主窗口和开发工具的 `ConfigProvider` 都传入 `getStyleCsp()` 返回的 Tauri nonce，使动态组件样式通过生产 CSP。消息提示必须使用 `App.useApp()`，不能使用会创建独立 React 根的静态 `message` API。原生验证和截图见 [UIRuntimeAudit.md](UIRuntimeAudit.md)。
 
 ## 约束
 

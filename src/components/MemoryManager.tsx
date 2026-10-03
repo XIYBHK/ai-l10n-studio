@@ -1,5 +1,5 @@
 import { useState, useEffect, useMemo, useDeferredValue } from 'react';
-import { Modal, Table, Input, Button, message, Space, Popconfirm, Tag, Select } from 'antd';
+import { App, Modal, Table, Input, Button, Space, Popconfirm, Tag, Select } from 'antd';
 import { useTranslation } from 'react-i18next';
 import {
   DeleteOutlined,
@@ -82,6 +82,7 @@ interface MemoryManagerProps {
 
 export function MemoryManager({ visible, onClose }: MemoryManagerProps) {
   const { t } = useTranslation();
+  const { message } = App.useApp();
   const [memories, setMemories] = useState<MemoryEntry[]>([]);
   const [baseMemory, setBaseMemory] = useState<TranslationMemory | null>(null);
   const [loading, setLoading] = useState(false);
@@ -317,6 +318,11 @@ export function MemoryManager({ visible, onClose }: MemoryManagerProps) {
       }
     } catch (error) {
       log.logError(error, '导出记忆库失败');
+      message.error(
+        t('errors.exportFailed', {
+          error: error instanceof Error ? error.message : t('errors.unknown'),
+        })
+      );
     }
   };
 
@@ -346,6 +352,11 @@ export function MemoryManager({ visible, onClose }: MemoryManagerProps) {
       }
     } catch (error) {
       log.logError(error, '导入记忆库失败');
+      message.error(
+        t('errors.importFailed', {
+          error: error instanceof Error ? error.message : t('errors.unknown'),
+        })
+      );
     }
   };
 

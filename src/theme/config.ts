@@ -1,4 +1,5 @@
 import type { ThemeConfig } from 'antd';
+import { theme } from 'antd';
 
 const palette = {
   primary: '#cba6f7',
@@ -64,6 +65,7 @@ export const lightTheme: ThemeConfig = {
     colorTextSecondary: palette.light.textSecondary,
     colorTextTertiary: palette.light.textTertiary,
     colorTextDisabled: palette.light.textDisabled,
+    colorTextPlaceholder: palette.light.textTertiary,
     colorBorder: palette.light.border,
     colorBorderSecondary: palette.light.borderSecondary,
     boxShadow: '0 2px 8px rgba(203, 166, 247, 0.08)',
@@ -121,6 +123,7 @@ export const lightTheme: ThemeConfig = {
 };
 
 export const darkTheme: ThemeConfig = {
+  algorithm: theme.darkAlgorithm,
   token: {
     ...commonTokens,
     colorBgBase: palette.dark.bgBase,
@@ -131,6 +134,7 @@ export const darkTheme: ThemeConfig = {
     colorTextSecondary: palette.dark.textSecondary,
     colorTextTertiary: palette.dark.textTertiary,
     colorTextDisabled: palette.dark.textDisabled,
+    colorTextPlaceholder: palette.dark.textTertiary,
     colorBorder: palette.dark.border,
     colorBorderSecondary: palette.dark.borderSecondary,
     colorSplit: palette.dark.border,

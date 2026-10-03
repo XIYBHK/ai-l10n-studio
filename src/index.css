@@ -210,11 +210,18 @@ button:focus-visible {
   outline: 4px auto -webkit-focus-ring-color;
 }
 
-/* 全局过渡动画 - 仅应用于颜色和边框 */
-* {
-  transition-property: background-color, border-color, color;
-  transition-duration: var(--duration-base);
-  transition-timing-function: var(--ease-out);
+/* Apply a theme atomically, including portals and Ant Design CSS variables. */
+html.theme-changing *,
+html.theme-changing *::before,
+html.theme-changing *::after {
+  transition: none !important;
+}
+
+html[data-theme='light'] {
+  color-scheme: light;
+}
+html[data-theme='dark'] {
+  color-scheme: dark;
 }
 
 .tabular-nums {

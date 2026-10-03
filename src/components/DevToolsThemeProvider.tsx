@@ -4,9 +4,11 @@
  */
 import React, { useEffect } from 'react';
 import { ConfigProvider } from 'antd';
-import { useTheme } from '../hooks/useTheme';
+import { useTheme, useThemeDocument } from '../hooks/useTheme';
 import { listen } from '@tauri-apps/api/event';
 import { useAppStore } from '../store/useAppStore';
+import { getStyleCsp } from '../utils/styleCsp';
+import i18n from '../i18n/config';
 
 interface DevToolsThemeProviderProps {
   children: React.ReactNode;
@@ -14,6 +16,7 @@ interface DevToolsThemeProviderProps {
 
 export function DevToolsThemeProvider({ children }: DevToolsThemeProviderProps) {
   const themeData = useTheme();
+  useThemeDocument(themeData.appliedTheme);
 
   useEffect(() => {
     let unlistenFn: (() => void) | null = null;
@@ -26,8 +29,10 @@ export function DevToolsThemeProvider({ children }: DevToolsThemeProviderProps) 
       }>('theme:changed', (event) => {
         if (!active) return;
         console.log('[DevToolsThemeProvider] 收到主题变更事件:', event.payload);
-        themeData.setTheme(event.payload.theme);
-        useAppStore.getState().setSystemTheme(event.payload.appliedTheme);
+        useAppStore.setState({
+          theme: event.payload.theme,
+          systemTheme: event.payload.appliedTheme,
+        });
       });
       if (!active) {
         unlisten();
@@ -44,10 +49,27 @@ export function DevToolsThemeProvider({ children }: DevToolsThemeProviderProps) 
       active = false;
       if (unlistenFn) unlistenFn();
     };
-  }, [themeData.setTheme]);
+  }, []);
+
+  useEffect(() => {
+    let active = true;
+    let unlisten: (() => void) | undefined;
+    void listen<string>('language:changed', (event) => {
+      if (active) void i18n.changeLanguage(event.payload);
+    })
+      .then((dispose) => {
+        if (active) unlisten = dispose;
+        else dispose();
+      })
+      .catch((error) => console.error('[DevToolsThemeProvider] Language listener failed', error));
+    return () => {
+      active = false;
+      unlisten?.();
+    };
+  }, []);
 
   return (
-    <ConfigProvider theme={themeData.themeConfig}>
+    <ConfigProvider theme={themeData.themeConfig} csp={getStyleCsp()}>
       <div
         data-theme={themeData.isDark ? 'dark' : 'light'}
         style={{

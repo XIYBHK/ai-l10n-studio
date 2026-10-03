@@ -12,6 +12,7 @@ lerna-debug.log*
 dist/
 build/
 out/
+/PO-Translator_*_portable.zip
 
 # Coverage
 coverage/

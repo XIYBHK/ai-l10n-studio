@@ -1,5 +1,5 @@
 import { useState, useCallback } from 'react';
-import { message } from 'antd';
+import { App } from 'antd';
 import { useTranslation } from 'react-i18next';
 import { POEntry } from '../types/tauri';
 import { analyzeTranslationDifference } from '../utils/termAnalyzer';
@@ -34,6 +34,7 @@ export interface UseTermDetectionResult {
 
 export function useTermDetection(): UseTermDetectionResult {
   const { t } = useTranslation();
+  const { message } = App.useApp();
   const { activeAIConfig } = useActiveAIConfig();
   const { refresh: refreshTermLibrary } = useTermLibrary();
   const targetLanguage = useTargetLanguage();

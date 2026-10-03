@@ -25,6 +25,11 @@ function createIsolatedApp(sourcePath, fixtureRoot) {
     }
     fs.mkdirSync(path.join(directory, '.config'));
     fs.writeFileSync(path.join(directory, '.config', 'PORTABLE'), '');
+    fixture.poPath = path.join(directory, 'ui-sample.po');
+    fs.writeFileSync(
+      fixture.poPath,
+      'msgid ""\nmsgstr ""\n"Language: zh-CN\\n"\n\nmsgid "Open sample"\nmsgstr ""\n'
+    );
     return fixture;
   } catch (error) {
     cleanupIsolatedApp(fixture);

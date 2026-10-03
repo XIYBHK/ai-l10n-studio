@@ -18,7 +18,7 @@ exports.config = {
       'tauri:options': {
         application:
           process.env.TAURI_APP_PATH ||
-          path.resolve(__dirname, '..', 'src-tauri', 'target', 'debug', 'po-translator-gui.exe'),
+          path.resolve(__dirname, '..', 'src-tauri', 'target', 'release', 'po-translator-gui.exe'),
       },
     },
   ],

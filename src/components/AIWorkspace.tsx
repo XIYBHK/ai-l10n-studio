@@ -10,6 +10,7 @@ import type { ModelInfo } from '../types/generated/ModelInfo';
 import { createModuleLogger } from '../utils/logger';
 import { CumulativeStatsSection, SessionStatsSection } from './aiWorkspaceSections';
 import styles from './AIWorkspace.module.css';
+import { LazyModalFallback } from './ui/LazyModalFallback';
 
 const log = createModuleLogger('AIWorkspace');
 const MemoryManager = lazy(() =>
@@ -135,6 +136,7 @@ export const AIWorkspace = memo(function AIWorkspace({
               type="button"
               className={styles.resource}
               onClick={() => setMemoryManagerVisible(true)}
+              data-testid="open-memory-manager"
             >
               <BulbOutlined />
               <span>
@@ -146,6 +148,7 @@ export const AIWorkspace = memo(function AIWorkspace({
               type="button"
               className={styles.resource}
               onClick={() => setTermLibraryVisible(true)}
+              data-testid="open-term-manager"
             >
               <BookOutlined />
               <span>
@@ -157,7 +160,7 @@ export const AIWorkspace = memo(function AIWorkspace({
         </div>
       </Card>
       {memoryManagerVisible && (
-        <Suspense fallback={null}>
+        <Suspense fallback={<LazyModalFallback onClose={() => setMemoryManagerVisible(false)} />}>
           <MemoryManager
             visible={memoryManagerVisible}
             onClose={() => setMemoryManagerVisible(false)}
@@ -165,7 +168,7 @@ export const AIWorkspace = memo(function AIWorkspace({
         </Suspense>
       )}
       {termLibraryVisible && (
-        <Suspense fallback={null}>
+        <Suspense fallback={<LazyModalFallback onClose={() => setTermLibraryVisible(false)} />}>
           <TermLibraryManager
             visible={termLibraryVisible}
             onClose={() => setTermLibraryVisible(false)}

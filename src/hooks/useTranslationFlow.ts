@@ -1,6 +1,6 @@
 import { useEffect, useCallback, useRef, startTransition } from 'react';
 import { getCurrentWebviewWindow } from '@tauri-apps/api/webviewWindow';
-import { App, message as msg } from 'antd';
+import { App } from 'antd';
 import { useTranslation } from 'react-i18next';
 import { useSWRConfig } from 'swr';
 import { TRANSLATION_MEMORY_KEY } from './useTranslationMemory';
@@ -39,7 +39,7 @@ import type { TranslationItem } from '../types/generated/TranslationItem';
 const log = createModuleLogger('useTranslationFlow');
 
 export function useTranslationFlow() {
-  const { modal } = App.useApp();
+  const { modal, message: msg } = App.useApp();
   const { t } = useTranslation();
   const { mutate } = useSWRConfig();
   const entries = useEntries();

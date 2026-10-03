@@ -1,5 +1,5 @@
-import { useEffect, useState } from 'react';
-import { Card, Form, Select, InputNumber, Button, message } from 'antd';
+import { useCallback, useEffect, useRef, useState } from 'react';
+import { Card, Form, Select, InputNumber, Button, Alert, App } from 'antd';
 import { InfoCircleOutlined } from '@ant-design/icons';
 import { useTranslation } from 'react-i18next';
 import { configCommands } from '../../services/configCommands';
@@ -12,29 +12,40 @@ export function LogsTab() {
   const { t } = useTranslation();
   const [form] = Form.useForm();
   const [loading, setLoading] = useState(false);
+  const [loaded, setLoaded] = useState(false);
+  const [loadError, setLoadError] = useState(false);
+  const { message } = App.useApp();
+  const loadGeneration = useRef(0);
 
-  useEffect(() => {
+  const loadConfig = useCallback(() => {
+    const generation = ++loadGeneration.current;
+    setLoadError(false);
+    setLoaded(false);
     configCommands
       .get()
       .then((config) => {
+        if (generation !== loadGeneration.current) return;
         form.setFieldsValue({
           log_level: config.logLevel || 'info',
           log_retention_days: config.logRetentionDays ?? 7,
           log_max_size: config.logMaxSize ?? 128,
           log_max_count: config.logMaxCount ?? 8,
         });
+        setLoaded(true);
         log.debug('日志配置已加载', config);
       })
       .catch((err) => {
         log.error('加载日志配置失败:', err);
-        form.setFieldsValue({
-          log_level: 'info',
-          log_retention_days: 7,
-          log_max_size: 128,
-          log_max_count: 8,
-        });
+        if (generation === loadGeneration.current) setLoadError(true);
       });
   }, [form]);
+
+  useEffect(() => {
+    loadConfig();
+    return () => {
+      ++loadGeneration.current;
+    };
+  }, [loadConfig]);
 
   async function handleSave(values: {
     log_level: string;
@@ -42,6 +53,7 @@ export function LogsTab() {
     log_max_size: number;
     log_max_count: number;
   }) {
+    if (!loaded) return;
     setLoading(true);
     try {
       await configCommands.update({
@@ -79,8 +91,21 @@ export function LogsTab() {
       >
         {t('settings.logs.description')}
       </p>
+      {loadError && (
+        <Alert
+          type="error"
+          showIcon
+          title={t('settings.logs.loadFailed')}
+          action={
+            <Button size="small" onClick={loadConfig}>
+              {t('common.retry')}
+            </Button>
+          }
+          style={{ marginBottom: 'var(--space-4)' }}
+        />
+      )}
 
-      <Form form={form} layout="vertical" onFinish={handleSave}>
+      <Form form={form} layout="vertical" onFinish={handleSave} disabled={!loaded}>
         <Form.Item
           label={t('settings.logs.level')}
           name="log_level"
@@ -119,7 +144,7 @@ export function LogsTab() {
         </Form.Item>
 
         <Form.Item>
-          <Button type="primary" htmlType="submit" loading={loading}>
+          <Button type="primary" htmlType="submit" loading={loading} disabled={!loaded}>
             {t('common.save')}
           </Button>
         </Form.Item>

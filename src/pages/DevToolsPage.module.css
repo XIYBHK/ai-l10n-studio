@@ -1,0 +1,39 @@
+.logPanel {
+  display: flex;
+  min-height: 0;
+  height: 100%;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.logTextArea {
+  flex: 1;
+  min-height: 0;
+  width: 100%;
+  resize: none;
+}
+
+.logTextArea :global(textarea) {
+  height: 100%;
+  resize: none;
+}
+.page {
+  box-sizing: border-box;
+  padding: var(--space-4);
+  height: 100dvh;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.page :global(.ant-tabs) {
+  flex: 1;
+  min-height: 0;
+}
+
+.page :global(.ant-tabs-content-holder),
+.page :global(.ant-tabs-content),
+.page :global(.ant-tabs-tabpane) {
+  min-height: 0;
+  height: 100%;
+}

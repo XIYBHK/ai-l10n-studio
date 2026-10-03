@@ -1,6 +1,9 @@
 import { TauriStore } from '../../store/tauriStore';
 
-const mocks = vi.hoisted(() => ({ load: vi.fn(), runtime: vi.fn(() => true) }));
+const mocks = vi.hoisted(() => ({ load: vi.fn(), runtime: vi.fn(() => true), path: vi.fn() }));
+vi.mock('../../services/configCommands', () => ({
+  configCommands: { getSettingsPath: mocks.path },
+}));
 vi.mock('@tauri-apps/api/core', () => ({ isTauri: mocks.runtime }));
 vi.mock('@tauri-apps/plugin-store', () => ({ Store: { load: mocks.load } }));
 
@@ -8,6 +11,7 @@ describe('Tauri 2 persistence and write order', () => {
   let disk: Map<string, unknown>;
   beforeEach(() => {
     vi.clearAllMocks();
+    mocks.path.mockResolvedValue('F:/isolated/.config/com.potranslator.gui/app-settings.json');
     disk = new Map();
     mocks.load.mockImplementation(async () => ({
       get: async (key: string) => disk.get(key),
@@ -25,6 +29,9 @@ describe('Tauri 2 persistence and write order', () => {
     expect(await restarted.getTheme()).toBe('dark');
     expect(mocks.runtime).toHaveBeenCalled();
     expect(mocks.load).toHaveBeenCalledTimes(2);
+    expect(mocks.load).toHaveBeenCalledWith(
+      'F:/isolated/.config/com.potranslator.gui/app-settings.json'
+    );
   });
 
   it('serializes concurrent statistic updates and retains unknown cost provenance', async () => {

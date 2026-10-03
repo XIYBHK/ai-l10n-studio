@@ -42,7 +42,7 @@ flowchart LR
   Cmd --> Libraries[TM / terms disk transactions]
 ```
 
-普通命令经 `apiClient` 提供错误 UI，再经 `tauriInvoke` 记录脱敏日志；Channel 传输直接使用后者，由 flow 处理失败与通知。不要从组件直接调用原生 `invoke`。
+普通命令经 `apiClient` 提供错误 UI，再经 `tauriInvoke` 记录脱敏日志；窗口挂载时通过 `uiFeedback` 绑定 `App.useApp()` 消息实例，保持错误提示的主题和 CSP 上下文。Channel 传输直接使用后者，由 flow 处理失败与通知。不要从组件直接调用原生 `invoke`。
 
 ## 后端职责
 
@@ -63,7 +63,7 @@ flowchart LR
 
 `ConfigDraft::transaction` 在一个写锁内克隆当前配置、执行修改、校验、持久化，再发布内存状态。所有配置命令使用此入口；失败不发布新状态。旧 `draft/apply/update` API 已移除。
 
-公开配置保存为 `config.json`，凭据保存为 `config.secrets.json` 并按稳定 provider ID 定位。查询仅提供 `hasApiKey`，不返回密钥。每个文件原子替换；配置写入失败时恢复原凭据文件。界面主题/语言的唯一持久化入口是 Tauri store。
+公开配置保存为 `config.json`，凭据保存为 `config.secrets.json` 并按稳定 provider ID 定位。查询仅提供 `hasApiKey`，不返回密钥。每个文件原子替换；配置写入失败时恢复原凭据文件。界面主题/语言的唯一持久化入口是 Tauri store，加载路径来自 `get_app_settings_path`。普通模式保留 AppData 路径；便携模式使用 exe 旁 `.config/com.potranslator.gui/app-settings.json`，与后端数据同样隔离。
 
 插件目录是 `plugins/*/plugin.toml`。debug 从源码目录加载，release 从 `resource_dir/_up_/plugins` 加载。六个内置 TOML 目录与六个快速预设是不同集合，分别维护；预设详情见 [ModelPresets.md](ModelPresets.md)。目录价目仅用于本地估算，不表示在线供应商实时价格。
 
@@ -80,7 +80,7 @@ flowchart LR
 
 ## 主题与类型
 
-主窗口在 `AppShell` 调用一次 `useThemeRuntime` 处理系统主题监听、DOM 和跨窗口 emit。`useTheme` 只读状态并提供 actions。开发工具主题监听支持异步卸载清理。
+主窗口在 `AppShell` 调用一次 `useThemeRuntime` 处理系统主题监听和跨窗口 emit。`useTheme` 只读状态并提供 actions；每个窗口用 `useThemeDocument` 在绘制前同步 DOM，主题切换期间禁用过渡。开发工具只读加载偏好，监听主题和语言事件，并支持异步卸载清理。两个窗口都将 Tauri style nonce 传入 `ConfigProvider`；消息使用 `App.useApp()` 上下文，暗色主题使用 `darkAlgorithm`。真实界面回归见 [UIRuntimeAudit.md](UIRuntimeAudit.md)。
 
 设计 token 的唯一来源是 `src/index.css`。所有 UI 文案通过 i18n；两个 locale 字典按逻辑分组，运行时使用默认 `translation` namespace。
 

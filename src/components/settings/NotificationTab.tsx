@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Card, Form, Switch, Button, message } from 'antd';
+import { Alert, App, Card, Form, Switch, Button } from 'antd';
 import { BellOutlined } from '@ant-design/icons';
 import { useTranslation } from 'react-i18next';
 import { notificationManager } from '../../utils/notificationManager';
@@ -10,12 +10,17 @@ const log = createModuleLogger('NotificationTab');
 
 export function NotificationTab() {
   const { t } = useTranslation();
+  const { message } = App.useApp();
   const [notificationEnabled, setNotificationEnabled] = useState(notificationManager.isEnabled());
   const [form] = Form.useForm();
   const [ready, setReady] = useState(false);
+  const [loadError, setLoadError] = useState(false);
+  const [attempt, setAttempt] = useState(0);
 
   useEffect(() => {
     let active = true;
+    setReady(false);
+    setLoadError(false);
     void notificationManager
       .init()
       .then(() => {
@@ -24,11 +29,14 @@ export function NotificationTab() {
           setReady(true);
         }
       })
-      .catch((error) => log.logError(error, 'Load notification preferences failed'));
+      .catch((error) => {
+        log.logError(error, 'Load notification preferences failed');
+        if (active) setLoadError(true);
+      });
     return () => {
       active = false;
     };
-  }, []);
+  }, [attempt]);
 
   async function handleNotificationToggle(checked: boolean) {
     try {
@@ -58,6 +66,7 @@ export function NotificationTab() {
       }
     } catch (error) {
       log.error('请求通知权限失败', { error });
+      message.error(t('notifications.permissionFailed'));
     }
   }
 
@@ -80,6 +89,16 @@ export function NotificationTab() {
         {t('notifications.description')}
       </p>
 
+      {loadError && (
+        <Alert
+          type="error"
+          title={t('notifications.loadFailed')}
+          showIcon
+          action={
+            <Button onClick={() => setAttempt((value) => value + 1)}>{t('common.retry')}</Button>
+          }
+        />
+      )}
       <Form form={form} layout="vertical">
         <Form.Item label={t('notifications.enabled')}>
           <Switch

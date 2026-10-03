@@ -3,6 +3,14 @@ use crate::utils::paths;
 use std::process::Command;
 
 #[tauri::command]
+pub fn get_app_settings_path() -> Result<String, crate::error::AppError> {
+    Ok(paths::app_home_dir()?
+        .join("app-settings.json")
+        .to_string_lossy()
+        .into_owned())
+}
+
+#[tauri::command]
 pub fn get_system_language() -> Result<String, String> {
     app_log!("[系统语言] 检测系统语言...");
 

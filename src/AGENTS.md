@@ -16,7 +16,8 @@ React 19 + TypeScript + Vite + Ant Design 6. Current architecture: docs/Architec
 
 - Components orchestrate; extract domain logic into hooks and pure helpers.
 - src/index.css is the design-token SSOT. src/theme/config.ts supplies Ant Design token objects.
-- useTheme is pure state/actions. Only main AppShell owns useThemeRuntime global DOM/media/emit effects.
+- useTheme is pure state/actions. Only main AppShell owns useThemeRuntime media/emit effects; each window uses useThemeDocument to update its own DOM before paint.
+- Every ConfigProvider passes the Tauri style nonce from getStyleCsp. Use App.useApp for messages/modal feedback; static message APIs create roots outside this CSP/theme context.
 - Async listeners need active guards; unregister if registration resolves after unmount.
 - All visible strings and service error messages use i18n. Dictionaries are zh-CN/en-US in the default translation namespace.
 - Avoid custom focus traps over Ant Design Modal.

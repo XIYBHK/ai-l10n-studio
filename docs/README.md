@@ -4,18 +4,19 @@
 
 ## Current docs
 
-| File                    | Purpose                             |
-| ----------------------- | ----------------------------------- |
-| `Architecture.md`       | 当前架构与分层                      |
-| `API.md`                | Tauri IPC、前端服务和状态接口       |
-| `DataContract.md`       | 前后端数据类型与持久化边界          |
-| `SECURITY_NOTES.md`     | 配置与密钥文件边界                  |
-| `THEME.md`              | Catppuccin、Ant Design 6 和主题切换 |
-| `COLOR_SYSTEM.md`       | `src/index.css` token SSOT          |
-| `ERRORS.md`             | 错误排查与已知问题目录              |
-| `ModelPresets.md`       | 快速预设的接口与核验记录            |
-| `LogicFixes.md`         | 文档、TM、术语和实测修复交付        |
-| `ArchitectureReview.md` | 本轮架构收敛、测试和保留边界        |
+| File                    | Purpose                                      |
+| ----------------------- | -------------------------------------------- |
+| `Architecture.md`       | 当前架构与分层                               |
+| `API.md`                | Tauri IPC、前端服务和状态接口                |
+| `DataContract.md`       | 前后端数据类型与持久化边界                   |
+| `SECURITY_NOTES.md`     | 配置与密钥文件边界                           |
+| `THEME.md`              | Catppuccin、Ant Design 6 和主题切换          |
+| `COLOR_SYSTEM.md`       | `src/index.css` token SSOT                   |
+| `ERRORS.md`             | 错误排查与已知问题目录                       |
+| `ModelPresets.md`       | 快速预设的接口与核验记录                     |
+| `LogicFixes.md`         | 文档、TM、术语和实测修复交付                 |
+| `ArchitectureReview.md` | 本轮架构收敛、测试和保留边界                 |
+| `UIRuntimeAudit.md`     | release 界面缺陷、同类问题修复与原生回归证据 |
 
 ## Recommended order
 

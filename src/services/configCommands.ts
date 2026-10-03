@@ -3,6 +3,11 @@ import type { AppConfig } from '../types/tauri';
 import { invoke } from './apiClient';
 
 export const configCommands = {
+  async getSettingsPath(): Promise<string> {
+    return invoke<string>('get_app_settings_path', undefined, {
+      errorMessage: i18n.t('errors.ipc.loadConfig'),
+    });
+  },
   async get(): Promise<AppConfig> {
     return invoke<AppConfig>('get_app_config', undefined, {
       errorMessage: i18n.t('errors.ipc.loadConfig'),

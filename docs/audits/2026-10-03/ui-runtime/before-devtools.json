@@ -1,0 +1,206 @@
+{
+  "url": "http://tauri.localhost/devtools.html",
+  "title": "开发者工具",
+  "csp": [],
+  "text": " 后端日志\n AI 提示词日志\n暂停\n清空\n(每2秒更新)\n导出\n复制\n日志行数: 8\n字符数: 833\n最后更新: 18:58:29",
+  "styles": [
+    {
+      "nonce": "",
+      "text": "\n.anticon {\n  display: inline-flex;\n  align-items: center;\n  color: inherit;\n  font-style: normal;\n  line-height: 0;\n  t",
+      "sheet": false
+    },
+    {
+      "nonce": "",
+      "text": ".css-var-_r_0_{--ant-blue:#1677FF;--ant-purple:#722ED1;--ant-cyan:#13C2C2;--ant-green:#52C41A;--ant-magenta:#EB2F96;--an",
+      "sheet": false
+    },
+    {
+      "nonce": "",
+      "text": "a:where(.css-tql0nm){color:var(--ant-color-link);text-decoration:var(--ant-link-decoration);background-color:transparent",
+      "sheet": false
+    },
+    {
+      "nonce": "",
+      "text": ":where(.css-tql0nm).ant-wave{font-family:var(--ant-font-family);font-size:var(--ant-font-size);box-sizing:border-box;}:w",
+      "sheet": false
+    },
+    {
+      "nonce": "",
+      "text": ":where(.css-tql0nm).ant-btn{font-family:var(--ant-font-family);font-size:var(--ant-font-size);box-sizing:border-box;}:wh",
+      "sheet": false
+    },
+    {
+      "nonce": "",
+      "text": ".css-var-_r_0_.ant-btn{--ant-button-blue-shadow-color:0 2px 0 rgb(230,244,255);--ant-button-purple-shadow-color:0 2px 0 ",
+      "sheet": false
+    },
+    {
+      "nonce": "",
+      "text": ":where(.css-tql0nm).ant-space{display:inline-flex;}:where(.css-tql0nm).ant-space-rtl{direction:rtl;}:where(.css-tql0nm).",
+      "sheet": false
+    },
+    {
+      "nonce": "",
+      "text": ":where(.css-tql0nm).ant-input{box-sizing:border-box;}:where(.css-tql0nm).ant-input::before,:where(.css-tql0nm).ant-input",
+      "sheet": false
+    },
+    {
+      "nonce": "",
+      "text": ".css-var-_r_0_.ant-input{--ant-color-border:#2b2b3d;--ant-input-padding-block:4px;--ant-input-padding-block-sm:0px;--ant",
+      "sheet": false
+    },
+    {
+      "nonce": "",
+      "text": ":where(.css-tql0nm).ant-input-css-var{box-sizing:border-box;}:where(.css-tql0nm).ant-input-css-var::before,:where(.css-t",
+      "sheet": false
+    },
+    {
+      "nonce": "",
+      "text": ".css-var-_r_0_.ant-input-css-var{--ant-color-border:#2b2b3d;--ant-input-padding-block:4px;--ant-input-padding-block-sm:0",
+      "sheet": false
+    },
+    {
+      "nonce": "",
+      "text": ":where(.css-tql0nm).ant-tabs-css-var{font-family:var(--ant-font-family);font-size:var(--ant-font-size);box-sizing:border",
+      "sheet": false
+    },
+    {
+      "nonce": "",
+      "text": "@keyframes css-tql0nm-antSlideUpIn{0%{transform:scaleY(0.8);transform-origin:0% 0%;opacity:0;}100%{transform:scaleY(1);t",
+      "sheet": false
+    },
+    {
+      "nonce": "",
+      "text": "@keyframes css-tql0nm-antSlideUpOut{0%{transform:scaleY(1);transform-origin:0% 0%;opacity:1;}100%{transform:scaleY(0.8);",
+      "sheet": false
+    },
+    {
+      "nonce": "",
+      "text": "@keyframes css-tql0nm-antSlideDownIn{0%{transform:scaleY(0.8);transform-origin:100% 100%;opacity:0;}100%{transform:scale",
+      "sheet": false
+    },
+    {
+      "nonce": "",
+      "text": "@keyframes css-tql0nm-antSlideDownOut{0%{transform:scaleY(1);transform-origin:100% 100%;opacity:1;}100%{transform:scaleY",
+      "sheet": false
+    },
+    {
+      "nonce": "",
+      "text": ".css-var-_r_0_.ant-tabs-css-var{--ant-tabs-z-index-popup:1050;--ant-tabs-card-bg:rgba(0,0,0,0.02);--ant-tabs-card-height",
+      "sheet": false
+    },
+    {
+      "nonce": "",
+      "text": ":where(.css-tql0nm).ant-app{font-family:var(--ant-font-family);font-size:var(--ant-font-size);box-sizing:border-box;}:wh",
+      "sheet": false
+    },
+    {
+      "nonce": "",
+      "text": ".anticon{display:inline-flex;align-items:center;color:inherit;font-style:normal;line-height:0;text-align:center;text-tra",
+      "sheet": false
+    },
+    {
+      "nonce": "17603104997863821091",
+      "text": "\n      body {\n        margin: 0;\n        padding: 0;\n        overflow: hidden;\n      }\n    ",
+      "sheet": true,
+      "rules": 1
+    },
+    {
+      "nonce": "",
+      "text": "",
+      "sheet": false
+    }
+  ],
+  "components": [
+    {
+      "class": "ant-tabs ant-tabs-top css-tql0nm css-var-_r_0_ ant-tabs-css-var",
+      "text": " 后端日志 AI 提示词日志暂停清空(每2秒更新)导出复制INFO [po_translator_gui::utils::init] Logger initia",
+      "display": "flex",
+      "position": "static",
+      "color": "rgb(205, 214, 244)",
+      "background": "rgba(0, 0, 0, 0)",
+      "transition": "background-color 0.2s cubic-bezier(0, 0, 0.2, 1), border-color 0.2s cubic-bezier(0, 0, 0.2, 1), color 0.2s cubic-bezier(0, 0, 0.2, 1)",
+      "rect": {
+        "x": 16,
+        "y": 16,
+        "width": 868,
+        "height": 700
+      }
+    },
+    {
+      "class": "ant-btn css-tql0nm css-var-_r_0_ ant-btn-primary ant-btn-color-primary ant-btn-variant-solid",
+      "text": "暂停",
+      "display": "inline-block",
+      "position": "static",
+      "color": "rgb(255, 255, 255)",
+      "background": "rgb(107, 107, 107)",
+      "transition": "background-color 0.2s cubic-bezier(0, 0, 0.2, 1), border-color 0.2s cubic-bezier(0, 0, 0.2, 1), color 0.2s cubic-bezier(0, 0, 0.2, 1)",
+      "rect": {
+        "x": 16,
+        "y": 88.5,
+        "width": 55.9921875,
+        "height": 25.5
+      }
+    },
+    {
+      "class": "ant-btn css-tql0nm css-var-_r_0_ ant-btn-default ant-btn-color-default ant-btn-variant-outlined",
+      "text": "清空",
+      "display": "inline-block",
+      "position": "static",
+      "color": "rgb(255, 255, 255)",
+      "background": "rgb(107, 107, 107)",
+      "transition": "background-color 0.2s cubic-bezier(0, 0, 0.2, 1), border-color 0.2s cubic-bezier(0, 0, 0.2, 1), color 0.2s cubic-bezier(0, 0, 0.2, 1)",
+      "rect": {
+        "x": 16,
+        "y": 114,
+        "width": 55.9921875,
+        "height": 25.5
+      }
+    },
+    {
+      "class": "ant-btn css-tql0nm css-var-_r_0_ ant-btn-default ant-btn-color-default ant-btn-variant-outlined",
+      "text": "导出",
+      "display": "inline-block",
+      "position": "static",
+      "color": "rgb(255, 255, 255)",
+      "background": "rgb(107, 107, 107)",
+      "transition": "background-color 0.2s cubic-bezier(0, 0, 0.2, 1), border-color 0.2s cubic-bezier(0, 0, 0.2, 1), color 0.2s cubic-bezier(0, 0, 0.2, 1)",
+      "rect": {
+        "x": 16,
+        "y": 163.5,
+        "width": 55.9921875,
+        "height": 25.5
+      }
+    },
+    {
+      "class": "ant-btn css-tql0nm css-var-_r_0_ ant-btn-primary ant-btn-color-primary ant-btn-variant-solid",
+      "text": "复制",
+      "display": "inline-block",
+      "position": "static",
+      "color": "rgb(255, 255, 255)",
+      "background": "rgb(107, 107, 107)",
+      "transition": "background-color 0.2s cubic-bezier(0, 0, 0.2, 1), border-color 0.2s cubic-bezier(0, 0, 0.2, 1), color 0.2s cubic-bezier(0, 0, 0.2, 1)",
+      "rect": {
+        "x": 16,
+        "y": 189,
+        "width": 55.9921875,
+        "height": 25.5
+      }
+    },
+    {
+      "class": "ant-input css-tql0nm ant-input-outlined css-var-_r_0_ ant-input-css-var",
+      "text": "INFO [po_translator_gui::utils::init] Logger initialized at \"F:\\\\Github\\\\ai-l10n",
+      "display": "inline-block",
+      "position": "static",
+      "color": "rgb(205, 214, 244)",
+      "background": "rgb(30, 30, 46)",
+      "transition": "background-color 0.2s cubic-bezier(0, 0, 0.2, 1), border-color 0.2s cubic-bezier(0, 0, 0.2, 1), color 0.2s cubic-bezier(0, 0, 0.2, 1)",
+      "rect": {
+        "x": 16,
+        "y": 226.5,
+        "width": 153,
+        "height": 356
+      }
+    }
+  ]
+}

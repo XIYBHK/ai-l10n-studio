@@ -95,8 +95,8 @@ export const ActionButton: React.FC<ActionButtonProps> = ({
     justifyContent: 'center',
     gap: 'var(--space-1)',
     transition: hoverAnimation
-      ? 'transform 0.18s ease, box-shadow 0.18s ease, background-color var(--theme-transition-duration) var(--theme-transition-timing), border-color var(--theme-transition-duration) var(--theme-transition-timing), color var(--theme-transition-duration) var(--theme-transition-timing)'
-      : 'background-color var(--theme-transition-duration) var(--theme-transition-timing), border-color var(--theme-transition-duration) var(--theme-transition-timing), color var(--theme-transition-duration) var(--theme-transition-timing)',
+      ? 'transform var(--duration-base) var(--ease-out), box-shadow var(--duration-base) var(--ease-out), background-color var(--duration-base) var(--ease-out), border-color var(--duration-base) var(--ease-out)'
+      : 'background-color var(--duration-base) var(--ease-out), border-color var(--duration-base) var(--ease-out)',
     transform: isPressed ? 'scale(0.98)' : 'scale(1)',
     ...variantConfig,
     ...(buttonProps.disabled

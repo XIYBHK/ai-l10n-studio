@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Button, Card, Form, Input, Space, message } from 'antd';
+import { App, Button, Card, Form, Input, Space } from 'antd';
 import { useTranslation } from 'react-i18next';
 import { MODEL_PRESETS, createPresetProfile } from '../../config/modelPresets';
 import { modelConfigurationCommands } from '../../services/aiCommands';
@@ -25,6 +25,7 @@ export function QuickProviderSetup({
   onAdvanced,
 }: Props) {
   const { t } = useTranslation();
+  const { message } = App.useApp();
   const [selectedId, setSelectedId] = useState<string>();
   const [form] = Form.useForm<{ apiKey: string }>();
   const preset = MODEL_PRESETS.find(({ id }) => id === selectedId);
@@ -41,6 +42,7 @@ export function QuickProviderSetup({
       message.success(t('modelSettings.quick.saved'));
     } catch (cause) {
       log.error('quick provider setup failed', cause);
+      message.error(t('settings.saveFailed'));
     } finally {
       onBusyChange(false);
     }

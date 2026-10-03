@@ -37,6 +37,22 @@
 
 ## 近期问题（保留作为 recent reference）
 
+### 2026-10-03 - 生产 CSP 拦截动态样式与主题闪烁
+
+用户反馈设置无响应、调试窗口像无样式 HTML、亮暗切换文字闪烁。真实 release WebView2 证明设置内容已经挂载，但 Ant Design 注入的 style 没有 Tauri nonce，`style.sheet` 为 null；Modal 无定位样式，内容落到视口下方。开发工具同样缺少组件样式。编辑器静态 `message` 又创建独立 React 根，绕过窗口的 CSP/主题上下文。
+
+两个窗口将已有 Tauri nonce 传入 `ConfigProvider`，所有消息使用 `App.useApp()`；命令服务通过窗口绑定的消息实例反馈错误。CSP 保持启用。主题 DOM 更新改为 layout effect，取消全局颜色过渡，切换帧内统一禁止 transition。暗色主题补充 `darkAlgorithm`，避免占位文字沿用黑色亮色 token。
+
+设置和资源弹窗使用可取消的 lazy 加载界面；开发工具打开/初始化失败、通知权限失败、设置与日志读取失败均可见且可重试。日志初始化失败时禁用保存，避免用默认值覆盖未读到的配置。监控通过 generation 丢弃停止/清空后的迟到结果。
+
+新增 release 原生回归检查真正加载的应用 URL、每个动态 style 的 nonce/sheet、Modal 几何、四次主题切换的 80 帧、占位文字对比度和编辑保存。只拿到 webview handle 的 smoke 不能作为界面验收。证据见 [UIRuntimeAudit.md](UIRuntimeAudit.md)。
+
+### 2026-10-03 - 便携测试仍改写普通模式前端偏好
+
+后端数据已隔离，但 `Store.load('app-settings.json')` 使用插件默认 AppData 路径，便携测试仍影响日常主题/语言。新增 `get_app_settings_path` 统一前端与后端应用根目录；便携 store 使用测试副本旁 `.config`，普通模式路径保持原样。开发工具只读加载偏好，并在主窗口广播后更新内存状态。
+
+本轮早期探针确实改变了个人主题/语言；保留恢复前备份并恢复已知中文深色外观。修复后桌面 runner 比较个人偏好文件测试前后 SHA-256，变化即失败；实际原生测试通过。详细隔离与恢复记录见 [UIRuntimeAudit.md](UIRuntimeAudit.md)。
+
 ### 2026-10-03 - E2E 清理影响被测程序的原配置
 
 启动脚本原先直接在被测 exe 旁建立便携标记，并递归清除其 `com.potranslator.gui` 配置目录；指定已有 release 路径时可能删除用户数据。

@@ -79,6 +79,7 @@ pub fn run() {
             get_supported_langs,
             // 系统语言检测 (Phase 6)
             get_system_language,
+            get_app_settings_path,
             // 系统相关命令
             get_log_directory_path,
             open_log_directory,

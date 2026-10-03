@@ -135,6 +135,7 @@
       "logs": "Logs"
     },
     "logs": {
+      "loadFailed": "Could not load log settings. Please retry.",
       "description": "Log level changes apply immediately. Retention and rotation changes apply on restart.",
       "level": "Log level",
       "levelHelp": "DEBUG is most detailed; ERROR is least detailed.",
@@ -316,6 +317,7 @@
     "resetButton": "Reset Component"
   },
   "devTools": {
+    "openFailed": "Could not open the developer tools window. Please retry.",
     "modalTitle": "Developer Tools",
     "backendLogsTab": "Backend Logs",
     "promptLogsTab": "AI Prompt Logs",
@@ -350,6 +352,8 @@
     "emptyHelp": "When confirming a manual revision in the editor, you can add the difference to the glossary."
   },
   "notifications": {
+    "loadFailed": "Could not load notification settings. Please retry.",
+    "permissionFailed": "Could not request notification permission. Please retry.",
     "title": "Notifications",
     "description": "Send system notifications when translation completes or fails.",
     "enabled": "Enable notifications",

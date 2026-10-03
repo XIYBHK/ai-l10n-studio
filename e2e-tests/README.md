@@ -1,21 +1,30 @@
 # Desktop E2E
 
-本目录是独立的 Tauri 桌面 shell smoke 测试项目，使用 WebDriverIO 和 `tauri-driver`；UI 语义测试由根项目 Vitest 覆盖。
+本目录使用 WebDriverIO、`tauri-driver` 和真实 WebView2 测试 release exe，覆盖生产 CSP 下的组件样式和常用界面操作。Vitest 继续覆盖状态流及失败分支。
 
 ```powershell
 npm ci --prefix e2e-tests
 npm run test:e2e
 ```
 
-根命令会先构建 `src-tauri/target/debug/po-translator-gui.exe`，再运行本目录测试。启动脚本把 exe 和插件复制到 `src-tauri/target/e2e/run-*`，在副本旁创建全新的 `.config/PORTABLE`。退出时只删除带本次所有权标记的测试目录；源程序旁的配置不会读取、复制或清除。
+根命令先构建 `src-tauri/target/release/po-translator-gui.exe`。启动脚本把 exe 和插件复制到 `src-tauri/target/e2e/run-*`，在副本旁创建全新的 `.config/PORTABLE` 和单条 PO 样本。前端偏好通过 `get_app_settings_path` 使用副本的应用目录。退出时只删除带本次所有权标记的测试目录；测试前后比较普通模式偏好文件 SHA-256，变化即失败。
 
-已有 release 可直接测试单个启动用例，不重复构建，也不调用 MidScene：
+已有最新 release 可直接运行，不重复构建，也不调用 MidScene 或 AI 服务：
 
 ```powershell
 $env:TAURI_APP_PATH = (Resolve-Path 'src-tauri/target/release/po-translator-gui.exe').Path
-npm --prefix e2e-tests run test -- --spec ./specs/app.e2e.cjs
+npm --prefix e2e-tests run test -- --spec ./specs/ui.e2e.cjs
 ```
 
 需要已安装的 `tauri-driver`、Edge 和 WebView2。匹配 Edge 版本的驱动默认缓存到 `src-tauri/target/e2e/driver`；可用 `EDGE_DRIVER_BIN` 指定已有驱动。
 
-当前范围是应用启动、WebDriver 连接和至少一个桌面 webview handle；本机 Edge/WebView2 条件下可能停留在 `about:blank`，因此不把它描述为完整业务流程 E2E。
+`specs/ui.e2e.cjs` 验证真正的 `http://tauri.localhost/` UI，不能把 `about:blank` 或仅有 window handle 当成成功。当前六组回归覆盖：
+
+- 生产 CSP 保持启用，每个 Ant Design 动态 style 带 nonce 且 CSSOM 已生效；设置 Modal 在视口内，占位文字可读。
+- 五个设置标签、下拉框、关闭和重新打开。
+- 四次主题切换，每次采样 20 个绘制帧，检查 DOM 和文字/背景颜色同步。
+- 文件菜单、记忆与术语管理弹窗。
+- 编辑取消的消息样式，以及保持 textarea 焦点时 Ctrl+S 经真实 Rust IPC 写出 PO。
+- 调试窗口加载保存的语言/主题、两个日志标签、暂停状态独立、跨窗口主题同步和重复点击复用窗口。
+
+PO 导入通过发送应用现有 `tauri://drag-drop` 事件驱动正常处理器；这不等于实测 OS 文件对话框或鼠标拖放。通知、真实供应商请求、完整翻译/确认业务和大文件性能不在此套原生测试覆盖内。失败保存截图与 DOM；当前证据目录和修复记录见 [UIRuntimeAudit.md](../docs/UIRuntimeAudit.md)。

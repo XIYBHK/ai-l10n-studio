@@ -22,7 +22,7 @@
     "format:check": "prettier --check .",
     "fmt": "cargo fmt --manifest-path ./src-tauri/Cargo.toml",
     "lint:all": "npm run format:check && npm run fmt -- --check",
-    "test:e2e:build": "npm run tauri build -- --debug --no-bundle",
+    "test:e2e:build": "npm run tauri:build -- --no-bundle",
     "test:e2e": "npm run test:e2e:build && npm --prefix e2e-tests run test"
   },
   "dependencies": {

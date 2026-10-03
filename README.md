@@ -49,4 +49,4 @@ npm run tauri:portable
 - [颜色系统](./docs/COLOR_SYSTEM.md)
 - [错误目录](./docs/ERRORS.md)
 
-`src/` 是 React 前端，`src-tauri/src/` 是 Tauri 命令和 Rust 服务，`plugins/` 是随应用资源加载的 TOML 目录，`example-plugins/` 是配置示例，`e2e-tests/` 是独立桌面 shell smoke 测试项目。当前架构与本轮复查见 [Architecture.md](docs/Architecture.md) 和 [ArchitectureReview.md](docs/ArchitectureReview.md)。
+`src/` 是 React 前端，`src-tauri/src/` 是 Tauri 命令和 Rust 服务，`plugins/` 是随应用资源加载的 TOML 目录，`example-plugins/` 是配置示例，`e2e-tests/` 是基于 release exe 的桌面界面回归项目。当前架构与本轮复查见 [Architecture.md](docs/Architecture.md)、[ArchitectureReview.md](docs/ArchitectureReview.md) 和 [UIRuntimeAudit.md](docs/UIRuntimeAudit.md)。

@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { Card, Form, Input, Button, Space, message } from 'antd';
+import { App, Card, Form, Input, Button, Space } from 'antd';
 import { FileTextOutlined, UndoOutlined } from '@ant-design/icons';
 import { useTranslation } from 'react-i18next';
 import { systemPromptCommands } from '../../services/aiCommands';
@@ -12,6 +12,7 @@ const log = createModuleLogger('SystemPromptTab');
 
 export function SystemPromptTab() {
   const { t } = useTranslation();
+  const { message } = App.useApp();
   const [form] = Form.useForm();
   const { prompt, mutate } = useSystemPrompt();
   const { execute: savePrompt, loading: saving } = useAsync(systemPromptCommands.set);

@@ -1,5 +1,5 @@
 ﻿import { useState, useEffect, memo, useCallback } from 'react';
-import { message } from 'antd';
+import { App } from 'antd';
 import { useTranslation } from 'react-i18next';
 import { POEntry } from '../types/tauri';
 import { useTranslationStore } from '../store';
@@ -37,6 +37,7 @@ export const EditorPane = memo(function EditorPane({
   canNavigateNext,
 }: EditorPaneProps) {
   const { t } = useTranslation();
+  const { message } = App.useApp();
   const entries = useTranslationStore((state) => state.entries);
   const revision = useTranslationStore((state) => state.documentRevision);
   const document = useTranslationStore((state) => state.document);

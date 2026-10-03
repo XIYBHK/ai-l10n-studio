@@ -115,7 +115,7 @@ export function SettingsModal({ visible, onClose }: SettingsModalProps) {
       onCancel={onClose}
       footer={null}
       width={800}
-      destroyOnClose
+      destroyOnHidden
       styles={{
         body: {
           maxHeight: '70vh',

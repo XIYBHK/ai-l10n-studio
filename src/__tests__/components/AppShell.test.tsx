@@ -58,6 +58,7 @@ describe('model configuration startup', () => {
   it('opens settings only after successfully reading an empty configuration', async () => {
     getConfiguration.mockResolvedValue({ providers: [], defaultModel: null });
     mount();
-    expect(await screen.findByRole('dialog')).toHaveTextContent('Settings');
+    expect(await screen.findByText('Settings')).toBeInTheDocument();
+    expect(screen.getByRole('dialog')).toHaveTextContent('Settings');
   });
 });

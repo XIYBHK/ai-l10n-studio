@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef, lazy, Suspense } from 'react';
+import { useState, useEffect, useLayoutEffect, useRef, lazy, Suspense } from 'react';
 import { Alert, Button, ConfigProvider, App as AntApp } from 'antd';
 import { useTranslation } from 'react-i18next';
 import { useThemeRuntime } from './hooks/useTheme';
@@ -7,6 +7,10 @@ import { useTranslationFlow } from './hooks/useTranslationFlow';
 import { openDevToolsWindow } from './utils/devToolsWindow';
 import { createModuleLogger } from './utils/logger';
 import { useLanguage, useResetSessionStats } from './store';
+import { getStyleCsp } from './utils/styleCsp';
+import { LazyModalFallback } from './components/ui/LazyModalFallback';
+import { emit } from '@tauri-apps/api/event';
+import { bindUiFeedback } from './services/uiFeedback';
 
 import i18n from './i18n/config';
 import './App.css';
@@ -32,7 +36,7 @@ interface AppShellProps {
 export default function AppShell({ initError = null }: AppShellProps) {
   const themeData = useThemeRuntime();
   return (
-    <ConfigProvider theme={themeData.themeConfig}>
+    <ConfigProvider theme={themeData.themeConfig} csp={getStyleCsp()}>
       <AntApp>
         <AppShellContent initError={initError} themeData={themeData} />
       </AntApp>
@@ -45,12 +49,16 @@ function AppShellContent({
   themeData,
 }: AppShellProps & { themeData: ReturnType<typeof useThemeRuntime> }) {
   const { message: msg } = AntApp.useApp();
+  useLayoutEffect(() => bindUiFeedback(msg), [msg]);
   const { t } = useTranslation();
   const language = useLanguage();
   const resetSessionStats = useResetSessionStats();
 
   useEffect(() => {
     void i18n.changeLanguage(language);
+    void emit('language:changed', language).catch((error) => {
+      log.error('Language broadcast failed', error);
+    });
   }, [language]);
 
   const [settingsVisible, setSettingsVisible] = useState(false);
@@ -75,12 +83,6 @@ function AppShellContent({
     changeTargetLanguage,
     cancelTranslation,
   } = useTranslationFlow();
-
-  useEffect(() => {
-    const root = document.documentElement;
-    root.style.setProperty('--theme-transition-duration', '0.3s');
-    root.style.setProperty('--theme-transition-timing', 'cubic-bezier(0.645, 0.045, 0.355, 1)');
-  }, [themeData.appliedTheme]);
 
   const {
     configuration,
@@ -224,6 +226,7 @@ function AppShellContent({
               await openDevToolsWindow();
             } catch (error) {
               console.error('[AppShell] 打开开发者工具失败', error);
+              msg.error(t('devTools.openFailed'));
             }
           }}
           isTranslating={isTranslating}
@@ -255,7 +258,7 @@ function AppShellContent({
       </Suspense>
 
       {settingsVisible ? (
-        <Suspense fallback={null}>
+        <Suspense fallback={<LazyModalFallback onClose={() => setSettingsVisible(false)} />}>
           <SettingsModal visible={settingsVisible} onClose={() => setSettingsVisible(false)} />
         </Suspense>
       ) : null}

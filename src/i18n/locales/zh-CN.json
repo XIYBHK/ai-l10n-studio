@@ -135,6 +135,7 @@
       "logs": "日志"
     },
     "logs": {
+      "loadFailed": "日志设置读取失败，请重试。",
       "description": "日志级别立即生效；保留时间和文件轮转设置在重启后生效。",
       "level": "日志级别",
       "levelHelp": "DEBUG 最详细，ERROR 最简洁",
@@ -316,6 +317,7 @@
     "resetButton": "重置组件"
   },
   "devTools": {
+    "openFailed": "开发者工具窗口打开失败，请重试。",
     "modalTitle": "开发者工具",
     "backendLogsTab": "后端日志",
     "promptLogsTab": "AI 提示词日志",
@@ -350,6 +352,8 @@
     "emptyHelp": "在编辑器中确认人工修订时，可选择将差异加入术语库。"
   },
   "notifications": {
+    "loadFailed": "通知设置读取失败，请重试。",
+    "permissionFailed": "请求通知权限失败，请重试。",
     "title": "通知设置",
     "description": "翻译完成或失败时发送系统通知。",
     "enabled": "启用通知",

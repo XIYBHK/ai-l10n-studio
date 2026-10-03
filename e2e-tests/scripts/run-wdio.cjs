@@ -1,6 +1,7 @@
 ﻿const path = require('node:path');
 const fs = require('node:fs');
 const net = require('node:net');
+const { createHash } = require('node:crypto');
 const { spawn, spawnSync } = require('node:child_process');
 const edgedriver = require('edgedriver');
 const { createIsolatedApp, cleanupIsolatedApp } = require('./app-fixture.cjs');
@@ -26,7 +27,7 @@ if (fs.existsSync(dotenvPath)) {
 const rootDir = path.resolve(__dirname, '..', '..');
 const appPath =
   process.env.TAURI_APP_PATH ||
-  path.join(rootDir, 'src-tauri', 'target', 'debug', 'po-translator-gui.exe');
+  path.join(rootDir, 'src-tauri', 'target', 'release', 'po-translator-gui.exe');
 const fixtureRoot = path.join(rootDir, 'src-tauri', 'target', 'e2e');
 const preferredTauriDriverPort = Number(process.env.TAURI_DRIVER_PORT || 4545);
 const preferredNativeDriverPort = Number(process.env.TAURI_NATIVE_DRIVER_PORT || 17555);
@@ -40,6 +41,15 @@ const wdioScript = path.join(
   'bin',
   'wdio.js'
 );
+
+const personalPreferences = process.env.APPDATA
+  ? path.join(process.env.APPDATA, 'com.potranslator.gui', 'app-settings.json')
+  : null;
+function preferencesHash() {
+  return personalPreferences && fs.existsSync(personalPreferences)
+    ? createHash('sha256').update(fs.readFileSync(personalPreferences)).digest('hex')
+    : null;
+}
 
 function killProcessTree(child) {
   if (!child || child.killed || !child.pid) {
@@ -164,6 +174,7 @@ async function main() {
     PATH: `${path.dirname(edgeBinary)}${path.delimiter}${process.env.PATH || ''}`,
   };
   const fixture = createIsolatedApp(appPath, fixtureRoot);
+  const preferencesBefore = preferencesHash();
   let edgeDriver;
   let tauriDriver;
   const shutdown = () => {
@@ -212,6 +223,7 @@ async function main() {
         env: {
           ...driverEnv,
           TAURI_APP_PATH: fixture.appPath,
+          TAURI_E2E_PO_PATH: fixture.poPath,
           TAURI_DRIVER_PORT: tauriDriverPort,
         },
         shell: false,
@@ -226,6 +238,9 @@ async function main() {
     process.removeListener('SIGINT', onSigint);
     process.removeListener('SIGTERM', onSigterm);
     shutdown();
+    if (preferencesHash() !== preferencesBefore) {
+      throw new Error('Desktop test changed personal preferences outside its isolated fixture');
+    }
   }
 }
 
