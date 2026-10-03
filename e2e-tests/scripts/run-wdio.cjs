@@ -3,6 +3,7 @@ const fs = require('node:fs');
 const net = require('node:net');
 const { spawn, spawnSync } = require('node:child_process');
 const edgedriver = require('edgedriver');
+const { createIsolatedApp, cleanupIsolatedApp } = require('./app-fixture.cjs');
 
 // 加载 e2e-tests/.env（MidScene 模型密钥等），不覆盖已有环境变量
 const dotenvPath = path.join(__dirname, '..', '.env');
@@ -26,19 +27,18 @@ const rootDir = path.resolve(__dirname, '..', '..');
 const appPath =
   process.env.TAURI_APP_PATH ||
   path.join(rootDir, 'src-tauri', 'target', 'debug', 'po-translator-gui.exe');
-const exeDir = path.dirname(appPath);
-const portableDir = path.join(exeDir, '.config');
-const portableMarker = path.join(portableDir, 'PORTABLE');
-const portableStateDir = path.join(portableDir, 'com.potranslator.gui');
+const fixtureRoot = path.join(rootDir, 'src-tauri', 'target', 'e2e');
 const preferredTauriDriverPort = Number(process.env.TAURI_DRIVER_PORT || 4545);
 const preferredNativeDriverPort = Number(process.env.TAURI_NATIVE_DRIVER_PORT || 17555);
 const tauriDriverBin = process.env.TAURI_DRIVER_BIN || 'tauri-driver';
-const wdioBin = path.join(
+const wdioScript = path.join(
   rootDir,
   'e2e-tests',
   'node_modules',
-  '.bin',
-  process.platform === 'win32' ? 'wdio.cmd' : 'wdio'
+  '@wdio',
+  'cli',
+  'bin',
+  'wdio.js'
 );
 
 function killProcessTree(child) {
@@ -50,6 +50,7 @@ function killProcessTree(child) {
     spawnSync('taskkill', ['/PID', String(child.pid), '/T', '/F'], {
       stdio: 'ignore',
       shell: false,
+      windowsHide: true,
     });
     return;
   }
@@ -101,14 +102,6 @@ function waitForPort(port, timeoutMs = 30000) {
   });
 }
 
-function preparePortableState() {
-  fs.mkdirSync(portableDir, { recursive: true });
-  if (!fs.existsSync(portableMarker)) {
-    fs.writeFileSync(portableMarker, '');
-  }
-  fs.rmSync(portableStateDir, { recursive: true, force: true });
-}
-
 function getInstalledEdgeVersion() {
   const candidates = [
     process.env.EDGE_BINARY_PATH,
@@ -127,14 +120,23 @@ function getInstalledEdgeVersion() {
   }
 
   const result = spawnSync(
-    'powershell.exe',
-    ['-Command', `(Get-Item '${edgeBinaryPath.replace(/'/g, "''")}').VersionInfo.ProductVersion`],
+    'pwsh.exe',
+    [
+      '-NoProfile',
+      '-NonInteractive',
+      '-Command',
+      `(Get-Item -LiteralPath '${edgeBinaryPath.replace(/'/g, "''")}').VersionInfo.ProductVersion`,
+    ],
     {
       cwd: rootDir,
       encoding: 'utf8',
+      windowsHide: true,
     }
   );
 
+  if (result.error || result.status !== 0) {
+    throw result.error || new Error(`Edge version check failed: ${result.stderr}`);
+  }
   const version = result.stdout.trim();
   if (!version) {
     throw new Error('Could not determine Microsoft Edge version');
@@ -148,74 +150,86 @@ async function main() {
     throw new Error(`Tauri app binary not found: ${appPath}`);
   }
 
-  preparePortableState();
-
   const tauriDriverPort = String(await getAvailablePort(preferredTauriDriverPort));
   const nativeDriverPort = String(await getAvailablePort(preferredNativeDriverPort));
   const edgeVersion = process.env.EDGE_VERSION || getInstalledEdgeVersion();
-  const edgeBinary = process.env.EDGE_DRIVER_BIN || (await edgedriver.download(edgeVersion));
+  const edgeBinary =
+    process.env.EDGE_DRIVER_BIN ||
+    (await edgedriver.download(
+      edgeVersion,
+      process.env.EDGEDRIVER_CACHE_DIR || path.join(fixtureRoot, 'driver')
+    ));
   const driverEnv = {
     ...process.env,
     PATH: `${path.dirname(edgeBinary)}${path.delimiter}${process.env.PATH || ''}`,
   };
-
-  const edgeDriver = spawn(edgeBinary, [`--port=${nativeDriverPort}`], {
-    cwd: rootDir,
-    stdio: 'inherit',
-    env: driverEnv,
-    shell: false,
-  });
-
-  const tauriDriver = spawn(
-    tauriDriverBin,
-    ['--port', tauriDriverPort, '--native-port', nativeDriverPort],
-    {
-      cwd: rootDir,
-      stdio: 'inherit',
-      env: driverEnv,
-      shell: process.platform === 'win32',
-    }
-  );
-
+  const fixture = createIsolatedApp(appPath, fixtureRoot);
+  let edgeDriver;
+  let tauriDriver;
   const shutdown = () => {
     killProcessTree(tauriDriver);
     killProcessTree(edgeDriver);
+    cleanupIsolatedApp(fixture);
   };
 
+  const onSigint = () => process.exit(130);
+  const onSigterm = () => process.exit(143);
   process.on('exit', shutdown);
-  process.on('SIGINT', () => {
-    shutdown();
-    process.exit(130);
-  });
-  process.on('SIGTERM', () => {
-    shutdown();
-    process.exit(143);
-  });
+  process.on('SIGINT', onSigint);
+  process.on('SIGTERM', onSigterm);
 
   try {
+    edgeDriver = spawn(edgeBinary, [`--port=${nativeDriverPort}`], {
+      cwd: rootDir,
+      stdio: 'inherit',
+      env: driverEnv,
+      shell: false,
+      windowsHide: true,
+    });
+
+    tauriDriver = spawn(
+      tauriDriverBin,
+      ['--port', tauriDriverPort, '--native-port', nativeDriverPort],
+      {
+        cwd: rootDir,
+        stdio: 'inherit',
+        env: driverEnv,
+        shell: false,
+        windowsHide: true,
+      }
+    );
+
+    edgeDriver.on('error', (error) => console.error('[e2e] EdgeDriver failed:', error));
+    tauriDriver.on('error', (error) => console.error('[e2e] tauri-driver failed:', error));
     await waitForPort(nativeDriverPort, 30000);
     await waitForPort(tauriDriverPort, 30000);
 
-    const result = spawnSync(wdioBin, ['run', './wdio.conf.cjs'], {
-      cwd: path.join(rootDir, 'e2e-tests'),
-      env: {
-        ...driverEnv,
-        TAURI_APP_PATH: appPath,
-        TAURI_DRIVER_PORT: tauriDriverPort,
-      },
-      shell: process.platform === 'win32',
-      stdio: 'inherit',
-    });
-
-    if (result.status !== 0) {
-      process.exit(result.status ?? 1);
-    }
+    const result = spawnSync(
+      process.execPath,
+      [wdioScript, 'run', './wdio.conf.cjs', ...process.argv.slice(2)],
+      {
+        cwd: path.join(rootDir, 'e2e-tests'),
+        env: {
+          ...driverEnv,
+          TAURI_APP_PATH: fixture.appPath,
+          TAURI_DRIVER_PORT: tauriDriverPort,
+        },
+        shell: false,
+        windowsHide: true,
+        stdio: 'inherit',
+      }
+    );
+    if (result.error) throw result.error;
+    process.exitCode = result.status ?? 1;
   } finally {
+    process.removeListener('exit', shutdown);
+    process.removeListener('SIGINT', onSigint);
+    process.removeListener('SIGTERM', onSigterm);
     shutdown();
   }
 }
 
 main().catch((error) => {
   console.error('[e2e] failed:', error);
-  process.exit(1);
+  process.exitCode = 1;
 });

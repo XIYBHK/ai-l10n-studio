@@ -58,51 +58,37 @@ jobs:
       - name: Install frontend dependencies
         run: npm ci
 
-      - name: Collect changed files for Prettier
-        id: prettier-files
+      - name: Check changed-file Prettier formatting
         shell: bash
+        env:
+          EVENT_NAME: ${{ github.event_name }}
+          PR_BASE: ${{ github.event.pull_request.base.sha }}
+          PR_HEAD: ${{ github.event.pull_request.head.sha }}
+          PUSH_BASE: ${{ github.event.before }}
+          PUSH_HEAD: ${{ github.sha }}
         run: |
-          if [[ "${{ github.event_name }}" == "pull_request" ]]; then
-            BASE_SHA="${{ github.event.pull_request.base.sha }}"
-            HEAD_SHA="${{ github.event.pull_request.head.sha }}"
+          if [[ "$EVENT_NAME" == "pull_request" ]]; then
+            BASE_SHA="$PR_BASE"
+            HEAD_SHA="$PR_HEAD"
           else
-            BASE_SHA="${{ github.event.before }}"
-            HEAD_SHA="${{ github.sha }}"
+            BASE_SHA="$PUSH_BASE"
+            HEAD_SHA="$PUSH_HEAD"
           fi
-
           if [[ -z "$BASE_SHA" || "$BASE_SHA" =~ ^0+$ ]]; then
-            BASE_SHA=$(git rev-parse "${HEAD_SHA}^" 2>/dev/null || true)
-          fi
-
-          CHANGED_FILES=$(git diff --name-only "$BASE_SHA" "$HEAD_SHA" -- '*.js' '*.jsx' '*.ts' '*.tsx' '*.json' '*.md' '*.yml' '*.yaml' '*.css' '*.html')
-
-          if [[ -n "$CHANGED_FILES" ]]; then
-            echo "has_files=true" >> "$GITHUB_OUTPUT"
-            {
-              echo 'files<<EOF'
-              echo "$CHANGED_FILES"
-              echo 'EOF'
-            } >> "$GITHUB_OUTPUT"
-          else
-            echo "has_files=false" >> "$GITHUB_OUTPUT"
-          fi
-
-      - name: Check Prettier formatting
-        if: steps.prettier-files.outputs.has_files == 'true'
-        shell: bash
-        run: |
-          FILES=()
-          while IFS= read -r file; do
-            if [[ -n "$file" ]]; then
-              FILES+=("$file")
+            if git rev-parse --verify "${HEAD_SHA}^" >/dev/null 2>&1; then
+              BASE_SHA=$(git rev-parse "${HEAD_SHA}^")
+            else
+              BASE_SHA=$(git hash-object -w -t tree /dev/null)
             fi
-          done <<'EOF'
-          ${{ steps.prettier-files.outputs.files }}
-          EOF
-
-          echo "Checking files:"
-          printf '%s\n' "${FILES[@]}"
-          npx prettier --check "${FILES[@]}"
+          fi
+          git diff --diff-filter=ACMR --name-only -z "$BASE_SHA" "$HEAD_SHA" -- '*.js' '*.jsx' '*.ts' '*.tsx' '*.json' '*.md' '*.yml' '*.yaml' '*.css' '*.html' > "$RUNNER_TEMP/prettier-files"
+          FILES=()
+          while IFS= read -r -d '' file; do
+            if [[ -f "$file" ]]; then FILES+=("$file"); fi
+          done < "$RUNNER_TEMP/prettier-files"
+          if (( ${#FILES[@]} )); then
+            npx prettier --check "${FILES[@]}"
+          fi
 
       - name: Check cargo fmt
         working-directory: ./src-tauri
@@ -113,6 +99,9 @@ jobs:
 
       - name: Run frontend UI tests
         run: npm run test:run
+
+      - name: Run tooling regression tests
+        run: npm run test:scripts
 
       - name: Run Rust tests
         working-directory: ./src-tauri
