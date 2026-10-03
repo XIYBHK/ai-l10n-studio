@@ -5,16 +5,7 @@
  */
 
 import { Store } from '@tauri-apps/plugin-store';
-
-interface TauriRuntimeWindow extends Window {
-  __TAURI__?: {
-    invoke?: unknown;
-  };
-}
-
-const isTauriRuntime =
-  typeof window !== 'undefined' &&
-  typeof (window as TauriRuntimeWindow).__TAURI__?.invoke === 'function';
+import { isTauri } from '@tauri-apps/api/core';
 
 /**
  * Store 数据类型定义
@@ -29,6 +20,7 @@ export interface AppStoreData {
     totalTranslated: number;
     totalTokens: number;
     totalCost: number;
+    unpricedRequests: number;
     sessionCount: number;
     lastUpdated: number;
     tmHits: number;
@@ -79,11 +71,18 @@ export type StoreKey = keyof AppStoreData;
 /**
  * TauriStore 管理类
  */
-class TauriStore {
+export class TauriStore {
   private store: Store | null = null;
   private initialized = false;
   private initPromise: Promise<void> | null = null;
   private memoryStore = new Map<StoreKey, unknown>();
+  private pendingWrites: Promise<unknown> = Promise.resolve();
+
+  private serializeWrite(operation: () => Promise<void>): Promise<void> {
+    const result = this.pendingWrites.then(operation, operation);
+    this.pendingWrites = result;
+    return result;
+  }
 
   async init(): Promise<void> {
     if (this.initialized) return;
@@ -93,7 +92,7 @@ class TauriStore {
     this.initPromise = (async () => {
       try {
         console.log('[TauriStore] 初始化...');
-        if (!isTauriRuntime) {
+        if (!isTauri()) {
           this.initialized = true;
           console.log('[TauriStore] 非 Tauri 环境，使用内存存储');
           return;
@@ -103,6 +102,7 @@ class TauriStore {
         console.log('[TauriStore] 初始化成功');
       } catch (error) {
         console.error('[TauriStore] 初始化失败:', error);
+        this.initPromise = null;
         throw error;
       }
     })();
@@ -115,7 +115,7 @@ class TauriStore {
       await this.init();
     }
 
-    if (isTauriRuntime && !this.store) {
+    if (isTauri() && !this.store) {
       throw new Error('Store 未初始化');
     }
   }
@@ -123,7 +123,7 @@ class TauriStore {
   async get<K extends StoreKey>(key: K): Promise<AppStoreData[K] | null> {
     try {
       await this.ensureInitialized();
-      if (!isTauriRuntime) {
+      if (!isTauri()) {
         return (this.memoryStore.get(key) as AppStoreData[K] | undefined) ?? null;
       }
       const value = await this.store!.get<AppStoreData[K]>(key);
@@ -138,7 +138,7 @@ class TauriStore {
   async set<K extends StoreKey>(key: K, value: AppStoreData[K]): Promise<void> {
     try {
       await this.ensureInitialized();
-      if (!isTauriRuntime) {
+      if (!isTauri()) {
         this.memoryStore.set(key, value);
         return;
       }
@@ -153,7 +153,7 @@ class TauriStore {
   async has(key: StoreKey): Promise<boolean> {
     try {
       await this.ensureInitialized();
-      if (!isTauriRuntime) {
+      if (!isTauri()) {
         return this.memoryStore.has(key);
       }
       return await this.store!.has(key);
@@ -166,7 +166,7 @@ class TauriStore {
   async delete(key: StoreKey): Promise<void> {
     try {
       await this.ensureInitialized();
-      if (!isTauriRuntime) {
+      if (!isTauri()) {
         this.memoryStore.delete(key);
         return;
       }
@@ -181,7 +181,7 @@ class TauriStore {
   async clear(): Promise<void> {
     try {
       await this.ensureInitialized();
-      if (!isTauriRuntime) {
+      if (!isTauri()) {
         this.memoryStore.clear();
         return;
       }
@@ -196,7 +196,7 @@ class TauriStore {
   async save(): Promise<void> {
     try {
       await this.ensureInitialized();
-      if (!isTauriRuntime) return;
+      if (!isTauri()) return;
       await this.store!.save();
       console.log('[TauriStore] 保存成功');
     } catch (error) {
@@ -208,7 +208,7 @@ class TauriStore {
   async keys(): Promise<string[]> {
     try {
       await this.ensureInitialized();
-      if (!isTauriRuntime) {
+      if (!isTauri()) {
         return Array.from(this.memoryStore.keys());
       }
       return await this.store!.keys();
@@ -221,7 +221,7 @@ class TauriStore {
   async values(): Promise<unknown[]> {
     try {
       await this.ensureInitialized();
-      if (!isTauriRuntime) {
+      if (!isTauri()) {
         return Array.from(this.memoryStore.values());
       }
       return await this.store!.values();
@@ -234,7 +234,7 @@ class TauriStore {
   async length(): Promise<number> {
     try {
       await this.ensureInitialized();
-      if (!isTauriRuntime) {
+      if (!isTauri()) {
         return this.memoryStore.size;
       }
       return await this.store!.length();
@@ -268,32 +268,31 @@ class TauriStore {
 
   async getCumulativeStats(): Promise<AppStoreData['cumulativeStats']> {
     const stats = await this.get('cumulativeStats');
-    return (
-      stats ?? {
-        totalTranslated: 0,
-        totalTokens: 0,
-        totalCost: 0,
-        sessionCount: 0,
-        lastUpdated: Date.now(),
-        tmHits: 0,
-        deduplicated: 0,
-        aiTranslated: 0,
-        tmLearned: 0,
-        inputTokens: 0,
-        outputTokens: 0,
-      }
-    );
+    return stats && Number.isSafeInteger(stats.unpricedRequests) && stats.unpricedRequests >= 0
+      ? stats
+      : {
+          totalTranslated: 0,
+          totalTokens: 0,
+          totalCost: 0,
+          unpricedRequests: 0,
+          sessionCount: 0,
+          lastUpdated: Date.now(),
+          tmHits: 0,
+          deduplicated: 0,
+          aiTranslated: 0,
+          tmLearned: 0,
+          inputTokens: 0,
+          outputTokens: 0,
+        };
   }
 
   async updateCumulativeStats(updates: Partial<AppStoreData['cumulativeStats']>): Promise<void> {
-    const currentStats = await this.getCumulativeStats();
-    const newStats = {
-      ...currentStats,
-      ...updates,
-      lastUpdated: Date.now(),
-    };
-    await this.set('cumulativeStats', newStats);
-    await this.save();
+    await this.serializeWrite(async () => {
+      const currentStats = await this.getCumulativeStats();
+      const newStats = { ...currentStats, ...updates, lastUpdated: Date.now() };
+      await this.set('cumulativeStats', newStats);
+      await this.save();
+    });
   }
 
   async getRecentFiles(): Promise<string[]> {
@@ -326,17 +325,19 @@ class TauriStore {
   }
 
   async updatePreferences(updates: Partial<AppStoreData['preferences']>): Promise<void> {
-    const currentPrefs = await this.getPreferences();
-    const newPrefs = {
-      ...currentPrefs,
-      ...updates,
-      notifications: {
-        ...currentPrefs.notifications,
-        ...(updates.notifications || {}),
-      },
-    };
-    await this.set('preferences', newPrefs);
-    await this.save();
+    await this.serializeWrite(async () => {
+      const currentPrefs = await this.getPreferences();
+      const newPrefs = {
+        ...currentPrefs,
+        ...updates,
+        notifications: {
+          ...currentPrefs.notifications,
+          ...(updates.notifications || {}),
+        },
+      };
+      await this.set('preferences', newPrefs);
+      await this.save();
+    });
   }
 
   async addTranslationHistory(entry: AppStoreData['translationHistory'][0]): Promise<void> {

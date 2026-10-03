@@ -3,4 +3,4 @@
 /**
  * 语言信息
  */
-export type LanguageInfo = { code: string, display_name: string, english_name: string, };
+export type LanguageInfo = { code: string; display_name: string; english_name: string };

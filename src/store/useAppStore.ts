@@ -1,8 +1,8 @@
 import { create } from 'zustand';
 import { devtools } from 'zustand/middleware';
-import { AppConfig } from '../types/tauri';
 import { tauriStore } from './tauriStore';
 import { createModuleLogger } from '../utils/logger';
+import { notificationManager } from '../utils/notificationManager';
 
 const log = createModuleLogger('useAppStore');
 
@@ -31,18 +31,12 @@ function getInitialSystemTheme(): 'light' | 'dark' {
 }
 
 export interface AppState {
-  // 配置
-  config: AppConfig | null;
-
   // 主题和语言（持久化）
   theme: ThemeMode;
   language: Language;
 
-  // 🏗️ 系统主题状态（全局管理，参考 clash-verge-rev）
+  // 系统主题状态（全局管理）
   systemTheme: 'light' | 'dark';
-
-  // Actions - 配置
-  setConfig: (config: AppConfig) => void;
 
   // Actions - 主题和语言
   setTheme: (theme: ThemeMode) => void;
@@ -56,15 +50,11 @@ export const useAppStore = create<AppState>()(
   devtools(
     (set, get) => ({
       // 初始状态
-      config: null,
       theme: 'system', // Phase 9: 默认跟随系统
       language: 'zh-CN',
 
       // 系统主题状态（运行时检测，不持久化）
       systemTheme: getInitialSystemTheme(),
-
-      // Actions - 配置
-      setConfig: (config) => set({ config }),
 
       // 主题和语言（持久化）
       setTheme: (theme) => {
@@ -115,13 +105,11 @@ export const useAppStore = create<AppState>()(
 export const selectTheme = (state: AppState) => state.theme;
 export const selectLanguage = (state: AppState) => state.language;
 export const selectSystemTheme = (state: AppState) => state.systemTheme;
-export const selectConfig = (state: AppState) => state.config;
 
 // Actions Selectors
 export const selectSetTheme = (state: AppState) => state.setTheme;
 export const selectSetLanguage = (state: AppState) => state.setLanguage;
 export const selectSetSystemTheme = (state: AppState) => state.setSystemTheme;
-export const selectSetConfig = (state: AppState) => state.setConfig;
 
 // 便捷 Hooks
 export const useThemeMode = () => useAppStore(selectTheme);
@@ -140,14 +128,14 @@ export async function loadPersistedState() {
 
     await tauriStore.init();
 
-    const theme = await tauriStore.getTheme();
-    useAppStore.setState({ theme });
+    const [theme, language] = await Promise.all([tauriStore.getTheme(), tauriStore.getLanguage()]);
+    useAppStore.setState({ theme, language: normalizeLanguage(language) });
 
-    const language = await tauriStore.getLanguage();
-    useAppStore.setState({ language: normalizeLanguage(language) });
+    await notificationManager.init();
 
     log.info('持久化状态加载成功', { theme, language });
   } catch (error) {
     log.error('加载持久化状态失败', error);
+    throw error;
   }
 }

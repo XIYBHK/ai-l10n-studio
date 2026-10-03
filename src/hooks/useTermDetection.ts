@@ -4,9 +4,12 @@ import { useTranslation } from 'react-i18next';
 import { POEntry } from '../types/tauri';
 import { analyzeTranslationDifference } from '../utils/termAnalyzer';
 import { termLibraryCommands } from '../services/termCommands';
-import { useAppData } from './useConfig';
+import { useActiveAIConfig } from './useConfig';
 import { useTermLibrary } from './useTermLibrary';
 import { createModuleLogger } from '../utils/logger';
+import { useTargetLanguage } from '../store';
+import { useTranslationStore } from '../store/useTranslationStore';
+import { translationSlots } from '../utils/poDocument';
 
 const log = createModuleLogger('useTermDetection');
 
@@ -17,6 +20,7 @@ export interface DetectedDifference {
   aiTranslation: string;
   userTranslation: string;
   context: string | null;
+  language: string;
   difference: ReturnType<typeof analyzeTranslationDifference>;
 }
 
@@ -30,54 +34,65 @@ export interface UseTermDetectionResult {
 
 export function useTermDetection(): UseTermDetectionResult {
   const { t } = useTranslation();
-  const { activeAIConfig } = useAppData();
+  const { activeAIConfig } = useActiveAIConfig();
   const { refresh: refreshTermLibrary } = useTermLibrary();
+  const targetLanguage = useTargetLanguage();
 
   const [termModalVisible, setTermModalVisible] = useState(false);
   const [detectedDifference, setDetectedDifference] = useState<DetectedDifference | null>(null);
 
-  const detectDifference = useCallback((entry: POEntry, userTranslation: string) => {
-    if (!entry.needsReview || !entry.msgstr || userTranslation === entry.msgstr) {
-      log.debug('跳过术语检测', {
-        needsReview: entry.needsReview,
-        hasOriginalMsgstr: !!entry.msgstr,
-        isDifferent: userTranslation !== entry.msgstr,
-      });
-      return;
-    }
-
-    try {
-      const difference = analyzeTranslationDifference(entry.msgid, entry.msgstr, userTranslation);
-      if (!difference) {
-        log.error('analyzeTranslationDifference 返回 null/undefined');
-        return;
-      }
-      if (difference.confidence < DIFFERENCE_CONFIDENCE_THRESHOLD) {
-        log.debug('置信度不足，不触发弹窗', { confidence: difference.confidence });
+  const detectDifference = useCallback(
+    (entry: POEntry, userTranslation: string) => {
+      if (!entry.needsReview || !entry.msgstr || userTranslation === entry.msgstr) {
+        log.debug('跳过术语检测', {
+          needsReview: entry.needsReview,
+          hasOriginalMsgstr: !!entry.msgstr,
+          isDifferent: userTranslation !== entry.msgstr,
+        });
         return;
       }
 
-      log.info('检测到高置信度差异，准备弹窗确认', {
-        confidence: difference.confidence,
-        type: difference.type,
-      });
-      setDetectedDifference({
-        original: entry.msgid,
-        aiTranslation: entry.msgstr,
-        userTranslation,
-        context: entry.msgctxt ?? null,
-        difference,
-      });
-      setTermModalVisible(true);
-    } catch (error) {
-      log.logError(error, '术语检测失败');
-      message.error(
-        t('errors.termDetectFailed', {
-          error: error instanceof Error ? error.message : t('errors.unknown'),
-        })
-      );
-    }
-  }, [t]);
+      try {
+        const difference = analyzeTranslationDifference(entry.msgid, entry.msgstr, userTranslation);
+        if (!difference) {
+          log.error('analyzeTranslationDifference 返回 null/undefined');
+          return;
+        }
+        if (difference.confidence < DIFFERENCE_CONFIDENCE_THRESHOLD) {
+          log.debug('置信度不足，不触发弹窗', { confidence: difference.confidence });
+          return;
+        }
+
+        log.info('检测到高置信度差异，准备弹窗确认', {
+          confidence: difference.confidence,
+          type: difference.type,
+        });
+        setDetectedDifference({
+          original: entry.msgid,
+          aiTranslation: entry.msgstr,
+          userTranslation,
+          context:
+            translationSlots(
+              [entry],
+              [0],
+              useTranslationStore.getState().document?.metadata ?? {},
+              false
+            )[0]?.input.context ?? null,
+          language: targetLanguage,
+          difference,
+        });
+        setTermModalVisible(true);
+      } catch (error) {
+        log.logError(error, '术语检测失败');
+        message.error(
+          t('errors.termDetectFailed', {
+            error: error instanceof Error ? error.message : t('errors.unknown'),
+          })
+        );
+      }
+    },
+    [t, targetLanguage]
+  );
 
   const handleTermCancel = useCallback(() => {
     setTermModalVisible(false);
@@ -99,13 +114,20 @@ export function useTermDetection(): UseTermDetectionResult {
           userTranslation: detectedDifference.userTranslation,
           aiTranslation: detectedDifference.aiTranslation,
           context: detectedDifference.context,
+          language: detectedDifference.language,
         });
         log.info('术语添加成功');
 
-        const shouldUpdate = await termLibraryCommands.shouldUpdateStyleSummary();
+        const shouldUpdate = await termLibraryCommands.shouldUpdateStyleSummary(
+          detectedDifference.language,
+          detectedDifference.context
+        );
         if (shouldUpdate && activeAIConfig) {
           message.info(t('messages.generatingStyleSummary'), 1);
-          await termLibraryCommands.generateStyleSummary();
+          await termLibraryCommands.generateStyleSummary(
+            detectedDifference.language,
+            detectedDifference.context
+          );
           message.success(t('messages.termAddedWithSummary'));
         } else {
           message.success(t('messages.termAdded'));
@@ -122,7 +144,7 @@ export function useTermDetection(): UseTermDetectionResult {
         handleTermCancel();
       }
     },
-    [detectedDifference, activeAIConfig, refreshTermLibrary, t, handleTermCancel]
+    [detectedDifference, activeAIConfig, refreshTermLibrary, t, handleTermCancel, targetLanguage]
   );
 
   return {

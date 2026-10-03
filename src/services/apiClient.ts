@@ -25,13 +25,13 @@ interface InvokeOptions {
  */
 export async function invoke<T>(
   command: string,
-  params: Record<string, any> = {},
+  params: Record<string, unknown> = {},
   options: InvokeOptions = {}
 ): Promise<T> {
   const { silent = false, errorMessage, showErrorMessage = true } = options;
 
   try {
-    return await tauriInvoke<T>(command, params, { silent });
+    return await tauriInvoke<T>(command, params);
   } catch (error) {
     const errMsg = error instanceof Error ? error.message : String(error);
     const displayMsg = errorMessage || errMsg;

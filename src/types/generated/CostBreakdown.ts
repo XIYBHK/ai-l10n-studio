@@ -5,48 +5,49 @@
  *
  * 提供详细的成本分解，包括缓存节省信息
  */
-export type CostBreakdown = { 
-/**
- * 输入 token 数量（包含缓存）
- */
-input_tokens: number, 
-/**
- * 输出 token 数量
- */
-output_tokens: number, 
-/**
- * 缓存写入 token 数量
- */
-cache_write_tokens: number, 
-/**
- * 缓存读取 token 数量
- */
-cache_read_tokens: number, 
-/**
- * 常规输入成本
- */
-input_cost: number, 
-/**
- * 输出成本
- */
-output_cost: number, 
-/**
- * 缓存写入成本
- */
-cache_write_cost: number, 
-/**
- * 缓存读取成本
- */
-cache_read_cost: number, 
-/**
- * 总成本
- */
-total_cost: number, 
-/**
- * 缓存节省的金额（USD）
- */
-cache_savings: number, 
-/**
- * 缓存命中率（百分比，如 30.5 表示30.5%）
- */
-cache_hit_rate: number, };
+export type CostBreakdown = {
+  /**
+   * 输入 token 数量（包含缓存）
+   */
+  input_tokens: number;
+  /**
+   * 输出 token 数量
+   */
+  output_tokens: number;
+  /**
+   * 缓存写入 token 数量
+   */
+  cache_write_tokens: number;
+  /**
+   * 缓存读取 token 数量
+   */
+  cache_read_tokens: number;
+  /**
+   * 常规输入成本
+   */
+  input_cost: number;
+  /**
+   * 输出成本
+   */
+  output_cost: number;
+  /**
+   * 缓存写入成本
+   */
+  cache_write_cost: number;
+  /**
+   * 缓存读取成本
+   */
+  cache_read_cost: number;
+  /**
+   * 总成本
+   */
+  total_cost: number;
+  /**
+   * 缓存节省的金额（USD）
+   */
+  cache_savings: number;
+  /**
+   * 缓存命中率（百分比，如 30.5 表示30.5%）
+   */
+  cache_hit_rate: number;
+};

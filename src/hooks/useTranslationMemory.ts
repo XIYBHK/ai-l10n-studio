@@ -1,14 +1,12 @@
-import { useEffect } from 'react';
 import useSWR from 'swr';
-import { listen } from '@tauri-apps/api/event';
 import { translationMemoryCommands } from '../services/termCommands';
 import type { TranslationMemory } from '../types/tauri';
 
-const TM_KEY = 'translation_memory';
+export const TRANSLATION_MEMORY_KEY = 'translation_memory';
 
 export function useTranslationMemory() {
   const { data, error, isLoading, mutate } = useSWR<TranslationMemory>(
-    TM_KEY,
+    TRANSLATION_MEMORY_KEY,
     () => translationMemoryCommands.get(),
     {
       keepPreviousData: true,
@@ -18,31 +16,11 @@ export function useTranslationMemory() {
     }
   );
 
-  useEffect(() => {
-    let unlistenFn: (() => void) | null = null;
-    let isActive = true;
-
-    listen('translation:after', () => {
-      if (isActive) mutate();
-    }).then((fn) => {
-      if (isActive) {
-        unlistenFn = fn;
-      } else {
-        fn();
-      }
-    });
-
-    return () => {
-      isActive = false;
-      unlistenFn?.();
-    };
-  }, [mutate]);
-
   return {
     tm: data,
     error,
     isLoading: !!isLoading,
-    refresh: () => mutate(),
+    refresh: mutate,
     mutate,
   } as const;
 }

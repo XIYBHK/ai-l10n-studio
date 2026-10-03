@@ -1,5 +1,5 @@
 import userEvent from '@testing-library/user-event';
-import { screen, within } from '@testing-library/react';
+import { act, screen, within } from '@testing-library/react';
 import { renderWithProviders } from '../../test/renderWithProviders';
 import { EntryList } from '../../components/EntryList';
 import { useTranslationStore } from '../../store/useTranslationStore';
@@ -19,6 +19,15 @@ vi.mock('@tanstack/react-virtual', () => ({
 
 const createEntry = (overrides: Partial<POEntry> = {}): POEntry => ({
   comments: [],
+  translator_comments: '',
+  msgid_plural: null,
+  msgstr_plural: [],
+  flags: [],
+  occurrences: [],
+  obsolete: false,
+  previous_msgid: null,
+  previous_msgid_plural: null,
+  previous_msgctxt: null,
   msgctxt: '',
   msgid: '',
   msgstr: '',
@@ -44,6 +53,28 @@ describe('EntryList', () => {
     useTranslationStore.getState().setEntries(entries);
   });
 
+  it('hides obsolete rows and clears selection when the same file is reopened', async () => {
+    const user = userEvent.setup();
+    const allEntries = [...entries, createEntry({ msgid: 'Obsolete text', obsolete: true })];
+    const document = { header: null, metadata: {}, metadata_is_fuzzy: false, entries: allEntries };
+    useTranslationStore.getState().setDocument(document, 'same.po');
+    renderWithProviders(
+      <EntryList
+        entries={allEntries}
+        currentEntry={allEntries[0]}
+        isTranslating={false}
+        progress={0}
+        onEntrySelect={vi.fn()}
+        onTranslateSelected={vi.fn()}
+      />
+    );
+    expect(screen.queryByText('Obsolete text')).not.toBeInTheDocument();
+    await user.click(screen.getByText('Save file'));
+    expect(screen.getByRole('button', { name: /翻译选中/ })).toBeInTheDocument();
+    act(() => useTranslationStore.getState().setDocument(document, 'same.po'));
+    expect(screen.queryByRole('button', { name: /翻译选中/ })).not.toBeInTheDocument();
+  });
+
   it('groups entries and submits selected untranslated entries for translation', async () => {
     const user = userEvent.setup();
     const onEntrySelect = vi.fn();
@@ -61,8 +92,12 @@ describe('EntryList', () => {
     );
 
     expect(screen.getByText('Save file')).toBeInTheDocument();
+    expect(screen.queryByText('Open project')).not.toBeInTheDocument();
+    await user.click(screen.getByText('待确认', { selector: 'span' }));
     expect(screen.getByText('Open project')).toBeInTheDocument();
+    await user.click(screen.getByText('已翻译', { selector: 'span' }));
     expect(screen.getByText('Close window')).toBeInTheDocument();
+    await user.click(screen.getByText('未翻译', { selector: 'span' }));
 
     await user.click(screen.getByText('Save file'));
     expect(onEntrySelect).toHaveBeenCalledWith(entries[0]);
@@ -82,6 +117,11 @@ describe('EntryList', () => {
         progress={0}
         onEntrySelect={vi.fn()}
         onContextualRefine={vi.fn()}
+        onConfirmEntries={async (indices) => {
+          indices.forEach((index) =>
+            useTranslationStore.getState().updateEntry(index, { needsReview: false })
+          );
+        }}
       />
     );
 

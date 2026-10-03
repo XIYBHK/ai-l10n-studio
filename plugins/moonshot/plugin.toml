@@ -12,6 +12,7 @@ homepage = "https://platform.moonshot.cn"
 license = "MIT"
 
 [provider]
+api = "openai-completions"
 display_name = "Moonshot AI"
 default_url = "https://api.moonshot.cn/v1"
 default_model = "kimi-k2-0905-preview"

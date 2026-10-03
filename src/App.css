@@ -3,6 +3,15 @@
   --theme-transition-timing: cubic-bezier(0.645, 0.045, 0.355, 1);
 }
 
+.studio-shell {
+  display: flex;
+  flex-direction: column;
+  height: 100dvh;
+  min-height: 0;
+  background: var(--color-bgSecondary);
+  color: var(--color-textPrimary);
+}
+
 * {
   margin: 0;
   padding: 0;

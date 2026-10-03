@@ -1,31 +1,41 @@
+import i18n from '../i18n/config';
 import { open, save } from '@tauri-apps/plugin-dialog';
-import type { POEntry } from '../types/tauri';
+import type { PODocument } from '../types/tauri';
+import type { FileFormat, FileMetadata } from '../types/fileFormat';
 import { invoke } from './apiClient';
 
 export const poFileCommands = {
-  async parse(filePath: string): Promise<POEntry[]> {
-    return invoke<POEntry[]>('parse_po_file', { filePath }, { errorMessage: '解析 PO 文件失败' });
+  async parse(filePath: string): Promise<PODocument> {
+    return invoke<PODocument>(
+      'parse_po_file',
+      { filePath },
+      { errorMessage: i18n.t('errors.ipc.parsePo') }
+    );
   },
 
-  async save(filePath: string, entries: POEntry[]): Promise<void> {
+  async save(filePath: string, document: PODocument): Promise<void> {
     return invoke<void>(
       'save_po_file',
-      { filePath, entries },
-      { errorMessage: '保存 PO 文件失败' }
+      { filePath, document },
+      { errorMessage: i18n.t('errors.ipc.savePo') }
     );
   },
 };
 
 export const fileFormatCommands = {
-  async detect(filePath: string): Promise<string> {
-    return invoke<string>('detect_file_format', { filePath }, { errorMessage: '检测文件格式失败' });
+  async detect(filePath: string): Promise<FileFormat> {
+    return invoke<FileFormat>(
+      'detect_file_format',
+      { filePath },
+      { errorMessage: i18n.t('errors.ipc.detectFormat') }
+    );
   },
 
-  async getMetadata(filePath: string): Promise<unknown> {
-    return invoke<unknown>(
+  async getMetadata(filePath: string): Promise<FileMetadata> {
+    return invoke<FileMetadata>(
       'get_file_metadata',
       { filePath },
-      { errorMessage: '获取文件元数据失败' }
+      { errorMessage: i18n.t('errors.ipc.fileMetadata') }
     );
   },
 };

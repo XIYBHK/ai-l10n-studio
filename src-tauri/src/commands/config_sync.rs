@@ -11,11 +11,8 @@ pub async fn get_config_version() -> Result<ConfigVersionInfo, String> {
 
     Ok(ConfigVersionInfo {
         version: cfg.config_version,
-        timestamp: cfg
-            .last_modified
-            .clone()
-            .unwrap_or_else(|| chrono::Local::now().to_rfc3339()),
-        active_config_index: cfg.active_config_index,
-        config_count: cfg.ai_configs.len(),
+        timestamp: cfg.last_modified.clone().unwrap_or_default(),
+        default_model: cfg.default_model.clone(),
+        config_count: cfg.model_providers.len(),
     })
 }

@@ -35,10 +35,11 @@
 
 /* 原文区域 - 上半部分 */
 .sourceArea {
-  flex: 0 0 40%;
+  flex: 0 0 38%;
   display: flex;
   flex-direction: column;
-  border-bottom: 2px solid var(--color-borderPrimary);
+  min-height: 0;
+  border-bottom: 1px solid var(--color-borderSecondary);
   background-color: var(--color-bgPrimary);
 }
 
@@ -48,15 +49,16 @@
   display: flex;
   flex-direction: column;
   background-color: var(--color-bgPrimary);
+  min-height: 0;
 }
 
 /* 区块头部 */
 .sectionHeader {
   padding: var(--space-3) var(--space-4);
-  background: var(--color-bgTertiary);
-  border-bottom: 1px solid var(--color-borderSecondary);
-  font-size: var(--font-size-sm);
-  font-weight: var(--font-weight-semibold);
+  background: transparent;
+  border-bottom: 1px solid color-mix(in srgb, var(--color-borderSecondary) 70%, transparent);
+  font-size: var(--font-size-xs);
+  font-weight: var(--font-weight-medium);
   color: var(--color-textSecondary);
   display: flex;
   align-items: center;
@@ -67,30 +69,35 @@
 .sourceContent {
   flex: 1;
   padding: var(--space-4);
-  background: var(--color-bgSecondary);
-  border-radius: var(--radius-md);
-  margin: var(--space-4);
-  margin-top: 0;
-  box-shadow: var(--shadow-sm);
+  background: var(--color-bgPrimary);
+  border-radius: 0;
+  margin: 0;
+  box-shadow: none;
+  min-height: 0;
   overflow-y: auto;
 }
 
 .sourceText {
-  font-size: var(--font-size-md);
-  line-height: 1.6;
+  font-size: 15px;
+  line-height: 1.8;
   color: var(--color-textPrimary);
   white-space: pre-wrap;
   word-break: break-word;
-  font-family: var(--mono-font);
+  font-family: var(--body-font);
+}
+
+.emptyText {
+  color: var(--color-textDisabled);
+  font-style: italic;
 }
 
 /* 上下文信息区 */
 .contextBox {
   margin-top: var(--space-5);
   padding: var(--space-3);
-  background: var(--color-bgTertiary);
+  background: transparent;
   border-radius: var(--radius-base);
-  border: 1px solid var(--color-borderSecondary);
+  border: 1px solid color-mix(in srgb, var(--color-borderSecondary) 55%, transparent);
 }
 
 .contextItem {
@@ -138,43 +145,44 @@
   flex-direction: column;
   position: relative;
   padding: var(--space-4);
+  min-height: 0;
 }
 
 /* 文本输入区 */
 .textArea {
   flex: 1;
-  font-size: var(--font-size-md);
-  line-height: 1.6;
+  font-size: 16px;
+  line-height: 1.8;
   padding: var(--space-4);
   resize: none;
-  background-color: var(--color-bgSecondary) !important;
+  background-color: var(--color-bgPrimary) !important;
   border: 1px solid var(--color-borderSecondary) !important;
   border-radius: var(--radius-md) !important;
-  box-shadow: var(--shadow-sm) !important;
+  box-shadow: none !important;
   transition: all var(--duration-base) var(--ease-out) !important;
   font-family: var(--mono-font) !important;
 }
 
 .textArea:hover {
   border-color: var(--color-brandPrimary) !important;
-  box-shadow: 0 0 0 2px var(--color-brandPrimary) 20 !important;
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--color-brandPrimary) 10%, transparent) !important;
 }
 
 .textArea:focus {
   border-color: var(--color-brandPrimary) !important;
-  box-shadow: 0 0 0 3px var(--color-brandPrimary) 30 !important;
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--color-brandPrimary) 16%, transparent) !important;
   outline: none !important;
 }
 
 /* 未保存状态样式 */
 .textArea.unsaved {
   border-color: var(--color-statusUntranslated) !important;
-  box-shadow: 0 0 0 2px var(--color-statusUntranslated) 20 !important;
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--color-statusUntranslated) 12%, transparent) !important;
 }
 
 .textArea.unsaved:focus {
   border-color: var(--color-statusUntranslated) !important;
-  box-shadow: 0 0 0 3px var(--color-statusUntranslated) 30 !important;
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--color-statusUntranslated) 18%, transparent) !important;
 }
 
 .textArea textarea {
@@ -211,16 +219,16 @@
   font-size: var(--font-size-xs);
   font-weight: var(--font-weight-semibold);
   animation: pulse-badge 2s ease-in-out infinite;
-  box-shadow: var(--shadow-md);
+  box-shadow: none;
   z-index: 10;
 }
 
-.unsavedBadge::before {
-  content: '';
+.unsavedDot {
   width: 6px;
   height: 6px;
   border-radius: 50%;
-  background-color: #1e1e2e;
+  background-color: currentColor;
+  display: inline-block;
 }
 
 /* 工具栏 */
@@ -384,7 +392,7 @@
   }
   50% {
     opacity: 0.6;
-    box-shadow: 0 0 0 4px currentColor40;
+    box-shadow: 0 0 0 4px color-mix(in srgb, currentColor 25%, transparent);
   }
 }
 

@@ -59,7 +59,9 @@ export function DevToolsPage() {
   // 暂停/继续日志收集
   const handleToggleBackendLog = () => {
     toggleBackendLogEnabled();
-    message.info(backendEnabled ? t('messages.backendLogsPaused') : t('messages.backendLogsResumed'));
+    message.info(
+      backendEnabled ? t('messages.backendLogsPaused') : t('messages.backendLogsResumed')
+    );
   };
 
   // 清空日志

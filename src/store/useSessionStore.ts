@@ -2,7 +2,7 @@
  * 会话状态管理（瞬态）
  *
  * 职责：
- * - 管理翻译进度状态（isTranslating, progress, report）
+ * - 管理翻译进度状态（isTranslating, progress）
  * - 管理会话统计（sessionStats）
  *
  * 注意：此 Store 的状态不持久化，应用关闭后清空
@@ -10,7 +10,7 @@
 
 import { create } from 'zustand';
 import { devtools } from 'zustand/middleware';
-import { TranslationReport, TranslationStats } from '../types/tauri';
+import type { TranslationStats } from '../types/tauri';
 
 const INITIAL_SESSION_STATS: TranslationStats = {
   total: 0,
@@ -22,6 +22,7 @@ const INITIAL_SESSION_STATS: TranslationStats = {
     output_tokens: 0,
     total_tokens: 0,
     cost: 0,
+    unpriced_requests: 0,
   },
   tm_learned: 0,
 };
@@ -30,7 +31,6 @@ interface SessionState {
   // 翻译状态
   isTranslating: boolean;
   progress: number;
-  report: TranslationReport | null;
 
   // 本次会话统计（打开文件后的所有翻译聚合）
   sessionStats: TranslationStats;
@@ -38,7 +38,6 @@ interface SessionState {
   // Actions - 翻译状态
   setTranslating: (isTranslating: boolean) => void;
   setProgress: (progress: number) => void;
-  setReport: (report: TranslationReport | null) => void;
 
   // Actions - 会话统计
   updateSessionStats: (stats: TranslationStats) => void;
@@ -52,13 +51,11 @@ export const useSessionStore = create<SessionState>()(
       // 初始状态
       isTranslating: false,
       progress: 0,
-      report: null,
       sessionStats: INITIAL_SESSION_STATS,
 
       // Actions - 翻译状态
       setTranslating: (isTranslating) => set({ isTranslating }),
       setProgress: (progress) => set({ progress }),
-      setReport: (report) => set({ report }),
 
       // Actions - 会话统计管理
       updateSessionStats: (stats) => {
@@ -73,6 +70,8 @@ export const useSessionStore = create<SessionState>()(
             output_tokens: sessionStats.token_stats.output_tokens + stats.token_stats.output_tokens,
             total_tokens: sessionStats.token_stats.total_tokens + stats.token_stats.total_tokens,
             cost: sessionStats.token_stats.cost + stats.token_stats.cost,
+            unpriced_requests:
+              sessionStats.token_stats.unpriced_requests + stats.token_stats.unpriced_requests,
           },
           tm_learned: sessionStats.tm_learned + stats.tm_learned,
         };
@@ -98,13 +97,11 @@ export const useSessionStore = create<SessionState>()(
 // 基础状态 Selectors
 export const selectIsTranslating = (state: SessionState) => state.isTranslating;
 export const selectProgress = (state: SessionState) => state.progress;
-export const selectReport = (state: SessionState) => state.report;
 export const selectSessionStats = (state: SessionState) => state.sessionStats;
 
 // Actions Selectors
 export const selectSetTranslating = (state: SessionState) => state.setTranslating;
 export const selectSetProgress = (state: SessionState) => state.setProgress;
-export const selectSetReport = (state: SessionState) => state.setReport;
 export const selectUpdateSessionStats = (state: SessionState) => state.updateSessionStats;
 export const selectSetSessionStats = (state: SessionState) => state.setSessionStats;
 export const selectResetSessionStats = (state: SessionState) => state.resetSessionStats;
@@ -112,7 +109,6 @@ export const selectResetSessionStats = (state: SessionState) => state.resetSessi
 // 便捷 Hooks
 export const useIsTranslating = () => useSessionStore(selectIsTranslating);
 export const useProgress = () => useSessionStore(selectProgress);
-export const useReport = () => useSessionStore(selectReport);
 export const useSessionStats = () => useSessionStore(selectSessionStats);
 
 // Actions Hooks

@@ -1,5 +1,5 @@
 import { useState, useEffect, useMemo, useDeferredValue } from 'react';
-import { Modal, Table, Input, Button, message, Space, Popconfirm, Tag } from 'antd';
+import { Modal, Table, Input, Button, message, Space, Popconfirm, Tag, Select } from 'antd';
 import { useTranslation } from 'react-i18next';
 import {
   DeleteOutlined,
@@ -15,6 +15,8 @@ import { translationMemoryCommands } from '../services/termCommands';
 import { createModuleLogger } from '../utils/logger';
 import { useTranslationMemory } from '../hooks/useTranslationMemory';
 import { useSupportedLanguages } from '../hooks/useLanguage';
+import { buildMemoryKey, parseMemoryKey } from '../utils/translationMemory';
+import { useTargetLanguage } from '../store';
 import { useStatsStore } from '../store';
 import type { TranslationMemory } from '../types/tauri';
 
@@ -24,23 +26,53 @@ interface MemoryEntry {
   key: string;
   source: string;
   target: string;
-  language?: string;
+  language: string;
+  context: string | null;
 }
 
-const buildMemoryKey = (source: string, language?: string): string => {
-  if (language) {
-    return `${source}|${language}`;
-  }
-  return source;
-};
-
 const isTranslationMemory = (value: unknown): value is TranslationMemory => {
-  if (typeof value !== 'object' || value === null || !('memory' in value)) {
+  if (
+    typeof value !== 'object' ||
+    value === null ||
+    !('revision' in value) ||
+    typeof value.revision !== 'number' ||
+    !Number.isSafeInteger(value.revision) ||
+    value.revision < 0 ||
+    !('memory' in value) ||
+    !('last_updated' in value) ||
+    typeof value.last_updated !== 'string' ||
+    !Number.isFinite(Date.parse(value.last_updated)) ||
+    !('stats' in value) ||
+    typeof value.stats !== 'object' ||
+    value.stats === null
+  ) {
     return false;
   }
-
-  const memory = (value as { memory: unknown }).memory;
-  return typeof memory === 'object' && memory !== null;
+  const stats = value.stats;
+  if (
+    !('total_entries' in stats) ||
+    !('hits' in stats) ||
+    !('misses' in stats) ||
+    ![stats.total_entries, stats.hits, stats.misses].every(
+      (number) => typeof number === 'number' && Number.isSafeInteger(number) && number >= 0
+    )
+  )
+    return false;
+  const memory = value.memory;
+  return (
+    typeof memory === 'object' &&
+    memory !== null &&
+    !Array.isArray(memory) &&
+    Object.entries(memory).every(([key, target]) => {
+      if (typeof target !== 'string') return false;
+      try {
+        parseMemoryKey(key);
+        return true;
+      } catch {
+        return false;
+      }
+    })
+  );
 };
 
 interface MemoryManagerProps {
@@ -51,10 +83,13 @@ interface MemoryManagerProps {
 export function MemoryManager({ visible, onClose }: MemoryManagerProps) {
   const { t } = useTranslation();
   const [memories, setMemories] = useState<MemoryEntry[]>([]);
+  const [baseMemory, setBaseMemory] = useState<TranslationMemory | null>(null);
   const [loading, setLoading] = useState(false);
   const { tm, isLoading: loadingTM, mutate } = useTranslationMemory();
   const { languages } = useSupportedLanguages(); // 从后端动态获取语言列表
   const [searchText, setSearchText] = useState('');
+  const targetLanguage = useTargetLanguage();
+  const [newLanguage, setNewLanguage] = useState(targetLanguage || 'zh-Hans');
   const [newSource, setNewSource] = useState('');
   const [newTarget, setNewTarget] = useState('');
   const [tableHeight, setTableHeight] = useState(400);
@@ -67,32 +102,15 @@ export function MemoryManager({ visible, onClose }: MemoryManagerProps) {
     return config;
   }, [languages]);
 
-  const parseMemoryKey = useMemo(
-    () =>
-      (key: string): { source: string; language?: string } => {
-        const parts = key.split('|');
-
-        if (parts.length >= 2) {
-          const lastPart = parts[parts.length - 1];
-          if (languageConfig[lastPart]) {
-            const source = parts.slice(0, -1).join('|');
-            return { source, language: lastPart };
-          }
-        }
-
-        return { source: key, language: undefined };
-      },
-    [languageConfig]
-  );
-
-  const entriesFromMemory = (memory: TranslationMemory): MemoryEntry[] =>
+  const entriesFromMemory = (memory: Pick<TranslationMemory, 'memory'>): MemoryEntry[] =>
     Object.entries(memory.memory).map(([memoryKey, target], index) => {
-      const { source, language } = parseMemoryKey(memoryKey);
+      const { source, language, context } = parseMemoryKey(memoryKey);
       return {
         key: `${index}`,
         source,
         target,
         language,
+        context,
       };
     });
 
@@ -104,8 +122,11 @@ export function MemoryManager({ visible, onClose }: MemoryManagerProps) {
   }, [visible]);
 
   useEffect(() => {
-    if (visible) {
+    if (!visible) {
+      setBaseMemory(null);
+    } else if (!baseMemory) {
       if (tm) {
+        setBaseMemory(tm);
         const entries = entriesFromMemory(tm);
         setMemories(entries);
         log.info('记忆库加载成功', { count: entries.length });
@@ -113,7 +134,7 @@ export function MemoryManager({ visible, onClose }: MemoryManagerProps) {
         setMemories([]);
       }
     }
-  }, [visible, tm, loadingTM, parseMemoryKey]);
+  }, [visible, tm, loadingTM, baseMemory]);
 
   useEffect(() => {
     let rafId: number | null = null;
@@ -154,16 +175,22 @@ export function MemoryManager({ visible, onClose }: MemoryManagerProps) {
     try {
       const memoryMap: Record<string, string> = {};
       memories.forEach((entry) => {
-        const key = buildMemoryKey(entry.source, entry.language);
+        if (!entry.source.trim() || !entry.target.trim() || !entry.language.trim()) {
+          throw new Error(t('messages.requireSourceAndTarget'));
+        }
+        const key = buildMemoryKey(entry.source, entry.context, entry.language);
+        if (Object.prototype.hasOwnProperty.call(memoryMap, key))
+          throw new Error(t('memoryManager.duplicate', { source: entry.source }));
         memoryMap[key] = entry.target;
       });
 
+      if (!baseMemory) return;
       await translationMemoryCommands.save({
+        revision: baseMemory.revision,
         memory: memoryMap,
         stats: {
+          ...baseMemory.stats,
           total_entries: memories.length,
-          hits: 0,
-          misses: 0,
         },
         last_updated: new Date().toISOString(),
       });
@@ -173,6 +200,11 @@ export function MemoryManager({ visible, onClose }: MemoryManagerProps) {
       onClose();
     } catch (error) {
       log.logError(error, '保存记忆库失败');
+      message.error(
+        t('errors.saveFailed', {
+          error: error instanceof Error ? error.message : t('errors.unknown'),
+        })
+      );
     } finally {
       setLoading(false);
     }
@@ -185,9 +217,9 @@ export function MemoryManager({ visible, onClose }: MemoryManagerProps) {
   const handleClearAll = async () => {
     try {
       setLoading(true);
-      setMemories([]);
-
-      await translationMemoryCommands.save({
+      if (!baseMemory) return;
+      const cleared = await translationMemoryCommands.save({
+        revision: baseMemory.revision,
         memory: {},
         stats: {
           total_entries: 0,
@@ -197,7 +229,9 @@ export function MemoryManager({ visible, onClose }: MemoryManagerProps) {
         last_updated: new Date().toISOString(),
       });
 
-      const freshTM = await translationMemoryCommands.get();
+      setMemories([]);
+      setBaseMemory(cleared);
+      const freshTM = cleared;
       log.debug('清空后重新获取记忆库', { hasTM: !!freshTM });
 
       await mutate(freshTM, false);
@@ -212,7 +246,7 @@ export function MemoryManager({ visible, onClose }: MemoryManagerProps) {
       message.success(t('messages.memoryCleared'));
     } catch (error) {
       log.logError(error, '清空记忆库失败');
-      await mutate();
+      message.error(t('errors.saveFailed', { error: String(error) }));
     } finally {
       setLoading(false);
     }
@@ -222,19 +256,18 @@ export function MemoryManager({ visible, onClose }: MemoryManagerProps) {
     try {
       setLoading(true);
 
-      const addedCount = await translationMemoryCommands.mergeBuiltinPhrases();
-      log.info('内置词库合并完成', { addedCount });
-
-      const freshTM = await translationMemoryCommands.get();
-      log.debug('重新获取记忆库', { hasTM: !!freshTM });
-
-      await mutate(freshTM, false);
-
-      if (freshTM) {
-        const entries = entriesFromMemory(freshTM);
-        setMemories(entries);
-        log.info('记忆库界面已更新', { count: entries.length });
-      }
+      const builtin = await translationMemoryCommands.getBuiltinPhrases();
+      const existing = new Set(
+        memories.map((entry) => buildMemoryKey(entry.source, entry.context, entry.language))
+      );
+      const additions = entriesFromMemory(builtin).filter(
+        (entry) => !existing.has(buildMemoryKey(entry.source, entry.context, entry.language))
+      );
+      const addedCount = additions.length;
+      setMemories([
+        ...memories,
+        ...additions.map((entry, index) => ({ ...entry, key: `builtin:${Date.now()}:${index}` })),
+      ]);
 
       message.success(t('messages.builtinLoaded', { count: addedCount }));
     } catch (error) {
@@ -264,12 +297,14 @@ export function MemoryManager({ visible, onClose }: MemoryManagerProps) {
       if (filePath) {
         const memoryMap: Record<string, string> = {};
         memories.forEach((entry) => {
-          const key = buildMemoryKey(entry.source, entry.language);
+          const key = buildMemoryKey(entry.source, entry.context, entry.language);
           memoryMap[key] = entry.target;
         });
 
         const exportData = {
+          revision: 0,
           memory: memoryMap,
+          last_updated: new Date().toISOString(),
           stats: {
             total_entries: memories.length,
             hits: 0,
@@ -305,6 +340,8 @@ export function MemoryManager({ visible, onClose }: MemoryManagerProps) {
           const entries = entriesFromMemory(data);
           setMemories(entries);
           message.success(t('messages.memoryImported', { count: entries.length }));
+        } else {
+          message.error(t('memoryManager.invalidImport'));
         }
       }
     } catch (error) {
@@ -313,7 +350,7 @@ export function MemoryManager({ visible, onClose }: MemoryManagerProps) {
   };
 
   const handleAdd = () => {
-    if (!newSource || !newTarget) {
+    if (!newSource.trim() || !newTarget.trim()) {
       message.warning(t('messages.requireSourceAndTarget'));
       return;
     }
@@ -322,7 +359,20 @@ export function MemoryManager({ visible, onClose }: MemoryManagerProps) {
       key: `${Date.now()}`,
       source: newSource,
       target: newTarget,
+      language: newLanguage,
+      context: null,
     };
+
+    if (
+      memories.some(
+        (entry) =>
+          buildMemoryKey(entry.source, entry.context, entry.language) ===
+          buildMemoryKey(newSource, null, newLanguage)
+      )
+    ) {
+      message.warning(t('memoryManager.duplicate', { source: newSource }));
+      return;
+    }
 
     setMemories([...memories, newEntry]);
     setNewSource('');
@@ -348,7 +398,7 @@ export function MemoryManager({ visible, onClose }: MemoryManagerProps) {
 
   const columns = [
     {
-      title: '原文',
+      title: t('memoryManager.original'),
       dataIndex: 'source',
       key: 'source',
       width: '35%',
@@ -361,7 +411,7 @@ export function MemoryManager({ visible, onClose }: MemoryManagerProps) {
       ),
     },
     {
-      title: '译文',
+      title: t('memoryManager.translation'),
       dataIndex: 'target',
       key: 'target',
       width: '35%',
@@ -374,13 +424,19 @@ export function MemoryManager({ visible, onClose }: MemoryManagerProps) {
       ),
     },
     {
-      title: '语言',
+      title: t('memoryManager.context'),
+      dataIndex: 'context',
+      key: 'context',
+      ellipsis: true,
+    },
+    {
+      title: t('memoryManager.language'),
       dataIndex: 'language',
       key: 'language',
       width: '15%',
       render: (language?: string) => {
         if (!language) {
-          return <Tag color="default">未指定</Tag>;
+          return null;
         }
         const languageName = languageConfig[language];
         if (languageName) {
@@ -390,18 +446,18 @@ export function MemoryManager({ visible, onClose }: MemoryManagerProps) {
       },
     },
     {
-      title: '操作',
+      title: t('memoryManager.actions'),
       key: 'action',
       width: '15%',
       render: (_: unknown, record: MemoryEntry) => (
         <Popconfirm
-          title="确定删除这条记忆吗？"
+          title={t('memoryManager.deleteConfirm')}
           onConfirm={() => handleDelete(record.key)}
-          okText="确定"
-          cancelText="取消"
+          okText={t('common.confirm')}
+          cancelText={t('common.cancel')}
         >
           <Button type="text" danger icon={<DeleteOutlined />} size="small">
-            删除
+            {t('common.delete')}
           </Button>
         </Popconfirm>
       ),
@@ -410,16 +466,16 @@ export function MemoryManager({ visible, onClose }: MemoryManagerProps) {
 
   return (
     <Modal
-      title="记忆库管理"
+      title={t('memoryManager.title')}
       open={visible}
       onCancel={onClose}
       onOk={handleSave}
       width={960}
       centered
-      okText="保存"
-      cancelText="取消"
+      okText={t('common.save')}
+      cancelText={t('common.cancel')}
       confirmLoading={loading}
-      destroyOnClose
+      destroyOnHidden
       style={{ top: 20 }}
       styles={{
         body: {
@@ -436,52 +492,62 @@ export function MemoryManager({ visible, onClose }: MemoryManagerProps) {
         >
           <Space>
             <Button icon={<ImportOutlined />} onClick={handleImport}>
-              导入
+              {t('memoryManager.import')}
             </Button>
             <Button icon={<ExportOutlined />} onClick={handleExport}>
-              导出
+              {t('memoryManager.export')}
             </Button>
             <Button icon={<PlusOutlined />} onClick={handleLoadBuiltin}>
-              加载内置词库
+              {t('memoryManager.builtin')}
             </Button>
             <Popconfirm
-              title="确定清空所有记忆吗？"
-              description="此操作不可恢复！"
+              title={t('memoryManager.clearConfirm')}
+              description={t('memoryManager.clearDescription')}
               onConfirm={handleClearAll}
-              okText="确定"
-              cancelText="取消"
+              okText={t('common.confirm')}
+              cancelText={t('common.cancel')}
               okButtonProps={{ danger: true }}
             >
               <Button danger icon={<ClearOutlined />}>
-                清空
+                {t('memoryManager.clear')}
               </Button>
             </Popconfirm>
           </Space>
         </Space>
 
         <Input
-          placeholder="搜索原文或译文…"
+          placeholder={t('memoryManager.search')}
           prefix={<SearchOutlined />}
           value={searchText}
           onChange={(e) => setSearchText(e.target.value)}
           style={{ marginBottom: 'var(--space-3)' }}
         />
 
+        <Select
+          aria-label={t('memoryManager.language')}
+          value={newLanguage}
+          onChange={setNewLanguage}
+          options={languages.map((language) => ({
+            value: language.code,
+            label: language.display_name,
+          }))}
+          style={{ minWidth: 180, marginBottom: 'var(--space-3)' }}
+        />
         <Space.Compact style={{ width: '100%' }}>
           <Input
-            placeholder="原文"
+            placeholder={t('memoryManager.original')}
             value={newSource}
             onChange={(e) => setNewSource(e.target.value)}
             onPressEnter={handleAdd}
           />
           <Input
-            placeholder="译文"
+            placeholder={t('memoryManager.translation')}
             value={newTarget}
             onChange={(e) => setNewTarget(e.target.value)}
             onPressEnter={handleAdd}
           />
           <Button type="primary" icon={<PlusOutlined />} onClick={handleAdd}>
-            添加
+            {t('memoryManager.add')}
           </Button>
         </Space.Compact>
       </div>
@@ -494,8 +560,8 @@ export function MemoryManager({ visible, onClose }: MemoryManagerProps) {
         pagination={{
           pageSize: 10,
           showSizeChanger: true,
-          showTotal: (total) => `共 ${total} 条记忆`,
-          position: ['bottomCenter'],
+          showTotal: (total) => t('memoryManager.total', { count: total }),
+          placement: ['bottomCenter'],
         }}
         scroll={{ x: 900, y: tableHeight }}
       />

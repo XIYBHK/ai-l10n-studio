@@ -3,4 +3,13 @@
 /**
  * Token 统计信息
  */
-export type TokenStats = { input_tokens: number, output_tokens: number, total_tokens: number, cost: number, };
+export type TokenStats = {
+  input_tokens: number;
+  output_tokens: number;
+  total_tokens: number;
+  cost: number;
+  /**
+   * Requests omitted from `cost` because no price is known.
+   */
+  unpriced_requests: number;
+};

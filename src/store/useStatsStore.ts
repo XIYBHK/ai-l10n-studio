@@ -25,6 +25,7 @@ const INITIAL_STATS: TranslationStats = {
     output_tokens: 0,
     total_tokens: 0,
     cost: 0,
+    unpriced_requests: 0,
   },
   tm_learned: 0,
 };
@@ -55,6 +56,7 @@ export const useStatsStore = create<StatsState>()(
             totalTranslated: stats.total,
             totalTokens: stats.token_stats.total_tokens,
             totalCost: stats.token_stats.cost,
+            unpricedRequests: stats.token_stats.unpriced_requests,
             sessionCount: stats.total > 0 ? 1 : 0,
             lastUpdated: Date.now(),
             tmHits: stats.tm_hits,
@@ -80,6 +82,8 @@ export const useStatsStore = create<StatsState>()(
               output_tokens: prev.token_stats.output_tokens + stats.token_stats.output_tokens,
               total_tokens: prev.token_stats.total_tokens + stats.token_stats.total_tokens,
               cost: prev.token_stats.cost + stats.token_stats.cost,
+              unpriced_requests:
+                prev.token_stats.unpriced_requests + stats.token_stats.unpriced_requests,
             },
             tm_learned: prev.tm_learned + stats.tm_learned,
           };
@@ -89,6 +93,7 @@ export const useStatsStore = create<StatsState>()(
               totalTranslated: next.total,
               totalTokens: next.token_stats.total_tokens,
               totalCost: next.token_stats.cost,
+              unpricedRequests: next.token_stats.unpriced_requests,
               sessionCount: next.total > 0 ? 1 : 0,
               lastUpdated: Date.now(),
               tmHits: next.tm_hits,
@@ -113,6 +118,7 @@ export const useStatsStore = create<StatsState>()(
             totalTranslated: 0,
             totalTokens: 0,
             totalCost: 0,
+            unpricedRequests: 0,
             sessionCount: 0,
             lastUpdated: Date.now(),
             tmHits: 0,
@@ -163,6 +169,7 @@ export async function loadStats() {
           output_tokens: stats.outputTokens,
           total_tokens: stats.totalTokens,
           cost: stats.totalCost,
+          unpriced_requests: stats.unpricedRequests,
         },
         tm_learned: stats.tmLearned,
       },
@@ -171,5 +178,6 @@ export async function loadStats() {
     log.info('统计加载成功', stats);
   } catch (error) {
     log.error('加载统计失败', error);
+    throw error;
   }
 }

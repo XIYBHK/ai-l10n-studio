@@ -1,5 +1,6 @@
 import React, { CSSProperties } from 'react';
 import { CSS_COLORS } from '../../hooks/useCssColors';
+import { useTranslation } from 'react-i18next';
 
 interface StatusBarProps {
   lineNumber?: number;
@@ -11,6 +12,7 @@ interface StatusBarProps {
  * 底部状态栏组件
  */
 export const StatusBar: React.FC<StatusBarProps> = ({ lineNumber, charCount, isTranslated }) => {
+  const { t } = useTranslation();
   const containerStyles: CSSProperties = {
     padding: 'var(--space-2) var(--space-4)',
     borderTop: `1px solid ${CSS_COLORS.borderSecondary}`,
@@ -56,21 +58,29 @@ export const StatusBar: React.FC<StatusBarProps> = ({ lineNumber, charCount, isT
   return (
     <div style={containerStyles}>
       <div style={leftSectionStyles}>
-        {lineNumber !== undefined && <span>行: {lineNumber}</span>}
-        <span>字符: {charCount}</span>
-        <span style={statusStyles}>{isTranslated ? '✓ 已翻译' : '○ 未翻译'}</span>
+        {lineNumber !== undefined && (
+          <span>{t('workspace.editor.lineNumber', { count: lineNumber })}</span>
+        )}
+        <span>{t('workspace.editor.charCount', { count: charCount })}</span>
+        <span style={statusStyles}>
+          {isTranslated
+            ? `✓ ${t('workspace.editor.translated')}`
+            : `○ ${t('workspace.editor.untranslated')}`}
+        </span>
       </div>
 
       <div style={rightSectionStyles}>
         <div style={shortcutStyles}>
           <span>
-            <kbd style={kbdStyles}>Ctrl</kbd> + <kbd style={kbdStyles}>Enter</kbd> 保存
+            <kbd style={kbdStyles}>Ctrl</kbd> + <kbd style={kbdStyles}>Enter</kbd>{' '}
+            {t('common.save')}
           </span>
           <span>
-            <kbd style={kbdStyles}>Esc</kbd> 取消
+            <kbd style={kbdStyles}>Esc</kbd> {t('common.cancel')}
           </span>
           <span>
-            <kbd style={kbdStyles}>Ctrl</kbd> + <kbd style={kbdStyles}>↑/↓</kbd> 导航
+            <kbd style={kbdStyles}>Ctrl</kbd> + <kbd style={kbdStyles}>↑/↓</kbd>{' '}
+            {t('workspace.editor.navigation')}
           </span>
         </div>
       </div>

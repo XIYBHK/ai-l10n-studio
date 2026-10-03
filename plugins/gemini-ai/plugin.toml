@@ -12,8 +12,9 @@ homepage = "https://ai.google.dev"
 license = "MIT"
 
 [provider]
+api = "openai-completions"
 display_name = "Gemini"
-default_url = "https://generativelanguage.googleapis.com/v1beta/models"
+default_url = "https://generativelanguage.googleapis.com/v1beta/openai"
 default_model = "gemini-2.0-flash-exp"
 supports_cache = false
 supports_images = true

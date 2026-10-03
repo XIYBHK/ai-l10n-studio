@@ -39,7 +39,9 @@ export const EmptyState: React.FC<EmptyStateProps> = ({
 }) => {
   const { t } = useTranslation();
 
-  const config = useMemo<Record<EmptyStateType, { icon: React.ReactNode; title: string; description: string }>>(
+  const config = useMemo<
+    Record<EmptyStateType, { icon: React.ReactNode; title: string; description: string }>
+  >(
     () => ({
       'no-file': {
         icon: <FileTextOutlined />,

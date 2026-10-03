@@ -3,6 +3,7 @@ use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 
 use super::ModelInfo;
+use crate::services::model_config::ModelApi;
 
 #[cfg(feature = "ts-rs")]
 use ts_rs::TS;
@@ -13,16 +14,19 @@ use ts_rs::TS;
 /// 添加新供应商时只需实现此 trait，无需修改现有代码
 pub trait AIProvider: Send + Sync {
     /// 供应商唯一标识符 (小写，用于内部识别)
-    fn id(&self) -> &'static str;
+    fn id(&self) -> &str;
 
     /// 供应商显示名称 (用于UI显示)
-    fn display_name(&self) -> &'static str;
+    fn display_name(&self) -> &str;
 
     /// 默认API基础URL
-    fn default_url(&self) -> &'static str;
+    fn default_url(&self) -> &str;
+
+    /// Wire protocol used by the catalog entry.
+    fn api(&self) -> ModelApi;
 
     /// 默认模型ID
-    fn default_model(&self) -> &'static str;
+    fn default_model(&self) -> &str;
 
     /// 获取该供应商支持的所有模型
     fn get_models(&self) -> Vec<ModelInfo>;
@@ -43,6 +47,7 @@ pub trait AIProvider: Send + Sync {
             id: self.id().to_string(),
             display_name: self.display_name().to_string(),
             default_url: self.default_url().to_string(),
+            api: self.api(),
             default_model: self.default_model().to_string(),
         }
     }
@@ -59,6 +64,7 @@ pub struct ProviderInfo {
     pub id: String,
     pub display_name: String,
     pub default_url: String,
+    pub api: ModelApi,
     pub default_model: String,
 }
 
@@ -188,16 +194,19 @@ mod tests {
     }
 
     impl AIProvider for MockProvider {
-        fn id(&self) -> &'static str {
+        fn id(&self) -> &str {
             self.id
         }
-        fn display_name(&self) -> &'static str {
+        fn display_name(&self) -> &str {
             self.display_name
         }
-        fn default_url(&self) -> &'static str {
+        fn default_url(&self) -> &str {
             "https://api.mock.com/v1"
         }
-        fn default_model(&self) -> &'static str {
+        fn api(&self) -> ModelApi {
+            ModelApi::OpenaiCompletions
+        }
+        fn default_model(&self) -> &str {
             "mock-model"
         }
         fn get_models(&self) -> Vec<ModelInfo> {

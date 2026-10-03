@@ -38,7 +38,6 @@ export {
   useSetCurrentEntry,
   useSetCurrentFilePath,
   useSetSourceLanguage,
-  useSetTargetLanguage,
   useUpdateEntry,
   useGetEntryIndex,
 } from './useTranslationStore';
@@ -75,7 +74,10 @@ export async function initializeStores() {
     console.log('[Store] 初始化所有 Store...');
 
     try {
-      await Promise.all([loadPersistedState(), loadStats()]);
+      const results = await Promise.allSettled([loadPersistedState(), loadStats()]);
+      for (const result of results) {
+        if (result.status === 'rejected') throw result.reason;
+      }
       console.log('[Store] 所有 Store 初始化成功');
     } catch (error) {
       initPromise = null;

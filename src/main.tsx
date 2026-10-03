@@ -7,6 +7,8 @@ import ReactDOM from 'react-dom/client';
 import { getCurrentWindow } from '@tauri-apps/api/window';
 import App from './App';
 import { initializeStores } from './store';
+import { useAppStore } from './store/useAppStore';
+import i18n from './i18n/config';
 import './index.css';
 
 let appWindow: ReturnType<typeof getCurrentWindow> | null = null;
@@ -29,17 +31,15 @@ async function bootstrap() {
   try {
     let initError: string | null = null;
 
-    await Promise.all([
-      initializeStores().catch((error) => {
-        initError = `Store 初始化失败: ${String(error)}`;
-        console.error(initError, error);
-        renderApp(initError);
-      }),
-      new Promise<void>((resolve) => {
-        renderApp();
-        requestAnimationFrame(() => resolve());
-      }),
-    ]);
+    try {
+      await initializeStores();
+    } catch (error) {
+      initError = i18n.t('errors.loadFailed', { error: String(error) });
+      console.error(initError, error);
+    }
+    await i18n.changeLanguage(useAppStore.getState().language);
+    renderApp(initError);
+    await new Promise<void>((resolve) => requestAnimationFrame(() => resolve()));
 
     if (appWindow) {
       await appWindow.show();

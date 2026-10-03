@@ -26,19 +26,19 @@
      亮色主题 CSS 变量（默认）
      优化：使用 CSS 变量替代 Hook，避免每次渲染创建对象
      ============================================ */
-  --color-bgPrimary: #e6e9ef;
-  --color-bgSecondary: #e6e9ef;
-  --color-bgTertiary: #dce0e8;
+  --color-bgPrimary: #ffffff;
+  --color-bgSecondary: #f5f5fa;
+  --color-bgTertiary: #eeedf5;
   --color-textPrimary: #4c4f69;
   --color-textSecondary: #5c5f77;
   --color-textTertiary: #6c6f85;
   --color-textDisabled: rgba(76, 79, 105, 0.5);
-  --color-borderPrimary: #ccd0da;
-  --color-borderSecondary: #dce0e8;
+  --color-borderPrimary: #dcdce7;
+  --color-borderSecondary: #e9e8f0;
 
   /* 状态颜色 */
-  --color-statusUntranslated: #cba6f7;
-  --color-statusNeedsReview: #fab387;
+  --color-statusUntranslated: #7c4dbe;
+  --color-statusNeedsReview: #9c610f;
   --color-statusTranslated: #166534;
 
   /* 警示色（警告 / 错误） */
@@ -52,13 +52,13 @@
   --color-flashGlowSoft: rgba(137, 180, 250, 0.3);
 
   /* 交互状态 */
-  --color-selectedBg: rgba(203, 166, 247, 0.15);
-  --color-hoverBg: #dce0e8;
+  --color-selectedBg: rgba(124, 77, 190, 0.08);
+  --color-hoverBg: #f0eff7;
   --color-activeBg: rgba(203, 166, 247, 0.1);
-  --color-selectedBorder: #cba6f7;
+  --color-selectedBorder: #7c4dbe;
 
   /* 品牌色 */
-  --color-brandPrimary: #cba6f7;
+  --color-brandPrimary: #7c4dbe;
   --color-brandSecondary: #89b4fa;
 
   /* 翻译来源标识 */
@@ -72,6 +72,8 @@
   /* 遮罩层 */
   --color-overlayBg: rgba(0, 0, 0, 0.5);
   --color-overlayText: #ffffff;
+  --color-onBrand: #ffffff;
+  --studio-header-height: 64px;
 
   /* ============================================
      设计系统规范 - 字体层级
@@ -134,14 +136,14 @@
 [data-theme='dark'] {
   color-scheme: dark;
   --color-bgPrimary: #1e1e2e;
-  --color-bgSecondary: #1e1e2e;
-  --color-bgTertiary: #313244;
+  --color-bgSecondary: #181825;
+  --color-bgTertiary: #262637;
   --color-textPrimary: #cdd6f4;
   --color-textSecondary: #bac2de;
   --color-textTertiary: #a6adc8;
   --color-textDisabled: rgba(205, 214, 244, 0.5);
-  --color-borderPrimary: #313244;
-  --color-borderSecondary: #45475a;
+  --color-borderPrimary: #363649;
+  --color-borderSecondary: #2b2b3d;
 
   /* 状态颜色 - 暗色模式更亮 */
   --color-statusUntranslated: #cba6f7;
@@ -179,6 +181,7 @@
   /* 遮罩层 */
   --color-overlayBg: rgba(0, 0, 0, 0.7);
   --color-overlayText: #cdd6f4;
+  --color-onBrand: #1e1e2e;
 }
 
 /* 移除固定的链接颜色，由 Ant Design 主题控制 */

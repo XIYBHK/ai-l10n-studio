@@ -12,8 +12,9 @@ homepage = "https://www.minimaxi.com"
 license = "MIT"
 
 [provider]
+api = "anthropic-messages"
 display_name = "MiniMax"
-default_url = "https://api.minimax.io/v1/text/chatcompletion_v2"
+default_url = "https://api.minimax.io/anthropic/v1"
 default_model = "MiniMax-M2.1"
 supports_cache = true
 supports_images = true

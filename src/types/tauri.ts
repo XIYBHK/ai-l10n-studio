@@ -6,14 +6,13 @@
  */
 
 import type { POEntry as BasePOEntry } from './generated/POEntry';
+export type { PODocument } from './generated/PODocument';
 
 // 导出自动生成的类型（与后端 Rust 类型一致）
 export type { TranslationStats } from './generated/TranslationStats';
 export type { TokenStats } from './generated/TokenStats';
-export type { TranslationReport } from './generated/TranslationReport';
 export type { AppConfig } from './generated/AppConfig';
 export type { ContextualRefineRequest } from './generated/ContextualRefineRequest';
-export type { TranslationPair } from './generated/TranslationPair';
 
 // 前端扩展类型
 
@@ -32,37 +31,9 @@ export interface POEntry extends BasePOEntry {
 /**
  * 翻译记忆统计
  */
-export interface MemoryStats {
-  total_entries: number;
-  hits: number;
-  misses: number;
-}
+export type { MemoryStats } from './generated/MemoryStats';
 
 /**
  * 翻译记忆
  */
-export interface TranslationMemory {
-  memory: Record<string, string>;
-  stats: MemoryStats;
-}
-
-/**
- * 渐进式上屏队列项
- */
-export interface TranslationQueueItem {
-  index: number;
-  translation: string;
-  source: 'tm' | 'ai';
-  incrementalStats?: {
-    tmHits?: number;
-    deduplicated?: number;
-    aiTranslated?: number;
-    tmLearned?: number;
-    tokenStats?: {
-      inputTokens: number;
-      outputTokens: number;
-      totalTokens: number;
-      cost: number;
-    };
-  };
-}
+export type { TranslationMemory } from './generated/TranslationMemory';

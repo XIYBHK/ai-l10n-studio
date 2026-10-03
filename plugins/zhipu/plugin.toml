@@ -12,8 +12,9 @@ homepage = "https://www.zhipuai.cn"
 license = "MIT"
 
 [provider]
+api = "openai-completions"
 display_name = "智谱AI"
-default_url = "https://open.bigmodel.cn/api/paas/v4/chat/completions"
+default_url = "https://open.bigmodel.cn/api/paas/v4"
 default_model = "glm-4.7-flash"
 supports_cache = true
 supports_images = true

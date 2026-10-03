@@ -11,11 +11,11 @@ const palette = {
   info: '#89b4fa',
 
   light: {
-    bgBase: '#e6e9ef',
-    bgContainer: '#e6e9ef',
-    bgElevated: '#dce0e8',
-    border: '#ccd0da',
-    borderSecondary: '#dce0e8',
+    bgBase: '#f5f5fa',
+    bgContainer: '#ffffff',
+    bgElevated: '#ffffff',
+    border: '#dcdce7',
+    borderSecondary: '#e9e8f0',
     textPrimary: '#4c4f69',
     textSecondary: '#5c5f77',
     textTertiary: '#64687f',
@@ -23,11 +23,11 @@ const palette = {
   },
 
   dark: {
-    bgBase: '#1e1e2e',
-    bgContainer: '#313244',
-    bgElevated: '#45475a',
-    border: '#45475a',
-    borderSecondary: '#585b70',
+    bgBase: '#181825',
+    bgContainer: '#1e1e2e',
+    bgElevated: '#262637',
+    border: '#363649',
+    borderSecondary: '#2b2b3d',
     textPrimary: '#cdd6f4',
     textSecondary: '#bac2de',
     textTertiary: '#a6adc8',
@@ -54,6 +54,7 @@ const commonTokens = {
 export const lightTheme: ThemeConfig = {
   token: {
     ...commonTokens,
+    colorPrimary: '#7c4dbe',
     colorSuccess: palette.successLight,
     colorBgBase: palette.light.bgBase,
     colorBgContainer: palette.light.bgContainer,
@@ -87,7 +88,7 @@ export const lightTheme: ThemeConfig = {
       defaultActiveColor: palette.light.textPrimary,
       defaultActiveBorderColor: palette.light.border,
       defaultShadow: '0 2px 4px rgba(0, 0, 0, 0.04)',
-      primaryShadow: '0 2px 8px rgba(203, 166, 247, 0.25)',
+      primaryShadow: 'none',
     },
     Input: {
       colorBgContainer: palette.light.bgContainer,
@@ -162,8 +163,8 @@ export const darkTheme: ThemeConfig = {
       rowHoverBg: 'rgba(203, 166, 247, 0.08)',
     },
     Modal: {
-      contentBg: palette.dark.bgElevated,
-      headerBg: palette.dark.bgElevated,
+      contentBg: palette.dark.bgContainer,
+      headerBg: palette.dark.bgContainer,
     },
     Select: {
       colorBgContainer: palette.dark.bgContainer,

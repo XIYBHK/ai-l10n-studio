@@ -1,8 +1,8 @@
-import React, { CSSProperties } from 'react';
+import React from 'react';
 import { GlobalOutlined } from '@ant-design/icons';
-import { CSS_COLORS } from '../../hooks/useCssColors';
-import { SectionHeader } from '../ui/SectionHeader';
+import { useTranslation } from 'react-i18next';
 import { POEntry } from '../../types/tauri';
+import styles from '../EditorPane.module.css';
 
 interface SourceSectionProps {
   entry: POEntry;
@@ -12,63 +12,32 @@ interface SourceSectionProps {
  * 源码展示区域组件
  */
 export const SourceSection: React.FC<SourceSectionProps> = ({ entry }) => {
+  const { t } = useTranslation();
   const hasContext = entry.msgctxt || (entry.comments && entry.comments.length > 0);
 
-  const containerStyles: CSSProperties = {
-    flex: '0 0 40%',
-    borderBottom: `2px solid ${CSS_COLORS.borderPrimary}`,
-    display: 'flex',
-    flexDirection: 'column',
-    backgroundColor: CSS_COLORS.bgPrimary,
-  };
-
-  const contentStyles: CSSProperties = {
-    flex: 1,
-    padding: 'var(--space-4)',
-    overflowY: 'auto',
-    backgroundColor: CSS_COLORS.bgSecondary,
-    borderRadius: 'var(--radius-md)',
-    margin: 'var(--space-4)',
-    marginTop: 0,
-    boxShadow: 'var(--shadow-sm)',
-  };
-
-  const sourceTextStyles: CSSProperties = {
-    fontSize: 'var(--font-size-md)',
-    lineHeight: 1.6,
-    color: CSS_COLORS.textPrimary,
-    whiteSpace: 'pre-wrap',
-    wordBreak: 'break-word',
-    fontFamily: 'var(--mono-font)',
-  };
-
-  const emptyTextStyles: CSSProperties = {
-    color: CSS_COLORS.textDisabled,
-    fontStyle: 'italic',
-  };
-
   return (
-    <div style={containerStyles} role="region" aria-label="原文区域">
-      <SectionHeader
-        title="原文 (Source)"
-        icon={<GlobalOutlined aria-hidden="true" />}
-        bordered={false}
-        style={{
-          padding: 'var(--space-3) var(--space-4)',
-          marginBottom: 0,
-          backgroundColor: CSS_COLORS.bgTertiary,
-          borderBottom: `1px solid ${CSS_COLORS.borderSecondary}`,
-        }}
-      />
-      <div style={contentStyles}>
+    <div
+      className={styles.sourceArea}
+      role="region"
+      aria-label={t('workspace.editor.sourceRegion')}
+    >
+      <h3 className={styles.sectionHeader}>
+        <GlobalOutlined aria-hidden="true" />
+        {t('editor.original')}
+      </h3>
+      <div className={styles.sourceContent}>
         <div
-          style={sourceTextStyles}
+          className={styles.sourceText}
           role="textbox"
-          aria-label="原文内容"
+          aria-label={t('workspace.editor.sourceContent')}
           aria-readonly="true"
           tabIndex={0}
         >
-          {entry.msgid ? entry.msgid : <span style={emptyTextStyles}>(空)</span>}
+          {entry.msgid ? (
+            entry.msgid
+          ) : (
+            <span className={styles.emptyText}>{t('workspace.editor.empty')}</span>
+          )}
         </div>
 
         {/* 上下文和注释 */}
@@ -87,68 +56,31 @@ interface ContextInfoProps {
  * 上下文信息展示组件
  */
 export const ContextInfo: React.FC<ContextInfoProps> = ({ msgctxt, comments }) => {
-  const containerStyles: CSSProperties = {
-    marginTop: 'var(--space-5)',
-    padding: 'var(--space-3)',
-    backgroundColor: CSS_COLORS.bgTertiary,
-    borderRadius: 'var(--radius-base)',
-    border: `1px solid ${CSS_COLORS.borderSecondary}`,
-  };
-
-  const itemStyles: CSSProperties = {
-    fontSize: 'var(--font-size-sm)',
-    color: CSS_COLORS.textSecondary,
-    fontFamily: 'var(--body-font)',
-  };
-
-  const labelStyles: CSSProperties = {
-    fontWeight: 'var(--font-weight-semibold)',
-    marginBottom: 'var(--space-1)',
-    color: CSS_COLORS.textPrimary,
-    fontSize: 'var(--font-size-xs)',
-    textTransform: 'uppercase',
-    letterSpacing: '0.5px',
-  };
-
-  const valueStyles: CSSProperties = {
-    fontFamily: 'var(--mono-font)',
-    backgroundColor: CSS_COLORS.bgPrimary,
-    padding: 'var(--space-1) var(--space-2)',
-    borderRadius: 'var(--radius-sm)',
-    display: 'inline-block',
-    fontSize: 'var(--font-size-sm)',
-    color: CSS_COLORS.textSecondary,
-    border: `1px solid ${CSS_COLORS.borderSecondary}`,
-  };
-
-  const commentStyles: CSSProperties = {
-    color: CSS_COLORS.textTertiary,
-    fontSize: 'var(--font-size-xs)',
-    marginTop: 'var(--space-1)',
-    paddingLeft: 'var(--space-2)',
-    borderLeft: `2px solid ${CSS_COLORS.borderSecondary}`,
-  };
-
+  const { t } = useTranslation();
   return (
-    <div style={containerStyles} role="complementary" aria-label="上下文和注释">
+    <div
+      className={styles.contextBox}
+      role="complementary"
+      aria-label={t('workspace.editor.contextAndComments')}
+    >
       {msgctxt && (
-        <div style={{ ...itemStyles, marginBottom: comments?.length ? 'var(--space-3)' : 0 }}>
-          <div style={labelStyles} id="context-label">
-            上下文 (Context)
+        <div className={styles.contextItem}>
+          <div className={styles.contextLabel} id="context-label">
+            {t('editor.context')}
           </div>
-          <div style={valueStyles} aria-labelledby="context-label">
+          <div className={styles.contextValue} aria-labelledby="context-label">
             {msgctxt}
           </div>
         </div>
       )}
       {comments && comments.length > 0 && (
-        <div style={itemStyles}>
-          <div style={labelStyles} id="comments-label">
-            注释 (Comments)
+        <div className={styles.contextItem}>
+          <div className={styles.contextLabel} id="comments-label">
+            {t('workspace.editor.comments')}
           </div>
           <div role="list" aria-labelledby="comments-label">
             {comments.map((comment, index) => (
-              <div key={index} style={commentStyles} role="listitem">
+              <div key={index} className={styles.commentItem} role="listitem">
                 {comment}
               </div>
             ))}

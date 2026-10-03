@@ -1,5 +1,5 @@
-use crate::services::ConfigDraft;
 use crate::services::ai::plugin_loader;
+use crate::services::{AppConfig, ConfigDraft};
 use crate::utils::logging::NoModuleFilter;
 use crate::utils::logging::Type as LogType;
 use crate::utils::paths;
@@ -7,17 +7,21 @@ use crate::{logging, logging_error};
 #[cfg(not(debug_assertions))]
 use anyhow::Context;
 use anyhow::Result;
-use flexi_logger::{Cleanup, Criterion, Duplicate, FileSpec, LogSpecBuilder, Logger, WriteMode};
+use flexi_logger::{
+    Cleanup, Criterion, Duplicate, FileSpec, LogSpecBuilder, LogSpecification, Logger, WriteMode,
+};
+use std::path::{Path, PathBuf};
 use std::sync::OnceLock;
-use tokio::time::{Duration, timeout};
 
 pub static LOGGER_HANDLE: OnceLock<flexi_logger::LoggerHandle> = OnceLock::new();
 
-pub async fn init_app() -> Result<()> {
+pub async fn init_app(resource_dir: Option<&Path>) -> Result<()> {
     paths::init_portable_flag()?;
     paths::init_app_directories()?;
-    init_logger().await?;
-    init_ai_providers()?;
+    let config = (**ConfigDraft::global().await.data()).clone();
+    init_logger(&config)?;
+    delete_old_logs(config.log_retention_days).await?;
+    init_ai_providers(resource_dir)?;
 
     logging!(info, LogType::Init, "Application initialized successfully");
     logging!(
@@ -36,108 +40,88 @@ pub async fn init_app() -> Result<()> {
     Ok(())
 }
 
-fn init_ai_providers() -> Result<()> {
+fn init_ai_providers(resource_dir: Option<&Path>) -> Result<()> {
     logging!(info, LogType::Init, "Initializing AI providers...");
 
-    let plugins_dir = get_plugins_dir()?;
+    let plugins_dir = get_plugins_dir(resource_dir)?;
 
     logging!(info, LogType::Init, "Plugin directory: {:?}", plugins_dir);
 
     if !plugins_dir.exists() {
-        logging!(
-            info,
-            LogType::Init,
-            "Plugin directory is missing; skipping dynamic provider loading"
-        );
-        return Ok(());
+        anyhow::bail!("Plugin directory is missing: {:?}", plugins_dir);
     }
 
     plugin_loader::init_global_plugin_loader(&plugins_dir)?;
 
-    match plugin_loader::load_all_plugins() {
-        Ok(count) => {
-            logging!(
-                info,
-                LogType::Init,
-                "Plugin system initialized, loaded {} AI providers",
-                count
-            );
-        }
-        Err(error) => {
-            logging_error!(LogType::Init, "Failed to load plugins: {}", error);
-        }
-    }
+    let count = plugin_loader::load_all_plugins()?;
+    anyhow::ensure!(
+        count > 0,
+        "No AI providers were loaded from {:?}",
+        plugins_dir
+    );
+    logging!(info, LogType::Init, "Loaded {} AI providers", count);
 
     Ok(())
 }
 
-fn get_plugins_dir() -> anyhow::Result<std::path::PathBuf> {
+fn get_plugins_dir(resource_dir: Option<&Path>) -> anyhow::Result<PathBuf> {
     #[cfg(debug_assertions)]
     {
-        let current_dir = std::env::current_dir().unwrap_or_else(|_| std::path::PathBuf::from("."));
-        Ok(current_dir.parent().unwrap_or(&current_dir).join("plugins"))
+        let _ = resource_dir;
+        let manifest_dir = Path::new(env!("CARGO_MANIFEST_DIR"));
+        Ok(manifest_dir.join("..").join("plugins"))
     }
 
     #[cfg(not(debug_assertions))]
     {
-        let exe_path = std::env::current_exe().context("Failed to get executable path")?;
-
-        #[cfg(target_os = "windows")]
-        let plugins_dir = exe_path
-            .parent()
-            .map(|dir| dir.join("plugins"))
-            .unwrap_or_else(|| exe_path.join("plugins"));
-
-        #[cfg(target_os = "macos")]
-        let plugins_dir = exe_path
-            .parent()
-            .and_then(|dir| dir.parent())
-            .and_then(|dir| dir.parent())
-            .and_then(|dir| dir.parent())
-            .map(|dir| dir.join("Resources").join("plugins"))
-            .unwrap_or_else(|| exe_path.join("plugins"));
-
-        #[cfg(target_os = "linux")]
-        let plugins_dir = exe_path
-            .parent()
-            .map(|dir| dir.join("plugins"))
-            .unwrap_or_else(|| exe_path.join("plugins"));
-
-        Ok(plugins_dir)
+        let resource_dir = resource_dir.context("resource_dir is required in release builds")?;
+        Ok(resource_dir.join("_up_").join("plugins"))
     }
 }
 
-async fn load_log_config() -> (usize, usize) {
-    match timeout(Duration::from_millis(500), ConfigDraft::global()).await {
-        Ok(draft) => {
-            let config = draft.data();
-            (
-                config.log_max_size.unwrap_or(128) as usize * 1024,
-                config.log_max_count.unwrap_or(8) as usize,
-            )
-        }
-        Err(_) => {
-            eprintln!("Logger init config load timed out, using defaults");
-            (128 * 1024, 8)
-        }
+pub fn validate_log_settings(config: &AppConfig) -> Result<()> {
+    if !matches!(
+        config.log_level.as_str(),
+        "trace" | "debug" | "info" | "warn" | "error"
+    ) {
+        anyhow::bail!("invalid log level: {}", config.log_level);
     }
+    if config.log_max_size.unwrap_or(128) == 0 || config.log_max_count.unwrap_or(8) == 0 {
+        anyhow::bail!("log size and count must be positive");
+    }
+    if config.log_retention_days.is_some_and(|days| days > 365) {
+        anyhow::bail!("log retention must be between 0 and 365 days");
+    }
+    Ok(())
 }
 
-async fn init_logger() -> Result<()> {
+pub fn apply_log_settings(config: &AppConfig) -> Result<()> {
+    validate_log_settings(config)?;
+    let Some(handle) = LOGGER_HANDLE.get() else {
+        return Ok(());
+    };
+    let spec = LogSpecification::parse(&config.log_level)
+        .map_err(|error| anyhow::anyhow!("invalid log level: {error}"))?;
+    handle.set_new_spec(spec);
+    Ok(())
+}
+
+fn init_logger(config: &AppConfig) -> Result<()> {
     let log_dir = paths::app_logs_dir()?;
     if !log_dir.exists() {
         std::fs::create_dir_all(&log_dir)?;
     }
 
-    let (log_max_size, log_max_count) = load_log_config().await;
+    validate_log_settings(config)?;
+    let log_max_size = config.log_max_size.unwrap_or(128) as usize * 1024;
+    let log_max_count = config.log_max_count.unwrap_or(8) as usize;
 
     crate::utils::logger::init_tracing();
 
-    let level = if cfg!(debug_assertions) {
-        log::LevelFilter::Debug
-    } else {
-        log::LevelFilter::Info
-    };
+    let level = config
+        .log_level
+        .parse::<log::LevelFilter>()
+        .unwrap_or(log::LevelFilter::Info);
 
     let duplicate = if cfg!(debug_assertions) {
         Duplicate::Debug
@@ -177,6 +161,10 @@ async fn init_logger() -> Result<()> {
 }
 
 pub async fn delete_old_logs(retention_days: Option<u32>) -> Result<()> {
+    delete_old_logs_in(&paths::app_logs_dir()?, retention_days).await
+}
+
+async fn delete_old_logs_in(log_dir: &Path, retention_days: Option<u32>) -> Result<()> {
     let Some(days) = retention_days else {
         logging!(
             info,
@@ -185,8 +173,10 @@ pub async fn delete_old_logs(retention_days: Option<u32>) -> Result<()> {
         );
         return Ok(());
     };
+    if days == 0 {
+        return Ok(());
+    }
 
-    let log_dir = paths::app_logs_dir()?;
     if !log_dir.exists() {
         return Ok(());
     }
@@ -210,7 +200,10 @@ pub async fn delete_old_logs(retention_days: Option<u32>) -> Result<()> {
             && let Ok(modified) = metadata.modified()
         {
             let modified_time: chrono::DateTime<chrono::Local> = modified.into();
-            if modified_time < cutoff {
+            let file_name = entry.file_name().to_string_lossy().to_string();
+            let is_app_log = file_name.starts_with("app_");
+            let is_current_log = file_name.contains("latest");
+            if modified_time < cutoff && is_app_log && !is_current_log {
                 if let Err(error) = tokio::fs::remove_file(entry.path()).await {
                     logging_error!(
                         LogType::Init,
@@ -243,16 +236,34 @@ mod tests {
     use super::*;
 
     #[tokio::test]
-    async fn test_init_app() {
-        let result = init_app().await;
-        if result.is_err() {
-            println!("Init failed (expected in test env): {:?}", result);
+    async fn test_delete_old_logs() {
+        let dir = tempfile::tempdir().unwrap();
+        for file in ["app_old.log", "app_latest.log", "unrelated.log"] {
+            let path = dir.path().join(file);
+            std::fs::write(&path, "log").unwrap();
+            let handle = std::fs::File::options().write(true).open(path).unwrap();
+            handle
+                .set_modified(std::time::SystemTime::UNIX_EPOCH)
+                .unwrap();
         }
+        delete_old_logs_in(dir.path(), Some(0)).await.unwrap();
+        assert!(dir.path().join("app_old.log").exists());
+        delete_old_logs_in(dir.path(), Some(7)).await.unwrap();
+        assert!(!dir.path().join("app_old.log").exists());
+        assert!(dir.path().join("app_latest.log").exists());
+        assert!(dir.path().join("unrelated.log").exists());
     }
 
-    #[tokio::test]
-    async fn test_delete_old_logs() {
-        let result = delete_old_logs(Some(7)).await;
-        assert!(result.is_ok());
+    #[cfg(debug_assertions)]
+    #[test]
+    fn debug_plugins_dir_is_repository_plugins() {
+        let manifest_dir = Path::new(env!("CARGO_MANIFEST_DIR"));
+        let expected = manifest_dir.join("..").join("plugins");
+        assert_eq!(get_plugins_dir(None).unwrap(), expected);
+    }
+
+    #[test]
+    fn default_log_settings_are_valid() {
+        assert!(validate_log_settings(&AppConfig::default()).is_ok());
     }
 }

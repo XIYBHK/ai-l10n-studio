@@ -47,7 +47,7 @@ export const ActionButton: React.FC<ActionButtonProps> = ({
     primary: {
       backgroundColor: CSS_COLORS.brandPrimary,
       borderColor: CSS_COLORS.brandPrimary,
-      color: '#ffffff',
+      color: 'var(--color-onBrand)',
       boxShadow: '0 1px 2px rgba(0, 0, 0, 0.08)',
     },
     secondary: {
@@ -99,6 +99,14 @@ export const ActionButton: React.FC<ActionButtonProps> = ({
       : 'background-color var(--theme-transition-duration) var(--theme-transition-timing), border-color var(--theme-transition-duration) var(--theme-transition-timing), color var(--theme-transition-duration) var(--theme-transition-timing)',
     transform: isPressed ? 'scale(0.98)' : 'scale(1)',
     ...variantConfig,
+    ...(buttonProps.disabled
+      ? {
+          backgroundColor: CSS_COLORS.bgTertiary,
+          borderColor: CSS_COLORS.borderSecondary,
+          color: CSS_COLORS.textDisabled,
+          boxShadow: 'none',
+        }
+      : {}),
     ...style,
   };
 

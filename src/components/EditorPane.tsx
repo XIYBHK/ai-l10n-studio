@@ -8,6 +8,8 @@ import { TermConfirmModal } from './TermConfirmModal';
 import { ErrorBoundary } from './ErrorBoundary';
 import { createModuleLogger } from '../utils/logger';
 import { useTermDetection } from '../hooks/useTermDetection';
+import { useEditorState } from '../hooks/useEditorState';
+import { pluralCount } from '../utils/poDocument';
 import { EditorToolbar } from './editor/EditorToolbar';
 import { SourceSection } from './editor/SourceSection';
 import { TargetSection } from './editor/TargetSection';
@@ -19,8 +21,7 @@ const log = createModuleLogger('EditorPane');
 
 interface EditorPaneProps {
   entry: POEntry | null;
-  onEntryUpdate: (index: number, updates: Partial<POEntry>) => void;
-  aiTranslation?: string;
+  onConfirmEntries: (indices: number[]) => Promise<void>;
   onNavigatePrev?: () => void;
   onNavigateNext?: () => void;
   canNavigatePrev?: boolean;
@@ -29,8 +30,7 @@ interface EditorPaneProps {
 
 export const EditorPane = memo(function EditorPane({
   entry,
-  onEntryUpdate,
-  aiTranslation,
+  onConfirmEntries,
   onNavigatePrev,
   onNavigateNext,
   canNavigatePrev,
@@ -38,6 +38,8 @@ export const EditorPane = memo(function EditorPane({
 }: EditorPaneProps) {
   const { t } = useTranslation();
   const entries = useTranslationStore((state) => state.entries);
+  const revision = useTranslationStore((state) => state.documentRevision);
+  const document = useTranslationStore((state) => state.document);
   const {
     termModalVisible,
     detectedDifference,
@@ -46,70 +48,42 @@ export const EditorPane = memo(function EditorPane({
     handleTermCancel,
   } = useTermDetection();
 
-  const [translation, setTranslation] = useState('');
-  const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
-  const [originalTranslation, setOriginalTranslation] = useState('');
+  const entryIndex = entry ? entries.indexOf(entry) : -1;
+  const identity = `${revision}:${entryIndex}:${entry?.msgctxt}:${entry?.msgid}:${entry?.line_start}`;
+  const [pluralSelection, setPluralSelection] = useState({ identity, index: 0 });
+  const pluralIndex = pluralSelection.identity === identity ? pluralSelection.index : 0;
+  const savedTranslation = entry?.msgid_plural
+    ? (entry.msgstr_plural[pluralIndex] ?? '')
+    : (entry?.msgstr ?? '');
+  const {
+    translation,
+    setTranslation: handleTranslationChange,
+    hasUnsavedChanges,
+    cancel,
+  } = useEditorState(entryIndex, entry?.msgid_plural ? pluralIndex : null, savedTranslation);
+  const [saving, setSaving] = useState(false);
 
-  useEffect(() => {
-    if (entry) {
-      const initialTranslation = entry.msgstr || '';
-      setTranslation(initialTranslation);
-      setOriginalTranslation(initialTranslation);
-      setHasUnsavedChanges(false);
-      log.debug('条目已切换', {
-        msgid: entry.msgid,
-        msgstr: entry.msgstr,
-        hasAiTranslation: !!aiTranslation,
-        aiTranslation,
-      });
-    }
-  }, [entry, aiTranslation]);
-
-  const handleTranslationChange = useCallback(
-    (value: string) => {
-      setTranslation(value);
-      setHasUnsavedChanges(entry ? entry.msgstr !== value : false);
-    },
-    [entry]
-  );
-
-  const handleSaveTranslation = useCallback(() => {
-    if (!entry) return;
-
-    const index = entries.findIndex((e) => e === entry);
-
-    log.info('准备保存译文', {
-      index,
-      translation,
-      hasAiTranslation: !!aiTranslation,
-      aiTranslation: aiTranslation,
-      isDifferent: translation !== aiTranslation,
-    });
-
-    if (index >= 0) {
-      onEntryUpdate(index, { msgstr: translation, needsReview: false });
-      setHasUnsavedChanges(false);
-      setOriginalTranslation(translation);
+  const handleSaveTranslation = useCallback(async () => {
+    if (!entry || entryIndex < 0 || saving) return;
+    setSaving(true);
+    try {
+      await onConfirmEntries([entryIndex]);
+      if (useTranslationStore.getState().documentRevision !== revision) return;
       message.success(t('messages.translationSaved'));
       announceToScreenReader(t('messages.translationSaved'), 'polite');
-      log.info('译文已保存', { index, translation });
-
-      detectDifference(entry, translation);
+      if (!entry.msgid_plural) detectDifference(entry, translation);
+    } catch (error) {
+      log.logError(error, 'Confirm translation failed');
+      message.error(t('document.confirmFailed', { error: String(error) }));
+    } finally {
+      setSaving(false);
     }
-  }, [entry, entries, onEntryUpdate, translation, aiTranslation, t, detectDifference]);
-
-  const handleBlur = useCallback(() => {
-    if (hasUnsavedChanges && entry) {
-      log.debug('译文输入框失去焦点，自动保存');
-      handleSaveTranslation();
-    }
-  }, [hasUnsavedChanges, entry, handleSaveTranslation]);
+  }, [entry, entryIndex, saving, onConfirmEntries, revision, translation, t, detectDifference]);
 
   const handleCancel = useCallback(() => {
-    setTranslation(originalTranslation);
-    setHasUnsavedChanges(false);
+    cancel();
     message.info(t('messages.editCancelled'));
-  }, [originalTranslation]);
+  }, [cancel, t]);
 
   const handleCopyOriginal = useCallback(() => {
     if (entry?.msgid) {
@@ -173,6 +147,7 @@ export const EditorPane = memo(function EditorPane({
       {/* 工具栏 */}
       <EditorToolbar
         hasUnsavedChanges={hasUnsavedChanges}
+        saving={saving}
         onSave={handleSaveTranslation}
         onCancel={handleCancel}
         onCopyOriginal={handleCopyOriginal}
@@ -181,6 +156,28 @@ export const EditorPane = memo(function EditorPane({
         canNavigatePrev={canNavigatePrev}
         canNavigateNext={canNavigateNext}
       />
+
+      {entry.msgid_plural && (
+        <div>
+          <select
+            aria-label={t('editor.pluralForm', { index: pluralIndex })}
+            value={pluralIndex}
+            onChange={(event) => {
+              setPluralSelection({ identity, index: Number(event.target.value) });
+            }}
+          >
+            {Array.from({ length: pluralCount(entry, document?.metadata ?? {}) }, (_, index) => (
+              <option key={index} value={index}>
+                {t('editor.pluralForm', { index })}
+              </option>
+            ))}
+          </select>
+          <span>
+            {t('editor.pluralRule')}: {document?.metadata['Plural-Forms'] ?? ''}
+          </span>
+          <div>{entry.msgid_plural}</div>
+        </div>
+      )}
 
       {/* 双栏编辑区域 */}
       <div className={styles.splitView} role="form" aria-label="翻译编辑表单">
@@ -192,7 +189,6 @@ export const EditorPane = memo(function EditorPane({
           entry={entry}
           translation={translation}
           onTranslationChange={handleTranslationChange}
-          onBlur={handleBlur}
           hasUnsavedChanges={hasUnsavedChanges}
           saveStatusId={saveStatusId}
         />

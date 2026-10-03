@@ -1,3 +1,4 @@
+use crate::services::model_config::ModelApi;
 /**
  * 插件配置管理系统 (Phase 3)
  *
@@ -5,20 +6,19 @@
  */
 use anyhow::{Context, Result};
 use serde::{Deserialize, Serialize};
-use std::collections::HashMap;
 use std::path::Path;
 
 /// 插件配置的根结构
 #[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
 pub struct PluginConfig {
     pub plugin: PluginMeta,
     pub provider: ProviderConfig,
-    #[serde(default)]
-    pub models: ModelOverrides,
 }
 
 /// 插件元数据
 #[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
 pub struct PluginMeta {
     /// 插件名称（用于显示）
     pub name: String,
@@ -44,7 +44,10 @@ pub struct PluginMeta {
 
 /// 供应商配置
 #[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
 pub struct ProviderConfig {
+    /// Explicit wire protocol; plugin configurations must declare this field.
+    pub api: ModelApi,
     /// 供应商显示名称
     pub display_name: String,
     /// 默认 API 基础 URL
@@ -60,13 +63,11 @@ pub struct ProviderConfig {
     /// 模型列表（完整定义）
     #[serde(default)]
     pub models: Vec<ModelPluginConfig>,
-    /// 额外的配置选项
-    #[serde(default)]
-    pub extra_config: HashMap<String, toml::Value>,
 }
 
 /// 插件模型配置
 #[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
 pub struct ModelPluginConfig {
     /// 模型 ID
     pub id: String,
@@ -76,47 +77,22 @@ pub struct ModelPluginConfig {
     pub context_window: usize,
     /// 最大输出 token 数
     pub max_output_tokens: usize,
-    /// 输入价格（CNY per 1K tokens）
+    /// 输入价格（USD per 1M tokens）
     pub input_price: f64,
-    /// 输出价格（CNY per 1K tokens）  
+    /// 输出价格（USD per 1M tokens）
     pub output_price: f64,
     /// 缓存读取价格（可选）
     #[serde(default)]
-    pub cache_reads_price: f64,
+    pub cache_reads_price: Option<f64>,
     /// 缓存写入价格（可选）
     #[serde(default)]
-    pub cache_writes_price: f64,
+    pub cache_writes_price: Option<f64>,
     /// 是否推荐
     #[serde(default)]
     pub recommended: bool,
     /// 模型描述
     #[serde(default)]
     pub description: Option<String>,
-}
-
-/// 模型配置覆盖
-#[derive(Debug, Clone, Serialize, Deserialize, Default)]
-pub struct ModelOverrides {
-    /// 模型配置覆盖（模型ID -> 配置）
-    #[serde(default)]
-    pub overrides: HashMap<String, ModelConfigOverride>,
-    /// 是否禁用某些模型
-    #[serde(default)]
-    pub disabled_models: Vec<String>,
-    /// 推荐的模型ID
-    #[serde(default)]
-    pub recommended_model: Option<String>,
-}
-
-/// 单个模型的配置覆盖
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct ModelConfigOverride {
-    /// 模型显示名称覆盖
-    pub name: Option<String>,
-    /// 模型描述覆盖
-    pub description: Option<String>,
-    /// 是否推荐覆盖
-    pub recommended: Option<bool>,
 }
 
 impl PluginConfig {
@@ -168,6 +144,24 @@ impl PluginConfig {
         }
         if self.provider.default_url.is_empty() {
             anyhow::bail!("默认 URL 不能为空");
+        }
+        let url =
+            reqwest::Url::parse(&self.provider.default_url).context("默认 API 基础 URL 无效")?;
+        if !matches!(url.scheme(), "https" | "http")
+            || url.host_str().is_none()
+            || !url.username().is_empty()
+            || url.password().is_some()
+            || url.query().is_some()
+            || url.fragment().is_some()
+        {
+            anyhow::bail!("默认 URL 必须是无凭证和查询参数的 HTTP(S) 基础地址");
+        }
+        let path = url.path().trim_end_matches('/');
+        if ["/chat/completions", "/responses", "/messages"]
+            .iter()
+            .any(|suffix| path.ends_with(suffix))
+        {
+            anyhow::bail!("默认 URL 必须是基础地址，不能包含请求端点");
         }
         if self.provider.default_model.is_empty() {
             anyhow::bail!("默认模型不能为空");
@@ -261,9 +255,7 @@ impl PluginScanner {
             anyhow::bail!("缺少插件配置文件: plugin.toml");
         }
 
-        // provider.rs 和 models.rs 都是可选的
-        // DynamicAIProvider 会从 plugin.toml 动态创建供应商实现
-        // 这些文件只在需要自定义行为时才需要
+        // 插件是纯 TOML catalog；provider.rs 和 models.rs 不参与运行时加载。
 
         Ok(())
     }
@@ -289,15 +281,14 @@ mod tests {
                 license: Some("MIT".to_string()),
             },
             provider: ProviderConfig {
+                api: ModelApi::OpenaiCompletions,
                 display_name: "Test Provider".to_string(),
                 default_url: "https://api.test.com/v1".to_string(),
                 default_model: "test-model".to_string(),
                 supports_cache: true,
                 supports_images: false,
                 models: vec![],
-                extra_config: HashMap::new(),
             },
-            models: ModelOverrides::default(),
         }
     }
 
@@ -318,6 +309,33 @@ mod tests {
     }
 
     #[test]
+    fn catalog_rejects_missing_protocol_and_endpoint_urls() {
+        let config = create_test_config();
+        let toml = toml::to_string(&config).unwrap();
+        assert!(PluginConfig::from_toml(&toml).is_ok());
+        let missing_protocol = toml.replace("api = \"openai-completions\"\n", "");
+        assert!(PluginConfig::from_toml(&missing_protocol).is_err());
+        assert!(
+            PluginConfig::from_toml(&format!(
+                "{toml}\n[provider.extra_config]\nmax_retries = 3\n"
+            ))
+            .is_err()
+        );
+        for endpoint in ["/chat/completions", "/responses", "/messages"] {
+            let mut invalid = config.clone();
+            invalid.provider.default_url = format!("https://api.test.com/v1{endpoint}");
+            assert!(invalid.validate().is_err());
+        }
+    }
+
+    #[test]
+    fn example_catalogs_match_the_runtime_schema() {
+        let root = Path::new(env!("CARGO_MANIFEST_DIR")).join("../example-plugins");
+        let configs = PluginScanner::new(root).scan_plugins().unwrap();
+        assert_eq!(configs.len(), 3);
+    }
+
+    #[test]
     fn test_toml_parsing() {
         let toml_content = r#"
 [plugin]
@@ -329,6 +347,7 @@ description = "Test provider plugin"
 author = "Test Author"
 
 [provider]
+api = "openai-completions"
 display_name = "Test Provider"
 default_url = "https://api.test.com/v1"
 default_model = "test-model"
@@ -378,6 +397,7 @@ version = "1.0.0"
 api_version = "1.0"
 
 [provider]
+api = "openai-completions"
 display_name = "Test Provider"
 default_url = "https://api.test.com/v1"
 default_model = "test-model"

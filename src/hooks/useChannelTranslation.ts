@@ -1,199 +1,156 @@
-import { useState, useCallback, useRef } from 'react';
+import { useCallback, useEffect, useRef } from 'react';
 import { Channel } from '@tauri-apps/api/core';
 import { invoke } from '../services/tauriInvoke';
 import { createModuleLogger } from '../utils/logger';
-import type { TranslationStats, TokenStats } from '../types/tauri';
+import type { BatchProgressEvent } from '../types/generated/BatchProgressEvent';
+import type { BatchResultWithTaskId } from '../types/generated/BatchResultWithTaskId';
+import type { TranslationInput } from '../types/generated/TranslationInput';
+import type { TranslationItem } from '../types/generated/TranslationItem';
+import type { ContextualRefineRequest, TranslationStats } from '../types/tauri';
 
 const log = createModuleLogger('useChannelTranslation');
-
-// ========== 类型定义 ==========
-
-export interface BatchProgressEvent {
-  current: number;
-  total: number;
-  percentage: number;
-  text?: string;
-  task_id?: number; // 新增：任务ID，用于取消翻译
-}
-
-export interface BatchStatsEvent {
-  total: number;
-  tm_hits: number;
-  deduplicated: number;
-  ai_translated: number;
-  token_stats: TokenStatsEvent;
-  tm_learned: number;
-}
-
-export interface TokenStatsEvent {
-  total_tokens: number;
-  prompt_tokens: number;
-  completion_tokens: number;
-  cost: number;
-}
-
-export type { TranslationStats, TokenStats };
-
-export interface BatchResult {
-  translations: string[];
-  translation_sources: string[];
-  stats: TranslationStats;
-}
-
-export interface BatchResultWithTaskId extends BatchResult {
-  task_id: number;
-}
-
+export type { BatchProgressEvent, BatchResultWithTaskId };
 export interface TranslationCallbacks {
-  onProgress?: (current: number, total: number, percentage: number) => void;
-  onStats?: (stats: BatchStatsEvent) => void;
-  onItem?: (index: number, translation: string) => void;
+  onProgress?: (processed: number, total: number, percentage: number) => void;
+  onStats?: (stats: TranslationStats) => void;
+  onItems?: (items: TranslationItem[]) => void;
+}
+
+interface Run {
+  taskId: number | null;
+  cancelRequested: boolean;
+  cancelSent: boolean;
+  finished: Promise<void>;
+  finish: () => void;
+}
+
+async function cancelRun(run: Run) {
+  run.cancelRequested = true;
+  if (run.taskId === null || run.cancelSent) return;
+  run.cancelSent = true;
+  try {
+    await invoke('cancel_translation', { taskId: run.taskId });
+  } catch (error) {
+    run.cancelSent = false;
+    throw error;
+  }
 }
 
 export const useChannelTranslation = () => {
-  const [isTranslating, setIsTranslating] = useState(false);
-  const [progress, setProgress] = useState<BatchProgressEvent>({
-    current: 0,
-    total: 0,
-    percentage: 0,
-  });
-  const [stats, setStats] = useState<BatchStatsEvent | null>(null);
-  const [currentTaskId, setCurrentTaskId] = useState<number | null>(null);
+  const activeRun = useRef<Run | null>(null);
+  const mounted = useRef(true);
 
-  const callbacksRef = useRef<TranslationCallbacks>({});
+  useEffect(() => {
+    mounted.current = true;
+    return () => {
+      mounted.current = false;
+      if (activeRun.current) {
+        void cancelRun(activeRun.current).catch((error) => log.error('Cancel failed', error));
+      }
+      activeRun.current = null;
+    };
+  }, []);
 
   const translateBatch = useCallback(
     async (
-      texts: string[],
+      inputs: TranslationInput[],
       targetLanguage: string,
-      callbacks?: TranslationCallbacks
-    ): Promise<BatchResult> => {
-      if (texts.length === 0) {
-        throw new Error('没有需要翻译的文本');
-      }
-
-      setIsTranslating(true);
-      setProgress({ current: 0, total: texts.length, percentage: 0 });
-      setStats(null);
-      setCurrentTaskId(null);
-      callbacksRef.current = callbacks || {};
-
-      log.info('开始 Channel 批量翻译', {
-        total: texts.length,
-        targetLanguage,
+      callbacks: TranslationCallbacks = {},
+      refineRequests?: ContextualRefineRequest[]
+    ): Promise<BatchResultWithTaskId> => {
+      if (inputs.length === 0) throw new Error('No translation inputs');
+      if (activeRun.current) throw new Error('A translation is already running');
+      let finish = () => {};
+      const finished = new Promise<void>((resolve) => {
+        finish = resolve;
       });
-
+      const run: Run = {
+        taskId: null,
+        cancelRequested: false,
+        cancelSent: false,
+        finished,
+        finish,
+      };
+      activeRun.current = run;
+      const isCurrent = () => mounted.current && activeRun.current === run;
+      let processed = 0;
+      const received = new Map<number, TranslationItem>();
+      const applyItems = (items: TranslationItem[]) => {
+        const changed = items.filter((item) => {
+          const previous = received.get(item.index);
+          if (previous?.translation === item.translation && previous.source === item.source)
+            return false;
+          received.set(item.index, item);
+          return true;
+        });
+        if (changed.length) callbacks.onItems?.(changed);
+      };
+      const observeTask = (taskId: number) => {
+        run.taskId = taskId;
+        if (run.cancelRequested) {
+          void cancelRun(run).catch((error) => log.error('Cancel failed', error));
+        }
+      };
       try {
         const progressChannel = new Channel<BatchProgressEvent>();
-        const statsChannel = new Channel<BatchStatsEvent>();
-
-        progressChannel.onmessage = (progressEvent: BatchProgressEvent) => {
-          const currentRaw = progressEvent.current;
-          const total = progressEvent.total;
-          const percentage = progressEvent.percentage;
-          const text = progressEvent.text;
-          const index: number | null = null;
-          const taskId = progressEvent.task_id ?? null;
-
-          // 如果事件中包含任务ID，立即保存（用于取消翻译）
-          if (taskId !== null && taskId !== undefined) {
-            setCurrentTaskId(taskId);
-            log.info('🆔 收到任务ID:', taskId);
-          }
-
-          const monotonicCurrent = Math.max(progress.current ?? 0, currentRaw);
-          const normalized: BatchProgressEvent = {
-            current: monotonicCurrent,
-            total,
-            percentage,
-            text,
-          };
-          log.debug('进度更新:', normalized);
-          setProgress(normalized);
-
-          if (callbacksRef.current.onProgress) {
-            callbacksRef.current.onProgress(monotonicCurrent, total, percentage);
-          }
-
-          if (callbacksRef.current.onItem && index !== null && typeof text === 'string') {
-            callbacksRef.current.onItem(index, text);
-          }
+        progressChannel.onmessage = (event) => {
+          observeTask(event.task_id);
+          if (!isCurrent()) return;
+          processed = Math.max(processed, event.processed);
+          const percentage = event.total ? (processed / event.total) * 100 : 0;
+          applyItems(event.items);
+          callbacks.onStats?.(event.stats);
+          callbacks.onProgress?.(processed, event.total, percentage);
         };
-
-        statsChannel.onmessage = (statsEvent) => {
-          log.debug('📈 统计更新:', statsEvent);
-          setStats(statsEvent);
-
-          if (callbacksRef.current.onStats) {
-            callbacksRef.current.onStats(statsEvent);
-          }
-        };
-
         const result = await invoke<BatchResultWithTaskId>(
-          'translate_batch_with_channel',
+          refineRequests ? 'contextual_refine' : 'translate_batch_with_channel',
           {
-            texts,
+            ...(refineRequests ? { requests: refineRequests } : { inputs }),
             targetLanguage,
             progressChannel,
-            statsChannel,
-          },
-          {}
+          }
         );
-
-        // 保存任务 ID 以便后续取消
-        setCurrentTaskId(result.task_id);
-
-        log.info('批量翻译完成', {
-          taskId: result.task_id,
-          translated: result.translations.length,
-          tm_hits: result.stats.tm_hits,
-          ai_translated: result.stats.ai_translated,
-          cost: result.stats.token_stats.cost,
-        });
-
+        observeTask(result.task_id);
+        if (isCurrent()) {
+          // The return value is authoritative even if a final channel event was lost.
+          applyItems(result.items);
+          callbacks.onStats?.(result.stats);
+          const percentage = (result.items.length / inputs.length) * 100;
+          callbacks.onProgress?.(result.items.length, inputs.length, percentage);
+        }
         return result;
-      } catch (error) {
-        log.error('批量翻译失败:', error);
-        throw error;
       } finally {
-        setIsTranslating(false);
-        setCurrentTaskId(null);
+        run.finish();
+        if (isCurrent()) {
+          activeRun.current = null;
+        }
       }
     },
-    // 所有外部依赖通过 ref 访问，参数通过调用时传入，故依赖数组为空
     []
   );
 
   const cancelTranslation = useCallback(async () => {
-    if (currentTaskId !== null) {
-      log.info('取消翻译任务', { taskId: currentTaskId });
-      try {
-        await invoke('cancel_translation', { taskId: currentTaskId });
-        setIsTranslating(false);
-        setCurrentTaskId(null);
-        log.info('翻译任务已取消');
-      } catch (error) {
-        log.error('取消翻译失败:', error);
-        throw error;
-      }
-    }
-  }, [currentTaskId]);
+    if (activeRun.current) await cancelRun(activeRun.current);
+  }, []);
 
   const reset = useCallback(() => {
-    setProgress({ current: 0, total: 0, percentage: 0 });
-    setStats(null);
-    setIsTranslating(false);
-    setCurrentTaskId(null);
-    callbacksRef.current = {};
+    if (activeRun.current) {
+      void cancelRun(activeRun.current).catch((error) => log.error('Cancel failed', error));
+    }
+    activeRun.current = null;
+  }, []);
+
+  const cancelAndWait = useCallback(async () => {
+    const run = activeRun.current;
+    if (!run) return;
+    await cancelRun(run);
+    await run.finished;
   }, []);
 
   return {
-    isTranslating,
-    progress,
-    stats,
-    currentTaskId,
     translateBatch,
     cancelTranslation,
+    cancelAndWait,
     reset,
   };
 };

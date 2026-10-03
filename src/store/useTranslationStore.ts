@@ -17,15 +17,30 @@
 
 import { create } from 'zustand';
 import { devtools } from 'zustand/middleware';
-import { POEntry } from '../types/tauri';
+import { POEntry, PODocument } from '../types/tauri';
 import { createModuleLogger } from '../utils/logger';
 
 const log = createModuleLogger('useTranslationStore');
+
+export interface EditorDraft {
+  entryIndex: number;
+  pluralIndex: number | null;
+  value: string;
+}
+
+export const editorDraftKey = (index: number, pluralIndex: number | null) =>
+  `${index}:${pluralIndex ?? 'singular'}`;
 
 // ============================================
 // State & Actions 定义
 // ============================================
 interface TranslationState {
+  document: PODocument | null;
+  documentRevision: number;
+  contentRevision: number;
+  savedContentRevision: number;
+  entryVersions: number[];
+  drafts: Record<string, EditorDraft>;
   entries: POEntry[];
   entryIndexMap: Map<POEntry, number>;
   currentEntry: POEntry | null;
@@ -37,13 +52,22 @@ interface TranslationState {
   targetLanguage: string;
 
   setEntries: (entries: POEntry[]) => void;
+  setDocument: (document: PODocument, path: string | null) => void;
+  setDraft: (index: number, pluralIndex: number | null, value: string) => void;
+  discardDraft: (index: number, pluralIndex: number | null) => void;
+  clearTranslations: (indices: number[]) => void;
+  commitDrafts: (indices?: number[]) => number[];
+  markSaved: (documentRevision: number, contentRevision: number, path: string) => void;
+  updateEntries: (
+    updates: { index: number; updates: Partial<POEntry> }[],
+    revision?: number
+  ) => void;
   setCurrentEntry: (entry: POEntry | null) => void;
   setCurrentIndex: (index: number) => void;
   updateEntry: (index: number, updates: Partial<POEntry>) => void;
   setCurrentFilePath: (path: string | null) => void;
 
   setSourceLanguage: (language: string) => void;
-  setTargetLanguage: (language: string) => void;
 
   getEntryIndex: (entry: POEntry) => number;
 
@@ -54,6 +78,12 @@ interface TranslationState {
 }
 
 const initialState = {
+  document: null,
+  documentRevision: 0,
+  contentRevision: 0,
+  savedContentRevision: 0,
+  entryVersions: [] as number[],
+  drafts: {} as Record<string, EditorDraft>,
   entries: [],
   entryIndexMap: new Map<POEntry, number>(),
   currentEntry: null,
@@ -81,12 +111,155 @@ export const useTranslationStore = create<TranslationState>()(
           entryIndexMap.set(entry, index);
         });
 
+        const currentIndex = entries.findIndex((entry) => !entry.obsolete && !!entry.msgid);
         set({
           entries,
           entryIndexMap,
-          currentEntry: entries.length > 0 ? entries[0] : null,
-          currentIndex: entries.length > 0 ? 0 : -1,
+          currentEntry: entries[currentIndex] ?? null,
+          currentIndex,
+          documentRevision: get().documentRevision + 1,
+          contentRevision: 0,
+          savedContentRevision: 0,
+          entryVersions: entries.map(() => 0),
+          drafts: {},
         });
+      },
+
+      setDocument: (document, path) => {
+        const entries = document.entries.map((entry) => ({
+          ...entry,
+          needsReview: entry.flags.includes('fuzzy'),
+        }));
+        const currentIndex = entries.findIndex((entry) => !entry.obsolete && !!entry.msgid);
+        set({
+          document,
+          entries,
+          entryIndexMap: new Map(entries.map((entry, index) => [entry, index])),
+          currentEntry: entries[currentIndex] ?? null,
+          currentIndex,
+          currentFilePath: path,
+          documentRevision: get().documentRevision + 1,
+          contentRevision: 0,
+          savedContentRevision: path ? 0 : -1,
+          entryVersions: entries.map(() => 0),
+          drafts: {},
+          sourceLanguage: '',
+          targetLanguage: document.metadata.Language || 'zh-CN',
+        });
+      },
+
+      updateEntries: (updates, revision) => {
+        const state = get();
+        if (revision !== undefined && revision !== state.documentRevision) return;
+        const entries = [...state.entries];
+        const entryIndexMap = new Map(state.entryIndexMap);
+        const entryVersions = [...state.entryVersions];
+        let changed = false;
+        for (const item of updates) {
+          const previous = entries[item.index];
+          if (!previous) continue;
+          const entry = { ...previous, ...item.updates };
+          if (item.updates.needsReview !== undefined) {
+            entry.flags = entry.flags.filter((flag) => flag !== 'fuzzy');
+            if (item.updates.needsReview) entry.flags.push('fuzzy');
+          }
+          if (JSON.stringify(entry) === JSON.stringify(previous)) continue;
+          changed = true;
+          entryVersions[item.index] = (entryVersions[item.index] ?? 0) + 1;
+          entryIndexMap.delete(previous);
+          entryIndexMap.set(entry, item.index);
+          entries[item.index] = entry;
+        }
+        if (changed)
+          set({
+            entries,
+            entryIndexMap,
+            entryVersions,
+            contentRevision: state.contentRevision + 1,
+            currentEntry: entries[state.currentIndex] ?? null,
+          });
+      },
+
+      setDraft: (index, pluralIndex, value) => {
+        const state = get();
+        const entry = state.entries[index];
+        if (!entry) return;
+        const key = editorDraftKey(index, pluralIndex);
+        const saved =
+          pluralIndex === null ? entry.msgstr : (entry.msgstr_plural[pluralIndex] ?? '');
+        const drafts = { ...state.drafts };
+        if (value === saved) delete drafts[key];
+        else drafts[key] = { entryIndex: index, pluralIndex, value };
+        const entryVersions = [...state.entryVersions];
+        entryVersions[index] = (entryVersions[index] ?? 0) + 1;
+        set({ drafts, entryVersions });
+      },
+
+      discardDraft: (index, pluralIndex) => {
+        const drafts = { ...get().drafts };
+        delete drafts[editorDraftKey(index, pluralIndex)];
+        set({ drafts });
+      },
+
+      commitDrafts: (indices) => {
+        const state = get();
+        const drafts = { ...state.drafts };
+        const patches = new Map<number, Partial<POEntry>>();
+        for (const [key, draft] of Object.entries(drafts)) {
+          if (indices && !indices.includes(draft.entryIndex)) continue;
+          const entry = state.entries[draft.entryIndex];
+          if (!entry) continue;
+          const patch = patches.get(draft.entryIndex) ?? {
+            needsReview: true,
+            translationSource: undefined,
+          };
+          if (draft.pluralIndex === null) patch.msgstr = draft.value;
+          else {
+            patch.msgstr_plural = [...(patch.msgstr_plural ?? entry.msgstr_plural)];
+            patch.msgstr_plural[draft.pluralIndex] = draft.value;
+          }
+          patches.set(draft.entryIndex, patch);
+          delete drafts[key];
+        }
+        state.updateEntries(Array.from(patches, ([index, updates]) => ({ index, updates })));
+        set({ drafts });
+        return [...patches.keys()];
+      },
+
+      clearTranslations: (indices) => {
+        const state = get();
+        const drafts = Object.fromEntries(
+          Object.entries(state.drafts).filter(([, draft]) => !indices.includes(draft.entryIndex))
+        );
+        const entryVersions = [...state.entryVersions];
+        for (const index of indices) entryVersions[index] = (entryVersions[index] ?? 0) + 1;
+        set({ drafts, entryVersions });
+        get().updateEntries(
+          indices.flatMap((index) => {
+            const entry = state.entries[index];
+            return entry
+              ? [
+                  {
+                    index,
+                    updates: {
+                      msgstr: '',
+                      msgstr_plural: entry.msgstr_plural.map(() => ''),
+                      needsReview: false,
+                      translationSource: undefined,
+                    },
+                  },
+                ]
+              : [];
+          })
+        );
+      },
+
+      markSaved: (revision, contentRevision, path) => {
+        if (get().documentRevision === revision)
+          set({
+            savedContentRevision: contentRevision,
+            currentFilePath: path,
+          });
       },
 
       // 设置当前条目
@@ -111,23 +284,7 @@ export const useTranslationStore = create<TranslationState>()(
 
       // 更新条目
       updateEntry: (index, updates) => {
-        const { entries, currentIndex, entryIndexMap } = get();
-        if (index >= 0 && index < entries.length) {
-          const newEntries = [...entries];
-          newEntries[index] = { ...newEntries[index], ...updates };
-
-          // 重新构建索引映射（仅当条目引用变化时）
-          const newEntryIndexMap = new Map(entryIndexMap);
-          newEntryIndexMap.set(newEntries[index], index);
-
-          set({ entries: newEntries, entryIndexMap: newEntryIndexMap });
-
-          // 如果更新的是当前条目，也要更新 currentEntry
-          if (index === currentIndex) {
-            set({ currentEntry: newEntries[index] });
-          }
-          log.debug('更新条目', { index, updates });
-        }
+        get().updateEntries([{ index, updates }]);
       },
 
       setCurrentFilePath: (path) => {
@@ -140,11 +297,6 @@ export const useTranslationStore = create<TranslationState>()(
         set({ sourceLanguage: language });
       },
 
-      setTargetLanguage: (language) => {
-        log.info('设置目标语言', { language });
-        set({ targetLanguage: language });
-      },
-
       // O(1) 获取条目索引
       getEntryIndex: (entry) => {
         const { entryIndexMap } = get();
@@ -154,8 +306,10 @@ export const useTranslationStore = create<TranslationState>()(
       // 下一个条目
       nextEntry: () => {
         const { currentIndex, entries } = get();
-        if (currentIndex < entries.length - 1) {
-          const newIndex = currentIndex + 1;
+        const newIndex = entries.findIndex(
+          (entry, index) => index > currentIndex && !entry.obsolete && !!entry.msgid
+        );
+        if (newIndex !== -1) {
           set({
             currentIndex: newIndex,
             currentEntry: entries[newIndex],
@@ -167,8 +321,10 @@ export const useTranslationStore = create<TranslationState>()(
       // 上一个条目
       previousEntry: () => {
         const { currentIndex, entries } = get();
-        if (currentIndex > 0) {
-          const newIndex = currentIndex - 1;
+        let newIndex = currentIndex - 1;
+        while (newIndex >= 0 && (entries[newIndex].obsolete || !entries[newIndex].msgid))
+          newIndex--;
+        if (newIndex >= 0) {
           set({
             currentIndex: newIndex,
             currentEntry: entries[newIndex],
@@ -180,7 +336,7 @@ export const useTranslationStore = create<TranslationState>()(
       // 重置所有状态
       reset: () => {
         log.info('重置翻译状态');
-        set(initialState);
+        set({ ...initialState, documentRevision: get().documentRevision + 1 });
       },
     }),
     { name: 'TranslationStore' }
@@ -198,13 +354,14 @@ export const selectCurrentIndex = (state: TranslationState) => state.currentInde
 export const selectCurrentFilePath = (state: TranslationState) => state.currentFilePath;
 export const selectSourceLanguage = (state: TranslationState) => state.sourceLanguage;
 export const selectTargetLanguage = (state: TranslationState) => state.targetLanguage;
+export const selectDocumentDirty = (state: TranslationState) =>
+  state.contentRevision !== state.savedContentRevision || Object.keys(state.drafts).length > 0;
 
 export const selectSetEntries = (state: TranslationState) => state.setEntries;
 export const selectSetCurrentEntry = (state: TranslationState) => state.setCurrentEntry;
 export const selectUpdateEntry = (state: TranslationState) => state.updateEntry;
 export const selectSetCurrentFilePath = (state: TranslationState) => state.setCurrentFilePath;
 export const selectSetSourceLanguage = (state: TranslationState) => state.setSourceLanguage;
-export const selectSetTargetLanguage = (state: TranslationState) => state.setTargetLanguage;
 export const selectGetEntryIndex = (state: TranslationState) => state.getEntryIndex;
 export const selectNextEntry = (state: TranslationState) => state.nextEntry;
 export const selectPreviousEntry = (state: TranslationState) => state.previousEntry;
@@ -230,6 +387,5 @@ export const useSetEntries = () => useTranslationStore(selectSetEntries);
 export const useSetCurrentEntry = () => useTranslationStore(selectSetCurrentEntry);
 export const useSetCurrentFilePath = () => useTranslationStore(selectSetCurrentFilePath);
 export const useSetSourceLanguage = () => useTranslationStore(selectSetSourceLanguage);
-export const useSetTargetLanguage = () => useTranslationStore(selectSetTargetLanguage);
 export const useUpdateEntry = () => useTranslationStore(selectUpdateEntry);
 export const useGetEntryIndex = () => useTranslationStore(selectGetEntryIndex);

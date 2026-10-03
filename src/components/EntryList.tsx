@@ -1,7 +1,9 @@
 import React, { useState, useEffect, useRef, memo, useCallback, useMemo } from 'react';
-import { Progress } from 'antd';
+import { Progress, message } from 'antd';
+import { useTranslation } from 'react-i18next';
 import { POEntry } from '../types/tauri';
-import { useUpdateEntry } from '../store';
+import { useTranslationStore } from '../store/useTranslationStore';
+import { isEntryTranslated } from '../utils/poDocument';
 import { createModuleLogger } from '../utils/logger';
 import { announceToScreenReader } from '../utils/accessibility';
 import styles from './EntryList.module.css';
@@ -19,6 +21,7 @@ interface EntryListProps {
   onEntrySelect: (entry: POEntry) => void;
   onTranslateSelected?: (indices: number[]) => void;
   onContextualRefine?: (indices: number[]) => void;
+  onConfirmEntries: (indices: number[]) => Promise<void>;
 }
 
 export const EntryList = memo(function EntryList({
@@ -29,17 +32,24 @@ export const EntryList = memo(function EntryList({
   onEntrySelect,
   onTranslateSelected,
   onContextualRefine,
+  onConfirmEntries,
 }: EntryListProps) {
-  const updateEntry = useUpdateEntry();
+  const { t } = useTranslation();
+  const clearTranslations = useTranslationStore((state) => state.clearTranslations);
+  const document = useTranslationStore((state) => state.document);
 
   const containerRef = useRef<HTMLDivElement>(null);
 
-  const getEntryStatus = useCallback((entry: POEntry) => {
-    if (!entry.msgid) return 'empty';
-    if (entry.msgstr && entry.needsReview) return 'needs-review';
-    if (entry.msgstr) return 'translated';
-    return 'untranslated';
-  }, []);
+  const getEntryStatus = useCallback(
+    (entry: POEntry) => {
+      if (!entry.msgid || entry.obsolete) return 'empty';
+      const translated = isEntryTranslated(entry, document?.metadata ?? {});
+      if (translated && entry.needsReview) return 'needs-review';
+      if (translated) return 'translated';
+      return 'untranslated';
+    },
+    [document]
+  );
 
   // 按状态分组条目
   const groupedEntries = useMemo(() => {
@@ -78,30 +88,37 @@ export const EntryList = memo(function EntryList({
     }
   );
 
+  const confirmEntries = useCallback(
+    (indices: number[]) => {
+      void onConfirmEntries(indices).catch((error) => {
+        log.logError(error, 'Confirm translations failed');
+        message.error(t('document.confirmFailed', { error: String(error) }));
+      });
+    },
+    [onConfirmEntries, t]
+  );
+
   // 确认翻译
   const handleConfirm = useCallback(
     (index: number, event: React.MouseEvent) => {
       event.stopPropagation();
-      updateEntry(index, { needsReview: false });
+      confirmEntries([index]);
     },
-    [updateEntry]
+    [confirmEntries]
   );
 
   // 确认所有待确认条目
   const handleConfirmAll = useCallback(() => {
-    groupedEntries.needsReview.forEach(({ index }) => {
-      updateEntry(index, { needsReview: false });
-    });
-  }, [groupedEntries.needsReview, updateEntry]);
+    confirmEntries(groupedEntries.needsReview.map(({ index }) => index));
+  }, [groupedEntries.needsReview, confirmEntries]);
 
   // 确认已选中条目
   const handleConfirmSelected = () => {
-    selectedIndices.forEach((index) => {
-      const entry = entries[index];
-      if (entry && getEntryStatus(entry) === 'needs-review') {
-        updateEntry(index, { needsReview: false });
-      }
-    });
+    confirmEntries(
+      selectedIndices.filter(
+        (index) => entries[index] && getEntryStatus(entries[index]) === 'needs-review'
+      )
+    );
     clearSelection();
   };
 
@@ -123,12 +140,10 @@ export const EntryList = memo(function EntryList({
   const handleRemoveAll = useCallback(
     (columnType: 'needsReview' | 'translated') => {
       const targetEntries = groupedEntries[columnType];
-      targetEntries.forEach(({ index }) => {
-        updateEntry(index, { msgstr: '', needsReview: false, translationSource: undefined });
-      });
+      clearTranslations(targetEntries.map(({ index }) => index));
       clearSelection();
     },
-    [groupedEntries, updateEntry, clearSelection]
+    [groupedEntries, clearTranslations, clearSelection]
   );
 
   useEffect(() => {
@@ -142,7 +157,9 @@ export const EntryList = memo(function EntryList({
           const columnKeys = columnEntries.map(({ index }) => index);
           setSelectedIndices(columnKeys);
         } else {
-          const allKeys = entries.map((_, index) => index);
+          const allKeys = entries.flatMap((entry, index) =>
+            entry.obsolete || !entry.msgid ? [] : [index]
+          );
           setSelectedIndices(allKeys);
         }
       }
@@ -223,7 +240,10 @@ export const EntryList = memo(function EntryList({
     >
       <div className={styles.header} role="banner">
         <span className={styles.headerText} aria-live="polite" aria-atomic="true">
-          共 {entries.length} 条 {selectedIndices.length > 0 && `(已选 ${selectedIndices.length})`}
+          {t('entryList.total', {
+            count: entries.filter((entry) => !entry.obsolete && entry.msgid).length,
+          })}{' '}
+          {selectedIndices.length > 0 && t('entryList.selected', { count: selectedIndices.length })}
         </span>
         <div className={styles.headerActions}>
           {selectedIndices.length > 0 && (
@@ -238,7 +258,7 @@ export const EntryList = memo(function EntryList({
                 isTranslating={isTranslating}
               />
               <span className={styles.shortcutHint} aria-label="键盘快捷键">
-                Ctrl+A 全选 | Ctrl+C 复制 | Esc 取消
+                {t('entryList.shortcuts')}
               </span>
             </>
           )}

@@ -12,8 +12,9 @@ homepage = "https://openai.com"
 license = "MIT"
 
 [provider]
+api = "openai-completions"
 display_name = "OpenAI"
-default_url = "https://api.openai.com/v1/chat/completions"
+default_url = "https://api.openai.com/v1"
 default_model = "gpt-4o-mini"
 supports_cache = true
 supports_images = true

@@ -11,6 +11,7 @@ use std::sync::Arc;
 
 use super::plugin_config::{PluginConfig, PluginScanner};
 use super::provider::{ProviderInfo, with_global_registry_mut};
+use crate::services::model_config::ModelApi;
 
 /// 插件加载器状态
 #[derive(Debug, Clone)]
@@ -114,6 +115,7 @@ impl PluginLoader {
             id: config.plugin.id.clone(),
             display_name: config.provider.display_name.clone(),
             default_url: config.provider.default_url.clone(),
+            api: config.provider.api,
             default_model: config.provider.default_model.clone(),
         };
 
@@ -234,8 +236,7 @@ impl PluginLoader {
 
 /// 动态 AI 供应商实现
 ///
-/// 这是一个基于配置的 AIProvider 实现，用于支持插件化
-/// 在完整实现中，这里应该动态加载编译后的供应商代码
+/// 这是一个基于 TOML catalog 的 AIProvider 实现。
 struct DynamicAIProvider {
     config: PluginConfig,
 }
@@ -250,22 +251,24 @@ use super::ModelInfo;
 use super::provider::AIProvider;
 
 impl AIProvider for DynamicAIProvider {
-    fn id(&self) -> &'static str {
-        // 注意：这里使用 Box::leak 来创建 &'static str
-        // 在生产环境中应该使用更好的字符串管理方式
-        Box::leak(self.config.plugin.id.clone().into_boxed_str())
+    fn id(&self) -> &str {
+        &self.config.plugin.id
     }
 
-    fn display_name(&self) -> &'static str {
-        Box::leak(self.config.provider.display_name.clone().into_boxed_str())
+    fn display_name(&self) -> &str {
+        &self.config.provider.display_name
     }
 
-    fn default_url(&self) -> &'static str {
-        Box::leak(self.config.provider.default_url.clone().into_boxed_str())
+    fn default_url(&self) -> &str {
+        &self.config.provider.default_url
     }
 
-    fn default_model(&self) -> &'static str {
-        Box::leak(self.config.provider.default_model.clone().into_boxed_str())
+    fn api(&self) -> ModelApi {
+        self.config.provider.api
+    }
+
+    fn default_model(&self) -> &str {
+        &self.config.provider.default_model
     }
 
     fn get_models(&self) -> Vec<ModelInfo> {
@@ -282,16 +285,8 @@ impl AIProvider for DynamicAIProvider {
                 max_output_tokens: model_config.max_output_tokens,
                 input_price: model_config.input_price,
                 output_price: model_config.output_price,
-                cache_reads_price: if model_config.cache_reads_price == 0.0 {
-                    None
-                } else {
-                    Some(model_config.cache_reads_price)
-                },
-                cache_writes_price: if model_config.cache_writes_price == 0.0 {
-                    None
-                } else {
-                    Some(model_config.cache_writes_price)
-                },
+                cache_reads_price: model_config.cache_reads_price,
+                cache_writes_price: model_config.cache_writes_price,
                 supports_cache: self.config.provider.supports_cache,
                 supports_images: self.config.provider.supports_images,
                 recommended: model_config.recommended,
@@ -346,9 +341,64 @@ pub fn load_all_plugins() -> Result<usize> {
 #[cfg(test)]
 #[allow(clippy::unwrap_used, clippy::expect_used, clippy::clone_on_ref_ptr)]
 mod tests {
+    use super::super::cost_calculator::CostCalculator;
     use super::*;
     use std::io::Write;
     use tempfile::TempDir;
+
+    #[test]
+    fn toml_model_preserves_zero_and_missing_cache_prices_in_costs() {
+        let config = PluginConfig::from_toml(
+            r#"
+[plugin]
+name = "Cost Test"
+id = "cost_test"
+version = "1.0.0"
+api_version = "1.0"
+
+[provider]
+api = "openai-completions"
+display_name = "Cost Test"
+default_url = "https://api.example.com/v1"
+default_model = "free-cache"
+
+[[provider.models]]
+id = "free-cache"
+name = "Free Cache"
+context_window = 4096
+max_output_tokens = 1024
+input_price = 1.0
+output_price = 2.0
+cache_reads_price = 0.0
+cache_writes_price = 0.0
+
+[[provider.models]]
+id = "default-cache"
+name = "Default Cache"
+context_window = 4096
+max_output_tokens = 1024
+input_price = 1.0
+output_price = 2.0
+"#,
+        )
+        .unwrap();
+
+        let models = DynamicAIProvider::new(config).get_models();
+        assert_eq!(models[0].cache_reads_price, Some(0.0));
+        assert_eq!(models[0].cache_writes_price, Some(0.0));
+        assert_eq!(models[1].cache_reads_price, None);
+        assert_eq!(models[1].cache_writes_price, None);
+
+        let free_cost =
+            CostCalculator::calculate_openai(&models[0], 1_000_000, 0, 500_000, 500_000);
+        assert_eq!(free_cost.cache_read_cost, 0.0);
+        assert_eq!(free_cost.cache_write_cost, 0.0);
+
+        let default_cost =
+            CostCalculator::calculate_openai(&models[1], 1_000_000, 0, 500_000, 500_000);
+        assert_eq!(default_cost.cache_read_cost, 0.5);
+        assert_eq!(default_cost.cache_write_cost, 0.5);
+    }
 
     fn create_test_plugin_dir(temp_dir: &TempDir, plugin_id: &str) -> PathBuf {
         let plugins_dir = temp_dir.path().join("plugins");
@@ -363,7 +413,10 @@ id = "{}"
 version = "1.0.0"
 api_version = "1.0"
 description = "Test plugin"
-author = "Test Author"[provider]
+author = "Test Author"
+
+[provider]
+api = "openai-completions"
 display_name = "Test Provider {}"
 default_url = "https://api.test{}.com/v1"
 default_model = "test-model-{}"
@@ -407,47 +460,37 @@ supports_images = false
     #[test]
     fn test_load_single_plugin() {
         let temp_dir = TempDir::new().unwrap();
-        let plugins_dir = create_test_plugin_dir(&temp_dir, "test1");
+        let plugins_dir = create_test_plugin_dir(&temp_dir, "test_one");
 
         let loader = PluginLoader::new(&plugins_dir);
         let loaded_count = loader.load_all_plugins().unwrap();
 
-        // 插件加载可能失败（测试环境缺少 provider.rs 实现），这是预期的
-        println!(
-            "Loaded {} plugins (expected 1, but may fail in test env)",
-            loaded_count
-        );
-
-        // 验证不会 panic，加载失败是可以接受的
+        assert_eq!(loaded_count, 1);
         let loaded_plugins = loader.get_loaded_plugins();
-        println!(
-            "Loaded plugin IDs: {:?}",
-            loaded_plugins.keys().collect::<Vec<_>>()
-        );
-
-        // 只在插件成功加载时验证
-        if let Some(plugin) = loaded_plugins.get("test1") {
-            assert_eq!(plugin.config.plugin.id, "test1");
-            assert!(matches!(plugin.status, PluginStatus::Loaded));
-        }
+        let plugin = loaded_plugins.get("test_one").unwrap();
+        assert_eq!(plugin.config.plugin.id, "test_one");
+        assert!(matches!(plugin.status, PluginStatus::Loaded));
     }
 
     #[test]
     fn test_load_multiple_plugins() {
         let temp_dir = TempDir::new().unwrap();
-        let plugins_dir = create_test_plugin_dir(&temp_dir, "test1");
+        let plugins_dir = create_test_plugin_dir(&temp_dir, "test_one");
 
         // 创建第二个插件
-        let plugin2_dir = plugins_dir.join("test2");
+        let plugin2_dir = plugins_dir.join("test_two");
         std::fs::create_dir(&plugin2_dir).unwrap();
 
         let config2_content = r#"[plugin]
 name = "Test Plugin 2"
-id = "test2"
+id = "test_two"
 version = "1.0.0"
-api_version = "1.0"[provider]
+api_version = "1.0"
+
+[provider]
+api = "openai-completions"
 display_name = "Test Provider 2"
-default_url = "https://api.test2.com/v1"
+default_url = "https://api.test_two.com/v1"
 default_model = "test-model-2"
 "#;
         std::fs::write(plugin2_dir.join("plugin.toml"), config2_content).unwrap();
@@ -456,17 +499,33 @@ default_model = "test-model-2"
         let loader = PluginLoader::new(&plugins_dir);
         let loaded_count = loader.load_all_plugins().unwrap();
 
-        // 插件加载可能失败（测试环境缺少 provider.rs 实现），这是预期的
-        println!(
-            "Loaded {} plugins (expected 2, but may fail in test env)",
-            loaded_count
-        );
-
-        // 验证不会 panic，加载失败是可以接受的
+        assert_eq!(loaded_count, 2);
         let loaded_plugins = loader.get_loaded_plugins();
-        println!(
-            "Loaded plugin IDs: {:?}",
-            loaded_plugins.keys().collect::<Vec<_>>()
-        );
+        assert!(loaded_plugins.contains_key("test_one"));
+        assert!(loaded_plugins.contains_key("test_two"));
+    }
+
+    #[test]
+    fn builtin_catalog_exposes_explicit_protocol_and_base_url() {
+        let plugins_path = Path::new(env!("CARGO_MANIFEST_DIR")).join("../plugins");
+        let plugins = PluginScanner::new(plugins_path).scan_plugins().unwrap();
+        assert_eq!(plugins.len(), 6);
+        for (_, config) in plugins {
+            let provider = DynamicAIProvider::new(config.clone());
+            let info = provider.get_provider_info();
+            let expected = if config.plugin.id == "minimax" {
+                ModelApi::AnthropicMessages
+            } else {
+                ModelApi::OpenaiCompletions
+            };
+            assert_eq!(info.api, expected, "{}", info.id);
+            assert_eq!(info.default_url, config.provider.default_url);
+            assert_eq!(info.default_model, config.provider.default_model);
+            assert!(
+                !["/chat/completions", "/responses", "/messages"]
+                    .iter()
+                    .any(|suffix| info.default_url.ends_with(suffix))
+            );
+        }
     }
 }

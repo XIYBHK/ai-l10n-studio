@@ -1,14 +1,16 @@
 import { useState, useEffect, useRef, lazy, Suspense } from 'react';
-import { ConfigProvider, App as AntApp } from 'antd';
+import { Alert, Button, ConfigProvider, App as AntApp } from 'antd';
 import { useTranslation } from 'react-i18next';
-import { useTheme } from './hooks/useTheme';
-import { useAIConfigs } from './hooks/useConfig';
+import { useThemeRuntime } from './hooks/useTheme';
+import { useModelConfiguration } from './hooks/useConfig';
 import { useTranslationFlow } from './hooks/useTranslationFlow';
 import { openDevToolsWindow } from './utils/devToolsWindow';
 import { createModuleLogger } from './utils/logger';
+import { useLanguage, useResetSessionStats } from './store';
 
-import './i18n/config';
+import i18n from './i18n/config';
 import './App.css';
+import './styles/accessibility.css';
 
 const log = createModuleLogger('AppShell');
 const MenuBar = lazy(() =>
@@ -28,13 +30,33 @@ interface AppShellProps {
 }
 
 export default function AppShell({ initError = null }: AppShellProps) {
+  const themeData = useThemeRuntime();
+  return (
+    <ConfigProvider theme={themeData.themeConfig}>
+      <AntApp>
+        <AppShellContent initError={initError} themeData={themeData} />
+      </AntApp>
+    </ConfigProvider>
+  );
+}
+
+function AppShellContent({
+  initError,
+  themeData,
+}: AppShellProps & { themeData: ReturnType<typeof useThemeRuntime> }) {
   const { message: msg } = AntApp.useApp();
   const { t } = useTranslation();
+  const language = useLanguage();
+  const resetSessionStats = useResetSessionStats();
+
+  useEffect(() => {
+    void i18n.changeLanguage(language);
+  }, [language]);
 
   const [settingsVisible, setSettingsVisible] = useState(false);
   const hasCheckedAIConfig = useRef(false);
   const openFileRef = useRef<() => Promise<void> | void>(() => undefined);
-  const saveFileRef = useRef<() => Promise<void> | void>(() => undefined);
+  const saveFileRef = useRef<() => Promise<boolean> | void>(() => undefined);
 
   const {
     entries,
@@ -42,7 +64,6 @@ export default function AppShell({ initError = null }: AppShellProps) {
     currentFilePath,
     isTranslating,
     progress,
-    translationStats,
     openFile,
     saveFile,
     saveAsFile,
@@ -50,12 +71,10 @@ export default function AppShell({ initError = null }: AppShellProps) {
     handleTranslateSelected,
     handleContextualRefine,
     handleEntrySelect,
-    handleEntryUpdate,
+    confirmEntries,
+    changeTargetLanguage,
     cancelTranslation,
-    resetTranslationStats,
   } = useTranslationFlow();
-
-  const themeData = useTheme();
 
   useEffect(() => {
     const root = document.documentElement;
@@ -63,10 +82,16 @@ export default function AppShell({ initError = null }: AppShellProps) {
     root.style.setProperty('--theme-transition-timing', 'cubic-bezier(0.645, 0.045, 0.355, 1)');
   }, [themeData.appliedTheme]);
 
-  const { active, loading: aiConfigLoading } = useAIConfigs();
+  const {
+    configuration,
+    loading: aiConfigLoading,
+    error: aiConfigError,
+    mutate: reloadAIConfig,
+  } = useModelConfiguration();
+  const active = configuration.defaultModel;
 
   useEffect(() => {
-    if (aiConfigLoading) return;
+    if (aiConfigLoading || aiConfigError) return;
 
     if (!hasCheckedAIConfig.current && !active) {
       hasCheckedAIConfig.current = true;
@@ -77,7 +102,7 @@ export default function AppShell({ initError = null }: AppShellProps) {
     if (active) {
       hasCheckedAIConfig.current = true;
     }
-  }, [active, aiConfigLoading]);
+  }, [active, aiConfigLoading, aiConfigError]);
 
   useEffect(() => {
     openFileRef.current = openFile;
@@ -100,6 +125,10 @@ export default function AppShell({ initError = null }: AppShellProps) {
   }, []);
 
   const checkAIConfig = (): boolean => {
+    if (aiConfigError) {
+      msg.error(t('modelSettings.loadFailed'));
+      return false;
+    }
     if (!active) {
       setSettingsVisible(true);
       msg.warning(t('messages.aiServiceRequired'));
@@ -130,97 +159,106 @@ export default function AppShell({ initError = null }: AppShellProps) {
   };
 
   return (
-    <ConfigProvider theme={themeData.themeConfig}>
-      <AntApp>
+    <div
+      data-testid="app-shell"
+      className="studio-shell"
+      data-theme={themeData.isDark ? 'dark' : 'light'}
+    >
+      <h1 className="sr-only">{t('app.title')}</h1>
+      {aiConfigError && (
+        <Alert
+          title={t('modelSettings.loadFailed')}
+          type="error"
+          showIcon
+          action={
+            <Button size="small" loading={aiConfigLoading} onClick={() => void reloadAIConfig()}>
+              {t('common.retry')}
+            </Button>
+          }
+        />
+      )}
+      {initError && (
         <div
-          data-testid="app-shell"
-          data-theme={themeData.isDark ? 'dark' : 'light'}
-          style={{ height: '100vh' }}
+          role="alert"
+          style={{
+            position: 'fixed',
+            top: 0,
+            left: 0,
+            right: 0,
+            background: 'var(--color-error)',
+            color: '#ffffff',
+            padding: 'var(--space-4)',
+            zIndex: 9999,
+            textAlign: 'center',
+            boxShadow: 'var(--shadow-md)',
+          }}
         >
-          <h1 className="sr-only">{t('app.title')}</h1>
-          {initError && (
-            <div
-              role="alert"
-              style={{
-                position: 'fixed',
-                top: 0,
-                left: 0,
-                right: 0,
-                background: 'var(--color-error)',
-                color: '#ffffff',
-                padding: 'var(--space-4)',
-                zIndex: 9999,
-                textAlign: 'center',
-                boxShadow: 'var(--shadow-md)',
-              }}
-            >
-              {initError}
-              <button
-                onClick={() => window.location.reload()}
-                style={{
-                  marginLeft: 'var(--space-4)',
-                  padding: 'var(--space-1) var(--space-3)',
-                  borderRadius: 'var(--radius-base)',
-                  border: 'none',
-                  background: 'rgba(255,255,255,0.2)',
-                  color: '#ffffff',
-                  cursor: 'pointer',
-                }}
-              >
-                {t('messages.reload')}
-              </button>
-            </div>
-          )}
-
-          <Suspense fallback={null}>
-            <MenuBar
-              onOpenFile={openFile}
-              onSaveFile={saveFile}
-              onSaveAsFile={saveAsFile}
-              onTranslateAll={handleTranslateAll}
-              onSettings={() => setSettingsVisible(true)}
-              onDevTools={async () => {
-                try {
-                  await openDevToolsWindow();
-                } catch (error) {
-                  console.error('[AppShell] 打开开发者工具失败', error);
-                }
-              }}
-              isTranslating={isTranslating}
-              hasEntries={entries.length > 0}
-              onCancelTranslation={async () => {
-                try {
-                  await cancelTranslation();
-                } catch (error) {
-                  console.error('[AppShell] 取消翻译失败:', error);
-                }
-              }}
-            />
-          </Suspense>
-
-          <Suspense fallback={null}>
-            <TranslationWorkspace
-              entries={entries}
-              currentEntry={currentEntry}
-              isTranslating={isTranslating}
-              progress={progress}
-              translationStats={translationStats}
-              currentFilePath={currentFilePath}
-              onEntrySelect={handleEntrySelect}
-              onEntryUpdate={handleEntryUpdate}
-              onTranslateSelected={handleTranslateSelectedWrapper}
-              onContextualRefine={handleContextualRefineWrapper}
-              onResetStats={resetTranslationStats}
-            />
-          </Suspense>
-
-          {settingsVisible ? (
-            <Suspense fallback={null}>
-              <SettingsModal visible={settingsVisible} onClose={() => setSettingsVisible(false)} />
-            </Suspense>
-          ) : null}
+          {initError}
+          <button
+            onClick={() => window.location.reload()}
+            style={{
+              marginLeft: 'var(--space-4)',
+              padding: 'var(--space-1) var(--space-3)',
+              borderRadius: 'var(--radius-base)',
+              border: 'none',
+              background: 'rgba(255,255,255,0.2)',
+              color: '#ffffff',
+              cursor: 'pointer',
+            }}
+          >
+            {t('messages.reload')}
+          </button>
         </div>
-      </AntApp>
-    </ConfigProvider>
+      )}
+
+      <Suspense fallback={null}>
+        <MenuBar
+          onOpenFile={openFile}
+          onSaveFile={saveFile}
+          onSaveAsFile={saveAsFile}
+          onTranslateAll={handleTranslateAll}
+          onSettings={() => setSettingsVisible(true)}
+          onTargetLanguageChange={changeTargetLanguage}
+          onDevTools={async () => {
+            try {
+              await openDevToolsWindow();
+            } catch (error) {
+              console.error('[AppShell] 打开开发者工具失败', error);
+            }
+          }}
+          isTranslating={isTranslating}
+          hasEntries={entries.length > 0}
+          onCancelTranslation={async () => {
+            try {
+              await cancelTranslation();
+            } catch (error) {
+              console.error('[AppShell] 取消翻译失败:', error);
+            }
+          }}
+        />
+      </Suspense>
+
+      <Suspense fallback={null}>
+        <TranslationWorkspace
+          entries={entries}
+          currentEntry={currentEntry}
+          isTranslating={isTranslating}
+          progress={progress}
+          currentFilePath={currentFilePath}
+          onEntrySelect={handleEntrySelect}
+          onConfirmEntries={confirmEntries}
+          onTranslateSelected={handleTranslateSelectedWrapper}
+          onContextualRefine={handleContextualRefineWrapper}
+          onResetStats={resetSessionStats}
+          onOpenFile={openFile}
+        />
+      </Suspense>
+
+      {settingsVisible ? (
+        <Suspense fallback={null}>
+          <SettingsModal visible={settingsVisible} onClose={() => setSettingsVisible(false)} />
+        </Suspense>
+      ) : null}
+    </div>
   );
 }

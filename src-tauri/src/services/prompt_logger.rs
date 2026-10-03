@@ -4,10 +4,12 @@
 use chrono::Local;
 use parking_lot::Mutex;
 use serde::{Deserialize, Serialize};
+use uuid::Uuid;
 
 /// 提示词日志条目
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct PromptLogEntry {
+    pub id: String,
     pub timestamp: String,
     pub log_type: String, // "批量翻译" 或 "精翻"
     pub prompt: String,
@@ -15,72 +17,55 @@ pub struct PromptLogEntry {
     pub metadata: Option<serde_json::Value>,
 }
 
-/// 全局提示词日志存储
-static PROMPT_LOGS: Mutex<Option<Vec<PromptLogEntry>>> = Mutex::new(None);
-
-/// 初始化提示词日志
-pub fn init_prompt_logger() {
-    let mut logs = PROMPT_LOGS.lock();
-    if logs.is_none() {
-        *logs = Some(Vec::new());
-    }
+#[derive(Default)]
+struct PromptLog {
+    entries: Vec<PromptLogEntry>,
 }
 
-/// 记录提示词
-pub fn log_prompt(log_type: &str, prompt: String, metadata: Option<serde_json::Value>) -> String {
-    let mut logs = PROMPT_LOGS.lock();
-    if logs.is_none() {
-        *logs = Some(Vec::new());
-    }
-
-    let timestamp = Local::now().format("%Y-%m-%d %H:%M:%S").to_string();
-    let entry_id = format!(
-        "{}-{}",
-        timestamp,
-        logs.as_ref().map(|l| l.len()).unwrap_or(0)
-    );
-
-    let entry = PromptLogEntry {
-        timestamp: timestamp.clone(),
-        log_type: log_type.to_string(),
-        prompt,
-        response: None,
-        metadata,
-    };
-
-    if let Some(ref mut log_vec) = *logs {
-        log_vec.push(entry);
-        // 限制日志条数为最近100条
-        if log_vec.len() > 100 {
-            log_vec.drain(0..log_vec.len() - 100);
+impl PromptLog {
+    fn push(
+        &mut self,
+        log_type: &str,
+        prompt: String,
+        metadata: Option<serde_json::Value>,
+    ) -> String {
+        let id = Uuid::new_v4().to_string();
+        self.entries.push(PromptLogEntry {
+            id: id.clone(),
+            timestamp: Local::now().format("%Y-%m-%d %H:%M:%S").to_string(),
+            log_type: log_type.into(),
+            prompt,
+            response: None,
+            metadata,
+        });
+        if self.entries.len() > 100 {
+            self.entries.drain(..self.entries.len() - 100);
         }
+        id
     }
 
-    entry_id
-}
-
-/// 更新提示词的响应
-pub fn update_prompt_response(index: usize, response: String) {
-    let mut logs = PROMPT_LOGS.lock();
-    if let Some(ref mut log_vec) = *logs {
-        if let Some(entry) = log_vec.get_mut(index) {
+    fn respond(&mut self, id: &str, response: String) {
+        if let Some(entry) = self.entries.iter_mut().find(|entry| entry.id == id) {
             entry.response = Some(response);
         }
     }
 }
 
-/// 获取所有提示词日志
-pub fn get_prompt_logs() -> Vec<PromptLogEntry> {
-    let logs = PROMPT_LOGS.lock();
-    logs.as_ref().map(|v| v.clone()).unwrap_or_default()
-}
+static PROMPT_LOGS: Mutex<PromptLog> = Mutex::new(PromptLog {
+    entries: Vec::new(),
+});
 
-/// 清空提示词日志
+pub fn log_prompt(log_type: &str, prompt: String, metadata: Option<serde_json::Value>) -> String {
+    PROMPT_LOGS.lock().push(log_type, prompt, metadata)
+}
+pub fn update_prompt_response(id: &str, response: String) {
+    PROMPT_LOGS.lock().respond(id, response);
+}
+pub fn get_prompt_logs() -> Vec<PromptLogEntry> {
+    PROMPT_LOGS.lock().entries.clone()
+}
 pub fn clear_prompt_logs() {
-    let mut logs = PROMPT_LOGS.lock();
-    if let Some(ref mut log_vec) = *logs {
-        log_vec.clear();
-    }
+    PROMPT_LOGS.lock().entries.clear();
 }
 
 /// 格式化提示词日志为可读文本（精简版）
@@ -138,4 +123,27 @@ pub fn format_prompt_logs() -> String {
     }
 
     output
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    #[test]
+    fn responses_follow_ids_after_interleaving_trimming_and_clear() {
+        let mut logs = PromptLog::default();
+        let first = logs.push("A", "first".into(), None);
+        let second = logs.push("B", "second".into(), None);
+        logs.respond(&first, "response-a".into());
+        assert_eq!(logs.entries[0].response.as_deref(), Some("response-a"));
+        assert_eq!(logs.entries[1].response, None);
+        for _ in 0..100 {
+            logs.push("new", "new".into(), None);
+        }
+        logs.respond(&second, "must-not-attach".into());
+        assert!(logs.entries.iter().all(|entry| entry.response.is_none()));
+        logs.entries.clear();
+        logs.push("fresh", "fresh".into(), None);
+        logs.respond(&first, "must-not-attach".into());
+        assert_eq!(logs.entries[0].response, None);
+    }
 }

@@ -1,5 +1,6 @@
 import React, { memo, useRef } from 'react';
 import { Badge, Button } from 'antd';
+import { useTranslation } from 'react-i18next';
 import { CheckOutlined } from '@ant-design/icons';
 import { useVirtualizer } from '@tanstack/react-virtual';
 import { POEntry } from '../../types/tauri';
@@ -15,6 +16,7 @@ export type IndexedEntry = { entry: POEntry; index: number };
 // 获取翻译来源样式
 function getSourceStyle(
   source: 'tm' | 'dedup' | 'ai' | undefined,
+  labels: { tm: string; dedup: string; ai: string },
   colors: {
     sourceTmBg: string;
     sourceTmColor: string;
@@ -25,18 +27,11 @@ function getSourceStyle(
   }
 ) {
   const styles = {
-    tm: { bg: colors.sourceTmBg, color: colors.sourceTmColor, label: '记忆' },
-    dedup: { bg: colors.sourceDedupBg, color: colors.sourceDedupColor, label: '去重' },
-    ai: { bg: colors.sourceAiBg, color: colors.sourceAiColor, label: 'AI' },
+    tm: { bg: colors.sourceTmBg, color: colors.sourceTmColor, label: labels.tm },
+    dedup: { bg: colors.sourceDedupBg, color: colors.sourceDedupColor, label: labels.dedup },
+    ai: { bg: colors.sourceAiBg, color: colors.sourceAiColor, label: labels.ai },
   };
   return styles[source || 'ai'];
-}
-
-// 获取条目背景色（用于内联样式）
-function getEntryBackground(isSelected: boolean, isCurrent: boolean): string {
-  if (isSelected) return CSS_COLORS.selectedBg;
-  if (isCurrent) return CSS_COLORS.hoverBg;
-  return CSS_COLORS.bgPrimary;
 }
 
 // 获取条目状态CSS类名
@@ -62,7 +57,16 @@ const renderVirtualItem = (
     columnType: ColumnType
   ) => void,
   onConfirm: (index: number, event: React.MouseEvent) => void,
-  getEntryStatus: (entry: POEntry) => string
+  getEntryStatus: (entry: POEntry) => string,
+  labels: {
+    tm: string;
+    dedup: string;
+    ai: string;
+    empty: string;
+    confirm: string;
+    confirmItem: string;
+    itemLabel: string;
+  }
 ) => {
   const isSelected = selectedIndices.includes(globalIndex);
   const isCurrent = currentEntry === entry;
@@ -74,7 +78,9 @@ const renderVirtualItem = (
       key={`${columnType}-${globalIndex}`}
       role="listitem"
       aria-selected={isSelected}
-      aria-label={getEntryStatusDescription(status, globalIndex, isSelected)}
+      aria-label={labels.itemLabel
+        .replace('{{index}}', String(globalIndex + 1))
+        .replace('{{status}}', getEntryStatusDescription(status, globalIndex, isSelected))}
       tabIndex={0}
       className={`
         ${styles.virtualItem}
@@ -85,7 +91,6 @@ const renderVirtualItem = (
       style={{
         height: `${virtualItem.size}px`,
         transform: `translateY(${virtualItem.start}px)`,
-        backgroundColor: getEntryBackground(isSelected, isCurrent),
       }}
       onClick={(event) => onRowClick(entry, globalIndex, event, columnType)}
       onKeyDown={(e) => {
@@ -101,16 +106,16 @@ const renderVirtualItem = (
           <span
             className={styles.sourceBadge}
             style={{
-              backgroundColor: getSourceStyle(entry.translationSource, CSS_COLORS).bg,
-              color: getSourceStyle(entry.translationSource, CSS_COLORS).color,
+              backgroundColor: getSourceStyle(entry.translationSource, labels, CSS_COLORS).bg,
+              color: getSourceStyle(entry.translationSource, labels, CSS_COLORS).color,
             }}
           >
-            {getSourceStyle(entry.translationSource, CSS_COLORS).label}
+            {getSourceStyle(entry.translationSource, labels, CSS_COLORS).label}
           </span>
         )}
       </div>
       <TruncatedText
-        text={entry.msgid || '(空)'}
+        text={entry.msgid || labels.empty}
         maxWidth="100%"
         className={styles.msgidText}
         style={{
@@ -132,14 +137,14 @@ const renderVirtualItem = (
             size="small"
             icon={<CheckOutlined />}
             onClick={(e) => onConfirm(globalIndex, e)}
-            aria-label={`确认第 ${globalIndex + 1} 条翻译`}
+            aria-label={labels.confirmItem.replace('{{index}}', String(globalIndex + 1))}
             style={{
               fontSize: 'var(--font-size-xs)',
               height: '20px',
               padding: '0 6px',
             }}
           >
-            确认
+            {labels.confirm}
           </Button>
         </div>
       )}
@@ -181,12 +186,13 @@ export const VirtualizedColumn = memo(function VirtualizedColumn({
   onRemoveAll,
   setActiveColumn,
 }: VirtualizedColumnProps) {
+  const { t } = useTranslation();
   const parentRef = useRef<HTMLDivElement>(null);
 
   const virtualizer = useVirtualizer({
     count: items.length,
     getScrollElement: () => parentRef.current,
-    estimateSize: () => 80,
+    estimateSize: () => 88,
     overscan: 5,
   });
 
@@ -194,19 +200,17 @@ export const VirtualizedColumn = memo(function VirtualizedColumn({
     <div
       className={styles.virtualColumnContainer}
       role="region"
-      aria-label={`${title}列表 (${items.length}项)`}
-      style={{
-        borderRight:
-          columnType !== 'translated' ? `1px solid ${CSS_COLORS.borderSecondary}` : 'none',
-      }}
+      aria-label={t('workspace.list.region', { title, count: items.length })}
       onMouseEnter={() => setActiveColumn(columnType)}
-      onMouseLeave={() => setActiveColumn(null)}
     >
       <div className={styles.columnHeader}>
         <div className={styles.columnHeaderLeft}>
           <Badge color={statusColor} />
           <span style={{ flexShrink: 0 }}>{title}</span>
-          <span className={styles.countBadge} aria-label={`${items.length}项`}>
+          <span
+            className={styles.countBadge}
+            aria-label={t('workspace.list.count', { count: items.length })}
+          >
             {items.length}
           </span>
         </div>
@@ -218,10 +222,10 @@ export const VirtualizedColumn = memo(function VirtualizedColumn({
               size="small"
               onClick={onConfirmAll}
               className={styles.actionButton}
-              aria-label={`确认所有${title} (${items.length}项)`}
+              aria-label={t('workspace.list.confirmAll', { title, count: items.length })}
               style={{ color: CSS_COLORS.brandPrimary }}
             >
-              确认所有
+              {t('entryList.confirmAll')}
             </Button>
             <Button
               type="link"
@@ -229,9 +233,9 @@ export const VirtualizedColumn = memo(function VirtualizedColumn({
               danger
               onClick={() => onRemoveAll('needsReview')}
               className={styles.actionButton}
-              aria-label={`移除所有${title}`}
+              aria-label={t('workspace.list.removeAll', { title })}
             >
-              移除
+              {t('workspace.list.remove')}
             </Button>
           </div>
         )}
@@ -243,9 +247,9 @@ export const VirtualizedColumn = memo(function VirtualizedColumn({
             danger
             onClick={() => onRemoveAll('translated')}
             className={styles.actionButton}
-            aria-label={`移除所有${title}`}
+            aria-label={t('workspace.list.removeAll', { title })}
           >
-            移除
+            {t('workspace.list.remove')}
           </Button>
         )}
       </div>
@@ -254,7 +258,7 @@ export const VirtualizedColumn = memo(function VirtualizedColumn({
         ref={parentRef}
         className={`${styles.scrollContainer} virtual-scroll-optimized`}
         role="list"
-        aria-label={`${title}条目`}
+        aria-label={t('workspace.list.items', { title })}
       >
         {items.length === 0 ? (
           <EmptyState type="column-empty" />
@@ -277,7 +281,16 @@ export const VirtualizedColumn = memo(function VirtualizedColumn({
                 columnType,
                 onRowClick,
                 onConfirm,
-                getEntryStatus
+                getEntryStatus,
+                {
+                  tm: t('workspace.editor.sourceMemory'),
+                  dedup: t('workspace.editor.sourceDedup'),
+                  ai: t('workspace.list.sourceAI'),
+                  empty: t('workspace.editor.empty'),
+                  confirm: t('entryList.confirm'),
+                  confirmItem: t('workspace.list.confirmItem'),
+                  itemLabel: t('workspace.list.itemLabel'),
+                }
               );
             })}
           </div>

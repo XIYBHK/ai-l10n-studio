@@ -7,17 +7,19 @@
 }
 
 .header {
-  padding: var(--space-2) var(--space-4);
+  padding: var(--space-4);
   border-bottom: 1px solid var(--color-borderSecondary);
-  background: var(--color-bgTertiary);
+  background: var(--color-bgPrimary);
   display: flex;
   justify-content: space-between;
   align-items: center;
   flex-shrink: 0;
+  flex-wrap: wrap;
+  gap: var(--space-2);
 }
 
 .headerText {
-  font-size: var(--font-size-base);
+  font-size: var(--font-size-sm);
   font-weight: var(--font-weight-medium);
   color: var(--color-textPrimary);
   white-space: nowrap;
@@ -48,8 +50,32 @@
   flex: 1;
   height: 0;
   display: flex;
+  flex-direction: column;
   overflow: hidden;
   min-height: 0;
+}
+
+.statusFilters {
+  padding: 12px 12px 6px;
+}
+.statusFilters :global(.ant-segmented) {
+  background: var(--color-bgSecondary);
+  padding: 3px;
+}
+.statusFilters :global(.ant-segmented-item-label) {
+  padding: 0 6px;
+  font-size: 12px;
+}
+.filterLabel {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 5px;
+}
+.filterLabel > span {
+  font-size: 10px;
+  font-variant-numeric: tabular-nums;
+  color: var(--color-textTertiary);
 }
 
 .column {
@@ -78,7 +104,7 @@
 
 .virtualColumnContainer {
   width: 100%;
-  height: 100%;
+  flex: 1;
   display: flex;
   flex-direction: column;
   min-width: 0;
@@ -90,17 +116,17 @@
 /* 列标题样式 */
 .columnHeader {
   padding: var(--space-2) var(--space-3);
-  background: var(--color-bgTertiary);
+  background: var(--color-bgPrimary);
   border-bottom: 1px solid var(--color-borderSecondary);
-  font-size: var(--font-size-base);
+  font-size: var(--font-size-xs);
   font-weight: var(--font-weight-semibold);
   color: var(--color-textPrimary);
   display: flex;
   justify-content: space-between;
   align-items: center;
-  height: 40px;
+  height: 38px;
   flex-shrink: 0;
-  box-shadow: var(--shadow-sm);
+  box-shadow: none;
 }
 
 .columnHeaderLeft {
@@ -174,34 +200,23 @@
   cursor: pointer;
   background-color: var(--color-bgPrimary);
   border-bottom: 1px solid var(--color-borderSecondary);
-  border-left: 4px solid transparent;
+  border-left: 2px solid transparent;
   user-select: none;
   box-sizing: border-box;
   overflow: hidden;
-  transition: all var(--duration-fast) var(--ease-out);
+  transition: background-color var(--duration-fast) var(--ease-out);
 }
 
 /* 悬停效果 - 现代化 */
 .virtualItem:hover {
   background-color: var(--color-hoverBg);
-  transform: translateX(2px);
-  box-shadow:
-    var(--shadow-md),
-    inset 0 0 0 1px var(--color-borderSecondary);
-}
-
-/* 点击反馈 - 缩放效果 */
-.virtualItem:active {
-  transform: translateX(2px) scale(0.98);
 }
 
 /* 选中状态 - 增强 */
 .virtualItem.selected {
   border-left-color: var(--color-brandPrimary);
   background-color: var(--color-selectedBg);
-  box-shadow:
-    inset 3px 0 0 var(--color-brandPrimary),
-    var(--shadow-sm);
+  box-shadow: inset 2px 0 0 var(--color-brandPrimary);
 }
 
 /* 状态颜色标记 */
@@ -275,15 +290,15 @@
 /* 翻译来源徽章 - 药丸形状 */
 .sourceBadge {
   font-size: 11px;
-  padding: 2px 8px;
-  border-radius: var(--radius-full);
+  padding: 2px 5px;
+  border-radius: var(--radius-sm);
   white-space: nowrap;
   font-weight: var(--font-weight-semibold);
   display: inline-flex;
   align-items: center;
   gap: 4px;
   line-height: 1.2;
-  box-shadow: var(--shadow-sm);
+  box-shadow: none;
   letter-spacing: 0.02em;
 }
 

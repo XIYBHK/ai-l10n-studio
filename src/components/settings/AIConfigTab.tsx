@@ -1,482 +1,508 @@
-import { useEffect, useState, useMemo } from 'react';
+import { useEffect, useState } from 'react';
 import {
-  Form,
-  Input,
-  Select,
+  Alert,
   Button,
   Card,
-  Col,
-  Tag,
-  Popconfirm,
-  message,
-  Space,
-  AutoComplete,
+  Checkbox,
+  Collapse,
   Empty,
+  Form,
+  Input,
+  InputNumber,
+  Popconfirm,
+  Select,
+  Space,
+  Tag,
+  message,
 } from 'antd';
-import {
-  PlusOutlined,
-  DeleteOutlined,
-  EditOutlined,
-  CheckOutlined,
-  ApiOutlined,
-} from '@ant-design/icons';
+import { DeleteOutlined, PlusOutlined } from '@ant-design/icons';
 import { useTranslation } from 'react-i18next';
-import { aiConfigCommands, aiModelCommands, aiProviderCommands } from '../../services/aiCommands';
-import type { AIConfig } from '../../types/aiProvider';
-import { createModuleLogger } from '../../utils/logger';
-import { useAIConfigs } from '../../hooks/useConfig';
+import { aiProviderCommands, modelConfigurationCommands } from '../../services/aiCommands';
+import { useModelConfiguration } from '../../hooks/useConfig';
+import type { ModelApi, ModelDefinition, ModelProviderProfile } from '../../types/aiProvider';
 import type { ProviderInfo } from '../../types/generated/ProviderInfo';
+import { createModuleLogger } from '../../utils/logger';
+import styles from './AIConfigTab.module.css';
+import { QuickProviderSetup } from './QuickProviderSetup';
 
 const log = createModuleLogger('AIConfigTab');
-
-type ProviderConfig = {
-  value: string;
-  label: string;
-  defaultUrl?: string;
-  defaultModel?: string;
-};
-
-function mapProviderInfoToConfig(provider: ProviderInfo): ProviderConfig {
-  return {
-    value: provider.id,
-    label: provider.display_name,
-    defaultUrl: provider.default_url,
-    defaultModel: provider.default_model,
-  };
-}
-
-interface AIConfigTabProps {
+const emptyModel = (): ModelDefinition => ({
+  id: '',
+  name: null,
+  contextWindow: null,
+  maxTokens: null,
+});
+const emptyProfile = (): ModelProviderProfile => ({
+  id: '',
+  displayName: '',
+  catalogProviderId: null,
+  api: 'openai-completions',
+  baseUrl: '',
+  models: [emptyModel()],
+  proxy: null,
+});
+interface Props {
   onProviderChange?: (providerId: string) => void;
 }
 
-export function AIConfigTab({ onProviderChange }: AIConfigTabProps) {
+export function AIConfigTab({ onProviderChange }: Props) {
   const { t } = useTranslation();
-  const [form] = Form.useForm();
-  const { configs, active, mutateAll, mutateActive } = useAIConfigs();
-  const [activeIndex, setActiveIndex] = useState<number | null>(null);
-  const [editingIndex, setEditingIndex] = useState<number | null>(null);
-  const [isAddingNew, setIsAddingNew] = useState(false);
-  const [testing, setTesting] = useState(false);
-  const [deletingIndex, setDeletingIndex] = useState<number | null>(null);
-  const [dynamicProviders, setDynamicProviders] = useState<ProviderInfo[]>([]);
-  const [providersLoading, setProvidersLoading] = useState(false);
-  const [availableModels, setAvailableModels] = useState<string[]>([]);
-
-  const providerConfigs: ProviderConfig[] = useMemo(() => {
-    return dynamicProviders.map(mapProviderInfoToConfig);
-  }, [dynamicProviders]);
-  const isEditingExisting = editingIndex !== null && !isAddingNew;
+  const { configuration, loading, error, mutate } = useModelConfiguration();
+  const [catalog, setCatalog] = useState<ProviderInfo[]>([]);
+  const [editing, setEditing] = useState<ModelProviderProfile | null>(null);
+  const [apiKey, setApiKey] = useState('');
+  const [clearKey, setClearKey] = useState(false);
+  const [testModel, setTestModel] = useState<string>();
+  const [busy, setBusy] = useState(false);
+  const [form] = Form.useForm<ModelProviderProfile>();
+  const watchedModels = Form.useWatch('models', form) as ModelDefinition[] | undefined;
+  const proxyEnabled = Form.useWatch(['proxy', 'enabled'], form) === true;
+  const existing = editing
+    ? configuration.providers.find((provider) => provider.profile.id === editing.id)
+    : undefined;
 
   useEffect(() => {
-    setProvidersLoading(true);
+    let active = true;
     aiProviderCommands
       .getAll()
       .then((providers) => {
-        log.debug('加载动态供应商成功:', providers);
-        setDynamicProviders(providers);
+        if (active) setCatalog(providers);
       })
-      .catch((err) => {
-        log.error('加载动态供应商失败:', err);
-      })
-      .finally(() => {
-        setProvidersLoading(false);
-      });
+      .catch((cause) => log.error('provider catalog failed', cause));
+    return () => {
+      active = false;
+    };
   }, []);
 
-  useEffect(() => {
-    if (active) {
-      const idx = configs.findIndex((config) => config.index === active.index);
-      setActiveIndex(idx >= 0 ? idx : null);
-    } else {
-      setActiveIndex(null);
-    }
-  }, [active, configs]);
-
-  function getProviderLabel(providerId: string): string {
-    const provider = providerConfigs.find((p) => p.value === providerId);
-    return provider ? provider.label : providerId;
-  }
-
-  async function handleProviderChange(providerId: string) {
-    const providerConfig = providerConfigs.find((p) => p.value === providerId);
-    if (providerConfig) {
-      form.setFieldsValue({
-        baseUrl: providerConfig.defaultUrl,
-        model: providerConfig.defaultModel,
-      });
-    }
-
-    // 加载该供应商的所有模型
+  const run = async (action: () => Promise<void>) => {
+    setBusy(true);
     try {
-      const models = await aiModelCommands.getProviderModels(providerId);
-      const modelIds = models.map((m) => m.id);
-      setAvailableModels(modelIds);
-      log.info('加载动态模型列表', { providerId, count: modelIds.length });
-
-      // 触发回调
-      onProviderChange?.(providerId);
-    } catch (error) {
-      log.error('加载模型列表失败:', error);
-      setAvailableModels([]);
-    }
-  }
-
-  async function handleTestConnection(values: AIConfig) {
-    const apiKey = values.apiKey?.trim();
-    if (!apiKey) {
-      message.warning(t('messages.reTypeApiKeyBeforeTest'));
-      return;
-    }
-
-    setTesting(true);
-    try {
-      const testConfig: AIConfig = {
-        providerId: values.providerId,
-        apiKey,
-        baseUrl: values.baseUrl || null,
-        model: values.model,
-        proxy: values.proxy?.enabled
-          ? {
-              enabled: true,
-              host: values.proxy.host,
-              port: values.proxy.port,
-            }
-          : null,
-      };
-      await aiConfigCommands.testConnection(
-        testConfig.providerId,
-        testConfig.apiKey,
-        testConfig.baseUrl || undefined
-      );
-      message.success(t('messages.connectionTestSuccess'));
-      log.info('连接测试成功', { providerId: values.providerId });
-    } catch (error) {
-      const errorMsg = error instanceof Error ? error.message : '测试失败';
-      message.error(errorMsg);
-      log.error('测试连接异常', { error });
+      await action();
+    } catch (cause) {
+      log.error('model settings action failed', cause);
     } finally {
-      setTesting(false);
+      setBusy(false);
     }
-  }
-
-  function handleAddNew() {
-    setIsAddingNew(true);
-    setEditingIndex(null);
+  };
+  const edit = (profile: ModelProviderProfile) => {
+    setEditing(profile);
+    setApiKey('');
+    setClearKey(false);
+    setTestModel(profile.models[0]?.id);
     form.resetFields();
-  }
-
-  function handleEdit(index: number) {
-    log.info('编辑配置', { index, total: configs.length });
-    const config = configs[index];
-    log.info('配置数据', { config });
-    setEditingIndex(index);
-    setIsAddingNew(false);
-    form.setFieldsValue({
-      providerId: config.providerId,
-      baseUrl: config.baseUrl,
-      model: config.model,
-      apiKey: '',
-      proxy: config.proxy || { enabled: false, host: '', port: '' },
+    form.setFieldsValue(profile);
+    onProviderChange?.(profile.catalogProviderId ?? profile.id);
+  };
+  const readProfile = (): ModelProviderProfile => ({
+    ...editing!,
+    ...form.getFieldsValue(true),
+    proxy: form.getFieldValue(['proxy', 'enabled'])
+      ? {
+          enabled: true,
+          host: String(form.getFieldValue(['proxy', 'host']) ?? '').trim(),
+          port: Number(form.getFieldValue(['proxy', 'port'])),
+        }
+      : null,
+    models: ((form.getFieldValue('models') as ModelDefinition[] | undefined) ?? []).map(
+      (model) => ({
+        id: model.id.trim(),
+        name: model.name?.trim() || null,
+        contextWindow: model.contextWindow ?? null,
+        maxTokens: model.maxTokens ?? null,
+      })
+    ),
+  });
+  const credential = () => (clearKey ? '' : apiKey.trim() || null);
+  const save = () =>
+    run(async () => {
+      await form.validateFields();
+      await modelConfigurationCommands.saveProvider(readProfile(), credential());
+      await mutate();
+      setEditing(null);
+      setApiKey('');
+      message.success(t('modelSettings.saved'));
     });
-  }
-
-  async function handleDelete(index: number) {
-    setDeletingIndex(index);
-    log.info('[删除] 开始删除配置', { index, total: configs.length });
-    try {
-      log.info('[删除] 调用删除命令');
-      await aiConfigCommands.delete(String(index));
-      log.info('[删除] 命令执行成功');
-      message.success(t('messages.configDeleted'));
-      mutateAll();
-      mutateActive();
-      log.info('[删除] 配置删除成功', { index });
-    } catch (error) {
-      const errorMsg = error instanceof Error ? error.message : t('errors.unknown');
-      message.error(t('errors.configDeleteFailed', { error: errorMsg }));
-      log.error('[删除] 删除配置失败', { error, index, total: configs.length });
-    } finally {
-      setDeletingIndex(null);
-      log.info('[delete] cleared deleting state');
-    }
-  }
-
-  async function handleSetActive(index: number) {
-    try {
-      log.info('设置启用配置', { index, total: configs.length });
-      await aiConfigCommands.setActive(String(index));
-      message.success(t('messages.configEnabled'));
-      mutateActive();
-      log.info('设置启用配置成功', { index });
-    } catch (error) {
-      const errorMsg = error instanceof Error ? error.message : t('errors.unknown');
-      message.error(t('errors.configEnableFailed', { error: errorMsg }));
-      log.error('启用配置失败', { error, index, total: configs.length });
-    }
-  }
-
-  async function handleSave(values: AIConfig) {
-    try {
-      const apiKey = values.apiKey?.trim() ?? '';
-      if (isAddingNew && !apiKey) {
-        message.error(t('messages.apiKeyRequired'));
-        return;
-      }
-
-      // 确保空字符串转换为 null
-      const config: AIConfig = {
-        providerId: values.providerId,
-        apiKey,
-        baseUrl: values.baseUrl?.trim() || null,
-        model: values.model?.trim() || null,
-        proxy: values.proxy?.enabled
-          ? {
-              enabled: true,
-              host: values.proxy.host,
-              port: values.proxy.port,
-            }
-          : null,
+  const addBuiltin = (id: string) =>
+    run(async () => {
+      const item = catalog.find((provider) => provider.id === id);
+      if (!item) return;
+      let profile = {
+        ...emptyProfile(),
+        id: item.id,
+        displayName: item.display_name,
+        catalogProviderId: item.id,
+        api: item.api,
+        baseUrl: item.default_url,
       };
-
-      log.info('保存配置', { isAddingNew, editingIndex, providerId: config.providerId });
-
-      if (isAddingNew) {
-        await aiConfigCommands.add(config);
-        message.success(t('messages.configAdded'));
-      } else if (editingIndex !== null) {
-        await aiConfigCommands.update(editingIndex, config);
-        message.success(t('messages.configUpdated'));
+      if (configuration.providers.some((provider) => provider.profile.id === id)) {
+        let suffix = 2;
+        while (
+          configuration.providers.some((provider) => provider.profile.id === id + '-' + suffix)
+        )
+          suffix++;
+        profile = { ...profile, id: id + '-' + suffix };
       }
-
-      setIsAddingNew(false);
-      setEditingIndex(null);
-      form.resetFields();
-      mutateAll();
-      mutateActive();
-    } catch (error) {
-      const errorMsg = error instanceof Error ? error.message : '保存失败';
-      message.error(errorMsg);
-      log.error('保存配置失败', { error, values });
-    }
-  }
-
-  function handleCancel() {
-    setIsAddingNew(false);
-    setEditingIndex(null);
-    form.resetFields();
-  }
+      profile.models = await modelConfigurationCommands.discoverModels(profile, null);
+      edit(profile);
+    });
+  const discover = () =>
+    run(async () => {
+      await form.validateFields(['id', 'displayName', 'baseUrl', 'api']);
+      const discovered = await modelConfigurationCommands.discoverModels(
+        readProfile(),
+        credential()
+      );
+      const current = readProfile().models.filter((model) => model.id);
+      const ids = new Set(current.map((model) => model.id));
+      const merged = [...current, ...discovered.filter((model) => !ids.has(model.id))];
+      form.setFieldValue('models', merged);
+      setTestModel((previous) => previous || merged[0]?.id);
+      message.success(t('modelSettings.discovered', { count: discovered.length }));
+    });
+  const test = () =>
+    run(async () => {
+      await form.validateFields();
+      const profile = readProfile();
+      const selected = profile.models.some((model) => model.id === testModel)
+        ? testModel!
+        : profile.models[0].id;
+      const result = await modelConfigurationCommands.testProvider(profile, credential(), selected);
+      if (result.success)
+        message.success(t('modelSettings.connected', { ms: result.responseTimeMs }));
+      else message.error(result.message);
+    });
+  const options = configuration.providers.flatMap((provider) =>
+    provider.profile.models.map((model) => ({
+      value: JSON.stringify([provider.profile.id, model.id]),
+      label: provider.profile.displayName + ' / ' + (model.name || model.id),
+    }))
+  );
 
   return (
-    <Col span={24} data-testid="ai-config-tab">
-      <Card
-        title={
-          <span>
-            <ApiOutlined /> AI 配置
-          </span>
+    <div data-testid="ai-config-tab" className={styles.settings} aria-busy={busy}>
+      <div className={styles.intro}>
+        <h3>{t('modelSettings.title')}</h3>
+        <p>{t('modelSettings.description')}</p>
+      </div>
+      {error && <Alert type="error" showIcon message={t('modelSettings.loadFailed')} />}
+      {!editing && (
+        <QuickProviderSetup
+          providers={configuration.providers}
+          disabled={busy || loading || !!error}
+          onBusyChange={setBusy}
+          onSaved={mutate}
+          onAdvanced={(profile, key) => {
+            edit(profile);
+            setApiKey(key);
+          }}
+        />
+      )}
+      <label className={styles.label} htmlFor="default-model">
+        {t('modelSettings.defaultModel')}
+      </label>
+      <Select
+        id="default-model"
+        aria-label={t('modelSettings.defaultModel')}
+        loading={loading}
+        disabled={busy}
+        allowClear
+        placeholder={t('modelSettings.selectDefault')}
+        value={
+          configuration.defaultModel
+            ? JSON.stringify([
+                configuration.defaultModel.providerId,
+                configuration.defaultModel.modelId,
+              ])
+            : undefined
         }
-        size="small"
-      >
-        {configs.length === 0 ? (
-          <Empty
-            image={Empty.PRESENTED_IMAGE_SIMPLE}
-            description='暂无配置，请点击"新增"添加配置'
-            style={{ padding: '20px 0' }}
-          />
-        ) : (
-          <Space direction="vertical" style={{ width: '100%' }} size="small">
-            {configs.map((config, index) => (
-              <Card
-                key={`config-${index}-${config.providerId}`}
-                size="small"
-                styles={{
-                  body: { padding: '12px 16px' },
-                }}
-                style={{ border: '1px solid var(--ant-color-border-secondary)' }}
-              >
-                <div
-                  style={{
-                    display: 'flex',
-                    justifyContent: 'space-between',
-                    alignItems: 'center',
-                    gap: 12,
-                  }}
+        options={options}
+        onChange={(value: string | undefined) =>
+          void run(async () => {
+            const pair: [string, string] | null = value ? JSON.parse(value) : null;
+            await modelConfigurationCommands.setDefault(
+              pair ? { providerId: pair[0], modelId: pair[1] } : null
+            );
+            await mutate();
+          })
+        }
+      />
+      {!configuration.providers.length && !editing && (
+        <Empty description={t('modelSettings.empty')} image={Empty.PRESENTED_IMAGE_SIMPLE} />
+      )}
+      <div className={styles.providers}>
+        {configuration.providers.map((provider) => (
+          <Card
+            key={provider.profile.id}
+            size="small"
+            title={provider.profile.displayName}
+            extra={
+              <Space>
+                <Tag>
+                  {t(provider.hasApiKey ? 'modelSettings.keyConfigured' : 'modelSettings.noKey')}
+                </Tag>
+                <Button size="small" disabled={busy} onClick={() => edit(provider.profile)}>
+                  {t('common.edit')}
+                </Button>
+                <Popconfirm
+                  title={t('modelSettings.confirmRemove')}
+                  onConfirm={() =>
+                    run(async () => {
+                      await modelConfigurationCommands.removeProvider(provider.profile.id);
+                      if (editing?.id === provider.profile.id) setEditing(null);
+                      await mutate();
+                    })
+                  }
                 >
-                  <div style={{ flex: 1, minWidth: 0 }}>
-                    <div style={{ fontWeight: 500, marginBottom: 4 }}>
-                      {getProviderLabel(config.providerId)}
-                    </div>
-                    <div
-                      style={{
-                        fontSize: 'var(--font-size-sm)',
-                        color: 'var(--ant-color-text-secondary)',
-                      }}
-                    >
-                      <div>模型: {config.model || '(未设置)'}</div>
-                      <div>密钥: {config.apiKeyPreview || '(未设置)'}</div>
-                      {config.proxy?.enabled && (
-                        <div>
-                          代理: {config.proxy.host}:{config.proxy.port}
-                        </div>
-                      )}
-                    </div>
-                  </div>
-                  <Space size="small" wrap>
-                    {activeIndex !== index ? (
-                      <Button size="small" type="primary" onClick={() => handleSetActive(index)}>
-                        设为启用
-                      </Button>
-                    ) : (
-                      <Tag color="green" icon={<CheckOutlined />}>
-                        启用中
-                      </Tag>
-                    )}
-                    <Button
-                      size="small"
-                      type="link"
-                      icon={<EditOutlined />}
-                      onClick={() => handleEdit(index)}
-                      title={t('common.edit')}
-                      aria-label={t('common.edit')}
-                    />
-                    <Popconfirm
-                      title="确认删除此配置？"
-                      onConfirm={() => handleDelete(index)}
-                      okText="确认"
-                      cancelText="取消"
-                      okButtonProps={{ loading: deletingIndex === index }}
-                    >
-                      <Button
-                        size="small"
-                        type="link"
-                        danger
-                        icon={<DeleteOutlined />}
-                        title={t('common.delete')}
-                        aria-label={t('common.delete')}
-                        loading={deletingIndex === index}
-                        disabled={deletingIndex !== null && deletingIndex !== index}
-                      />
-                    </Popconfirm>
-                  </Space>
-                </div>
-              </Card>
-            ))}
-          </Space>
-        )}
-      </Card>
-
-      {isAddingNew || editingIndex !== null ? (
+                  <Button
+                    size="small"
+                    danger
+                    disabled={busy}
+                    aria-label={t('modelSettings.removeProvider', {
+                      name: provider.profile.displayName,
+                    })}
+                    icon={<DeleteOutlined />}
+                  />
+                </Popconfirm>
+              </Space>
+            }
+          >
+            <div className={styles.endpoint}>
+              {provider.profile.api} · {provider.profile.baseUrl}
+            </div>
+            <div className={styles.modelTags}>
+              {provider.profile.models.map((model) => (
+                <Tag key={model.id}>{model.name || model.id}</Tag>
+              ))}
+            </div>
+          </Card>
+        ))}
+      </div>
+      {editing ? (
         <Card
-          title={isAddingNew ? '新增配置' : '编辑配置'}
           size="small"
-          style={{ marginTop: 16 }}
-          extra={
-            <Button onClick={handleCancel} size="small">
-              取消
-            </Button>
-          }
+          title={t(existing ? 'modelSettings.editProvider' : 'modelSettings.newProvider')}
         >
-          <Form form={form} layout="vertical" size="small" onFinish={handleSave}>
-            <Form.Item
-              label="Provider"
-              name="providerId"
-              rules={[{ required: true, message: 'Please select a provider' }]}
-            >
-              <Select
-                data-testid="ai-config-provider"
-                onChange={handleProviderChange}
-                loading={providersLoading}
+          <Form form={form} layout="vertical" initialValues={editing} onFinish={() => void save()}>
+            <div className={styles.fieldGrid}>
+              <Form.Item
+                name="id"
+                label={t('modelSettings.providerId')}
+                rules={[
+                  { required: true },
+                  { pattern: /^[a-z][a-z0-9-]*$/, message: t('modelSettings.idRule') },
+                  {
+                    validator: (_, value: string) =>
+                      !existing &&
+                      configuration.providers.some((provider) => provider.profile.id === value)
+                        ? Promise.reject(new Error(t('modelSettings.duplicateId')))
+                        : Promise.resolve(),
+                  },
+                ]}
               >
-                {providerConfigs.map((p) => (
-                  <Select.Option key={p.value} value={p.value}>
-                    {p.label}
-                  </Select.Option>
-                ))}
-              </Select>
-            </Form.Item>
-
+                <Input disabled={!!existing} autoComplete="off" placeholder="my-provider" />
+              </Form.Item>
+              <Form.Item
+                name="displayName"
+                label={t('modelSettings.displayName')}
+                rules={[{ required: true, whitespace: true }]}
+              >
+                <Input />
+              </Form.Item>
+              <Form.Item name="api" label={t('modelSettings.api')} rules={[{ required: true }]}>
+                <Select
+                  options={(
+                    ['openai-completions', 'openai-responses', 'anthropic-messages'] as ModelApi[]
+                  ).map((value) => ({ value, label: value }))}
+                />
+              </Form.Item>
+              <Form.Item
+                name="baseUrl"
+                label={t('modelSettings.baseUrl')}
+                rules={[{ required: true }, { type: 'url' }]}
+              >
+                <Input placeholder="https://api.example.com/v1" />
+              </Form.Item>
+            </div>
             <Form.Item
-              label="API Key"
-              name="apiKey"
-              rules={
-                isEditingExisting
-                  ? []
-                  : [{ required: true, whitespace: true, message: 'Please enter an API Key' }]
-              }
-              extra={
-                isEditingExisting
-                  ? 'Leave blank to keep the current key; re-enter it before testing.'
-                  : undefined
-              }
+              label={t('modelSettings.apiKey')}
+              htmlFor="model-api-key"
+              extra={t(
+                existing?.hasApiKey ? 'modelSettings.keepApiKey' : 'modelSettings.optionalApiKey'
+              )}
             >
               <Input.Password
-                data-testid="ai-config-api-key"
-                placeholder={
-                  isEditingExisting
-                    ? 'Leave blank to keep the current key'
-                    : 'Please enter an API Key'
-                }
+                id="model-api-key"
+                disabled={clearKey}
+                autoComplete="new-password"
+                value={apiKey}
+                onChange={(event) => setApiKey(event.target.value)}
               />
-            </Form.Item>
-
-            <Form.Item label="Base URL" name="baseUrl">
-              <Input placeholder="Optional, uses the provider default when empty" />
-            </Form.Item>
-
-            <Form.Item
-              label="Model"
-              name="model"
-              rules={[{ required: true, message: 'Please enter or select a model' }]}
-              extra={
-                availableModels.length > 0
-                  ? `This provider exposes ${availableModels.length} models; choose one or type manually`
-                  : 'Please enter a model name'
-              }
-            >
-              <AutoComplete
-                data-testid="ai-config-model"
-                placeholder={
-                  availableModels.length > 0
-                    ? 'Select from the list or type a model name'
-                    : 'e.g. gpt-3.5-turbo'
-                }
-                options={availableModels.map((model) => ({ value: model, label: model }))}
-                filterOption={(inputValue, option) =>
-                  option?.value.toLowerCase().includes(inputValue.toLowerCase()) ?? false
-                }
-                allowClear
-              />
-            </Form.Item>
-
-            <Form.Item>
-              <Space>
-                <Button type="primary" htmlType="submit" loading={testing} icon={<CheckOutlined />}>
-                  {isAddingNew ? '添加' : '更新'}
-                </Button>
-                <Button onClick={handleCancel}>取消</Button>
-                <Button
-                  data-testid="ai-config-test-connection"
-                  onClick={() => form.validateFields().then(handleTestConnection)}
-                  loading={testing}
+              {existing?.hasApiKey && (
+                <Checkbox
+                  checked={clearKey}
+                  onChange={(event) => setClearKey(event.target.checked)}
                 >
-                  测试连接
+                  {t('modelSettings.clearKey')}
+                </Checkbox>
+              )}
+            </Form.Item>
+            <div className={styles.modelHeader}>
+              <span className={styles.label}>{t('modelSettings.models')}</span>
+              <Button size="small" loading={busy} onClick={() => void discover()}>
+                {t('modelSettings.discover')}
+              </Button>
+            </div>
+            <Form.List
+              name="models"
+              rules={[
+                {
+                  validator: (_, models: ModelDefinition[]) =>
+                    models?.length
+                      ? Promise.resolve()
+                      : Promise.reject(new Error(t('modelSettings.requireModel'))),
+                },
+              ]}
+            >
+              {(fields, { add, remove }, { errors }) => (
+                <>
+                  <div className={styles.columnLabels} aria-hidden="true">
+                    <span>{t('modelSettings.modelId')}</span>
+                    <span>{t('modelSettings.modelName')}</span>
+                    <span>{t('modelSettings.contextWindow')}</span>
+                    <span>{t('modelSettings.maxTokens')}</span>
+                    <span />
+                  </div>
+                  {fields.map(({ key, name }) => (
+                    <div className={styles.modelRow} key={key}>
+                      <Form.Item name={[name, 'id']} rules={[{ required: true, whitespace: true }]}>
+                        <Input
+                          aria-label={t('modelSettings.modelId')}
+                          placeholder={t('modelSettings.modelId')}
+                        />
+                      </Form.Item>
+                      <Form.Item name={[name, 'name']}>
+                        <Input
+                          aria-label={t('modelSettings.modelName')}
+                          placeholder={t('modelSettings.modelName')}
+                        />
+                      </Form.Item>
+                      <Form.Item name={[name, 'contextWindow']}>
+                        <InputNumber
+                          min={1}
+                          precision={0}
+                          aria-label={t('modelSettings.contextWindow')}
+                          placeholder={t('modelSettings.contextWindow')}
+                        />
+                      </Form.Item>
+                      <Form.Item name={[name, 'maxTokens']}>
+                        <InputNumber
+                          min={1}
+                          precision={0}
+                          aria-label={t('modelSettings.maxTokens')}
+                          placeholder={t('modelSettings.maxTokens')}
+                        />
+                      </Form.Item>
+                      <Button
+                        aria-label={t('modelSettings.removeModel')}
+                        disabled={busy}
+                        icon={<DeleteOutlined />}
+                        onClick={() => remove(name)}
+                      />
+                    </div>
+                  ))}
+                  <Form.ErrorList errors={errors} />
+                  <Button type="dashed" icon={<PlusOutlined />} onClick={() => add(emptyModel())}>
+                    {t('modelSettings.addModel')}
+                  </Button>
+                </>
+              )}
+            </Form.List>
+            <Collapse
+              className={styles.proxy}
+              size="small"
+              items={[
+                {
+                  key: 'proxy',
+                  label: t('modelSettings.proxy'),
+                  children: (
+                    <>
+                      <Form.Item name={['proxy', 'enabled']} valuePropName="checked">
+                        <Checkbox>{t('modelSettings.enableProxy')}</Checkbox>
+                      </Form.Item>
+                      <div className={styles.fieldGrid}>
+                        <Form.Item
+                          name={['proxy', 'host']}
+                          label={t('modelSettings.proxyHost')}
+                          rules={[{ required: proxyEnabled }]}
+                        >
+                          <Input disabled={!proxyEnabled} placeholder="127.0.0.1" />
+                        </Form.Item>
+                        <Form.Item
+                          name={['proxy', 'port']}
+                          label={t('modelSettings.proxyPort')}
+                          rules={[{ required: proxyEnabled }]}
+                        >
+                          <InputNumber disabled={!proxyEnabled} min={1} max={65535} precision={0} />
+                        </Form.Item>
+                      </div>
+                    </>
+                  ),
+                },
+              ]}
+            />
+            <div className={styles.actions}>
+              <Space wrap>
+                <Button type="primary" htmlType="submit" loading={busy}>
+                  {t('modelSettings.save')}
+                </Button>
+                <Button
+                  disabled={busy}
+                  onClick={() => {
+                    setEditing(null);
+                    setApiKey('');
+                  }}
+                >
+                  {t('common.cancel')}
                 </Button>
               </Space>
-            </Form.Item>
+              <Space wrap>
+                <Select
+                  aria-label={t('modelSettings.testModel')}
+                  className={styles.testModel}
+                  value={testModel}
+                  placeholder={t('modelSettings.testModel')}
+                  onChange={setTestModel}
+                  options={(watchedModels ?? editing.models)
+                    .filter((model) => model.id)
+                    .map((model) => ({ value: model.id, label: model.id }))}
+                />
+                <Button loading={busy} onClick={() => void test()}>
+                  {t('modelSettings.test')}
+                </Button>
+              </Space>
+            </div>
           </Form>
         </Card>
       ) : (
-        <Button
-          data-testid="ai-config-add-button"
-          type="primary"
-          icon={<PlusOutlined />}
-          onClick={handleAddNew}
-          style={{ marginTop: 16 }}
-        >
-          新增配置
-        </Button>
+        <Space wrap>
+          <Select<string>
+            aria-label={t('modelSettings.addBuiltin')}
+            value={undefined}
+            disabled={busy}
+            className={styles.builtin}
+            placeholder={t('modelSettings.addBuiltin')}
+            options={catalog.map((provider) => ({
+              value: provider.id,
+              label: provider.display_name,
+            }))}
+            onChange={(id) => void addBuiltin(id)}
+          />
+          <Button icon={<PlusOutlined />} disabled={busy} onClick={() => edit(emptyProfile())}>
+            {t('modelSettings.addCustom')}
+          </Button>
+        </Space>
       )}
-    </Col>
+    </div>
   );
 }
-
 export default AIConfigTab;

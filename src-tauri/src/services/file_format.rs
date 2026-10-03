@@ -4,9 +4,16 @@ use anyhow::{Result, anyhow};
 use serde::{Deserialize, Serialize};
 use std::fs;
 use std::path::Path;
+#[cfg(feature = "ts-rs")]
+use ts_rs::TS;
 
 /// 文件格式枚举
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[cfg_attr(feature = "ts-rs", derive(TS))]
+#[cfg_attr(
+    feature = "ts-rs",
+    ts(export, export_to = "../../src/types/generated/")
+)]
 pub enum FileFormat {
     PO,
     JSON,
@@ -52,14 +59,22 @@ impl FileFormat {
 
 /// 文件元数据
 #[derive(Debug, Clone, Serialize, Deserialize)]
+#[cfg_attr(feature = "ts-rs", derive(TS))]
+#[cfg_attr(
+    feature = "ts-rs",
+    ts(export, export_to = "../../src/types/generated/")
+)]
 pub struct FileMetadata {
     pub format: FileFormat,
     #[serde(skip_serializing_if = "Option::is_none")]
+    #[cfg_attr(feature = "ts-rs", ts(optional))]
     pub source_language: Option<String>,
     #[serde(skip_serializing_if = "Option::is_none")]
+    #[cfg_attr(feature = "ts-rs", ts(optional))]
     pub target_language: Option<String>,
     pub total_entries: usize,
     #[serde(skip_serializing_if = "Option::is_none")]
+    #[cfg_attr(feature = "ts-rs", ts(optional))]
     pub file_path: Option<String>,
 }
 
@@ -100,7 +115,7 @@ pub fn detect_file_format(file_path: &str) -> Result<FileFormat> {
             }
         }
         FileFormat::XLIFF => {
-            if content.contains("<xliff") || content.contains("<xliff") {
+            if content.contains("<xliff") {
                 FileFormat::XLIFF
             } else {
                 return Err(anyhow!("文件内容不符合 XLIFF 格式"));
@@ -129,8 +144,9 @@ pub fn get_file_metadata(file_path: &str) -> Result<FileMetadata> {
     let metadata = match format {
         FileFormat::PO => extract_po_metadata(file_path)?,
         FileFormat::JSON => extract_json_metadata(file_path)?,
-        FileFormat::XLIFF => extract_xliff_metadata(file_path)?,
-        FileFormat::YAML => extract_yaml_metadata(file_path)?,
+        FileFormat::XLIFF | FileFormat::YAML => {
+            return Err(anyhow!("尚不支持 {} 元数据解析", format.display_name()));
+        }
     };
 
     Ok(metadata)
@@ -141,18 +157,19 @@ fn extract_po_metadata(file_path: &str) -> Result<FileMetadata> {
     use crate::services::POParser;
 
     let parser = POParser::new()?;
-    let entries = parser.parse_file(file_path)?;
-
-    // 从 PO header 提取语言信息（简化实现）
-    let content = fs::read_to_string(file_path)?;
-    let source_lang = extract_po_language(&content, "Language:");
-    let target_lang = extract_po_language(&content, "Language:");
+    let document = parser.parse_file(file_path)?;
+    let source_lang = None;
+    let target_lang = document.metadata.get("Language").cloned();
 
     Ok(FileMetadata {
         format: FileFormat::PO,
         source_language: source_lang,
         target_language: target_lang,
-        total_entries: entries.len(),
+        total_entries: document
+            .entries
+            .iter()
+            .filter(|entry| !entry.obsolete)
+            .count(),
         file_path: Some(file_path.to_string()),
     })
 }
@@ -179,42 +196,6 @@ fn extract_json_metadata(file_path: &str) -> Result<FileMetadata> {
         total_entries,
         file_path: Some(file_path.to_string()),
     })
-}
-
-/// 提取 XLIFF 文件元数据（占位实现）
-fn extract_xliff_metadata(file_path: &str) -> Result<FileMetadata> {
-    // Phase 4 暂不完整实现，返回基础元数据
-    Ok(FileMetadata {
-        format: FileFormat::XLIFF,
-        source_language: None,
-        target_language: None,
-        total_entries: 0,
-        file_path: Some(file_path.to_string()),
-    })
-}
-
-/// 提取 YAML 文件元数据（占位实现）
-fn extract_yaml_metadata(file_path: &str) -> Result<FileMetadata> {
-    // Phase 4 暂不完整实现，返回基础元数据
-    Ok(FileMetadata {
-        format: FileFormat::YAML,
-        source_language: None,
-        target_language: None,
-        total_entries: 0,
-        file_path: Some(file_path.to_string()),
-    })
-}
-
-/// 从 PO 内容提取语言信息（辅助函数）
-fn extract_po_language(content: &str, key: &str) -> Option<String> {
-    content
-        .lines()
-        .find(|line| line.contains(key))
-        .and_then(|line| {
-            line.split(':')
-                .nth(1)
-                .map(|s| s.trim().trim_matches('\\').trim().to_string())
-        })
 }
 
 #[cfg(test)]

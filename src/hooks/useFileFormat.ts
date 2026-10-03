@@ -1,5 +1,4 @@
 import useSWR from 'swr';
-import type { FileFormat, FileMetadata } from '../types/fileFormat';
 import { fileFormatCommands } from '../services/fileCommands';
 
 export function useFileFormat(filePath: string | null | undefined) {
@@ -15,7 +14,7 @@ export function useFileFormat(filePath: string | null | undefined) {
     }
   );
   return {
-    format: (data as FileFormat | undefined) ?? undefined,
+    format: data,
     isLoading: !!isLoading,
     error,
     refresh: () => mutate(),
@@ -36,7 +35,7 @@ export function useFileMetadata(filePath: string | null | undefined) {
     }
   );
   return {
-    metadata: (data as FileMetadata | undefined) ?? undefined,
+    metadata: data,
     isLoading: !!isLoading,
     error,
     refresh: () => mutate(),

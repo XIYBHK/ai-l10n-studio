@@ -1,57 +1,35 @@
-import type { ContextualRefineRequest } from '../types/tauri';
+import i18n from '../i18n/config';
 import { invoke } from './apiClient';
-
-export const translatorCommands = {
-  async translateEntry(text: string, targetLanguage?: string): Promise<string> {
-    return invoke<string>(
-      'translate_entry',
-      { text, targetLanguage: targetLanguage || null },
-      { errorMessage: '翻译失败', silent: false }
-    );
-  },
-
-  async contextualRefine(
-    requests: ContextualRefineRequest[],
-    targetLanguage: string
-  ): Promise<string[]> {
-    return invoke<string[]>(
-      'contextual_refine',
-      { requests, targetLanguage },
-      { errorMessage: 'Contextual Refine 失败', silent: false }
-    );
-  },
-};
+import type { LanguageInfo } from '../types/generated/LanguageInfo';
 
 export const i18nCommands = {
-  async getSupportedLanguages(): Promise<string[]> {
-    return invoke<string[]>('get_supported_langs', undefined, {
-      errorMessage: '获取支持的语言列表失败',
+  async getSupportedLanguages(): Promise<LanguageInfo[]> {
+    return invoke<LanguageInfo[]>('get_supported_langs', undefined, {
+      errorMessage: i18n.t('errors.ipc.supportedLanguages'),
     });
   },
 
   async getSystemLocale(): Promise<string> {
     return invoke<string>('get_system_locale', undefined, {
-      errorMessage: '获取系统语言失败',
+      errorMessage: i18n.t('errors.ipc.systemLocale'),
     });
   },
 
-  async detectLanguage(text: string): Promise<{ code: string; display_name: string }> {
-    return invoke<{ code: string; display_name: string }>(
+  async detectLanguage(text: string): Promise<LanguageInfo> {
+    return invoke<LanguageInfo>(
       'detect_text_language',
       { text },
       {
-        errorMessage: '语言检测失败',
+        errorMessage: i18n.t('errors.ipc.detectLanguage'),
       }
     );
   },
 
-  async getDefaultTargetLanguage(
-    sourceLangCode: string
-  ): Promise<{ code: string; display_name: string }> {
-    return invoke<{ code: string; display_name: string }>(
+  async getDefaultTargetLanguage(sourceLangCode: string): Promise<LanguageInfo> {
+    return invoke<LanguageInfo>(
       'get_default_target_lang',
       { sourceLangCode },
-      { errorMessage: '获取默认目标语言失败' }
+      { errorMessage: i18n.t('errors.ipc.targetLanguage') }
     );
   },
 };

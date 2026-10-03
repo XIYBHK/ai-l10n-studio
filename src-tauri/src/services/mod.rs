@@ -4,8 +4,8 @@
 
 // 核心服务模块
 pub mod ai_translator;
-pub mod batch_translator;
 pub mod config_draft;
+pub mod model_config;
 pub mod po_parser;
 pub mod translation_stats;
 pub mod translation_task;
@@ -18,7 +18,6 @@ pub mod translation_memory;
 
 // 文件和数据处理
 pub mod batch_progress_channel;
-pub mod file_chunker;
 pub mod file_format;
 pub mod prompt_logger;
 pub mod term_library;
@@ -32,22 +31,18 @@ pub mod tests;
 // ============================================================================
 
 // 核心类型
-pub use ai_translator::{AIConfig, AITranslator, ProxyConfig};
+pub use ai_translator::{AIConfig, AITranslator};
 pub use config_draft::ConfigDraft;
 pub use config_draft::{AppConfig, ConfigVersionInfo};
-pub use translation_stats::TokenStats;
 
 // 批量翻译
-pub use batch_progress_channel::{BatchProgressEvent, BatchStatsEvent, TokenStatsEvent};
-pub use batch_translator::{BatchTranslator, TranslationReport};
+pub use batch_progress_channel::BatchProgressEvent;
 
-// PO 解析（POEntry 在 commands 模块定义）
-pub use po_parser::POParser;
+pub use po_parser::{PODocument, POParser};
 
 // 翻译记忆和术语
 pub use prompt_logger::{
-    clear_prompt_logs, format_prompt_logs, get_prompt_logs, init_prompt_logger, log_prompt,
-    update_prompt_response,
+    clear_prompt_logs, format_prompt_logs, log_prompt, update_prompt_response,
 };
 pub use term_library::TermLibrary;
 pub use translation_memory::TranslationMemory;

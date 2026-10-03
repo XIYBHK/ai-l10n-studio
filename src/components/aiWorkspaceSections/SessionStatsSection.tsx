@@ -8,12 +8,13 @@ import { TokenCard } from './TokenCard';
 import { CostBreakdown } from './CostBreakdown';
 import { CacheInfo } from './CacheInfo';
 import { EfficiencyTip } from './EfficiencyTip';
+import { useTranslation } from 'react-i18next';
 
 export const SESSION_CARD_DATA = [
-  { key: 'tm_hits', label: '记忆库命中', color: 'statusTranslated', percentage: true },
-  { key: 'deduplicated', label: '去重节省', color: 'statusUntranslated', percentage: true },
-  { key: 'ai_translated', label: 'AI调用', color: 'textPrimary', percentage: true },
-  { key: 'tm_learned', label: '记忆库新增', color: 'statusTranslated', percentage: false },
+  { key: 'tm_hits', label: 'memoryHits', color: 'statusTranslated' },
+  { key: 'deduplicated', label: 'deduplication', color: 'statusUntranslated' },
+  { key: 'ai_translated', label: 'aiTranslated', color: 'textPrimary' },
+  { key: 'tm_learned', label: 'tmLearned', color: 'statusTranslated' },
 ] as const;
 
 // 本次会话统计区块
@@ -22,7 +23,9 @@ export const SessionStatsSection = memo(function SessionStatsSection({
   modelInfo,
   language,
 }: SessionStatsSectionProps) {
-  const hasData = (sessionStats.tm_hits ?? 0) > 0 || (sessionStats.ai_translated ?? 0) > 0;
+  const { t } = useTranslation();
+  const hasData =
+    sessionStats.tm_hits > 0 || sessionStats.ai_translated > 0 || sessionStats.tm_learned > 0;
 
   if (!hasData) {
     return (
@@ -34,7 +37,7 @@ export const SessionStatsSection = memo(function SessionStatsSection({
           fontSize: 'var(--font-size-sm)',
         }}
       >
-        暂无数据
+        {t('aiWorkspace.noStats')}
       </div>
     );
   }
@@ -79,10 +82,10 @@ export const SessionStatsSection = memo(function SessionStatsSection({
   };
 
   return (
-    <div role="region" aria-label="本次会话统计">
+    <div role="region" aria-label={t('aiWorkspace.session')}>
       <div style={headerStyle}>
         <BarChartOutlined aria-hidden="true" />
-        本次会话统计
+        {t('aiWorkspace.session')}
       </div>
 
       {/* 效率指标 2x2网格 */}
@@ -90,7 +93,7 @@ export const SessionStatsSection = memo(function SessionStatsSection({
         {SESSION_CARD_DATA.map((item) => (
           <StatCard
             key={item.key}
-            title={item.label}
+            title={t(`aiWorkspace.${item.label}`)}
             value={getStatValue(item.key)}
             color={item.color}
           />
@@ -99,13 +102,17 @@ export const SessionStatsSection = memo(function SessionStatsSection({
 
       {/* Token消耗 */}
       <div style={tokenGridStyle}>
-        <TokenCard label="输入" value={formatTokens(inputTokens)} />
-        <TokenCard label="输出" value={formatTokens(outputTokens)} />
-        <TokenCard label="总计" value={formatTokens(totalTokens)} />
+        <TokenCard label={t('aiWorkspace.input')} value={formatTokens(inputTokens)} />
+        <TokenCard label={t('aiWorkspace.output')} value={formatTokens(outputTokens)} />
+        <TokenCard label={t('aiWorkspace.total')} value={formatTokens(totalTokens)} />
       </div>
 
       {/* 成本 */}
-      <CostBreakdown cost={cost} language={language} />
+      <CostBreakdown
+        cost={cost}
+        language={language}
+        unpricedRequests={sessionStats.token_stats.unpriced_requests}
+      />
 
       {/* 缓存支持提示 */}
       {modelInfo && <CacheInfo modelInfo={modelInfo} />}

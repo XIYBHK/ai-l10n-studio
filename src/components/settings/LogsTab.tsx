@@ -36,7 +36,12 @@ export function LogsTab() {
       });
   }, [form]);
 
-  async function handleSave(values: any) {
+  async function handleSave(values: {
+    log_level: string;
+    log_retention_days: number;
+    log_max_size: number;
+    log_max_count: number;
+  }) {
     setLoading(true);
     try {
       await configCommands.update({
@@ -48,7 +53,7 @@ export function LogsTab() {
       message.success(t('messages.logSettingsSaved'));
       log.info('日志设置已保存', values);
     } catch (error) {
-      const errorMsg = error instanceof Error ? error.message : '保存失败';
+      const errorMsg = error instanceof Error ? error.message : t('settings.saveFailed');
       message.error(errorMsg);
       log.error('保存日志设置失败', { error });
     } finally {
@@ -60,7 +65,7 @@ export function LogsTab() {
     <Card
       title={
         <span>
-          <InfoCircleOutlined /> 日志设置
+          <InfoCircleOutlined /> {t('settings.tabs.logs')}
         </span>
       }
       size="small"
@@ -72,47 +77,50 @@ export function LogsTab() {
           fontSize: 'var(--font-size-base)',
         }}
       >
-        配置应用日志的输出级别、保留时间、文件大小和数量。建议在开发和调试时使用
-        DEBUG级别，生产环境使用 INFO 级别。
+        {t('settings.logs.description')}
       </p>
 
       <Form form={form} layout="vertical" onFinish={handleSave}>
-        <Form.Item label="日志级别" name="log_level" tooltip="DEBUG 最详细，ERROR 最简洁">
+        <Form.Item
+          label={t('settings.logs.level')}
+          name="log_level"
+          tooltip={t('settings.logs.levelHelp')}
+        >
           <Select>
-            <Select.Option value="debug">DEBUG - 调试信息</Select.Option>
-            <Select.Option value="info">INFO - 一般信息</Select.Option>
-            <Select.Option value="warn">WARN - 警告信息</Select.Option>
-            <Select.Option value="error">ERROR - 错误信息</Select.Option>
+            <Select.Option value="debug">{t('settings.logs.debug')}</Select.Option>
+            <Select.Option value="info">{t('settings.logs.info')}</Select.Option>
+            <Select.Option value="warn">{t('settings.logs.warn')}</Select.Option>
+            <Select.Option value="error">{t('settings.logs.error')}</Select.Option>
           </Select>
         </Form.Item>
 
         <Form.Item
-          label="日志保留天数"
+          label={t('settings.logs.retention')}
           name="log_retention_days"
-          tooltip="日志文件保留的天数，超期自动删除"
+          tooltip={t('settings.logs.retentionHelp')}
         >
-          <InputNumber min={1} max={365} style={{ width: '100%' }} />
+          <InputNumber min={0} max={365} style={{ width: '100%' }} />
         </Form.Item>
 
         <Form.Item
-          label="单个日志文件最大大小 (KB)"
+          label={t('settings.logs.size')}
           name="log_max_size"
-          tooltip="单个日志文件的最大大小，超过后自动创建新文件"
+          tooltip={t('settings.logs.sizeHelp')}
         >
           <InputNumber min={64} max={1024} style={{ width: '100%' }} />
         </Form.Item>
 
         <Form.Item
-          label="日志文件最大数量"
+          label={t('settings.logs.count')}
           name="log_max_count"
-          tooltip="最多保留的日志文件数量，超期自动删除最旧的文件"
+          tooltip={t('settings.logs.countHelp')}
         >
           <InputNumber min={1} max={50} style={{ width: '100%' }} />
         </Form.Item>
 
         <Form.Item>
           <Button type="primary" htmlType="submit" loading={loading}>
-            保存设置
+            {t('common.save')}
           </Button>
         </Form.Item>
       </Form>

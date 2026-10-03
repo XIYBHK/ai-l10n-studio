@@ -1,0 +1,128 @@
+.settings {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+}
+.intro h3 {
+  margin: 0 0 var(--space-2);
+  font-size: var(--font-size-lg);
+}
+.intro p {
+  margin: 0;
+  color: var(--color-textSecondary);
+}
+.label {
+  font-weight: 600;
+}
+.providers {
+  display: grid;
+  gap: var(--space-3);
+}
+.endpoint {
+  color: var(--color-textSecondary);
+  font-size: var(--font-size-xs);
+  overflow-wrap: anywhere;
+}
+.modelTags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+  margin-top: var(--space-3);
+}
+.fieldGrid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0 var(--space-4);
+}
+.modelHeader {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: var(--space-3);
+}
+.modelRow,
+.columnLabels {
+  display: grid;
+  grid-template-columns:
+    minmax(140px, 2fr) minmax(100px, 1.5fr) minmax(90px, 1fr) minmax(90px, 1fr)
+    auto;
+  gap: var(--space-2);
+}
+.columnLabels {
+  color: var(--color-textSecondary);
+  font-size: var(--font-size-xs);
+  margin-bottom: var(--space-2);
+}
+.proxy {
+  margin-top: var(--space-4);
+}
+.modelRow :global(.ant-input-number) {
+  width: 100%;
+}
+.actions {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  gap: var(--space-3);
+  margin-top: var(--space-5);
+}
+.testModel {
+  min-width: 160px;
+}
+.builtin {
+  min-width: 200px;
+}
+.quickDescription {
+  margin: 0 0 var(--space-3);
+  color: var(--color-textSecondary);
+}
+.presetGrid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: var(--space-2);
+}
+.presetButton {
+  height: auto;
+  min-width: 0;
+  padding: var(--space-3);
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: var(--space-1);
+}
+.presetModel {
+  width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  text-align: left;
+  font-size: var(--font-size-xs);
+  opacity: 0.8;
+}
+.quickEndpoint {
+  margin: var(--space-4) 0 var(--space-3);
+  color: var(--color-textSecondary);
+  font-size: var(--font-size-xs);
+  overflow-wrap: anywhere;
+}
+@media (max-width: 700px) {
+  .presetGrid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+  .columnLabels {
+    display: none;
+  }
+  .fieldGrid {
+    grid-template-columns: 1fr;
+  }
+  .modelRow {
+    grid-template-columns: 1fr 1fr auto;
+  }
+  .modelRow > :nth-child(3),
+  .modelRow > :nth-child(4) {
+    grid-row: 2;
+  }
+  .modelRow > :last-child {
+    grid-column: 3;
+    grid-row: 1;
+  }
+}

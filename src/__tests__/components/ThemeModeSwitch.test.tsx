@@ -3,11 +3,16 @@ import { screen, waitFor } from '@testing-library/react';
 import { ThemeModeSwitch } from '../../components/ThemeModeSwitch';
 import { useAppStore } from '../../store/useAppStore';
 import { renderWithProviders } from '../../test/renderWithProviders';
+import { useThemeRuntime } from '../../hooks/useTheme';
+
+function ThemePage() {
+  useThemeRuntime();
+  return <ThemeModeSwitch />;
+}
 
 describe('ThemeModeSwitch', () => {
   beforeEach(() => {
     useAppStore.setState({
-      config: null,
       theme: 'system',
       language: 'zh-CN',
       systemTheme: 'light',
@@ -17,7 +22,7 @@ describe('ThemeModeSwitch', () => {
   it('updates the applied theme when the user selects dark mode', async () => {
     const user = userEvent.setup();
 
-    renderWithProviders(<ThemeModeSwitch />);
+    renderWithProviders(<ThemePage />);
 
     const options = screen.getByTestId('theme-mode-switch').querySelectorAll('label');
     await user.click(options[1] as HTMLElement);
@@ -32,7 +37,7 @@ describe('ThemeModeSwitch', () => {
   it('keeps system mode aligned with the mocked system theme', async () => {
     const user = userEvent.setup();
 
-    renderWithProviders(<ThemeModeSwitch />);
+    renderWithProviders(<ThemePage />);
 
     const options = screen.getByTestId('theme-mode-switch').querySelectorAll('label');
     await user.click(options[2] as HTMLElement);

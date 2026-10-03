@@ -3,4 +3,18 @@
 /**
  * 支持的语言枚举
  */
-export type Language = "zh-Hans" | "zh-Hant" | "en" | "ja" | "ko" | "fr" | "de" | "es" | "ru" | "ar" | "pt" | "it" | "th" | "vi";
+export type Language =
+  | 'zh-Hans'
+  | 'zh-Hant'
+  | 'en'
+  | 'ja'
+  | 'ko'
+  | 'fr'
+  | 'de'
+  | 'es'
+  | 'ru'
+  | 'ar'
+  | 'pt'
+  | 'it'
+  | 'th'
+  | 'vi';

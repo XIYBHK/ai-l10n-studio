@@ -3,7 +3,7 @@ import userEvent from '@testing-library/user-event';
 import { TranslationWorkspace } from '../../components/TranslationWorkspace';
 import { useTranslationStore } from '../../store/useTranslationStore';
 import { renderWithProviders } from '../../test/renderWithProviders';
-import type { POEntry, TranslationStats } from '../../types/tauri';
+import type { POEntry } from '../../types/tauri';
 
 vi.mock('@tanstack/react-virtual', () => ({
   useVirtualizer: vi.fn(({ count }: { count: number }) => ({
@@ -18,15 +18,8 @@ vi.mock('@tanstack/react-virtual', () => ({
 }));
 
 vi.mock('../../components/AIWorkspace', () => ({
-  AIWorkspace: ({
-    stats,
-    onResetStats,
-  }: {
-    stats: TranslationStats | null;
-    onResetStats: () => void;
-  }) => (
+  AIWorkspace: ({ onResetStats }: { onResetStats: () => void }) => (
     <aside aria-label="AI workspace">
-      <span>AI translated: {stats?.ai_translated ?? 0}</span>
       <button type="button" onClick={onResetStats}>
         Reset stats
       </button>
@@ -35,7 +28,7 @@ vi.mock('../../components/AIWorkspace', () => ({
 }));
 
 vi.mock('../../hooks/useConfig', () => ({
-  useAppData: () => ({
+  useActiveAIConfig: () => ({
     activeAIConfig: null,
   }),
 }));
@@ -53,7 +46,7 @@ vi.mock('../../hooks/useFileFormat', () => ({
   }),
   useFileMetadata: () => ({
     metadata: {
-      totalEntries: 3,
+      total_entries: 3,
     },
     isLoading: false,
   }),
@@ -65,6 +58,15 @@ const createEntry = (overrides: Partial<POEntry> = {}): POEntry => ({
   msgid: '',
   msgstr: '',
   line_start: 1,
+  translator_comments: '',
+  msgid_plural: null,
+  msgstr_plural: [],
+  flags: [],
+  occurrences: [],
+  obsolete: false,
+  previous_msgid: null,
+  previous_msgid_plural: null,
+  previous_msgctxt: null,
   ...overrides,
 });
 
@@ -80,32 +82,17 @@ const entries: POEntry[] = [
   createEntry({ msgid: 'Close window', msgstr: 'Fermer la fenetre', line_start: 30 }),
 ];
 
-const stats: TranslationStats = {
-  total: 3,
-  tm_hits: 1,
-  deduplicated: 0,
-  ai_translated: 2,
-  tm_learned: 1,
-  token_stats: {
-    input_tokens: 100,
-    output_tokens: 50,
-    total_tokens: 150,
-    cost: 0.01,
-  },
-};
-
 const renderWorkspace = (overrides: Partial<Parameters<typeof TranslationWorkspace>[0]> = {}) => {
   const props = {
     entries,
     currentEntry: entries[1],
     isTranslating: false,
     progress: 0,
-    translationStats: stats,
     currentFilePath: 'C:\\projects\\messages.po',
     onEntrySelect: vi.fn(),
-    onEntryUpdate: vi.fn(),
     onTranslateSelected: vi.fn(),
     onContextualRefine: vi.fn(),
+    onConfirmEntries: vi.fn().mockResolvedValue(undefined),
     onResetStats: vi.fn(),
     ...overrides,
   };
@@ -123,23 +110,31 @@ describe('TranslationWorkspace', () => {
     useTranslationStore.getState().reset();
   });
 
+  it('offers file import before a document is opened', async () => {
+    const user = userEvent.setup();
+    const onOpenFile = vi.fn();
+    renderWorkspace({ entries: [], currentEntry: null, currentFilePath: null, onOpenFile });
+    expect(screen.getByRole('heading', { name: '让文字，自在跨越语言。' })).toBeInTheDocument();
+    await user.click(screen.getByRole('button', { name: /导入/ }));
+    expect(onOpenFile).toHaveBeenCalledOnce();
+  });
+
   it('renders the list, editor, AI panel, and file info together', async () => {
     renderWorkspace();
 
-    expect(screen.getByText('Save file')).toBeInTheDocument();
+    expect(screen.queryByText('Save file')).not.toBeInTheDocument();
     expect(screen.getAllByText('Open project')).toHaveLength(2);
     expect(screen.getByDisplayValue('Ouvrir le projet')).toBeInTheDocument();
-    expect(await screen.findByRole('complementary', { name: 'AI workspace' })).toHaveTextContent(
-      'AI translated: 2'
-    );
-    expect(screen.getByText('messages.po')).toBeInTheDocument();
-    expect(screen.getByText('3 entries')).toBeInTheDocument();
+    expect(await screen.findByRole('complementary', { name: 'AI workspace' })).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: 'messages.po' })).toBeInTheDocument();
+    expect(screen.getByText('共 3 条条目')).toBeInTheDocument();
   });
 
   it('routes list selections and selected translation actions to workspace callbacks', async () => {
     const user = userEvent.setup();
     const props = renderWorkspace();
 
+    await user.click(screen.getByText('未翻译', { selector: 'span' }));
     await user.click(screen.getByText('Save file'));
     expect(props.onEntrySelect).toHaveBeenCalledWith(entries[0]);
 
@@ -156,10 +151,7 @@ describe('TranslationWorkspace', () => {
     await user.type(translationInput, 'Fermer la fenetre active');
     await user.keyboard('{Control>}{Enter}{/Control}');
 
-    expect(props.onEntryUpdate).toHaveBeenCalledWith(2, {
-      msgstr: 'Fermer la fenetre active',
-      needsReview: false,
-    });
+    expect(props.onConfirmEntries).toHaveBeenCalledWith([2]);
 
     const aiPanel = await screen.findByRole('complementary', { name: 'AI workspace' });
     await user.click(within(aiPanel).getByRole('button', { name: 'Reset stats' }));

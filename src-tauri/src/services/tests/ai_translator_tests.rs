@@ -1,398 +1,466 @@
-//! AI 翻译器测试模块
-//!
-//! 包含 `AITranslator` 的单元测试和集成测试
+#![allow(clippy::unwrap_used, clippy::expect_used)]
 
-use crate::services::ai_translator::{AIConfig, AITranslator, ProxyConfig};
-use crate::services::translation_stats::{BatchStats, TokenStats};
+use crate::services::ai::{
+    ModelInfo,
+    provider::{AIProvider, with_global_registry_mut},
+};
+use crate::services::ai_translator::{AIConfig, AITranslator, parse_translations, preview};
+use crate::services::batch_progress_channel::{TranslationInput, TranslationSource};
+use crate::services::model_config::ModelApi;
+use crate::services::prompt_builder::build_inputs_prompt;
+use crate::services::translation_memory::{
+    TranslationMemory, canonical_target_language, memory_key,
+};
+use std::io::{Read, Write};
+use std::net::TcpListener;
+use std::time::Duration;
 
-#[cfg(test)]
-#[allow(clippy::unwrap_used, clippy::expect_used, clippy::clone_on_ref_ptr)]
-mod tests {
-    use super::*;
-
-    /// 创建测试用的 AI 配置
-    fn create_test_config() -> AIConfig {
-        AIConfig {
-            provider_id: "moonshot".to_string(), // 使用真实的供应商 ID
-            api_key: "test_key".to_string(),
-            base_url: Some("https://api.test.com".to_string()),
-            model: Some("test-model".to_string()),
-            proxy: None,
-        }
+struct TestProvider;
+impl AIProvider for TestProvider {
+    fn id(&self) -> &str {
+        "local-test"
     }
-
-    // ========== AITranslator::new() 测试 ==========
-
-    #[test]
-    fn test_ai_translator_new_basic() {
-        let translator = AITranslator::new("test_key".to_string(), None, false, None, None);
-
-        assert!(translator.is_ok());
-        // 验证翻译器创建成功，不访问私有字段
-        let t = translator.unwrap();
-        let _stats = t.get_token_stats();
+    fn display_name(&self) -> &str {
+        "Local test"
     }
-
-    #[test]
-    fn test_ai_translator_new_with_tm() {
-        let translator = AITranslator::new(
-            "test_key".to_string(),
-            None,
-            true,
-            None,
-            Some("zh-Hans".to_string()),
-        );
-
-        assert!(translator.is_ok());
-        // 验证翻译器创建成功，不访问私有字段
-        let t = translator.unwrap();
-        let _tm = t.get_translation_memory();
+    fn default_url(&self) -> &str {
+        "http://127.0.0.1:1"
     }
-
-    #[test]
-    fn test_ai_translator_new_with_custom_prompt() {
-        let custom_prompt = "自定义翻译提示词";
-        let translator = AITranslator::new(
-            "test_key".to_string(),
-            None,
-            false,
-            Some(custom_prompt),
-            None,
-        );
-
-        assert!(translator.is_ok());
-        // 验证翻译器创建成功
-        let t = translator.unwrap();
-        let _prompt = t.current_system_prompt();
+    fn api(&self) -> ModelApi {
+        ModelApi::OpenaiCompletions
     }
-
-    // ========== AITranslator::new_with_config() 测试 ==========
-
-    #[test]
-    fn test_ai_translator_new_with_config_basic() {
-        let config = create_test_config();
-        let result = AITranslator::new_with_config(config, false, None, None);
-
-        // 可能会失败（供应商配置问题），只验证方法调用不崩溃
-        match result {
-            Ok(t) => {
-                let _stats = t.get_token_stats();
-            }
-            Err(_) => {
-                // 如果失败也是可以接受的（供应商未注册等）
-            }
-        }
+    fn default_model(&self) -> &str {
+        "local-test"
     }
-
-    #[test]
-    fn test_ai_translator_new_with_config_with_proxy() {
-        let mut config = create_test_config();
-        config.proxy = Some(ProxyConfig {
-            host: "127.0.0.1".to_string(),
-            port: 7890,
-            enabled: true,
-        });
-
-        let result = AITranslator::new_with_config(config, false, None, None);
-
-        // 可能会失败，只验证方法调用不崩溃
-        let _ = result;
-    }
-
-    #[test]
-    fn test_ai_translator_new_with_config_with_tm() {
-        let config = create_test_config();
-        let result = AITranslator::new_with_config(config, true, None, Some("zh-Hant".to_string()));
-
-        // 可能会失败，只验证方法调用不崩溃
-        if let Ok(t) = result {
-            let _tm = t.get_translation_memory();
-        }
-    }
-
-    // ========== Token 统计测试 ==========
-
-    #[test]
-    fn test_token_stats_default() {
-        let stats = TokenStats::default();
-        assert_eq!(stats.input_tokens, 0);
-        assert_eq!(stats.output_tokens, 0);
-        assert_eq!(stats.total_tokens, 0);
-        assert_eq!(stats.cost, 0.0);
-    }
-
-    #[test]
-    fn test_token_stats_new() {
-        let stats = TokenStats::new();
-        assert_eq!(stats.input_tokens, 0);
-        assert_eq!(stats.output_tokens, 0);
-    }
-
-    #[test]
-    fn test_token_stats_update() {
-        let mut stats = TokenStats::new();
-        stats.update(100, 50, 150);
-        assert_eq!(stats.input_tokens, 100);
-        assert_eq!(stats.output_tokens, 50);
-        assert_eq!(stats.total_tokens, 150);
-
-        // 测试累加
-        stats.update(50, 25, 75);
-        assert_eq!(stats.input_tokens, 150);
-        assert_eq!(stats.output_tokens, 75);
-        assert_eq!(stats.total_tokens, 225);
-    }
-
-    #[test]
-    fn test_token_stats_add_cost() {
-        let mut stats = TokenStats::new();
-        stats.add_cost(0.5);
-        assert_eq!(stats.cost, 0.5);
-
-        stats.add_cost(0.3);
-        assert_eq!(stats.cost, 0.8);
-    }
-
-    #[test]
-    fn test_token_stats_reset() {
-        let mut stats = TokenStats::new();
-        stats.update(100, 50, 150);
-        stats.add_cost(0.5);
-
-        stats.reset();
-        assert_eq!(stats.input_tokens, 0);
-        assert_eq!(stats.output_tokens, 0);
-        assert_eq!(stats.total_tokens, 0);
-        assert_eq!(stats.cost, 0.0);
-    }
-
-    // ========== Batch 统计测试 ==========
-
-    #[test]
-    fn test_batch_stats_default() {
-        let stats = BatchStats::default();
-        assert_eq!(stats.total, 0);
-        assert_eq!(stats.tm_hits, 0);
-        assert_eq!(stats.deduplicated, 0);
-        assert_eq!(stats.ai_translated, 0);
-        assert_eq!(stats.tm_learned, 0);
-    }
-
-    #[test]
-    fn test_batch_stats_new() {
-        let stats = BatchStats::new();
-        assert_eq!(stats.total, 0);
-    }
-
-    #[test]
-    fn test_batch_stats_init() {
-        let mut stats = BatchStats::new();
-        stats.init(100);
-        assert_eq!(stats.total, 100);
-        assert_eq!(stats.tm_hits, 0);
-        assert_eq!(stats.ai_translated, 0);
-    }
-
-    #[test]
-    fn test_batch_stats_record_tm_hit() {
-        let mut stats = BatchStats::new();
-        stats.record_tm_hit();
-        stats.record_tm_hit();
-        assert_eq!(stats.tm_hits, 2);
-    }
-
-    #[test]
-    fn test_batch_stats_record_deduplication() {
-        let mut stats = BatchStats::new();
-        stats.record_deduplication(20);
-        assert_eq!(stats.deduplicated, 20);
-    }
-
-    #[test]
-    fn test_batch_stats_record_ai_translation() {
-        let mut stats = BatchStats::new();
-        stats.record_ai_translation(78);
-        assert_eq!(stats.ai_translated, 78);
-    }
-
-    #[test]
-    fn test_batch_stats_record_tm_learning() {
-        let mut stats = BatchStats::new();
-        stats.record_tm_learning();
-        stats.record_tm_learning();
-        stats.record_tm_learning();
-        assert_eq!(stats.tm_learned, 3);
-    }
-
-    #[test]
-    fn test_batch_stats_reset() {
-        let mut stats = BatchStats::new();
-        stats.init(100);
-        stats.record_tm_hit();
-        stats.record_deduplication(20);
-        stats.record_ai_translation(78);
-
-        stats.reset();
-        assert_eq!(stats.total, 0);
-        assert_eq!(stats.tm_hits, 0);
-        assert_eq!(stats.deduplicated, 0);
-        assert_eq!(stats.ai_translated, 0);
-    }
-
-    // ========== AITranslator 方法测试 ==========
-
-    #[test]
-    fn test_get_token_stats() {
-        let translator =
-            AITranslator::new("test_key".to_string(), None, false, None, None).unwrap();
-
-        let stats = translator.get_token_stats();
-        assert_eq!(stats.input_tokens, 0);
-        assert_eq!(stats.output_tokens, 0);
-    }
-
-    #[test]
-    fn test_reset_stats() {
-        let mut translator =
-            AITranslator::new("test_key".to_string(), None, false, None, None).unwrap();
-
-        // 重置统计
-        translator.reset_stats();
-        let stats = translator.get_token_stats();
-        assert_eq!(stats.input_tokens, 0);
-        assert_eq!(stats.output_tokens, 0);
-    }
-
-    #[test]
-    fn test_clear_conversation_history() {
-        let mut translator =
-            AITranslator::new("test_key".to_string(), None, false, None, None).unwrap();
-
-        // 清空历史（应该不会出错）
-        translator.clear_conversation_history();
-        // 验证方法调用成功（不访问私有字段）
-    }
-
-    #[test]
-    fn test_current_system_prompt() {
-        let translator =
-            AITranslator::new("test_key".to_string(), None, false, None, None).unwrap();
-
-        let prompt = translator.current_system_prompt();
-        assert!(!prompt.is_empty());
-    }
-
-    #[test]
-    fn test_build_user_prompt() {
-        let translator = AITranslator::new(
-            "test_key".to_string(),
-            None,
-            false,
-            None,
-            Some("zh-Hans".to_string()),
-        )
-        .unwrap();
-
-        let texts = vec!["Hello".to_string(), "World".to_string()];
-
-        let prompt = translator.build_user_prompt(&texts);
-        assert!(prompt.contains("简体中文"));
-        assert!(prompt.contains("Hello"));
-        assert!(prompt.contains("World"));
-    }
-
-    #[test]
-    fn test_build_user_prompt_without_target_language() {
-        let translator =
-            AITranslator::new("test_key".to_string(), None, false, None, None).unwrap();
-
-        let texts = vec!["Hello".to_string()];
-        let prompt = translator.build_user_prompt(&texts);
-        assert!(prompt.contains("目标语言"));
-    }
-
-    // ========== 错误处理测试 ==========
-
-    #[test]
-    fn test_invalid_proxy_config() {
-        let mut config = create_test_config();
-        // 无效的代理地址（空地址，但仍然可以创建）
-        config.proxy = Some(ProxyConfig {
-            host: "".to_string(),
-            port: 0,
-            enabled: false, // 禁用代理
-        });
-
-        let result = AITranslator::new_with_config(config, false, None, None);
-
-        // 可能会失败（供应商配置问题），只验证方法调用不崩溃
-        let _ = result;
-    }
-
-    #[test]
-    fn test_empty_api_key() {
-        let translator = AITranslator::new("".to_string(), None, false, None, None);
-
-        // 空 API key 应该也能创建（实际请求时会失败）
-        assert!(translator.is_ok());
+    fn get_models(&self) -> Vec<ModelInfo> {
+        vec![ModelInfo {
+            id: "local-test".into(),
+            name: "Local test".into(),
+            provider: "local-test".into(),
+            context_window: 4096,
+            max_output_tokens: 2048,
+            input_price: 1.0,
+            output_price: 2.0,
+            cache_reads_price: None,
+            cache_writes_price: None,
+            supports_cache: false,
+            supports_images: false,
+            description: None,
+            recommended: false,
+        }]
     }
 }
 
-#[cfg(test)]
-#[allow(clippy::unwrap_used, clippy::expect_used, clippy::clone_on_ref_ptr)]
-mod integration_tests {
-    use super::*;
-
-    /// 注意：这些测试需要实际的网络连接和有效的 API 密钥
-    /// 默认情况下不运行，使用 `cargo test --features integration` 运行
-
-    #[tokio::test]
-    #[ignore] // 需要网络连接
-    async fn test_translate_with_mock_api() {
-        let mut translator =
-            AITranslator::new("test_key".to_string(), None, false, None, None).unwrap();
-
-        // test_key 会触发模拟模式
-        let texts = vec!["Hello".to_string(), "World".to_string()];
-        let result = translator.translate_batch(texts, None).await;
-
-        assert!(result.is_ok());
-        let translations = result.unwrap();
-        assert_eq!(translations.len(), 2);
+pub(crate) fn register_test_provider() -> AIConfig {
+    with_global_registry_mut(|registry| registry.register(TestProvider)).unwrap();
+    AIConfig {
+        provider_id: "local-test".into(),
+        catalog_provider_id: Some("local-test".into()),
+        api_key: "unused".into(),
+        api: ModelApi::OpenaiCompletions,
+        base_url: "http://127.0.0.1:1".into(),
+        model: "local-test".into(),
+        max_tokens: None,
+        proxy: None,
     }
+}
 
-    #[tokio::test]
-    #[ignore] // 需要网络连接
-    async fn test_translate_empty_list() {
-        let mut translator =
-            AITranslator::new("test_key".to_string(), None, false, None, None).unwrap();
-
-        let result = translator.translate_batch(vec![], None).await;
-        assert!(result.is_ok());
-        assert!(result.unwrap().is_empty());
+fn input(text: &str, context: Option<&str>) -> TranslationInput {
+    TranslationInput {
+        text: text.into(),
+        context: context.map(str::to_string),
     }
+}
 
-    #[tokio::test]
-    #[ignore] // 需要网络连接
-    async fn test_translate_batch_with_progress() {
-        let mut translator =
-            AITranslator::new("test_key".to_string(), None, false, None, None).unwrap();
-
-        let texts = vec!["Hello".to_string(), "World".to_string(), "Test".to_string()];
-
-        // 使用原子计数器来避免闭包可变性问题
-        use std::sync::atomic::{AtomicUsize, Ordering};
-        let progress_calls = std::sync::Arc::new(AtomicUsize::new(0));
-        let progress_calls_clone = progress_calls.clone();
-
-        let progress_callback = Box::new(move |_index: usize, _text: String| {
-            progress_calls_clone.fetch_add(1, Ordering::SeqCst);
-        });
-
-        let result = translator
-            .translate_batch(texts, Some(progress_callback))
-            .await;
-        assert!(result.is_ok());
-        // 模拟模式下，进度回调可能不会被调用
+#[test]
+fn language_and_context_isolation() {
+    let mut tm = TranslationMemory::new();
+    tm.clear();
+    tm.add_translation("Open".into(), "打开".into(), Some("verb"), "zh-CN");
+    tm.add_translation("Open".into(), "开放".into(), Some("adjective"), "zh-Hans");
+    assert_eq!(
+        tm.get_translation("Open", Some("verb"), "zh-Hans")
+            .as_deref(),
+        Some("打开")
+    );
+    assert_eq!(
+        tm.get_translation("Open", Some("adjective"), "zh-CN")
+            .as_deref(),
+        Some("开放")
+    );
+    for lang in ["zh-TW", "zh-HK", "zh-Hant", "ja", ""] {
+        assert!(tm.get_translation("Open", Some("verb"), lang).is_none());
     }
+    assert!(tm.get_translation("Open", None, "zh-Hans").is_none());
+    tm.memory.insert("Open".into(), "legacy".into());
+    assert!(tm.get_translation("Open", None, "en").is_none());
+    assert_eq!(canonical_target_language("ZH_tw"), "zh-Hant");
+    assert_ne!(
+        memory_key("a|b", Some("c"), "en"),
+        memory_key("a", Some("b|c"), "en")
+    );
+}
+
+#[test]
+fn tm_round_trip_and_clear_preserve_empty_state() {
+    let directory = tempfile::tempdir().unwrap();
+    let path = directory.path().join("tm.json");
+    let mut tm = TranslationMemory::new();
+    tm.clear();
+    tm.add_translation("a\n\"b".into(), "翻译".into(), Some("c|d"), "zh-HK");
+    tm.save_to_file(&path).unwrap();
+    let mut loaded = TranslationMemory::new_from_file(&path).unwrap();
+    assert_eq!(
+        loaded
+            .get_translation("a\n\"b", Some("c|d"), "zh-Hant")
+            .as_deref(),
+        Some("翻译")
+    );
+    loaded.clear();
+    loaded.save_to_file(&path).unwrap();
+    assert_eq!(
+        TranslationMemory::new_from_file(&path).unwrap().get_size(),
+        0
+    );
+    std::fs::write(&path, r#"{"learned":{"Open":"打开"}}"#).unwrap();
+    assert!(TranslationMemory::new_from_file(&path).is_err());
+}
+
+#[test]
+fn structured_response_preserves_newlines_numbers_and_whitespace() {
+    let parsed = parse_translations(r#"["  1. 开始\n下一行  ","{0} %% | \\"]"#, 2).unwrap();
+    assert_eq!(parsed[0], "  1. 开始\n下一行  ");
+    assert_eq!(parsed[1], "{0} %% | \\");
+    assert!(parse_translations(r#"["one"]"#, 2).is_err());
+    assert!(parse_translations(r#"["one", 2]"#, 2).is_err());
+    assert!(parse_translations(r#"[""]"#, 1).is_err());
+    assert!(parse_translations("1. translated", 1).is_err());
+    assert_eq!(
+        parse_translations("```json\n[\"yes\"]\n```", 1).unwrap(),
+        ["yes"]
+    );
+    assert_eq!(
+        parse_translations("```json\r\n[\"yes\"]\r\n```", 1).unwrap(),
+        ["yes"]
+    );
+    assert_eq!(preview("你好𠮷世界", 3), "你好𠮷…");
+}
+
+#[test]
+fn prompt_keeps_context_and_text_in_separate_json_fields() {
+    let prompt = build_inputs_prompt(&[input("a\nb", Some("menu\"title"))], "zh-TW", None);
+    let body: serde_json::Value = serde_json::from_str(prompt.split_once('\n').unwrap().1).unwrap();
+    assert_eq!(body["entries"][0]["text"], "a\nb");
+    assert_eq!(body["entries"][0]["context"], "menu\"title");
+    assert!(prompt.contains("zh-Hant"));
+}
+
+fn serve_once(content: &str) -> (String, std::thread::JoinHandle<serde_json::Value>) {
+    let listener = TcpListener::bind("127.0.0.1:0").unwrap();
+    let url = format!("http://{}", listener.local_addr().unwrap());
+    let body = serde_json::json!({"choices":[{"message":{"role":"assistant","content":content}}],"usage":{"prompt_tokens":4,"completion_tokens":2,"total_tokens":6}}).to_string();
+    let server = std::thread::spawn(move || {
+        let (mut stream, _) = listener.accept().unwrap();
+        stream
+            .set_read_timeout(Some(Duration::from_secs(5)))
+            .unwrap();
+        let mut bytes = Vec::new();
+        let mut buffer = [0; 2048];
+        let request = loop {
+            let count = stream.read(&mut buffer).unwrap();
+            assert_ne!(count, 0);
+            bytes.extend_from_slice(&buffer[..count]);
+            if let Some(end) = bytes.windows(4).position(|window| window == b"\r\n\r\n") {
+                let headers = String::from_utf8_lossy(&bytes[..end]);
+                let size: usize = headers
+                    .lines()
+                    .find_map(|line| {
+                        line.to_lowercase()
+                            .strip_prefix("content-length:")
+                            .map(|value| value.trim().parse().unwrap())
+                    })
+                    .unwrap();
+                if bytes.len() >= end + 4 + size {
+                    break serde_json::from_slice(&bytes[end + 4..end + 4 + size]).unwrap();
+                }
+            }
+        };
+        write!(stream, "HTTP/1.1 200 OK\r\nContent-Type: application/json\r\nContent-Length: {}\r\nConnection: close\r\n\r\n{}", body.len(), body).unwrap();
+        request
+    });
+    (url, server)
+}
+
+#[tokio::test]
+async fn empty_response_preserves_reported_usage() {
+    let (url, server) = serve_once("");
+    let mut config = register_test_provider();
+    config.base_url = url;
+    config.catalog_provider_id = None;
+    let mut translator =
+        AITranslator::new_with_config(config, false, None, Some("zh-CN".into())).unwrap();
+    let error = translator
+        .translate_inputs(vec![input("Empty response usage probe", None)])
+        .await
+        .unwrap_err();
+    server.join().unwrap();
+    assert!(error.to_string().contains("AI响应为空"));
+    assert_eq!(translator.get_token_stats().input_tokens, 4);
+    assert_eq!(translator.get_token_stats().output_tokens, 2);
+    assert_eq!(translator.get_token_stats().total_tokens, 6);
+    assert_eq!(translator.get_token_stats().unpriced_requests, 1);
+}
+
+#[tokio::test]
+async fn library_phrase_rules_are_sent_in_real_request_without_other_language_or_context() {
+    use crate::services::term_library::TermLibrary;
+    let (url, server) = serve_once(r#"["打开文件"]"#);
+    let mut library = TermLibrary::new();
+    library
+        .add_term(
+            "Open".into(),
+            "打开".into(),
+            "旧译".into(),
+            None,
+            "zh-CN".into(),
+        )
+        .unwrap();
+    library
+        .add_term(
+            "Open".into(),
+            "開く".into(),
+            "旧訳".into(),
+            None,
+            "ja".into(),
+        )
+        .unwrap();
+    library
+        .add_term(
+            "Open".into(),
+            "开放".into(),
+            "旧译".into(),
+            Some("adjective".into()),
+            "zh-CN".into(),
+        )
+        .unwrap();
+    library
+        .update_style_summary("Japanese only style".into(), "ja".into(), None)
+        .unwrap();
+    let mut memory = TranslationMemory::new();
+    memory.clear();
+    memory.add_translation("Open file".into(), "过期译文".into(), Some("verb"), "zh-CN");
+    let mut translator = AITranslator::for_test(url, Some("zh-CN"), Some(memory));
+    translator.set_test_term_library(library);
+    let items = translator
+        .translate_inputs(vec![input("Open file", Some("verb"))])
+        .await
+        .unwrap();
+    assert_eq!(items[0].translation, "打开文件");
+    assert!(matches!(items[0].source, TranslationSource::Ai));
+    let request = server.join().unwrap();
+    let prompt = request["messages"][1]["content"].as_str().unwrap();
+    let payload: serde_json::Value =
+        serde_json::from_str(prompt.split_once('\n').unwrap().1).unwrap();
+    assert_eq!(
+        payload["entries"][0]["phrase_rules"],
+        serde_json::json!([{"source":"Open","translation":"打开"}])
+    );
+    assert!(payload["entries"][0]["style_guidance"].is_null());
+    assert!(!prompt.contains("Japanese only style"));
+    assert!(!prompt.contains("開く"));
+    assert!(!prompt.contains("开放"));
+}
+
+#[tokio::test]
+async fn library_rejects_ai_output_that_ignores_an_explicit_phrase_rule() {
+    use crate::services::term_library::TermLibrary;
+    let (url, server) = serve_once(r#"["错误译法"]"#);
+    let mut library = TermLibrary::new();
+    library
+        .add_term(
+            "Open".into(),
+            "打开".into(),
+            "旧译".into(),
+            None,
+            "zh-CN".into(),
+        )
+        .unwrap();
+    let mut translator = AITranslator::for_test(url, Some("zh-CN"), None);
+    translator.set_test_term_library(library);
+    let error = translator
+        .translate_inputs(vec![input("Open", None)])
+        .await
+        .unwrap_err();
+    assert!(error.to_string().contains("术语规则"));
+    assert!(!error.is_retryable());
+    server.join().unwrap();
+}
+
+#[tokio::test]
+async fn library_contextual_refinement_sends_and_validates_scoped_rules() {
+    use crate::services::term_library::TermLibrary;
+    let (url, server) = serve_once("打开");
+    let mut library = TermLibrary::new();
+    library
+        .add_term(
+            "Open".into(),
+            "打开".into(),
+            "旧译".into(),
+            Some("verb".into()),
+            "zh-CN".into(),
+        )
+        .unwrap();
+    let mut translator = AITranslator::for_test(url, Some("zh-CN"), None);
+    translator.set_test_term_library(library);
+    assert_eq!(
+        translator
+            .translate_with_context_prompt(
+                input("Open", Some("verb")),
+                "Refine this translation".into()
+            )
+            .await
+            .unwrap(),
+        "打开"
+    );
+    let request = server.join().unwrap();
+    let prompt = request["messages"][1]["content"].as_str().unwrap();
+    let payload: serde_json::Value = serde_json::from_str(prompt.lines().last().unwrap()).unwrap();
+    assert_eq!(
+        payload["phrase_rules"],
+        serde_json::json!([{"source":"Open","translation":"打开"}])
+    );
+    assert_eq!(payload["context"], "verb");
+}
+
+#[tokio::test]
+async fn library_human_correction_is_the_first_persisted_translation_and_next_tm_hit() {
+    use crate::services::translation_memory::ConfirmedTranslation;
+    let (url, server) = serve_once(r#"["错误"]"#);
+    let mut memory = TranslationMemory::new();
+    memory.clear();
+    let mut translator = AITranslator::for_test(url, Some("zh-CN"), Some(memory));
+    translator
+        .translate_inputs(vec![input("Open", Some("verb"))])
+        .await
+        .unwrap();
+    server.join().unwrap();
+    assert_eq!(translator.get_translation_memory().unwrap().memory.len(), 0);
+    assert_eq!(translator.batch_stats.tm_learned, 0);
+    let temp = tempfile::tempdir().unwrap();
+    let path = temp.path().join("tm.json");
+    TranslationMemory::confirm(
+        &path,
+        vec![ConfirmedTranslation {
+            source: "Open".into(),
+            translation: "打开".into(),
+            context: Some("verb".into()),
+            language: "zh-CN".into(),
+        }],
+    )
+    .unwrap();
+    let mut confirmed = AITranslator::for_test(
+        "http://127.0.0.1:1".into(),
+        Some("zh-Hans"),
+        Some(TranslationMemory::new_from_file(path).unwrap()),
+    );
+    let items = confirmed
+        .translate_inputs(vec![input("Open", Some("verb"))])
+        .await
+        .unwrap();
+    assert_eq!(items[0].translation, "打开");
+    assert!(matches!(items[0].source, TranslationSource::Tm));
+}
+
+#[tokio::test]
+async fn real_http_deduplicates_only_equal_context_and_reports_sources() {
+    register_test_provider();
+    let (url, server) = serve_once(r#"["打开", "开放"]"#);
+    let mut tm = TranslationMemory::new();
+    tm.clear();
+    tm.add_translation("Save".into(), "保存".into(), None, "zh-CN");
+    let mut translator = AITranslator::for_test(url, Some("zh-CN"), Some(tm));
+    let items = translator
+        .translate_inputs(vec![
+            input("Open", Some("verb")),
+            input("Open", Some("adjective")),
+            input("Open", Some("verb")),
+            input("Save", None),
+        ])
+        .await
+        .unwrap();
+    assert_eq!(
+        items
+            .iter()
+            .map(|item| item.translation.as_str())
+            .collect::<Vec<_>>(),
+        ["打开", "开放", "打开", "保存"]
+    );
+    assert!(matches!(items[0].source, TranslationSource::Ai));
+    assert!(matches!(items[2].source, TranslationSource::Dedup));
+    assert!(matches!(items[3].source, TranslationSource::Tm));
+    assert_eq!(translator.batch_stats.ai_translated, 2);
+    assert_eq!(translator.batch_stats.deduplicated, 1);
+    assert_eq!(translator.get_token_stats().total_tokens, 6);
+    assert!(translator.get_token_stats().cost > 0.0);
+    let request = server.join().unwrap();
+    let prompt = request["messages"][1]["content"].as_str().unwrap();
+    let payload: serde_json::Value =
+        serde_json::from_str(prompt.split_once('\n').unwrap().1).unwrap();
+    assert_eq!(payload["entries"].as_array().unwrap().len(), 2);
+    assert_eq!(translator.batch_stats.tm_learned, 0);
+    let memory = translator.get_translation_memory().unwrap();
+    assert!(
+        !memory
+            .memory
+            .contains_key(&memory_key("Open", Some("verb"), "zh-CN"))
+    );
+    assert_eq!(memory.memory.len(), 1);
+}
+
+#[tokio::test]
+async fn missing_target_fails_before_request() {
+    let mut translator = AITranslator::for_test("http://127.0.0.1:1".into(), None, None);
+    assert!(
+        translator
+            .translate_inputs(vec![input("Open", None)])
+            .await
+            .is_err()
+    );
+    assert!(
+        translator
+            .translate_inputs(Vec::new())
+            .await
+            .unwrap()
+            .is_empty()
+    );
+}
+
+#[tokio::test]
+async fn dropping_pending_http_future_cancels_without_retry() {
+    let listener = TcpListener::bind("127.0.0.1:0").unwrap();
+    let url = format!("http://{}", listener.local_addr().unwrap());
+    let cancellation = tokio_util::sync::CancellationToken::new();
+    let cancel_on_accept = cancellation.clone();
+    let (release_tx, release_rx) = std::sync::mpsc::channel();
+    let server = std::thread::spawn(move || {
+        let (stream, _) = listener.accept().unwrap();
+        cancel_on_accept.cancel();
+        release_rx.recv_timeout(Duration::from_secs(5)).unwrap();
+        drop(stream);
+        listener.set_nonblocking(true).unwrap();
+        assert!(listener.accept().is_err());
+    });
+    let mut translator = AITranslator::for_test(url, Some("en"), None);
+    let result = tokio::time::timeout(Duration::from_secs(2), async {
+        tokio::select! {
+            biased;
+            _ = cancellation.cancelled() => true,
+            _ = translator.translate_inputs(vec![input("Hello", None)]) => false,
+        }
+    })
+    .await;
+    release_tx.send(()).unwrap();
+    server.join().unwrap();
+    assert!(result.unwrap());
+    assert_eq!(translator.batch_stats.ai_translated, 0);
 }

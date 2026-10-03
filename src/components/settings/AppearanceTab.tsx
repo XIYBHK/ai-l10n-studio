@@ -3,6 +3,7 @@ import { BgColorsOutlined } from '@ant-design/icons';
 import { useLanguage, useSetLanguageAction } from '../../store';
 import type { Language } from '../../store/useAppStore';
 import { ThemeModeSwitch } from '../ThemeModeSwitch';
+import { useTranslation } from 'react-i18next';
 
 const languageOptions: Array<{ value: Language; label: string }> = [
   { value: 'zh-CN', label: '简体中文' },
@@ -10,6 +11,7 @@ const languageOptions: Array<{ value: Language; label: string }> = [
 ];
 
 export function AppearanceTab() {
+  const { t } = useTranslation();
   const language = useLanguage();
   const setLanguage = useSetLanguageAction();
   const [form] = Form.useForm();
@@ -30,7 +32,7 @@ export function AppearanceTab() {
             fontWeight: 600,
           }}
         >
-          <BgColorsOutlined /> 外观设置
+          <BgColorsOutlined /> {t('settings.appearance.title')}
         </span>
       }
       size="small"
@@ -38,11 +40,7 @@ export function AppearanceTab() {
       <Form form={form} layout="vertical">
         <Row gutter={16}>
           <Col span={12}>
-            <Form.Item
-              label="应用语言"
-              tooltip="更改界面语言后需要重启应用"
-              style={{ marginBottom: 0 }}
-            >
+            <Form.Item label={t('settings.appearance.language')} style={{ marginBottom: 0 }}>
               <Select value={language} onChange={handleLanguageChange} style={{ minWidth: 0 }}>
                 {languageOptions.map((option) => (
                   <Select.Option key={option.value} value={option.value}>
@@ -54,7 +52,7 @@ export function AppearanceTab() {
           </Col>
 
           <Col span={12}>
-            <Form.Item label="主题模式" style={{ marginBottom: 0 }}>
+            <Form.Item label={t('settings.appearance.theme')} style={{ marginBottom: 0 }}>
               <div
                 style={{
                   minWidth: 0,

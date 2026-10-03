@@ -37,4 +37,18 @@ describe('tauriInvoke', () => {
 
     expect(handler).toHaveBeenCalledWith('demo_command', { value: 42 });
   });
+
+  it('redacts sensitive containers without mutating IPC arguments', () => {
+    const args = {
+      credentials: { nested: { value: 'secret-value' } },
+      authorization: ['secret-value'],
+      entries: [{ apiKey: 'short', visible: 1 }],
+    };
+    expect(maskSensitiveData(args)).toEqual({
+      credentials: '***',
+      authorization: '***',
+      entries: [{ apiKey: '***', visible: 1 }],
+    });
+    expect(args.credentials.nested.value).toBe('secret-value');
+  });
 });

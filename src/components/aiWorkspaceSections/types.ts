@@ -29,6 +29,7 @@ export interface TermLibrarySectionProps {
 }
 
 export interface CostBreakdownProps {
-  cost: number;
+  cost: number | null;
   language: string;
+  unpricedRequests?: number;
 }

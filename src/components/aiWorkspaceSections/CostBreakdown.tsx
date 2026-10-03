@@ -1,11 +1,18 @@
 import React, { memo } from 'react';
+import { useTranslation } from 'react-i18next';
 import { DollarOutlined } from '@ant-design/icons';
 import { CSS_COLORS } from '../../hooks/useCssColors';
-import { formatCostByLocale } from '../../utils/formatters';
+import { formatCost } from '../../utils/formatters';
 import type { CostBreakdownProps } from './types';
 
 // 成本展示组件
-export const CostBreakdown = memo(function CostBreakdown({ cost, language }: CostBreakdownProps) {
+export const CostBreakdown = memo(function CostBreakdown({
+  cost,
+  language,
+  unpricedRequests = 0,
+}: CostBreakdownProps) {
+  const { t } = useTranslation();
+  const estimate = cost === 0 && unpricedRequests > 0 ? null : cost;
   const containerStyle: React.CSSProperties = {
     padding: 'var(--space-2)',
     backgroundColor: CSS_COLORS.bgTertiary,
@@ -27,7 +34,7 @@ export const CostBreakdown = memo(function CostBreakdown({ cost, language }: Cos
         }}
       >
         <DollarOutlined />
-        预估成本
+        {t('modelSettings.knownPriceEstimate')}
       </span>
       <span
         style={{
@@ -37,7 +44,10 @@ export const CostBreakdown = memo(function CostBreakdown({ cost, language }: Cos
           fontFamily: 'monospace',
         }}
       >
-        {formatCostByLocale(cost, language)}
+        {estimate === null ? t('modelSettings.costUnknown') : formatCost(estimate, language)}
+        {unpricedRequests > 0 && (
+          <small> · {t('modelSettings.unpricedRequests', { count: unpricedRequests })}</small>
+        )}
       </span>
     </div>
   );

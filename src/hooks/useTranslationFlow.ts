@@ -1,19 +1,10 @@
-/**
- * 翻译流程 Hook
- * 封装文件操作、翻译执行、条目管理等核心业务逻辑
- *
- * 优化点：
- * 1. 使用原子化 selectors，避免不必要重渲染
- * 2. 使用 O(1) 索引查找替代 O(n) indexOf
- * 3. 移除不必要的 useCallback
- * 4. 修复 Tauri 事件监听的竞态条件
- * 5. 实现渐进式上屏队列机制（0.33秒间隔）
- */
-
-import { useState, useEffect, useCallback, useRef, startTransition } from 'react';
-import { listen } from '@tauri-apps/api/event';
-import { message as msg } from 'antd';
+import { useEffect, useCallback, useRef, startTransition } from 'react';
+import { getCurrentWebviewWindow } from '@tauri-apps/api/webviewWindow';
+import { App, message as msg } from 'antd';
 import { useTranslation } from 'react-i18next';
+import { useSWRConfig } from 'swr';
+import { TRANSLATION_MEMORY_KEY } from './useTranslationMemory';
+import { TERM_LIBRARY_KEY } from './useTermLibrary';
 import { useChannelTranslation } from './useChannelTranslation';
 import {
   useEntries,
@@ -21,13 +12,8 @@ import {
   useCurrentFilePath,
   useSourceLanguage,
   useTargetLanguage,
-  useSetEntries,
   useSetCurrentEntry,
-  useSetCurrentFilePath,
-  useSetSourceLanguage,
-  useSetTargetLanguage,
   useUpdateEntry,
-  useGetEntryIndex,
   useIsTranslating,
   useSetTranslating,
   useProgress,
@@ -35,511 +21,406 @@ import {
   useResetSessionStats,
   useUpdateSessionStats,
   useUpdateCumulativeStatsAction,
+  useTranslationStore,
 } from '../store';
-import { useAsync } from './useAsync';
-import { POEntry, TranslationStats, TranslationQueueItem } from '../types/tauri';
+import { POEntry, TranslationStats } from '../types/tauri';
 import { poFileCommands, dialogCommands } from '../services/fileCommands';
-import { i18nCommands, translatorCommands } from '../services/translationCommands';
+import { i18nCommands } from '../services/translationCommands';
 import { createModuleLogger } from '../utils/logger';
+import { statsDelta, translationSlots } from '../utils/poDocument';
+import { createTargetDocument } from '../utils/poDocument';
+import { canonicalTargetLanguage } from '../utils/translationMemory';
+import { selectDocumentDirty } from '../store/useTranslationStore';
+import { askUnsavedDocument, askTargetDocument } from '../components/UnsavedDocumentDialog';
+import { confirmDocumentEntries } from '../services/documentActions';
+import { notificationManager } from '../utils/notificationManager';
+import type { TranslationItem } from '../types/generated/TranslationItem';
 
 const log = createModuleLogger('useTranslationFlow');
 
 export function useTranslationFlow() {
+  const { modal } = App.useApp();
   const { t } = useTranslation();
+  const { mutate } = useSWRConfig();
   const entries = useEntries();
   const currentEntry = useCurrentEntry();
   const currentFilePath = useCurrentFilePath();
   const isTranslating = useIsTranslating();
   const sourceLanguage = useSourceLanguage();
   const targetLanguage = useTargetLanguage();
-
-  const setEntries = useSetEntries();
   const setCurrentEntry = useSetCurrentEntry();
-  const setCurrentFilePath = useSetCurrentFilePath();
-  const setSourceLanguage = useSetSourceLanguage();
-  const setTargetLanguage = useSetTargetLanguage();
   const updateEntry = useUpdateEntry();
-  const getEntryIndex = useGetEntryIndex();
   const setTranslating = useSetTranslating();
   const setProgress = useSetProgress();
   const progress = useProgress();
   const resetSessionStats = useResetSessionStats();
   const updateSessionStats = useUpdateSessionStats();
   const updateCumulativeStats = useUpdateCumulativeStatsAction();
+  const generation = useRef(0);
+  const mounted = useRef(true);
+  const running = useRef(false);
+  const saving = useRef(false);
+  const leavePrompt = useRef<Promise<boolean> | null>(null);
+  const prepareLeave = useRef<() => Promise<boolean>>(async () => true);
+  const allowClose = useRef(false);
+  const {
+    translateBatch,
+    cancelTranslation: cancelBatchTranslation,
+    cancelAndWait,
+    reset,
+  } = useChannelTranslation();
 
-  const [translationStats, setTranslationStats] = useState<TranslationStats | null>(null);
-
-  // 渐进式上屏队列
-  const updateQueue = useRef<TranslationQueueItem[]>([]);
-  const isProcessingQueue = useRef(false);
-  const queueTimerRef = useRef<number | null>(null);
-
-  // Hooks
-  const { execute: parsePOFile } = useAsync(poFileCommands.parse);
-  // 解构出稳定的函数引用，避免把整个 channelTranslation 对象放进 useCallback deps
-  const { translateBatch, cancelTranslation: cancelBatchTranslation } = useChannelTranslation();
-
-  useEffect(() => {
-    resetSessionStats();
-    log.info('翻译流程初始化，会话统计已重置');
-  }, [resetSessionStats]);
-
-  // 队列消费器 - 自适应间隔
-  const processUpdateQueue = useCallback(() => {
-    if (isProcessingQueue.current || updateQueue.current.length === 0) return;
-
-    isProcessingQueue.current = true;
-
-    const processNext = () => {
-      const item = updateQueue.current.shift();
-      if (!item) {
-        isProcessingQueue.current = false;
-        return;
-      }
-
-      // 更新条目并标记为刚更新（触发动画）
-      updateEntry(item.index, {
-        msgstr: item.translation,
-        needsReview: item.source === 'ai',
-        justUpdated: true,
-      });
-
-      // 500ms 后移除高亮标记（动画完成）
-      setTimeout(() => {
-        updateEntry(item.index, { justUpdated: false });
-      }, 500);
-
-      // 刷新统计（如果有增量统计）
-      if (item.incrementalStats) {
-        const stats: TranslationStats = {
-          total: 1,
-          tm_hits: item.incrementalStats.tmHits || 0,
-          deduplicated: item.incrementalStats.deduplicated || 0,
-          ai_translated: item.incrementalStats.aiTranslated || 0,
-          tm_learned: item.incrementalStats.tmLearned || 0,
+  const confirmEntries = useCallback(
+    async (indices: number[]) => {
+      const learned = await confirmDocumentEntries(indices);
+      if (learned) {
+        const learningStats: TranslationStats = {
+          total: 0,
+          tm_hits: 0,
+          deduplicated: 0,
+          ai_translated: 0,
+          tm_learned: learned,
           token_stats: {
-            input_tokens: item.incrementalStats.tokenStats?.inputTokens || 0,
-            output_tokens: item.incrementalStats.tokenStats?.outputTokens || 0,
-            total_tokens: item.incrementalStats.tokenStats?.totalTokens || 0,
-            cost: item.incrementalStats.tokenStats?.cost || 0,
+            input_tokens: 0,
+            output_tokens: 0,
+            total_tokens: 0,
+            cost: 0,
+            unpriced_requests: 0,
           },
         };
-        updateSessionStats(stats);
-      }
-
-      // 自适应间隔：队列越长，间隔越短
-      if (updateQueue.current.length > 0) {
-        const queueLength = updateQueue.current.length;
-        let interval: number;
-
-        if (queueLength > 100) {
-          interval = 50; // 超过100条：50ms（快速处理）
-        } else if (queueLength > 50) {
-          interval = 100; // 50-100条：100ms（中速）
-        } else if (queueLength > 20) {
-          interval = 200; // 20-50条：200ms（适中）
-        } else {
-          interval = 300; // 少于20条：300ms（慢速，便于观察）
-        }
-
-        queueTimerRef.current = window.setTimeout(processNext, interval);
-      } else {
-        isProcessingQueue.current = false;
-        log.info('队列处理完成');
-      }
-    };
-
-    processNext();
-  }, [setEntries, updateSessionStats, updateEntry]);
-
-  // 入队函数
-  const enqueueUpdate = useCallback(
-    (item: TranslationQueueItem) => {
-      updateQueue.current.push(item);
-      if (!isProcessingQueue.current) {
-        processUpdateQueue();
+        updateSessionStats(learningStats);
+        updateCumulativeStats(learningStats);
+        await mutate(TRANSLATION_MEMORY_KEY);
       }
     },
-    [processUpdateQueue]
+    [mutate, updateSessionStats, updateCumulativeStats]
   );
 
-  // 清空队列（切换文件/停止翻译时）
-  const clearQueue = useCallback(() => {
-    updateQueue.current = [];
-    if (queueTimerRef.current) {
-      clearTimeout(queueTimerRef.current);
-      queueTimerRef.current = null;
-    }
-    isProcessingQueue.current = false;
-    log.info('上屏队列已清空');
+  useEffect(() => {
+    mounted.current = true;
+    return () => {
+      mounted.current = false;
+      generation.current++;
+    };
   }, []);
 
-  // 翻译统计事件监听 - 修复竞态条件
-  useEffect(() => {
-    let unlistenFn: (() => void) | null = null;
-    let isActive = true;
-
-    const setupListener = async () => {
-      const unlisten = await listen<{ stats: TranslationStats }>('translation:after', (event) => {
-        if (!isActive) return;
-        const stats = event.payload.stats;
-        log.info('收到翻译统计', stats);
-
-        updateSessionStats(stats);
-        updateCumulativeStats(stats);
-      });
-
-      if (isActive) {
-        unlistenFn = unlisten;
-      } else {
-        unlisten();
-      }
-    };
-
-    setupListener().catch((err) => log.logError(err, '注册翻译统计监听失败'));
-
-    return () => {
-      isActive = false;
-      unlistenFn?.();
-    };
-  }, [updateSessionStats, updateCumulativeStats]);
-
-  // 文件拖放监听 - 修复竞态条件和依赖
-  useEffect(() => {
-    let unlistenFn: (() => void) | null = null;
-    let isActive = true;
-
-    const setupListener = async () => {
-      const unlisten = await listen<string[]>('tauri://file-drop', async (event) => {
-        if (!isActive) return;
-
-        const files = event.payload;
-        if (files && files.length > 0) {
-          const filePath = files[0];
-          if (filePath.toLowerCase().endsWith('.po')) {
-            try {
-              const newEntries = (await parsePOFile(filePath)) as POEntry[];
-              startTransition(() => {
-                setEntries(newEntries);
-                setCurrentFilePath(filePath);
-              });
-              await detectAndSetLanguages(newEntries);
-              log.info('通过拖放导入文件成功', { filePath });
-            } catch (error) {
-              log.logError(error, '解析拖放文件失败');
-              msg.error(
-                t('errors.importFailed', {
-                  error: error instanceof Error ? error.message : t('errors.unknown'),
-                })
-              );
-            }
-          }
-        }
-      });
-
-      if (isActive) {
-        unlistenFn = unlisten;
-      } else {
-        unlisten();
-      }
-    };
-
-    setupListener().catch((err) => log.logError(err, '注册文件拖放监听失败'));
-
-    return () => {
-      isActive = false;
-      unlistenFn?.();
-    };
-  }, [parsePOFile, setEntries, setCurrentFilePath]);
-
-  const detectAndSetLanguages = async (entriesToDetect: POEntry[]) => {
-    try {
-      const sampleTexts = entriesToDetect
-        .filter((e) => e.msgid && e.msgid.trim())
+  const loadFile = useCallback(
+    async (path: string) => {
+      if (!(await prepareLeave.current())) return;
+      const request = ++generation.current;
+      reset();
+      running.current = false;
+      setTranslating(false);
+      setProgress(0);
+      const document = await poFileCommands.parse(path);
+      if (!mounted.current || request !== generation.current) return;
+      startTransition(() => useTranslationStore.getState().setDocument(document, path));
+      resetSessionStats();
+      const sample = document.entries
+        .filter((entry) => !entry.obsolete && entry.msgid.trim())
         .slice(0, 5)
-        .map((e) => e.msgid)
+        .map((entry) => entry.msgid)
         .join(' ');
-
-      if (sampleTexts) {
-        const detectedLang = await i18nCommands.detectLanguage(sampleTexts);
-        setSourceLanguage(detectedLang.display_name);
-        const defaultTarget = await i18nCommands.getDefaultTargetLanguage(detectedLang.code);
-        setTargetLanguage(defaultTarget.code);
-        log.info('语言检测完成', {
-          source: detectedLang.display_name,
-          target: defaultTarget.display_name,
-        });
+      if (!sample) return;
+      try {
+        const language = await i18nCommands.detectLanguage(sample);
+        if (!mounted.current || request !== generation.current) return;
+        useTranslationStore.getState().setSourceLanguage(language.code);
+      } catch (error) {
+        log.logError(error, 'Language detection failed');
       }
-    } catch (error) {
-      log.logError(error, '语言检测失败');
-      setSourceLanguage('未知');
-      setTargetLanguage('zh-CN');
-    }
-  };
+    },
+    [reset, resetSessionStats, setProgress, setTranslating]
+  );
+
+  useEffect(() => {
+    let active = true;
+    let unlisten: (() => void) | undefined;
+    const register = async () => {
+      const cleanup = await getCurrentWebviewWindow().onDragDropEvent((event) => {
+        if (!active || event.payload.type !== 'drop') return;
+        const path = event.payload.paths.find((file) => file.toLowerCase().endsWith('.po'));
+        if (path)
+          void loadFile(path).catch((error: unknown) => {
+            if (active) msg.error(t('errors.importFailed', { error: String(error) }));
+          });
+      });
+      if (active) unlisten = cleanup;
+      else cleanup();
+    };
+    void register().catch((error) => log.logError(error, 'Drag/drop listener failed'));
+    return () => {
+      active = false;
+      unlisten?.();
+    };
+  }, [loadFile, t]);
 
   const openFile = async () => {
     try {
-      // 切换文件时清空队列
-      clearQueue();
-
-      const filePath = await dialogCommands.openFile();
-      if (filePath) {
-        const newEntries = (await parsePOFile(filePath)) as POEntry[];
-        startTransition(() => {
-          setEntries(newEntries);
-          setCurrentFilePath(filePath);
-        });
-        await detectAndSetLanguages(newEntries);
-        log.info('文件加载成功', { filePath, entryCount: newEntries.length });
-      }
+      const path = await dialogCommands.openFile();
+      if (mounted.current && path) await loadFile(path);
     } catch (error) {
-      log.logError(error, '打开文件失败');
-      msg.error(
-        t('errors.openFailed', {
-          error: error instanceof Error ? error.message : t('errors.unknown'),
-        })
-      );
+      msg.error(t('errors.openFailed', { error: String(error) }));
     }
   };
 
-  const saveFile = async () => {
-    if (!currentFilePath) {
+  const persistFile = async (saveAs: boolean) => {
+    if (running.current || saving.current) {
+      msg.warning(t('messages.translatingCannotSave'));
+      return false;
+    }
+    const state = useTranslationStore.getState();
+    if (!state.document) {
       msg.warning(t('messages.noFileToSave'));
-      return;
+      return false;
     }
-    if (isTranslating) {
-      msg.warning(t('messages.translatingCannotSave'));
-      return;
-    }
+    saving.current = true;
     try {
-      await poFileCommands.save(currentFilePath, entries);
-      msg.success(t('messages.saveSuccess'));
-      log.info('文件保存成功', { filePath: currentFilePath });
-    } catch (error) {
-      log.logError(error, '保存文件失败');
-      msg.error(
-        t('errors.saveFailed', {
-          error: error instanceof Error ? error.message : t('errors.unknown'),
-        })
-      );
-    }
-  };
-
-  const saveAsFile = async () => {
-    if (isTranslating) {
-      msg.warning(t('messages.translatingCannotSave'));
-      return;
-    }
-    try {
-      const filePath = await dialogCommands.saveFile();
-      if (filePath) {
-        await poFileCommands.save(filePath, entries);
-        setCurrentFilePath(filePath);
-        msg.success(t('messages.saveSuccess'));
-        log.info('文件另存为成功', { filePath });
+      const path =
+        saveAs || !state.currentFilePath ? await dialogCommands.saveFile() : state.currentFilePath;
+      if (!path || useTranslationStore.getState().documentRevision !== state.documentRevision)
+        return false;
+      const draftedIndices = [
+        ...new Set(
+          Object.values(useTranslationStore.getState().drafts).map((draft) => draft.entryIndex)
+        ),
+      ];
+      if (draftedIndices.length) {
+        try {
+          await confirmEntries(draftedIndices);
+        } catch (error) {
+          // A library failure must not prevent preserving the document on disk.
+          log.logError(error, 'Manual translation confirmation failed');
+          msg.warning(t('document.memorySaveFailed'));
+        }
       }
-    } catch (error) {
-      log.logError(error, '另存为失败');
-      msg.error(
-        t('errors.saveFailed', {
-          error: error instanceof Error ? error.message : t('errors.unknown'),
-        })
+      // Include edits made while the memory transaction was pending; they stay under review.
+      useTranslationStore.getState().commitDrafts();
+      const snapshot = useTranslationStore.getState();
+      if (snapshot.documentRevision !== state.documentRevision || !snapshot.document) return false;
+      const persistedEntries = snapshot.entries.map(
+        ({ needsReview: _review, translationSource: _source, justUpdated: _updated, ...entry }) =>
+          entry
       );
-    }
-  };
-
-  const executeTranslation = async (entriesToTranslate: POEntry[]) => {
-    const texts = entriesToTranslate.map((e) => e.msgid);
-    let completedCount = 0;
-
-    try {
-      setTranslating(true);
-      setProgress(0);
-
-      log.info('开始翻译', { count: texts.length });
-
-      const result = await translateBatch(texts, targetLanguage, {
-        onProgress: (current, _total, percentage) => {
-          setProgress(percentage);
-          completedCount = current;
-        },
-        onStats: (stats) => {
-          const convertedStats = {
-            ...stats,
-            token_stats: {
-              total_tokens: stats.token_stats.total_tokens,
-              prompt_tokens: stats.token_stats.prompt_tokens,
-              completion_tokens: stats.token_stats.completion_tokens,
-              input_tokens: stats.token_stats.prompt_tokens,
-              output_tokens: stats.token_stats.completion_tokens,
-              cost: stats.token_stats.cost,
-            },
-          } as TranslationStats;
-          setTranslationStats(convertedStats);
-
-          // 批量统计到达后，分配到队列中的每一项作为增量统计
-          const aiQueueItems = updateQueue.current.filter((item) => item.source === 'ai');
-          const queueLength = aiQueueItems.length;
-          if (queueLength > 0) {
-            const incrementalStats = {
-              tmHits: 0,
-              deduplicated: 0,
-              aiTranslated: Math.ceil(stats.ai_translated / queueLength),
-              tmLearned: Math.ceil(stats.tm_learned / queueLength),
-              tokenStats: {
-                inputTokens: Math.ceil(stats.token_stats.prompt_tokens / queueLength),
-                outputTokens: Math.ceil(stats.token_stats.completion_tokens / queueLength),
-                totalTokens: Math.ceil(stats.token_stats.total_tokens / queueLength),
-                cost: stats.token_stats.cost / queueLength,
-              },
-            };
-
-            // 仅为AI翻译项添加增量统计
-            aiQueueItems.forEach((item) => {
-              if (!item.incrementalStats) {
-                item.incrementalStats = incrementalStats;
-              }
-            });
-          }
-        },
-        onItem: (index, translation) => {
-          const entry = entriesToTranslate[index];
-          const entryIndex = getEntryIndex(entry);
-          if (entryIndex >= 0) {
-            // 入队而非立即更新
-            enqueueUpdate({
-              index: entryIndex,
-              translation,
-              source: 'ai',
-            });
-          }
-        },
+      await poFileCommands.save(path, {
+        ...snapshot.document,
+        metadata: { ...snapshot.document.metadata, Language: snapshot.targetLanguage },
+        entries: persistedEntries,
       });
-
-      // 注意：由于使用渐进式上屏，不在这里立即更新条目
-      // 所有更新都通过 onItem 回调入队处理
-
-      if (result.stats) {
-        const finalStats: TranslationStats = {
-          total: texts.length,
-          tm_hits: result.stats.tm_hits || 0,
-          deduplicated: result.stats.deduplicated || 0,
-          ai_translated: result.stats.ai_translated || 0,
-          token_stats: {
-            input_tokens: result.stats.token_stats.input_tokens || 0,
-            output_tokens: result.stats.token_stats.output_tokens || 0,
-            total_tokens: result.stats.token_stats.total_tokens || 0,
-            cost: result.stats.token_stats.cost || 0,
-          },
-          tm_learned: result.stats.tm_learned || 0,
-        };
-
-        log.info('统计已更新', finalStats);
+      if (
+        mounted.current &&
+        useTranslationStore.getState().documentRevision === state.documentRevision
+      ) {
+        useTranslationStore
+          .getState()
+          .markSaved(snapshot.documentRevision, snapshot.contentRevision, path);
+        msg.success(t('messages.saveSuccess'));
       }
-
-      log.info('翻译完成', { count: completedCount });
       return true;
     } catch (error) {
-      log.logError(error, '翻译失败');
-      const errorMessage = error instanceof Error ? error.message : String(error);
-      msg.error({ content: errorMessage, duration: 8 });
+      msg.error(t('errors.saveFailed', { error: String(error) }));
       return false;
     } finally {
-      setTranslating(false);
-      setProgress(0);
-      // 翻译完成后等待队列处理完毕
-      log.info('翻译完成，等待队列处理', { queueLength: updateQueue.current.length });
+      saving.current = false;
     }
   };
 
-  const translateAll = async () => {
-    if (isTranslating) {
-      log.warn('翻译正在进行中，忽略重复请求');
-      return;
-    }
-
-    const untranslatedEntries = entries.filter((entry) => entry.msgid && !entry.msgstr);
-    if (untranslatedEntries.length === 0) {
-      return;
-    }
-
-    log.info('准备批量翻译', { untranslatedCount: untranslatedEntries.length });
-    await executeTranslation(untranslatedEntries);
-  };
-
-  const handleTranslateSelected = async (indices: number[]) => {
-    const selectedEntries = indices
-      .map((i) => entries[i])
-      .filter((e: POEntry | undefined): e is POEntry => e !== undefined && !!e.msgid && !e.msgstr);
-
-    if (selectedEntries.length === 0) {
-      msg.info(t('messages.allSelectedTranslated'));
-      return;
-    }
-
-    await executeTranslation(selectedEntries);
-  };
-
-  const handleContextualRefine = async (indices: number[]) => {
-    const selectedEntries = indices
-      .map((i) => ({ index: i, entry: entries[i] }))
-      .filter(({ entry }) => entry !== undefined && !!entry.msgid && !!entry.needsReview)
-      .map(({ index, entry }) => ({ index, entry: entry as POEntry }));
-
-    if (selectedEntries.length === 0) {
-      msg.info(t('messages.noRefinableSelected'));
-      return;
-    }
-
-    setTranslating(true);
-
+  prepareLeave.current = async () => {
+    if (saving.current) return false;
+    if (leavePrompt.current) return leavePrompt.current;
+    leavePrompt.current = (async () => {
+      if (running.current) {
+        await cancelAndWait();
+        running.current = false;
+        setTranslating(false);
+      }
+      if (!selectDocumentDirty(useTranslationStore.getState())) return true;
+      const choice = await askUnsavedDocument(modal);
+      if (choice === 'cancel') return false;
+      if (choice === 'discard') return true;
+      return (await persistFile(false)) && !selectDocumentDirty(useTranslationStore.getState());
+    })();
     try {
-      const requests = selectedEntries.map(({ index, entry }) => ({
-        msgid: entry.msgid,
-        msgctxt: entry.msgctxt ?? null,
-        comment: entry.comments.join('\n') ?? null,
-        previousEntry: index > 0 ? (entries[index - 1]?.msgstr ?? null) : null,
-        nextEntry: index < entries.length - 1 ? (entries[index + 1]?.msgstr ?? null) : null,
-      }));
-
-      log.info('[精翻] 开始精翻', { count: requests.length });
-      const results = await translatorCommands.contextualRefine(requests, targetLanguage);
-
-      results.forEach((translation, i) => {
-        const { index } = selectedEntries[i];
-        updateEntry(index, {
-          msgstr: translation,
-          needsReview: true,
-          translationSource: 'ai',
-        });
-      });
-
-      log.info('[精翻] 完成', { count: results.length });
-    } catch (error) {
-      log.logError(error, '精翻失败');
-      const errorMessage = error instanceof Error ? error.message : String(error);
-      msg.error({ content: errorMessage, duration: 8 });
+      return await leavePrompt.current;
     } finally {
-      setTranslating(false);
+      leavePrompt.current = null;
     }
   };
 
-  // 移除不必要的 useCallback
-  const handleEntrySelect = (entry: POEntry) => {
-    setCurrentEntry(entry);
+  useEffect(() => {
+    let active = true;
+    let unlisten: (() => void) | undefined;
+    const window = getCurrentWebviewWindow();
+    void window
+      .onCloseRequested((event) => {
+        if (!active || allowClose.current) return;
+        event.preventDefault();
+        void prepareLeave
+          .current()
+          .then(async (proceed) => {
+            if (!active || !proceed) return;
+            allowClose.current = true;
+            try {
+              await window.close();
+            } catch (error) {
+              allowClose.current = false;
+              throw error;
+            }
+          })
+          .catch((error) => {
+            log.logError(error, 'Close window failed');
+            msg.error(String(error));
+          });
+      })
+      .then((cleanup) => {
+        if (active) unlisten = cleanup;
+        else cleanup();
+      })
+      .catch((error) => log.logError(error, 'Close listener failed'));
+    return () => {
+      active = false;
+      unlisten?.();
+    };
+  }, []);
+
+  const changeTargetLanguage = async (language: string) => {
+    const state = useTranslationStore.getState();
+    if (
+      !state.document ||
+      canonicalTargetLanguage(language) === canonicalTargetLanguage(state.targetLanguage)
+    )
+      return;
+    try {
+      if (!(await askTargetDocument(modal)) || !(await prepareLeave.current())) return;
+      const current = useTranslationStore.getState();
+      if (current.documentRevision !== state.documentRevision || !current.document) return;
+      const next = createTargetDocument(current.document, current.entries, language);
+      generation.current++;
+      reset();
+      current.setDocument(next, null);
+      useTranslationStore.getState().setSourceLanguage(state.sourceLanguage);
+      resetSessionStats();
+    } catch (error) {
+      msg.error(String(error));
+    }
   };
 
-  // 移除不必要的 useCallback
-  const handleEntryUpdate = (index: number, updates: Partial<POEntry>) => {
-    updateEntry(index, updates);
+  const executeTranslation = async (indices: number[], refine = false) => {
+    if (running.current || saving.current) return;
+    const state = useTranslationStore.getState();
+    const request = generation.current;
+    const revision = state.documentRevision;
+    const versions = [...state.entryVersions];
+    const isCurrent = () =>
+      mounted.current &&
+      request === generation.current &&
+      revision === useTranslationStore.getState().documentRevision;
+    let previousStats: TranslationStats | null = null;
+    let learned = false;
+    try {
+      const slots = translationSlots(
+        state.entries,
+        indices.filter(
+          (index) => !Object.values(state.drafts).some((draft) => draft.entryIndex === index)
+        ),
+        state.document?.metadata ?? {},
+        !refine
+      );
+      if (!slots.length) {
+        msg.info(t('messages.allSelectedTranslated'));
+        return;
+      }
+      running.current = true;
+      setTranslating(true);
+      setProgress(0);
+      const applyItems = (items: TranslationItem[]) => {
+        if (!isCurrent()) return;
+        const current = useTranslationStore.getState();
+        const patches = new Map<number, Partial<POEntry>>();
+        for (const item of items) {
+          const slot = slots[item.index];
+          if (!slot) continue;
+          const entry = current.entries[slot.entryIndex];
+          if (current.entryVersions[slot.entryIndex] !== versions[slot.entryIndex]) continue;
+          const patch = patches.get(slot.entryIndex) ?? {};
+          if (slot.pluralIndex === null) patch.msgstr = item.translation;
+          else {
+            patch.msgstr_plural = [...(patch.msgstr_plural ?? entry.msgstr_plural)];
+            patch.msgstr_plural[slot.pluralIndex] = item.translation;
+          }
+          patch.needsReview = patch.needsReview || entry.needsReview || item.source !== 'tm';
+          patch.translationSource = item.source;
+          patches.set(slot.entryIndex, patch);
+        }
+        current.updateEntries(
+          Array.from(patches, ([index, updates]) => ({ index, updates })),
+          revision
+        );
+        for (const index of patches.keys())
+          versions[index] = useTranslationStore.getState().entryVersions[index];
+      };
+      const requests = refine
+        ? slots.map((slot) => ({
+            msgid: slot.input.text,
+            context: slot.input.context,
+            msgctxt: slot.input.context,
+            comment: state.entries[slot.entryIndex].comments.join('\n') || null,
+            previousEntry: state.entries[slot.entryIndex - 1]?.msgstr ?? null,
+            nextEntry: state.entries[slot.entryIndex + 1]?.msgstr ?? null,
+          }))
+        : undefined;
+      const result = await translateBatch(
+        slots.map((slot) => slot.input),
+        state.targetLanguage,
+        {
+          onItems: applyItems,
+          onProgress: (_processed, _total, percentage) => {
+            if (isCurrent()) setProgress(percentage);
+          },
+          onStats: (stats) => {
+            learned ||= stats.tm_learned > 0;
+            if (!isCurrent()) return;
+            const delta = statsDelta(stats, previousStats);
+            previousStats = stats;
+            updateSessionStats(delta);
+            updateCumulativeStats(delta);
+          },
+        },
+        requests
+      );
+      learned ||= result.stats.tm_learned > 0;
+      if (isCurrent() && !result.cancelled) {
+        void notificationManager.translationComplete(
+          slots.length,
+          result.items.length,
+          slots.length - result.items.length
+        );
+      }
+    } catch (error) {
+      if (isCurrent()) {
+        msg.error({ content: String(error), duration: 8 });
+        void notificationManager.translationError(String(error));
+      }
+      log.logError(error, 'Translation failed');
+    } finally {
+      if (learned) {
+        void Promise.all([mutate(TRANSLATION_MEMORY_KEY), mutate(TERM_LIBRARY_KEY)]).catch(
+          (error) => log.logError(error, 'Translation cache refresh failed')
+        );
+      }
+      if (isCurrent()) {
+        running.current = false;
+        setTranslating(false);
+      }
+    }
   };
 
-  // 包装取消翻译，确保清空队列
   const cancelTranslation = useCallback(() => {
-    clearQueue();
-    cancelBatchTranslation();
-    log.info('翻译已取消，队列已清空');
-  }, [cancelBatchTranslation, clearQueue]);
+    void cancelBatchTranslation().catch((error) => {
+      log.logError(error, 'Cancel translation failed');
+      msg.error(String(error));
+    });
+  }, [cancelBatchTranslation]);
 
   return {
     entries,
@@ -547,18 +428,23 @@ export function useTranslationFlow() {
     currentFilePath,
     isTranslating,
     progress,
-    translationStats,
     sourceLanguage,
     targetLanguage,
     openFile,
-    saveFile,
-    saveAsFile,
-    translateAll,
-    handleTranslateSelected,
-    handleContextualRefine,
-    handleEntrySelect,
-    handleEntryUpdate,
+    saveFile: () => persistFile(false),
+    saveAsFile: () => persistFile(true),
+    translateAll: () =>
+      executeTranslation(useTranslationStore.getState().entries.map((_, index) => index)),
+    handleTranslateSelected: (indices: number[]) => executeTranslation(indices),
+    handleContextualRefine: (indices: number[]) =>
+      executeTranslation(
+        indices.filter((index) => useTranslationStore.getState().entries[index]?.needsReview),
+        true
+      ),
+    handleEntrySelect: setCurrentEntry,
+    handleEntryUpdate: updateEntry,
+    confirmEntries,
+    changeTargetLanguage,
     cancelTranslation,
-    resetTranslationStats: () => setTranslationStats(null),
   };
 }

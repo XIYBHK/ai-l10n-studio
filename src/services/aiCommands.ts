@@ -1,91 +1,65 @@
-import type { AIConfig, AIConfigSummary } from '../types/aiProvider';
+import type {
+  ModelConfiguration,
+  ModelDefinition,
+  ModelProviderProfile,
+  ModelSelection,
+  TestConnectionResult,
+} from '../types/aiProvider';
 import type { ModelInfo } from '../types/generated/ModelInfo';
 import type { ProviderInfo } from '../types/generated/ProviderInfo';
 import { invoke } from './apiClient';
+import i18n from '../i18n/config';
 
-export const aiConfigCommands = {
-  async getAll(): Promise<AIConfigSummary[]> {
-    return invoke<AIConfigSummary[]>('get_all_ai_configs', undefined, {
-      errorMessage: '获取AI配置列表失败',
+export const modelConfigurationCommands = {
+  async get(): Promise<ModelConfiguration> {
+    return invoke<ModelConfiguration>('get_model_configuration', undefined, {
+      errorMessage: i18n.t('modelSettings.loadFailed'),
     });
   },
-
-  async getActive(): Promise<AIConfigSummary | null> {
-    return invoke<AIConfigSummary | null>('get_active_ai_config', undefined, {
-      errorMessage: '获取当前AI配置失败',
-    });
-  },
-
-  async setActive(indexStr: string): Promise<void> {
-    const index = parseInt(indexStr, 10);
-    if (isNaN(index) || index < 0) {
-      throw new Error(`无效的配置索引: ${indexStr}`);
-    }
-
+  async saveProvider(
+    profile: ModelProviderProfile,
+    apiKey: string | null,
+    defaultModelId?: string
+  ): Promise<void> {
     return invoke<void>(
-      'set_active_ai_config',
-      { index },
-      {
-        errorMessage: '设置活动AI配置失败',
-      }
+      'save_model_provider',
+      { request: { profile, apiKey, defaultModelId: defaultModelId ?? null } },
+      { errorMessage: i18n.t('modelSettings.saveFailed') }
     );
   },
-
-  async add(config: AIConfig): Promise<void> {
-    return invoke<void>('add_ai_config', { config }, { errorMessage: '添加AI配置失败' });
-  },
-
-  async update(index: number, config: AIConfig): Promise<void> {
-    if (index < 0 || !Number.isInteger(index)) {
-      throw new Error(`无效的配置索引: ${index}`);
-    }
-
+  async removeProvider(providerId: string): Promise<void> {
     return invoke<void>(
-      'update_ai_config',
-      { index, config },
-      {
-        errorMessage: '更新AI配置失败',
-      }
+      'remove_model_provider',
+      { providerId },
+      { errorMessage: i18n.t('modelSettings.removeFailed') }
     );
   },
-
-  async delete(indexStr: string): Promise<void> {
-    const index = parseInt(indexStr, 10);
-    if (isNaN(index) || index < 0) {
-      throw new Error(`无效的配置索引: ${indexStr}`);
-    }
-
+  async setDefault(selection: ModelSelection | null): Promise<void> {
     return invoke<void>(
-      'remove_ai_config',
-      { index },
-      {
-        errorMessage: '删除AI配置失败',
-      }
+      'set_default_model',
+      { selection },
+      { errorMessage: i18n.t('modelSettings.defaultFailed') }
     );
   },
-
-  async testConnection(
-    providerId: string,
-    apiKey: string,
-    baseUrl?: string,
-    model?: string,
-    proxy?: unknown
-  ): Promise<{ success: boolean; message: string }> {
-    return invoke<{ success: boolean; message: string }>(
-      'test_ai_connection',
-      {
-        request: {
-          providerId,
-          apiKey,
-          baseUrl: baseUrl || null,
-          model: model || null,
-          proxy: proxy || null,
-        },
-      },
-      {
-        errorMessage: 'AI连接测试失败',
-        silent: true,
-      }
+  async testProvider(
+    profile: ModelProviderProfile,
+    apiKey: string | null,
+    modelId: string
+  ): Promise<TestConnectionResult> {
+    return invoke<TestConnectionResult>(
+      'test_model_provider',
+      { request: { profile, apiKey, modelId } },
+      { errorMessage: i18n.t('modelSettings.testFailed') }
+    );
+  },
+  async discoverModels(
+    profile: ModelProviderProfile,
+    apiKey: string | null
+  ): Promise<ModelDefinition[]> {
+    return invoke<ModelDefinition[]>(
+      'discover_provider_models',
+      { request: { profile, apiKey } },
+      { errorMessage: i18n.t('modelSettings.discoverFailed') }
     );
   },
 };

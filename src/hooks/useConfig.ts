@@ -1,87 +1,53 @@
 import useSWR from 'swr';
-import type { AIConfigSummary } from '../types/aiProvider';
 import { configCommands } from '../services/configCommands';
-import { aiConfigCommands, systemPromptCommands } from '../services/aiCommands';
-
-// 应用配置（整体）
-const APP_CONFIG_KEY = 'app_config';
-// AI 配置集合 & 当前启用项
-const AI_CONFIGS_KEY = 'ai_configs';
-const ACTIVE_AI_CONFIG_KEY = 'active_ai_config';
-// 系统提示词
-const SYSTEM_PROMPT_KEY = 'system_prompt';
-
+import { modelConfigurationCommands, systemPromptCommands } from '../services/aiCommands';
+import type { ModelConfiguration } from '../types/aiProvider';
+const DEFAULT_CONFIGURATION: ModelConfiguration = { providers: [], defaultModel: null };
 export function useAppConfig() {
-  const { data, error, isLoading, mutate } = useSWR(
-    APP_CONFIG_KEY,
-    () => configCommands.get(), // 迁移到统一命令层
-    {
-      keepPreviousData: true,
-      revalidateOnFocus: false, // 配置不需要聚焦刷新
-      revalidateOnReconnect: false, // 配置不需要重连刷新
-    }
-  );
+  const { data, error, isLoading, mutate } = useSWR('app_config', () => configCommands.get(), {
+    keepPreviousData: true,
+    revalidateOnFocus: false,
+    revalidateOnReconnect: false,
+  });
   return { config: data ?? null, error, isLoading: !!isLoading, mutate } as const;
 }
-
-export function useAIConfigs() {
-  const all = useSWR(
-    AI_CONFIGS_KEY,
-    () => aiConfigCommands.getAll(), // 迁移到统一命令层
-    {
-      keepPreviousData: true,
-      revalidateOnFocus: false, // AI配置不需要聚焦刷新
-      revalidateOnReconnect: false,
-    }
-  );
-  const active = useSWR(
-    ACTIVE_AI_CONFIG_KEY,
-    () => aiConfigCommands.getActive(), // 迁移到统一命令层
-    {
-      keepPreviousData: true,
-      revalidateOnFocus: false,
-      revalidateOnReconnect: false,
-    }
+export function useModelConfiguration() {
+  const { data, error, isLoading, mutate } = useSWR<ModelConfiguration>(
+    'model_configuration',
+    () => modelConfigurationCommands.get(),
+    { keepPreviousData: true, revalidateOnFocus: false, revalidateOnReconnect: false }
   );
   return {
-    configs: (all.data as AIConfigSummary[] | undefined) ?? [],
-    loading: !!all.isLoading || !!active.isLoading,
-    error: all.error || active.error,
-    active: (active.data as AIConfigSummary | null | undefined) ?? null,
-    mutateAll: all.mutate,
-    mutateActive: active.mutate,
+    configuration: data ?? DEFAULT_CONFIGURATION,
+    loading: !!isLoading,
+    error,
+    mutate,
   } as const;
 }
-
 export function useSystemPrompt() {
   const { data, error, isLoading, mutate } = useSWR(
-    SYSTEM_PROMPT_KEY,
-    () => systemPromptCommands.get(), // 迁移到统一命令层
-    {
-      revalidateOnFocus: false, // 系统提示词不需要聚焦刷新
-      revalidateOnReconnect: false,
-      dedupingInterval: 5000, // 5秒内去重
-    }
+    'system_prompt',
+    () => systemPromptCommands.get(),
+    { revalidateOnFocus: false, revalidateOnReconnect: false }
   );
   return { prompt: data ?? '', error, isLoading: !!isLoading, mutate } as const;
 }
-
-// 统一的数据访问 hook（简化版）
-export function useAppData() {
-  const appConfig = useAppConfig();
-  const aiConfigs = useAIConfigs();
-  const systemPrompt = useSystemPrompt();
-
+export function useActiveAIConfig() {
+  const { configuration } = useModelConfiguration();
+  const selection = configuration.defaultModel;
+  const provider = selection
+    ? configuration.providers.find((p) => p.profile.id === selection.providerId)
+    : undefined;
   return {
-    config: appConfig.config,
-    aiConfigs: aiConfigs.configs,
-    activeAIConfig: aiConfigs.active,
-    systemPrompt: systemPrompt.prompt,
-    refreshAll: () => {
-      appConfig.mutate();
-      aiConfigs.mutateAll();
-      aiConfigs.mutateActive();
-      systemPrompt.mutate();
-    },
+    activeAIConfig:
+      provider && selection
+        ? {
+            providerId: provider.profile.id,
+            model: selection.modelId,
+            displayName: provider.profile.displayName,
+            catalogProviderId: provider.profile.catalogProviderId,
+            hasApiKey: provider.hasApiKey,
+          }
+        : null,
   } as const;
 }

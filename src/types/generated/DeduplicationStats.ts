@@ -5,16 +5,17 @@
  *
  * 记录批量翻译中的去重效果。
  */
-export type DeduplicationStats = { 
-/**
- * 唯一条目数
- */
-unique_entries: number, 
-/**
- * 重复条目数
- */
-duplicate_entries: number, 
-/**
- * 唯一文本列表
- */
-unique_texts: Array<string>, };
+export type DeduplicationStats = {
+  /**
+   * 唯一条目数
+   */
+  unique_entries: number;
+  /**
+   * 重复条目数
+   */
+  duplicate_entries: number;
+  /**
+   * 唯一文本列表
+   */
+  unique_texts: Array<string>;
+};

@@ -11,11 +11,14 @@ import {
 import { TermEntry } from '../types/termLibrary';
 import { useTermLibrary } from '../hooks/useTermLibrary';
 import { useCssColors } from '../hooks/useCssColors';
-import { useAppData } from '../hooks/useConfig';
+import { useActiveAIConfig } from '../hooks/useConfig';
 import { createModuleLogger } from '../utils/logger';
 import { termLibraryCommands } from '../services/termCommands';
 import { formatDateTime } from '../utils/formatters';
 import { useAppStore } from '../store/useAppStore';
+import { useTargetLanguage } from '../store';
+import { buildMemoryKey } from '../utils/translationMemory';
+import { canonicalTargetLanguage } from '../utils/translationMemory';
 
 const { TextArea } = Input;
 const log = createModuleLogger('TermLibraryManager');
@@ -28,13 +31,18 @@ interface TermLibraryManagerProps {
 interface EditingTerm {
   source: string;
   user_translation: string;
+  original: TermEntry;
+  revision: number;
 }
+
+const termKey = (term: TermEntry) => buildMemoryKey(term.source, term.context, term.language);
 
 export function TermLibraryManager({ visible, onClose }: TermLibraryManagerProps) {
   const { t } = useTranslation();
-  const { activeAIConfig } = useAppData();
+  const { activeAIConfig } = useActiveAIConfig();
   const { termLibrary: library, refresh, mutate } = useTermLibrary({ enabled: visible });
   const language = useAppStore((state) => state.language);
+  const targetLanguage = useTargetLanguage();
   const [loading, setLoading] = useState(false);
   const [editingKey, setEditingKey] = useState<string>('');
   const [editingTerm, setEditingTerm] = useState<EditingTerm | null>(null);
@@ -47,9 +55,14 @@ export function TermLibraryManager({ visible, onClose }: TermLibraryManagerProps
   }, [visible, refresh]);
 
   // 删除术语
-  const handleDelete = async (source: string) => {
+  const handleDelete = async (term: TermEntry) => {
     try {
-      await termLibraryCommands.removeTerm(source);
+      await termLibraryCommands.removeTerm(
+        term.source,
+        term.context,
+        term.language,
+        library?.revision
+      );
       message.success(t('messages.termDeleted'));
       await mutate();
     } catch (error) {
@@ -60,10 +73,13 @@ export function TermLibraryManager({ visible, onClose }: TermLibraryManagerProps
 
   // 开始编辑
   const handleEdit = (term: TermEntry) => {
-    setEditingKey(term.source);
+    if (!library) return;
+    setEditingKey(termKey(term));
     setEditingTerm({
       source: term.source,
       user_translation: term.user_translation,
+      original: term,
+      revision: library.revision,
     });
   };
 
@@ -72,14 +88,15 @@ export function TermLibraryManager({ visible, onClose }: TermLibraryManagerProps
     if (!editingTerm) return;
 
     try {
-      const original = library?.terms.find((t: TermEntry) => t.source === editingKey);
-      if (!original) return;
+      const original = editingTerm.original;
 
       await termLibraryCommands.addTerm({
         source: editingTerm.source,
         userTranslation: editingTerm.user_translation,
         aiTranslation: original.ai_translation,
         context: original.context || null,
+        language: original.language || targetLanguage,
+        expectedRevision: editingTerm.revision,
       });
 
       message.success(t('messages.termUpdated'));
@@ -107,7 +124,7 @@ export function TermLibraryManager({ visible, onClose }: TermLibraryManagerProps
     log.info('开始生成风格总结', { termCount: library?.metadata.total_terms || 0 });
     setLoading(true);
     try {
-      const summary = await termLibraryCommands.generateStyleSummary();
+      const summary = await termLibraryCommands.generateStyleSummary(targetLanguage, null);
       const summaryText = typeof summary === 'string' ? summary : String(summary);
       log.info('风格总结生成成功', { summary: summaryText.substring(0, 50) + '...' });
       message.success(t('messages.styleSummaryGenerated'));
@@ -125,8 +142,19 @@ export function TermLibraryManager({ visible, onClose }: TermLibraryManagerProps
   };
 
   const columns = [
+    { title: t('memoryManager.language'), dataIndex: 'language', key: 'language', width: 100 },
     {
-      title: '原文',
+      title: t('memoryManager.context'),
+      dataIndex: 'context',
+      key: 'context',
+      width: 160,
+      ellipsis: true,
+      render: (context: string | null) => (
+        <Tooltip title={context}>{context ?? t('terms.genericContext')}</Tooltip>
+      ),
+    },
+    {
+      title: t('memoryManager.original'),
       dataIndex: 'source',
       key: 'source',
       width: '30%',
@@ -138,12 +166,12 @@ export function TermLibraryManager({ visible, onClose }: TermLibraryManagerProps
       ),
     },
     {
-      title: '用户译文',
+      title: t('terms.userTranslation'),
       dataIndex: 'user_translation',
       key: 'user_translation',
       width: '25%',
       render: (text: string, record: TermEntry) => {
-        const isEditing = editingKey === record.source;
+        const isEditing = editingKey === termKey(record);
         return isEditing ? (
           <TextArea
             value={editingTerm?.user_translation}
@@ -159,7 +187,7 @@ export function TermLibraryManager({ visible, onClose }: TermLibraryManagerProps
       },
     },
     {
-      title: 'AI译文',
+      title: t('terms.aiTranslation'),
       dataIndex: 'ai_translation',
       key: 'ai_translation',
       width: '25%',
@@ -173,7 +201,7 @@ export function TermLibraryManager({ visible, onClose }: TermLibraryManagerProps
       ),
     },
     {
-      title: '频次',
+      title: t('terms.frequency'),
       dataIndex: 'frequency',
       key: 'frequency',
       width: '8%',
@@ -181,18 +209,18 @@ export function TermLibraryManager({ visible, onClose }: TermLibraryManagerProps
       render: (freq: number) => <Tag color={freq > 3 ? 'green' : 'default'}>{freq}</Tag>,
     },
     {
-      title: '操作',
+      title: t('memoryManager.actions'),
       key: 'action',
       width: '12%',
-      render: (_: any, record: TermEntry) => {
-        const isEditing = editingKey === record.source;
+      render: (_: unknown, record: TermEntry) => {
+        const isEditing = editingKey === termKey(record);
         return isEditing ? (
           <Space size="small">
             <Button size="small" type="primary" onClick={handleSave}>
-              保存
+              {t('common.save')}
             </Button>
             <Button size="small" onClick={handleCancel}>
-              取消
+              {t('common.cancel')}
             </Button>
           </Space>
         ) : (
@@ -204,12 +232,17 @@ export function TermLibraryManager({ visible, onClose }: TermLibraryManagerProps
               aria-label={t('common.edit')}
             />
             <Popconfirm
-              title="确定删除此术语？"
-              onConfirm={() => handleDelete(record.source)}
-              okText="确定"
-              cancelText="取消"
+              title={t('terms.deleteConfirm')}
+              onConfirm={() => handleDelete(record)}
+              okText={t('common.confirm')}
+              cancelText={t('common.cancel')}
             >
-              <Button size="small" danger icon={<DeleteOutlined />} aria-label={t('common.delete')} />
+              <Button
+                size="small"
+                danger
+                icon={<DeleteOutlined />}
+                aria-label={t('common.delete')}
+              />
             </Popconfirm>
           </Space>
         );
@@ -221,10 +254,10 @@ export function TermLibraryManager({ visible, onClose }: TermLibraryManagerProps
     <Modal
       title={
         <span>
-          <BookOutlined /> 术语库管理
+          <BookOutlined /> {t('terms.title')}
           {library && (
             <Tag color="blue" style={{ marginLeft: 'var(--space-2)' }}>
-              {library.metadata.total_terms} 条术语
+              {t('terms.count', { count: library.metadata.total_terms })}
             </Tag>
           )}
         </span>
@@ -233,10 +266,10 @@ export function TermLibraryManager({ visible, onClose }: TermLibraryManagerProps
       onCancel={onClose}
       width={1040}
       centered
-      destroyOnClose={true}
+      destroyOnHidden
       footer={[
         <Button key="refresh" icon={<ReloadOutlined />} onClick={() => refresh()}>
-          刷新
+          {t('common.refresh')}
         </Button>,
         <Button
           key="generate"
@@ -244,12 +277,17 @@ export function TermLibraryManager({ visible, onClose }: TermLibraryManagerProps
           icon={<ThunderboltOutlined />}
           onClick={handleGenerateStyleSummary}
           loading={loading}
-          disabled={!library || library.metadata.total_terms === 0}
+          disabled={
+            !library?.terms.some(
+              (term) =>
+                term.language === canonicalTargetLanguage(targetLanguage) && term.context === null
+            )
+          }
         >
-          生成风格总结
+          {t('terms.generateSummary')}
         </Button>,
         <Button key="close" onClick={onClose}>
-          关闭
+          {t('common.close')}
         </Button>,
       ]}
     >
@@ -270,8 +308,7 @@ export function TermLibraryManager({ visible, onClose }: TermLibraryManagerProps
             lineHeight: '1.6',
           }}
         >
-          <strong style={{ color: cssColors.textPrimary }}>风格提示词自动生成规则：</strong>
-          首次添加或每新增5条术语时自动生成，也可随时点击下方按钮手动生成
+          {t('terms.description')}
         </div>
       </div>
 
@@ -293,7 +330,10 @@ export function TermLibraryManager({ visible, onClose }: TermLibraryManagerProps
               color: cssColors.textPrimary,
             }}
           >
-            当前风格总结 (v{library.style_summary.version})
+            {t('terms.summaryVersion', {
+              version: library.style_summary.version,
+              language: library.style_summary.language,
+            })}
           </div>
           <div
             style={{
@@ -311,8 +351,10 @@ export function TermLibraryManager({ visible, onClose }: TermLibraryManagerProps
               color: cssColors.textTertiary,
             }}
           >
-            基于 {library.style_summary.based_on_terms} 条术语 · 最后更新:{' '}
-            {formatDateTime(library.style_summary.generated_at, language)}
+            {t('terms.summaryDate', {
+              count: library.style_summary.based_on_terms,
+              date: formatDateTime(library.style_summary.generated_at, language),
+            })}
           </div>
         </div>
       )}
@@ -321,17 +363,17 @@ export function TermLibraryManager({ visible, onClose }: TermLibraryManagerProps
       <Table
         columns={columns}
         dataSource={library?.terms || []}
-        rowKey="source"
+        rowKey={termKey}
         loading={loading}
         pagination={{
           pageSize: 10,
           showSizeChanger: true,
-          showTotal: (total) => `共 ${total} 条术语`,
+          showTotal: (total) => t('terms.count', { count: total }),
         }}
         size="middle"
         scroll={{ x: 960 }}
         locale={{
-          emptyText: '暂无术语数据',
+          emptyText: t('terms.empty'),
         }}
       />
 
@@ -347,9 +389,9 @@ export function TermLibraryManager({ visible, onClose }: TermLibraryManagerProps
           <BookOutlined
             style={{ fontSize: 'var(--font-size-2xl)', marginBottom: 'var(--space-4)' }}
           />
-          <div>术语库为空</div>
+          <div>{t('terms.empty')}</div>
           <div style={{ fontSize: 'var(--font-size-sm)', marginTop: 'var(--space-2)' }}>
-            在编辑器中修改AI翻译后，系统会自动检测并建议加入术语库
+            {t('terms.emptyHelp')}
           </div>
         </div>
       )}

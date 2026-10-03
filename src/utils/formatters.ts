@@ -5,8 +5,6 @@ export function getErrorMessage(error: unknown): string {
   return String(error);
 }
 
-const USD_TO_CNY = 7.2;
-
 function resolveLocale(locale?: string): string {
   if (locale) {
     return locale;
@@ -19,13 +17,6 @@ function resolveLocale(locale?: string): string {
   return 'en-US';
 }
 
-function isChineseLocale(locale: string): boolean {
-  const normalized = locale.toLowerCase();
-  return ['zh', 'zh-cn', 'zh-tw', 'zh-hans', 'zh-hant'].some((value) =>
-    normalized.startsWith(value)
-  );
-}
-
 export function formatCost(cost: number, locale?: string): string {
   return new Intl.NumberFormat(resolveLocale(locale), {
     style: 'currency',
@@ -33,25 +24,6 @@ export function formatCost(cost: number, locale?: string): string {
     minimumFractionDigits: cost < 1 ? 4 : 2,
     maximumFractionDigits: cost < 1 ? 4 : 2,
   }).format(cost);
-}
-
-export function formatCNY(amount: number, locale?: string): string {
-  return new Intl.NumberFormat(resolveLocale(locale), {
-    style: 'currency',
-    currency: 'CNY',
-    minimumFractionDigits: amount < 1 ? 4 : 2,
-    maximumFractionDigits: amount < 1 ? 4 : 2,
-  }).format(amount);
-}
-
-export function formatCostByLocale(cost: number, locale?: string): string {
-  const currentLocale = resolveLocale(locale);
-
-  if (isChineseLocale(currentLocale)) {
-    return formatCNY(cost * USD_TO_CNY, currentLocale);
-  }
-
-  return formatCost(cost, currentLocale);
 }
 
 export function formatTokens(tokens: number, locale?: string): string {
@@ -150,7 +122,6 @@ export function formatTime(input: string | number | Date = Date.now(), locale?: 
 
 export const formatStats = {
   cost: formatCost,
-  costByLocale: formatCostByLocale,
   tokens: formatTokens,
   percentage: formatPercentage,
   count: formatCount,
@@ -198,6 +169,6 @@ export function formatTranslationStatsSummary(
       percentage: formatPercentage(aiTranslated, total, 1, locale),
     },
     tokens: formatTokens(tokens, locale),
-    cost: formatCostByLocale(cost, locale),
+    cost: formatCost(cost, locale),
   };
 }

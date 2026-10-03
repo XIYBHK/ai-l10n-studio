@@ -1,5 +1,6 @@
 import { memo } from 'react';
-import { Tag, Space } from 'antd';
+import { Space } from 'antd';
+import { useTranslation } from 'react-i18next';
 import { useFileFormat, useFileMetadata } from '../hooks/useFileFormat';
 import { CSS_COLORS } from '../hooks/useCssColors';
 
@@ -8,6 +9,7 @@ interface FileInfoBarProps {
 }
 
 export const FileInfoBar = memo(function FileInfoBar({ filePath }: FileInfoBarProps) {
+  const { t } = useTranslation();
   const { format, isLoading: loadingFormat } = useFileFormat(filePath || null);
   const { metadata, isLoading: loadingMeta } = useFileMetadata(filePath || null);
 
@@ -18,23 +20,22 @@ export const FileInfoBar = memo(function FileInfoBar({ filePath }: FileInfoBarPr
   return (
     <div
       style={{
-        padding: 'var(--space-1) var(--space-4)',
-        borderTop: `1px solid ${CSS_COLORS.borderPrimary}`,
-        backgroundColor: CSS_COLORS.bgTertiary,
+        padding: '8px 20px',
+        borderTop: `1px solid ${CSS_COLORS.borderSecondary}`,
+        backgroundColor: CSS_COLORS.bgPrimary,
         fontSize: 'var(--font-size-xs)',
         color: CSS_COLORS.textSecondary,
       }}
     >
-      <Space size="small" wrap>
-        <Tag color="blue">文件</Tag>
+      <Space size={12} separator={<span aria-hidden="true">·</span>} wrap>
         <span style={{ color: CSS_COLORS.textPrimary }}>{filePath.split(/[/\\]/).pop()}</span>
-        {loadingFormat ? <Tag>格式加载中…</Tag> : format && <Tag color="geekblue">{format}</Tag>}
+        {loadingFormat ? t('common.loading') : format?.toUpperCase()}
         {loadingMeta ? (
-          <Tag>元数据加载中…</Tag>
+          t('common.loading')
         ) : metadata ? (
           <>
-            {metadata.totalEntries !== undefined && (
-              <Tag color="purple">{metadata.totalEntries} entries</Tag>
+            {metadata.total_entries !== undefined && (
+              <span>{t('workspace.entryCount', { count: metadata.total_entries })}</span>
             )}
           </>
         ) : null}

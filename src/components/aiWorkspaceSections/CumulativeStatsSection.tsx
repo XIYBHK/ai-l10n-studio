@@ -2,16 +2,18 @@ import React, { memo } from 'react';
 import { Button, Popconfirm } from 'antd';
 import { BarChartOutlined, ReloadOutlined } from '@ant-design/icons';
 import { CSS_COLORS } from '../../hooks/useCssColors';
-import { formatTokens, formatCostByLocale } from '../../utils/formatters';
+import { formatTokens } from '../../utils/formatters';
+import { CostBreakdown } from './CostBreakdown';
 import type { CumulativeStatsSectionProps } from './types';
 import { StatCard } from './StatCard';
+import { useTranslation } from 'react-i18next';
 
 export const CUMULATIVE_CARDS = [
-  { key: 'total', label: '总计翻译', color: 'brandPrimary' },
-  { key: 'ai_translated', label: 'AI调用', color: 'textPrimary' },
-  { key: 'tm_hits', label: '记忆命中', color: 'statusTranslated' },
-  { key: 'deduplicated', label: '去重命中', color: 'statusUntranslated' },
-  { key: 'tm_learned', label: '记忆库新增', color: 'statusTranslated' },
+  { key: 'total', label: 'total', color: 'brandPrimary' },
+  { key: 'ai_translated', label: 'aiTranslated', color: 'textPrimary' },
+  { key: 'tm_hits', label: 'memoryHits', color: 'statusTranslated' },
+  { key: 'deduplicated', label: 'deduplication', color: 'statusUntranslated' },
+  { key: 'tm_learned', label: 'tmLearned', color: 'statusTranslated' },
 ] as const;
 
 // 累计统计区块
@@ -20,7 +22,8 @@ export const CumulativeStatsSection = memo(function CumulativeStatsSection({
   language,
   onReset,
 }: CumulativeStatsSectionProps) {
-  if (cumulativeStats.total === 0) {
+  const { t } = useTranslation();
+  if (cumulativeStats.total === 0 && cumulativeStats.tm_learned === 0) {
     return (
       <div
         style={{
@@ -30,7 +33,7 @@ export const CumulativeStatsSection = memo(function CumulativeStatsSection({
           fontSize: 'var(--font-size-sm)',
         }}
       >
-        暂无累计数据
+        {t('aiWorkspace.noStats')}
       </div>
     );
   }
@@ -83,14 +86,14 @@ export const CumulativeStatsSection = memo(function CumulativeStatsSection({
       <div style={headerStyle}>
         <span style={titleStyle}>
           <BarChartOutlined aria-hidden="true" />
-          累计统计
+          {t('aiWorkspace.cumulative')}
         </span>
         <Popconfirm
-          title="确认重置累计统计数据？"
+          title={t('aiWorkspace.resetConfirm')}
           onConfirm={onReset}
-          okText="确认"
-          cancelText="取消"
-          aria-label="确认重置累计统计数据对话框"
+          okText={t('common.confirm')}
+          cancelText={t('common.cancel')}
+          aria-label={t('aiWorkspace.resetConfirm')}
         >
           <Button
             type="text"
@@ -98,16 +101,16 @@ export const CumulativeStatsSection = memo(function CumulativeStatsSection({
             icon={<ReloadOutlined />}
             danger
             style={{ fontSize: 'var(--font-size-xs)', height: '22px' }}
-            aria-label="重置累计统计数据"
+            aria-label={t('aiWorkspace.resetConfirm')}
           >
-            重置
+            {t('aiWorkspace.reset')}
           </Button>
         </Popconfirm>
       </div>
 
       <div style={{ ...fullWidthGridStyle, marginBottom: 'var(--space-3)' }}>
         <StatCard
-          title={CUMULATIVE_CARDS[0].label}
+          title={t(`aiWorkspace.${CUMULATIVE_CARDS[0].label}`)}
           value={cumulativeStats.total ?? 0}
           color={CUMULATIVE_CARDS[0].color}
           size="large"
@@ -117,7 +120,7 @@ export const CumulativeStatsSection = memo(function CumulativeStatsSection({
         {CUMULATIVE_CARDS.slice(1, 3).map((item) => (
           <StatCard
             key={item.key}
-            title={item.label}
+            title={t(`aiWorkspace.${item.label}`)}
             value={cumulativeStats[item.key] ?? 0}
             color={item.color}
           />
@@ -127,7 +130,7 @@ export const CumulativeStatsSection = memo(function CumulativeStatsSection({
         {CUMULATIVE_CARDS.slice(3, 5).map((item) => (
           <StatCard
             key={item.key}
-            title={item.label}
+            title={t(`aiWorkspace.${item.label}`)}
             value={cumulativeStats[item.key] ?? 0}
             color={item.color}
           />
@@ -136,12 +139,12 @@ export const CumulativeStatsSection = memo(function CumulativeStatsSection({
 
       <div style={costContainerStyle}>
         <span style={{ color: CSS_COLORS.textSecondary }}>Token: {formatTokens(totalTokens)}</span>
-        <span
-          style={{ fontWeight: 600, color: CSS_COLORS.statusTranslated, fontFamily: 'monospace' }}
-        >
-          {formatCostByLocale(cost, language)}
-        </span>
       </div>
+      <CostBreakdown
+        cost={cost}
+        language={language}
+        unpricedRequests={cumulativeStats.token_stats.unpriced_requests}
+      />
     </div>
   );
 });

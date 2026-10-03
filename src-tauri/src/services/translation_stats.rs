@@ -2,11 +2,25 @@
 //!
 //! 负责统计翻译过程中的token使用、成本计算和批量统计
 
-use anyhow::Result;
 use serde::{Deserialize, Serialize};
 
 #[cfg(feature = "ts-rs")]
 use ts_rs::TS;
+
+#[derive(Debug, Clone, Default, Serialize, Deserialize)]
+#[cfg_attr(feature = "ts-rs", derive(TS))]
+#[cfg_attr(
+    feature = "ts-rs",
+    ts(export, export_to = "../../src/types/generated/")
+)]
+pub struct TranslationStats {
+    pub total: usize,
+    pub tm_hits: usize,
+    pub deduplicated: usize,
+    pub ai_translated: usize,
+    pub token_stats: TokenStats,
+    pub tm_learned: usize,
+}
 
 /// Token 统计信息
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -20,6 +34,8 @@ pub struct TokenStats {
     pub output_tokens: u32,
     pub total_tokens: u32,
     pub cost: f64,
+    /// Requests omitted from `cost` because no price is known.
+    pub unpriced_requests: u32,
 }
 
 impl Default for TokenStats {
@@ -29,6 +45,7 @@ impl Default for TokenStats {
             output_tokens: 0,
             total_tokens: 0,
             cost: 0.0,
+            unpriced_requests: 0,
         }
     }
 }
@@ -106,60 +123,6 @@ impl BatchStats {
     pub fn record_tm_learning(&mut self) {
         self.tm_learned += 1;
     }
-}
-
-/// 计算并更新 token 成本
-///
-/// # 参数
-/// - `token_stats`: 可变的 token 统计引用
-/// - `provider_id`: AI 供应商 ID
-/// - `model`: 模型名称
-/// - `prompt_tokens`: 输入 token 数
-/// - `completion_tokens`: 输出 token 数
-///
-/// # 返回
-/// 成功返回 ()，失败返回错误
-pub fn update_token_cost(
-    token_stats: &mut TokenStats,
-    provider_id: &str,
-    model: &str,
-    prompt_tokens: u32,
-    completion_tokens: u32,
-) -> Result<()> {
-    use crate::services::ai::CostCalculator;
-    use crate::services::ai::provider::with_global_registry;
-
-    // 更新 token 统计
-    let total_tokens = prompt_tokens + completion_tokens;
-    token_stats.update(prompt_tokens, completion_tokens, total_tokens);
-
-    // 使用 ModelInfo 计算精确成本
-    // Fail Fast 架构设计：多AI供应商架构要求强制 ModelInfo 存在
-    // 模型不存在 = 配置错误，应立即返回错误（见 docs/Architecture.md:195）
-    let model_info = with_global_registry(|registry| {
-        registry
-            .get_provider(provider_id)
-            .and_then(|provider| provider.get_model_info(model))
-            .ok_or_else(|| {
-                anyhow::anyhow!(
-                    "模型信息不存在: provider={}, model={}. 请检查插件系统中的模型定义",
-                    provider_id,
-                    model
-                )
-            })
-    })?;
-
-    let breakdown = CostCalculator::calculate_openai(
-        &model_info,
-        prompt_tokens as usize,
-        completion_tokens as usize,
-        0, // TODO: 支持从 API 响应中提取缓存 token
-        0,
-    );
-
-    token_stats.add_cost(breakdown.total_cost);
-
-    Ok(())
 }
 
 #[cfg(test)]

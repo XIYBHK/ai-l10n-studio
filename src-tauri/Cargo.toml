@@ -34,6 +34,8 @@ anyhow = "1.0"
 thiserror = "2.0"
 nom = "7.0"
 encoding_rs = "0.8"
+rspolib = "0.1.2"
+tempfile = "3.23.0"
 dirs = "5.0"
 indexmap = { version = "2.0", features = ["serde"] }
 lazy_static = "1.4"
@@ -123,9 +125,6 @@ useless_format = "allow"
 # Library code may have items used by frontend/tests but not by bin
 dead_code = "allow"
 unused_mut = "allow"
-
-[dev-dependencies]
-tempfile = "3.23.0"
 
 [lints.clippy.upper_case_acronyms]
 level = "allow"

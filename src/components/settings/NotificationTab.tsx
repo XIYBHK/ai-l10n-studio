@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Card, Form, Switch, Button, message } from 'antd';
 import { BellOutlined } from '@ant-design/icons';
 import { useTranslation } from 'react-i18next';
@@ -12,10 +12,27 @@ export function NotificationTab() {
   const { t } = useTranslation();
   const [notificationEnabled, setNotificationEnabled] = useState(notificationManager.isEnabled());
   const [form] = Form.useForm();
+  const [ready, setReady] = useState(false);
 
-  function handleNotificationToggle(checked: boolean) {
+  useEffect(() => {
+    let active = true;
+    void notificationManager
+      .init()
+      .then(() => {
+        if (active) {
+          setNotificationEnabled(notificationManager.isEnabled());
+          setReady(true);
+        }
+      })
+      .catch((error) => log.logError(error, 'Load notification preferences failed'));
+    return () => {
+      active = false;
+    };
+  }, []);
+
+  async function handleNotificationToggle(checked: boolean) {
     try {
-      notificationManager.setEnabled(checked);
+      await notificationManager.setEnabled(checked);
       message.success(
         t('messages.notificationToggled', {
           status: checked ? t('messages.notificationEnabled') : t('messages.notificationDisabled'),
@@ -25,6 +42,7 @@ export function NotificationTab() {
       log.info('通知设置已更改', { enabled: checked });
     } catch (error) {
       log.error('设置通知失败', { error });
+      message.error(t('settings.saveFailed'));
     }
   }
 
@@ -47,7 +65,7 @@ export function NotificationTab() {
     <Card
       title={
         <span>
-          <BellOutlined /> 通知设置
+          <BellOutlined /> {t('notifications.title')}
         </span>
       }
       size="small"
@@ -59,16 +77,20 @@ export function NotificationTab() {
           fontSize: 'var(--font-size-base)',
         }}
       >
-        配置翻译完成、系统更新等事件的通知提醒。
+        {t('notifications.description')}
       </p>
 
       <Form form={form} layout="vertical">
-        <Form.Item label="启用通知">
-          <Switch checked={notificationEnabled} onChange={handleNotificationToggle} />
+        <Form.Item label={t('notifications.enabled')}>
+          <Switch
+            checked={notificationEnabled}
+            onChange={handleNotificationToggle}
+            disabled={!ready}
+          />
         </Form.Item>
 
         <Form.Item>
-          <Button onClick={handleRequestPermission}>请求通知权限</Button>
+          <Button onClick={handleRequestPermission}>{t('notifications.permission')}</Button>
         </Form.Item>
       </Form>
     </Card>

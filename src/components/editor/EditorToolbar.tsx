@@ -7,9 +7,11 @@ import {
   CloseOutlined,
 } from '@ant-design/icons';
 import { Button, Badge } from 'antd';
+import { useTranslation } from 'react-i18next';
 import { CSS_COLORS } from '../../hooks/useCssColors';
 
 interface EditorToolbarProps {
+  saving?: boolean;
   hasUnsavedChanges: boolean;
   onSave: () => void;
   onCancel: () => void;
@@ -24,6 +26,7 @@ interface EditorToolbarProps {
  * 编辑器工具栏组件
  */
 export const EditorToolbar: React.FC<EditorToolbarProps> = ({
+  saving = false,
   hasUnsavedChanges,
   onSave,
   onCancel,
@@ -33,6 +36,7 @@ export const EditorToolbar: React.FC<EditorToolbarProps> = ({
   canNavigatePrev = false,
   canNavigateNext = false,
 }) => {
+  const { t } = useTranslation();
   const getStatusIndicator = () => {
     if (hasUnsavedChanges) {
       return (
@@ -51,7 +55,7 @@ export const EditorToolbar: React.FC<EditorToolbarProps> = ({
               marginLeft: 'var(--space-2)',
             }}
           >
-            有未保存的修改
+            {t('workspace.editor.unsavedChanges')}
           </span>
         </Badge>
       );
@@ -76,7 +80,7 @@ export const EditorToolbar: React.FC<EditorToolbarProps> = ({
             backgroundColor: CSS_COLORS.statusTranslated,
           }}
         />
-        已保存
+        {t('workspace.editor.saved')}
       </span>
     );
   };
@@ -113,13 +117,17 @@ export const EditorToolbar: React.FC<EditorToolbarProps> = ({
   };
 
   return (
-    <div style={toolbarStyles} role="toolbar" aria-label="编辑器工具栏">
+    <div style={toolbarStyles} role="toolbar" aria-label={t('workspace.editor.toolbar')}>
       <div style={leftSectionStyles}>{getStatusIndicator()}</div>
 
       <div style={rightSectionStyles}>
         {/* 导航按钮组 */}
         {(onNavigatePrev || onNavigateNext) && (
-          <div style={navigationGroupStyles} role="group" aria-label="导航">
+          <div
+            style={navigationGroupStyles}
+            role="group"
+            aria-label={t('workspace.editor.navigation')}
+          >
             <Button
               size="small"
               icon={<UpOutlined />}
@@ -145,9 +153,9 @@ export const EditorToolbar: React.FC<EditorToolbarProps> = ({
           icon={<CopyOutlined />}
           onClick={onCopyOriginal}
           disabled={hasUnsavedChanges}
-          aria-label="复制原文到剪贴板"
+          aria-label={t('workspace.editor.copySource')}
         >
-          复制原文
+          {t('workspace.editor.copySourceShort')}
         </Button>
 
         {hasUnsavedChanges && (
@@ -158,9 +166,9 @@ export const EditorToolbar: React.FC<EditorToolbarProps> = ({
               event.preventDefault();
             }}
             onClick={onCancel}
-            aria-label="取消修改 (Esc)"
+            aria-label={t('workspace.editor.cancelEdit')}
           >
-            取消
+            {t('common.cancel')}
           </Button>
         )}
 
@@ -169,8 +177,9 @@ export const EditorToolbar: React.FC<EditorToolbarProps> = ({
           type="primary"
           icon={<SaveOutlined />}
           onClick={onSave}
+          loading={saving}
           disabled={!hasUnsavedChanges}
-          aria-label="保存译文 (Ctrl+Enter)"
+          aria-label={t('workspace.editor.saveTranslation')}
           style={
             hasUnsavedChanges
               ? {
@@ -180,7 +189,7 @@ export const EditorToolbar: React.FC<EditorToolbarProps> = ({
               : undefined
           }
         >
-          保存 (Ctrl+Enter)
+          {t('workspace.editor.saveTranslation')}
         </Button>
       </div>
     </div>

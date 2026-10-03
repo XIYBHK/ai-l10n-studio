@@ -1,5 +1,4 @@
 import useSWR from 'swr';
-import type { LanguageInfo } from '../types/generated/LanguageInfo';
 import { i18nCommands } from '../services/translationCommands';
 
 const SUPPORTED_LANGS_KEY = 'supported_languages';
@@ -13,7 +12,7 @@ export function useSupportedLanguages() {
     }
   );
   return {
-    languages: (data as LanguageInfo[] | undefined) ?? [],
+    languages: data ?? [],
     isLoading: !!isLoading,
     error,
     refresh: () => mutate(),

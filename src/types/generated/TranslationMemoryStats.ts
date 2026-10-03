@@ -5,16 +5,17 @@
  *
  * 记录翻译记忆库的使用情况。
  */
-export type TranslationMemoryStats = { 
-/**
- * 缓存命中次数
- */
-cache_hits: number, 
-/**
- * 总查询次数
- */
-total_queries: number, 
-/**
- * 命中率（百分比）
- */
-hit_rate: number, };
+export type TranslationMemoryStats = {
+  /**
+   * 缓存命中次数
+   */
+  cache_hits: number;
+  /**
+   * 总查询次数
+   */
+  total_queries: number;
+  /**
+   * 命中率（百分比）
+   */
+  hit_rate: number;
+};

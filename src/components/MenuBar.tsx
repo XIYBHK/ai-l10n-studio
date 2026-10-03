@@ -1,35 +1,31 @@
-import { memo, useState, useEffect, useCallback, CSSProperties } from 'react';
-import { Tooltip, Typography } from 'antd';
+import { memo, useCallback, useEffect, useState } from 'react';
+import { Dropdown, Tooltip, Typography } from 'antd';
+import type { MenuProps } from 'antd';
 import {
-  FolderOpenOutlined,
+  ArrowRightOutlined,
+  BugOutlined,
+  BulbFilled,
+  BulbOutlined,
+  FileAddOutlined,
+  GlobalOutlined,
+  MoreOutlined,
   SaveOutlined,
   SettingOutlined,
-  TranslationOutlined,
-  BulbOutlined,
-  BulbFilled,
-  BugOutlined,
-  GlobalOutlined,
-  ArrowRightOutlined,
   StopOutlined,
+  TranslationOutlined,
 } from '@ant-design/icons';
-import { CSS_COLORS } from '../hooks/useCssColors';
-import { ActionButton, InfoCard } from './ui';
-import { LanguageSelector } from './LanguageSelector';
-import type { LanguageInfo } from '../types/generated/LanguageInfo';
-import { useAppData } from '../hooks/useConfig';
+import { useTranslation } from 'react-i18next';
+import { useActiveAIConfig } from '../hooks/useConfig';
 import { useSupportedLanguages } from '../hooks/useLanguage';
 import { useTheme } from '../hooks/useTheme';
-import { useSourceLanguage, useTargetLanguage, useSetTargetLanguage } from '../store';
+import { useSourceLanguage, useTargetLanguage } from '../store';
+import type { LanguageInfo } from '../types/generated/LanguageInfo';
 import { createModuleLogger } from '../utils/logger';
-
+import { ActionButton } from './ui';
+import { LanguageSelector } from './LanguageSelector';
+import styles from './MenuBar.module.css';
 const { Text } = Typography;
-
 const log = createModuleLogger('MenuBar');
-
-const MENU_HEIGHT = '56px';
-const MENU_PADDING_X = 'var(--space-5)';
-const MENU_GAP = 'var(--space-4)';
-
 interface MenuBarProps {
   onOpenFile: () => void;
   onSaveFile: () => void;
@@ -40,345 +36,19 @@ interface MenuBarProps {
   isTranslating: boolean;
   hasEntries: boolean;
   onCancelTranslation?: () => void;
+  onTargetLanguageChange: (language: string) => Promise<void>;
 }
-
-interface LogoSectionProps {
-  compact?: boolean;
-}
-
-interface FileActionsProps {
-  onOpenFile: () => void;
-  onSaveFile: () => void;
-  onSaveAsFile: () => void;
-  hasEntries: boolean;
-  compact?: boolean;
-}
-
-interface TranslateActionProps {
-  onTranslateAll: () => void;
-  isTranslating: boolean;
-  hasEntries: boolean;
-  hasAIConfig: boolean;
-  onCancelTranslation?: () => void;
-}
-
-interface LanguageSelectorSectionProps {
-  sourceLanguage?: string;
-  targetLanguage?: string;
-  onTargetLanguageChange?: (langCode: string, langInfo: LanguageInfo | undefined) => void;
-  hasEntries: boolean;
-  isTranslating: boolean;
-  compact?: boolean;
-}
-
-interface SystemActionsProps {
-  isDarkMode: boolean;
-  onThemeToggle?: () => void;
-  onSettings: () => void;
-  onDevTools?: () => void;
-}
-
-// ==================== Sub Components ====================
-
-/**
- * Logo区域 - 简化渐变，移除复杂动画
- */
-const LogoSection = memo(function LogoSection({ compact }: LogoSectionProps) {
-  return (
-    <div
-      style={{
-        fontSize: compact ? '18px' : '20px',
-        fontWeight: 700,
-        fontFamily: 'var(--display-font)',
-        color: CSS_COLORS.brandPrimary,
-        display: 'flex',
-        alignItems: 'center',
-        gap: 'var(--space-2)',
-        letterSpacing: '-0.02em',
-        flexShrink: 0,
-        whiteSpace: 'nowrap',
-      }}
-    >
-      <GlobalOutlined
-        style={{ fontSize: compact ? '20px' : '22px', color: CSS_COLORS.brandPrimary }}
-      />
-      <span>{compact ? 'AI L10n' : 'AI L10n Studio'}</span>
-    </div>
-  );
-});
-
-/**
- * 文件操作按钮组
- */
-const FileActions = memo(function FileActions({
-  onOpenFile,
-  onSaveFile,
-  onSaveAsFile,
-  hasEntries,
-  compact,
-}: FileActionsProps) {
-  return (
-    <div
-      style={{
-        display: 'flex',
-        alignItems: 'center',
-        gap: 'var(--space-2)',
-        padding: 'var(--space-1)',
-        backgroundColor: CSS_COLORS.bgTertiary,
-        border: `1px solid ${CSS_COLORS.borderSecondary}`,
-        borderRadius: 'var(--radius-full)',
-      }}
-      role="group"
-      aria-label="文件操作"
-    >
-      <Tooltip title="打开 PO 文件 (Ctrl+O)">
-        <ActionButton
-          variant="ghost"
-          size="small"
-          icon={<FolderOpenOutlined />}
-          onClick={onOpenFile}
-          aria-label="打开 PO 文件 (Ctrl+O)"
-        >
-          {!compact && '打开'}
-        </ActionButton>
-      </Tooltip>
-
-      <Tooltip title="保存到原文件 (Ctrl+S)">
-        <ActionButton
-          variant="ghost"
-          size="small"
-          icon={<SaveOutlined />}
-          onClick={onSaveFile}
-          disabled={!hasEntries}
-          aria-label={hasEntries ? '保存到原文件 (Ctrl+S)' : '保存（请先打开文件）'}
-          aria-disabled={!hasEntries}
-        >
-          {!compact && '保存'}
-        </ActionButton>
-      </Tooltip>
-
-      <Tooltip title="另存为新文件">
-        <ActionButton
-          variant="ghost"
-          size="small"
-          onClick={onSaveAsFile}
-          disabled={!hasEntries}
-          aria-label={hasEntries ? '另存为新文件' : '另存为（请先打开文件）'}
-          aria-disabled={!hasEntries}
-        >
-          {!compact && '另存为'}
-        </ActionButton>
-      </Tooltip>
-    </div>
-  );
-});
-
-/**
- * 翻译主按钮 - 更突出的视觉层级
- */
-const TranslateAction = memo(function TranslateAction({
-  onTranslateAll,
-  isTranslating,
-  hasEntries,
-  hasAIConfig,
-  onCancelTranslation,
-}: TranslateActionProps) {
-  const getAriaLabel = () => {
-    if (!hasAIConfig) return '批量翻译（请先配置 AI 服务）';
-    if (!hasEntries) return '批量翻译（请先打开文件）';
-    if (isTranslating) return '停止翻译';
-    return '批量翻译所有未翻译条目';
-  };
-
-  return (
-    <Tooltip
-      title={!hasAIConfig ? '请先配置 AI 服务' : isTranslating ? '停止翻译' : '翻译所有未翻译条目'}
-    >
-      <ActionButton
-        variant={isTranslating ? 'secondary' : 'primary'}
-        size="small"
-        icon={isTranslating ? <StopOutlined /> : <TranslationOutlined />}
-        onClick={isTranslating ? onCancelTranslation : onTranslateAll}
-        disabled={!hasAIConfig || !hasEntries}
-        aria-label={getAriaLabel()}
-        aria-disabled={!hasAIConfig || !hasEntries}
-        aria-busy={isTranslating}
-        danger={isTranslating}
-        style={{
-          backgroundColor: isTranslating ? undefined : CSS_COLORS.brandPrimary,
-          borderColor: isTranslating ? undefined : CSS_COLORS.brandPrimary,
-          boxShadow: isTranslating ? undefined : '0 2px 8px rgba(139, 92, 246, 0.25)',
-          fontWeight: 600,
-        }}
-      >
-        {isTranslating ? '停止翻译' : '批量翻译'}
-      </ActionButton>
-    </Tooltip>
-  );
-});
-
-/**
- * 语言选择区域 - 统一输入框样式
- */
-const LanguageSelectorSection = memo(function LanguageSelectorSection({
-  sourceLanguage,
-  targetLanguage,
-  onTargetLanguageChange,
-  hasEntries,
-  isTranslating,
-  compact,
-}: LanguageSelectorSectionProps) {
-  const { languages } = useSupportedLanguages();
-
-  const getLanguageDisplayName = (code?: string) => {
-    if (!code) return '';
-    const lang = languages.find((l) => l.code === code);
-    return lang ? lang.display_name : code;
-  };
-
-  if (!hasEntries) return null;
-
-  return (
-    <div
-      style={{
-        display: 'flex',
-        alignItems: 'center',
-        backgroundColor: CSS_COLORS.bgTertiary,
-        padding: 'var(--space-1) var(--space-3)',
-        borderRadius: 'var(--radius-full)',
-        border: `1px solid ${CSS_COLORS.borderSecondary}`,
-        flexShrink: 0,
-        whiteSpace: 'nowrap',
-        gap: 'var(--space-2)',
-      }}
-    >
-      {sourceLanguage && (
-        <Text strong style={{ fontSize: 'var(--font-size-sm)', color: CSS_COLORS.textSecondary }}>
-          {compact ? sourceLanguage : getLanguageDisplayName(sourceLanguage)}
-        </Text>
-      )}
-
-      <ArrowRightOutlined
-        style={{
-          fontSize: 'var(--font-size-sm)',
-          color: CSS_COLORS.textTertiary,
-        }}
-      />
-
-      <LanguageSelector
-        value={targetLanguage}
-        onChange={onTargetLanguageChange}
-        placeholder={compact ? '目标' : '目标语言'}
-        disabled={isTranslating}
-        style={{ width: compact ? 100 : 140 }}
-      />
-    </div>
-  );
-});
-
-/**
- * 系统操作按钮组（主题、设置、调试）
- */
-const SystemActions = memo(function SystemActions({
-  isDarkMode,
-  onThemeToggle,
-  onSettings,
-  onDevTools,
-}: SystemActionsProps) {
-  return (
-    <div
-      style={{
-        display: 'flex',
-        alignItems: 'center',
-        gap: 'var(--space-1)',
-        padding: 'var(--space-1)',
-        backgroundColor: CSS_COLORS.bgTertiary,
-        border: `1px solid ${CSS_COLORS.borderSecondary}`,
-        borderRadius: 'var(--radius-full)',
-      }}
-      role="group"
-      aria-label="系统操作"
-    >
-      {onThemeToggle && (
-        <Tooltip title={isDarkMode ? '切换到亮色模式' : '切换到暗色模式'}>
-          <ActionButton
-            variant="text"
-            size="small"
-            icon={isDarkMode ? <BulbFilled /> : <BulbOutlined />}
-            onClick={onThemeToggle}
-            data-testid="menu-theme-toggle"
-            aria-label={isDarkMode ? '切换到亮色模式' : '切换到暗色模式'}
-            aria-pressed={isDarkMode}
-            style={{ color: CSS_COLORS.textSecondary }}
-          />
-        </Tooltip>
-      )}
-
-      <Tooltip title="设置">
-        <ActionButton
-          variant="text"
-          size="small"
-          icon={<SettingOutlined />}
-          onClick={onSettings}
-          data-testid="menu-settings-button"
-          aria-label="打开设置"
-          style={{ color: CSS_COLORS.textSecondary }}
-        />
-      </Tooltip>
-
-      {onDevTools && (
-        <Tooltip title="调试日志">
-          <ActionButton
-            variant="text"
-            size="small"
-            icon={<BugOutlined />}
-            onClick={onDevTools}
-            aria-label="打开调试日志"
-            style={{ color: CSS_COLORS.textTertiary }}
-          />
-        </Tooltip>
-      )}
-    </div>
-  );
-});
-
-/**
- * AI配置提示 - 使用InfoCard组件
- */
-const AIConfigPrompt = memo(function AIConfigPrompt({ isDarkMode }: { isDarkMode?: boolean }) {
-  return (
-    <div style={{ flexShrink: 0 }}>
-      <InfoCard
-        type="warning"
-        icon={<BulbFilled />}
-        description="请先配置 AI 服务"
-        style={{
-          padding: 'var(--space-2) var(--space-3)',
-          fontSize: 'var(--font-size-sm)',
-          borderRadius: 'var(--radius-full)',
-          backgroundColor: isDarkMode ? 'rgba(250, 173, 20, 0.12)' : 'rgba(250, 173, 20, 0.10)',
-          border: `1px solid ${CSS_COLORS.statusNeedsReview}`,
-        }}
-      />
-    </div>
-  );
-});
-
-// ==================== Main Component ====================
-
-// 用于监听窗口宽度
 function useWindowWidth() {
-  const [width, setWidth] = useState(typeof window !== 'undefined' ? window.innerWidth : 1024);
-
+  const [width, setWidth] = useState(() =>
+    typeof window === 'undefined' ? 1440 : window.innerWidth
+  );
   useEffect(() => {
-    const handleResize = () => setWidth(window.innerWidth);
-    window.addEventListener('resize', handleResize);
-    return () => window.removeEventListener('resize', handleResize);
+    const onResize = () => setWidth(window.innerWidth);
+    window.addEventListener('resize', onResize);
+    return () => window.removeEventListener('resize', onResize);
   }, []);
-
   return width;
 }
-
 export const MenuBar = memo(function MenuBar({
   onOpenFile,
   onSaveFile,
@@ -389,141 +59,129 @@ export const MenuBar = memo(function MenuBar({
   isTranslating,
   hasEntries,
   onCancelTranslation,
+  onTargetLanguageChange,
 }: MenuBarProps) {
-  const { activeAIConfig } = useAppData();
-  const windowWidth = useWindowWidth();
+  const { t } = useTranslation();
+  const { activeAIConfig } = useActiveAIConfig();
   const { isDark: isDarkMode, toggleTheme } = useTheme();
+  const { languages } = useSupportedLanguages();
   const sourceLanguage = useSourceLanguage();
   const targetLanguage = useTargetLanguage();
-  const setTargetLanguage = useSetTargetLanguage();
-
+  const isCompact = useWindowWidth() < 1100;
+  const sourceName = languages.find((language) => language.code === sourceLanguage)?.display_name;
   const handleTargetLanguageChange = useCallback(
     (langCode: string, langInfo: LanguageInfo | undefined) => {
-      setTargetLanguage(langCode);
-      if (langInfo) {
-        log.info('切换目标语言', { code: langInfo.code, name: langInfo.display_name });
-      }
+      void onTargetLanguageChange(langCode);
+      if (langInfo) log.info('target language changed', { code: langInfo.code });
     },
-    [setTargetLanguage]
+    [onTargetLanguageChange]
   );
-
-  // 响应式断点
-  const isCompact = windowWidth < 1280;
-  const isMinimal = windowWidth < 900;
-
-  const containerStyles: CSSProperties = {
-    display: 'flex',
-    alignItems: 'center',
-    padding: `0 ${MENU_PADDING_X}`,
-    backgroundColor: CSS_COLORS.bgPrimary,
-    borderBottom: `1px solid ${CSS_COLORS.borderSecondary}`,
-    gap: MENU_GAP,
-    height: MENU_HEIGHT,
-    boxShadow: 'none',
-    zIndex: 10,
-  };
-
-  // 紧凑模式下的简化布局
-  if (isMinimal) {
-    return (
-      <nav style={containerStyles} aria-label="主菜单">
-        <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-3)', minWidth: 0 }}>
-          <LogoSection compact />
-          <FileActions
-            onOpenFile={onOpenFile}
-            onSaveFile={onSaveFile}
-            onSaveAsFile={onSaveAsFile}
-            hasEntries={hasEntries}
-            compact
-          />
-        </div>
-
-        <div style={{ flex: 1, display: 'flex', justifyContent: 'center' }}>
-          <TranslateAction
-            onTranslateAll={onTranslateAll}
-            isTranslating={isTranslating}
-            hasEntries={hasEntries}
-            hasAIConfig={!!activeAIConfig}
-            onCancelTranslation={onCancelTranslation}
-          />
-        </div>
-
-        <SystemActions
-          isDarkMode={isDarkMode}
-          onThemeToggle={toggleTheme}
-          onSettings={onSettings}
-          onDevTools={undefined}
-        />
-      </nav>
-    );
-  }
-
+  const fileMenu: MenuProps['items'] = [
+    { key: 'open', icon: <FileAddOutlined />, label: t('menu.import'), onClick: onOpenFile },
+    { type: 'divider' },
+    {
+      key: 'save',
+      icon: <SaveOutlined />,
+      label: t('menu.save'),
+      disabled: !hasEntries,
+      onClick: onSaveFile,
+    },
+    {
+      key: 'saveAs',
+      icon: <SaveOutlined />,
+      label: t('menu.saveAs'),
+      disabled: !hasEntries,
+      onClick: onSaveAsFile,
+    },
+  ];
+  const themeLabel = isDarkMode ? t('theme.light') : t('theme.dark');
   return (
-    <nav style={containerStyles} aria-label="主菜单">
-      <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-4)', minWidth: 0 }}>
-        <LogoSection compact={isCompact} />
-        <FileActions
-          onOpenFile={onOpenFile}
-          onSaveFile={onSaveFile}
-          onSaveAsFile={onSaveAsFile}
-          hasEntries={hasEntries}
-          compact={isCompact}
-        />
+    <nav className={styles.toolbar} aria-label={t('menu.mainMenu')}>
+      <div className={styles.brand}>
+        <span className={styles.brandMark} aria-hidden="true">
+          <GlobalOutlined />
+        </span>
+        <span className={styles.brandName}>{isCompact ? t('app.nameShort') : t('app.name')}</span>
       </div>
-
-      <div
-        style={{
-          flex: 1,
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-          gap: 'var(--space-3)',
-          minWidth: 0,
-        }}
-      >
-        <TranslateAction
-          onTranslateAll={onTranslateAll}
-          isTranslating={isTranslating}
-          hasEntries={hasEntries}
-          hasAIConfig={!!activeAIConfig}
-          onCancelTranslation={onCancelTranslation}
-        />
-
-        <LanguageSelectorSection
-          sourceLanguage={sourceLanguage}
-          targetLanguage={targetLanguage}
-          onTargetLanguageChange={handleTargetLanguageChange}
-          hasEntries={hasEntries}
-          isTranslating={isTranslating}
-          compact={isCompact}
-        />
-      </div>
-
-      <div
-        style={{
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'flex-end',
-          gap: 'var(--space-3)',
-          minWidth: 0,
-        }}
-      >
-        {!activeAIConfig && !isCompact && <AIConfigPrompt isDarkMode={isDarkMode} />}
-        {!activeAIConfig && isCompact && (
-          <Tooltip title="请先配置 AI 服务">
-            <BulbFilled style={{ color: CSS_COLORS.statusNeedsReview, fontSize: '16px' }} />
+      {hasEntries && (
+        <div className={styles.language}>
+          <Text className={styles.source}>
+            {sourceName || sourceLanguage || t('menu.autoDetect')}
+          </Text>
+          <ArrowRightOutlined className={styles.arrow} aria-hidden="true" />
+          <LanguageSelector
+            value={targetLanguage}
+            onChange={handleTargetLanguageChange}
+            placeholder={t('menu.targetLanguage')}
+            disabled={isTranslating}
+            style={{ width: isCompact ? 150 : 192 }}
+          />
+        </div>
+      )}
+      <div className={styles.spacer} />
+      {!activeAIConfig && (
+        <Tooltip title={t('menu.configureAI')}>
+          <BulbFilled className={styles.warning} aria-label={t('menu.configureAI')} />
+        </Tooltip>
+      )}
+      <Tooltip title={isTranslating ? t('menu.stopTranslation') : t('menu.batchTranslate')}>
+        <ActionButton
+          className={styles.translate}
+          variant={isTranslating ? 'danger' : 'primary'}
+          size="small"
+          icon={isTranslating ? <StopOutlined /> : <TranslationOutlined />}
+          onClick={isTranslating ? onCancelTranslation : onTranslateAll}
+          disabled={!activeAIConfig || !hasEntries}
+          aria-busy={isTranslating}
+          aria-label={isTranslating ? t('menu.stopTranslation') : t('menu.batchTranslate')}
+        >
+          {isCompact ? null : isTranslating ? t('menu.translating') : t('menu.batchTranslate')}
+        </ActionButton>
+      </Tooltip>
+      <Dropdown menu={{ items: fileMenu }} trigger={['click']} placement="bottomRight">
+        <ActionButton
+          variant="ghost"
+          size="small"
+          icon={isCompact ? <MoreOutlined /> : <SaveOutlined />}
+          aria-label={t('menu.fileActions')}
+        >
+          {isCompact ? null : t('menu.file')}
+        </ActionButton>
+      </Dropdown>
+      <div className={styles.actions}>
+        <Tooltip title={themeLabel}>
+          <ActionButton
+            variant="text"
+            size="small"
+            icon={isDarkMode ? <BulbFilled /> : <BulbOutlined />}
+            onClick={toggleTheme}
+            data-testid="menu-theme-toggle"
+            aria-label={themeLabel}
+          />
+        </Tooltip>
+        <Tooltip title={t('menu.settings')}>
+          <ActionButton
+            variant="text"
+            size="small"
+            icon={<SettingOutlined />}
+            onClick={onSettings}
+            data-testid="menu-settings-button"
+            aria-label={t('menu.settings')}
+          />
+        </Tooltip>
+        {onDevTools && (
+          <Tooltip title={t('menu.devTools')}>
+            <ActionButton
+              variant="text"
+              size="small"
+              icon={<BugOutlined />}
+              onClick={onDevTools}
+              aria-label={t('menu.devTools')}
+            />
           </Tooltip>
         )}
-
-        <SystemActions
-          isDarkMode={isDarkMode}
-          onThemeToggle={toggleTheme}
-          onSettings={onSettings}
-          onDevTools={onDevTools}
-        />
       </div>
     </nav>
   );
 });
-
 export default MenuBar;

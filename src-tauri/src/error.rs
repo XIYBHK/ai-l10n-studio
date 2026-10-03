@@ -11,6 +11,15 @@
 use thiserror::Error;
 use uuid::Uuid;
 
+impl serde::Serialize for AppError {
+    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
+    where
+        S: serde::Serializer,
+    {
+        serializer.serialize_str(&self.to_string())
+    }
+}
+
 /// 统一应用错误类型
 #[derive(Error, Debug)]
 pub enum AppError {

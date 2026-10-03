@@ -1,5 +1,6 @@
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useEffect } from 'react';
 import { POEntry } from '../types/tauri';
+import { useTranslationStore } from '../store/useTranslationStore';
 
 type ColumnType = 'untranslated' | 'needsReview' | 'translated';
 type IndexedEntry = { entry: POEntry; index: number };
@@ -17,12 +18,21 @@ export function useEntrySelection({
   activeColumn,
   onEntrySelect,
 }: UseEntrySelectionProps) {
+  const revision = useTranslationStore((state) => state.documentRevision);
   const [selectedIndices, setSelectedIndices] = useState<number[]>([]);
   const [lastClickedIndex, setLastClickedIndex] = useState<number | null>(null);
   const [lastClickedColumn, setLastClickedColumn] = useState<ColumnType | null>(null);
 
+  useEffect(() => {
+    setSelectedIndices([]);
+    setLastClickedIndex(null);
+    setLastClickedColumn(null);
+  }, [revision]);
+
   const clearSelection = useCallback(() => {
     setSelectedIndices([]);
+    setLastClickedIndex(null);
+    setLastClickedColumn(null);
   }, []);
 
   const selectAll = useCallback(() => {
@@ -31,7 +41,9 @@ export function useEntrySelection({
       const columnKeys = columnEntries.map(({ index }) => index);
       setSelectedIndices(columnKeys);
     } else {
-      const allKeys = entries.map((_, index) => index);
+      const allKeys = entries.flatMap((entry, index) =>
+        entry.obsolete || !entry.msgid ? [] : [index]
+      );
       setSelectedIndices(allKeys);
     }
   }, [activeColumn, groupedEntries, entries]);

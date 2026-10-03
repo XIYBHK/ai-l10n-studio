@@ -6,56 +6,57 @@
  * 参考：Roo-Code 的 ModelInfo 设计
  * 简化原则：跳过推理预算、分层定价等高级特性
  */
-export type ModelInfo = { 
-/**
- * 模型ID（如 "gpt-4o-mini"）
- */
-id: string, 
-/**
- * 显示名称（如 "GPT-4o Mini"）
- */
-name: string, 
-/**
- * 供应商（如 "OpenAI"）
- */
-provider: string, 
-/**
- * 上下文窗口大小（如 128000）
- */
-context_window: number, 
-/**
- * 最大输出 token 数（如 16384）
- */
-max_output_tokens: number, 
-/**
- * 输入价格（USD per 1M tokens）
- */
-input_price: number, 
-/**
- * 输出价格（USD per 1M tokens）
- */
-output_price: number, 
-/**
- * 缓存读取价格（可选，通常是输入价格的10%）
- */
-cache_reads_price: number | null, 
-/**
- * 缓存写入价格（可选，通常是输入价格的125%）
- */
-cache_writes_price: number | null, 
-/**
- * 是否支持 Prompt 缓存
- */
-supports_cache: boolean, 
-/**
- * 是否支持图像输入（多模态）
- */
-supports_images: boolean, 
-/**
- * 模型描述（可选）
- */
-description: string | null, 
-/**
- * 是否推荐（标记为推荐模型）
- */
-recommended: boolean, };
+export type ModelInfo = {
+  /**
+   * 模型ID（如 "gpt-4o-mini"）
+   */
+  id: string;
+  /**
+   * 显示名称（如 "GPT-4o Mini"）
+   */
+  name: string;
+  /**
+   * 供应商（如 "OpenAI"）
+   */
+  provider: string;
+  /**
+   * 上下文窗口大小（如 128000）
+   */
+  context_window: number;
+  /**
+   * 最大输出 token 数（如 16384）
+   */
+  max_output_tokens: number;
+  /**
+   * 输入价格（USD per 1M tokens）
+   */
+  input_price: number;
+  /**
+   * 输出价格（USD per 1M tokens）
+   */
+  output_price: number;
+  /**
+   * 缓存读取价格（可选，通常是输入价格的10%）
+   */
+  cache_reads_price: number | null;
+  /**
+   * 缓存写入价格（可选，通常是输入价格的125%）
+   */
+  cache_writes_price: number | null;
+  /**
+   * 是否支持 Prompt 缓存
+   */
+  supports_cache: boolean;
+  /**
+   * 是否支持图像输入（多模态）
+   */
+  supports_images: boolean;
+  /**
+   * 模型描述（可选）
+   */
+  description: string | null;
+  /**
+   * 是否推荐（标记为推荐模型）
+   */
+  recommended: boolean;
+};
