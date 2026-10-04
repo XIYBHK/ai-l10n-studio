@@ -1,0 +1,192 @@
+# 英文到简体中文的手动测试样例，UTF-8 编码。
+# 共 34 个条目：26 个未翻译单数、4 个已翻译、2 个 fuzzy、2 个未翻译复数。
+# 覆盖上下文、注释、来源位置、占位符、引号、换行、路径、HTML 和 Unicode。
+# 建议另存为副本，保留这个原始样例以便重复测试。
+msgid ""
+msgstr ""
+"Project-Id-Version: ai-l10n-studio-test 1.0\n"
+"POT-Creation-Date: 2026-10-04 00:00+0800\n"
+"PO-Revision-Date: 2026-10-04 00:00+0800\n"
+"Last-Translator: Test User <test@example.invalid>\n"
+"Language-Team: Simplified Chinese\n"
+"Language: zh_CN\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"Plural-Forms: nplurals=1; plural=0;\n"
+"X-Source-Language: en\n"
+
+#. 工具栏按钮。
+#: demo/toolbar.ts:10
+msgctxt "toolbar"
+msgid "Open file"
+msgstr ""
+
+#: demo/toolbar.ts:11
+msgctxt "toolbar"
+msgid "Save"
+msgstr ""
+
+#: demo/toolbar.ts:12
+msgctxt "toolbar"
+msgid "Save as..."
+msgstr ""
+
+#: demo/toolbar.ts:13
+msgctxt "toolbar"
+msgid "Close project"
+msgstr ""
+
+#: demo/toolbar.ts:14
+msgctxt "toolbar"
+msgid "Settings"
+msgstr ""
+
+#: demo/toolbar.ts:15
+msgctxt "toolbar"
+msgid "Developer tools"
+msgstr ""
+
+#: demo/theme.ts:10
+msgid "Switch to dark theme"
+msgstr ""
+
+#: demo/theme.ts:11
+msgid "Switch to light theme"
+msgstr ""
+
+#: demo/translation.ts:10
+msgid "Start translation"
+msgstr ""
+
+#: demo/translation.ts:11
+msgid "Pause"
+msgstr ""
+
+#: demo/translation.ts:12
+msgid "Resume"
+msgstr ""
+
+#: demo/translation.ts:13
+msgid "Cancel"
+msgstr ""
+
+#: demo/translation.ts:14
+msgid "Retry"
+msgstr ""
+
+#. 保留 {count} 占位符。
+#: demo/status.ts:10
+msgid "{count} entries selected."
+msgstr ""
+
+#. 保留 {percent} 占位符。
+#: demo/status.ts:11
+msgid "Translation progress: {percent}%"
+msgstr ""
+
+#. 保留 {path} 占位符。
+#: demo/status.ts:12
+msgid "Saved to {path}."
+msgstr ""
+
+#. 保留 {name} 占位符。
+#: demo/greeting.ts:10
+msgid "Hello, {name}!"
+msgstr ""
+
+#. 检查多个占位符是否完整保留。
+#: demo/placeholders.ts:10
+msgid "Keep the placeholders {name}, {count}, and {path} unchanged."
+msgstr ""
+
+#. 测试引号的解析和保存。
+#: demo/dialogs.ts:10
+msgid "Press \"Save\" to continue."
+msgstr ""
+
+#. 两行原文中间包含一个真实换行。
+#: demo/multiline.ts:10
+msgid ""
+"First line.\n"
+"Second line."
+msgstr ""
+
+#. 检查 Windows 路径中的反斜杠是否完整保留。
+#: demo/paths.ts:10
+msgid "Path example: C:\\Projects\\Demo\\messages.po"
+msgstr ""
+
+#. 保留 HTML 标签，只翻译文本。
+#: demo/html.ts:10
+msgid "<strong>Warning:</strong> Your changes have not been saved."
+msgstr ""
+
+#. 测试 UTF-8 字符和非 ASCII 标点。
+#: demo/unicode.ts:10
+msgid "Project “Aurora” supports Español, Français, and 日本語."
+msgstr ""
+
+#. 动词：打开。
+#: demo/context.ts:10
+msgctxt "verb"
+msgid "Open"
+msgstr ""
+
+#. 状态：开启。与前一个条目原文相同，但上下文不同。
+#: demo/context.ts:11
+msgctxt "status"
+msgid "Open"
+msgstr ""
+
+#. 多个物理行拼接成一个长段落，原文没有换行。
+#: demo/long-text.ts:10
+msgid ""
+"This project contains messages from several screens. "
+"Review the terminology, preserve every placeholder, and make sure that "
+"the translated text remains clear when the application window is resized."
+msgstr ""
+
+#. 已翻译条目，用于测试筛选、编辑和保存。
+#: demo/menu.ts:10
+msgctxt "menu"
+msgid "File"
+msgstr "文件"
+
+#: demo/menu.ts:11
+msgctxt "menu"
+msgid "Help"
+msgstr "帮助"
+
+#: demo/status.ts:20
+msgid "Translation completed."
+msgstr "翻译已完成。"
+
+#: demo/search.ts:10
+msgid "No results found."
+msgstr "未找到结果。"
+
+# 这是参考译文，仍需要人工复核。
+#. fuzzy 标记用于测试已有译文的待确认状态。
+#: demo/dialogs.ts:20
+#, fuzzy
+msgid "Discard unsaved changes?"
+msgstr "是否丢弃未保存的更改？"
+
+# 这是参考译文，仍需要人工复核。
+#: demo/network.ts:10
+#, fuzzy
+msgid "Connection timed out. Please try again."
+msgstr "连接超时，请重试。"
+
+#. 简体中文只有一种复数形式；保留 {count} 占位符。
+#: demo/plurals.ts:10
+msgid "{count} file selected"
+msgid_plural "{count} files selected"
+msgstr[0] ""
+
+#. 简体中文只有一种复数形式；保留 {count} 占位符。
+#: demo/plurals.ts:11
+msgid "Removed {count} entry"
+msgid_plural "Removed {count} entries"
+msgstr[0] ""
