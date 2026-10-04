@@ -3,27 +3,27 @@
   min-height: 0;
   position: relative;
   display: grid;
-  grid-template-columns: 1.1fr 1fr;
+  grid-template-columns: 1.1fr 0.9fr;
   align-content: center;
   align-items: center;
-  gap: 8%;
-  padding: 64px clamp(36px, 8vw, 150px) 100px;
+  gap: 7%;
+  padding: 52px clamp(36px, 7vw, 120px) 90px;
   overflow: auto;
   background: var(--color-bgSecondary);
 }
 .content {
-  max-width: 520px;
+  max-width: 580px;
 }
 .eyebrow {
   display: flex;
   align-items: center;
   gap: 8px;
-  font-size: 11px;
-  letter-spacing: 0.14em;
+  font-size: var(--font-size-xs);
+  letter-spacing: 0.1em;
   text-transform: uppercase;
   font-weight: 600;
-  color: var(--color-textTertiary);
-  margin-bottom: 26px;
+  color: var(--color-brandPrimary);
+  margin-bottom: var(--space-6);
 }
 .eyebrow > span {
   width: 6px;
@@ -32,17 +32,16 @@
   background: var(--color-brandPrimary);
 }
 .content h2 {
-  font-size: clamp(28px, 3vw, 44px);
-  font-weight: 600;
-  line-height: 1.35;
+  font: 650 clamp(32px, 3.4vw, 50px) / 1.3 var(--display-font);
   letter-spacing: -0.035em;
-  margin: 0 0 20px;
+  margin: 0 0 var(--space-5);
+  text-wrap: balance;
   color: var(--color-textPrimary);
 }
 .description {
-  max-width: 390px;
-  font-size: 15px;
-  line-height: 1.9;
+  max-width: 440px;
+  font-size: var(--font-size-md);
+  line-height: 1.85;
   color: var(--color-textSecondary);
 }
 .actions {
@@ -54,7 +53,9 @@
 .actions :global(.ant-btn-primary) {
   color: var(--color-onBrand);
   box-shadow: none;
-  font-weight: 500;
+  font-weight: 600;
+  height: 44px;
+  padding-inline: var(--space-5);
 }
 .actions kbd {
   font: 12px var(--mono-font);
@@ -69,38 +70,59 @@
   color: var(--color-textTertiary);
 }
 .features {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 16px;
-  margin-top: 40px;
-  padding-top: 22px;
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: var(--space-4);
+  margin-top: 48px;
+  padding-top: var(--space-6);
   border-top: 1px solid var(--color-borderPrimary);
   color: var(--color-textSecondary);
   font-size: 12px;
 }
 .features > span {
   display: flex;
-  align-items: center;
-  gap: 6px;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: var(--space-3);
+}
+.features strong {
+  display: block;
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-semibold);
+  color: var(--color-textPrimary);
+}
+.features small {
+  display: block;
+  font-size: var(--font-size-xs);
+  color: var(--color-textTertiary);
+  margin-top: var(--space-1);
+}
+.featureIcon {
+  display: grid;
+  place-items: center;
+  width: 32px;
+  height: 32px;
+  background: var(--color-bgPrimary);
+  border: 1px solid var(--color-borderPrimary);
+  border-radius: var(--radius-md);
 }
 .features :global(.anticon) {
   color: var(--color-brandPrimary);
-  font-size: 11px;
+  font-size: var(--font-size-base);
 }
 .illustration {
   position: relative;
   width: 100%;
-  max-width: 390px;
+  max-width: 430px;
   justify-self: end;
-  padding: 12px;
+  padding: var(--space-4);
 }
 .documentBack {
   position: absolute;
-  inset: 6px 0 20px 28px;
-  transform: rotate(5deg);
+  inset: 0 0 32px 32px;
   border: 1px solid var(--color-borderPrimary);
   border-radius: var(--radius-lg);
-  background: var(--color-bgTertiary);
+  background: var(--color-selectedBg);
 }
 .document {
   position: relative;
@@ -114,9 +136,9 @@
   display: flex;
   align-items: center;
   gap: 10px;
-  padding: 18px 22px;
+  padding: var(--space-5) var(--space-6);
   border-bottom: 1px solid var(--color-borderSecondary);
-  font-size: 12px;
+  font: var(--font-size-xs) var(--mono-font);
   color: var(--color-textSecondary);
 }
 .documentHeader :global(.anticon) {
@@ -130,21 +152,24 @@
   border-radius: var(--radius-sm);
 }
 .previewSection {
-  padding: 24px;
+  padding: var(--space-6);
+}
+.translatedSection {
+  background: color-mix(in srgb, var(--color-selectedBg) 55%, var(--color-bgPrimary));
 }
 .previewLabel {
   display: flex;
   justify-content: space-between;
-  font-size: 10px;
+  font-size: var(--font-size-xs);
   color: var(--color-textTertiary);
   letter-spacing: 0.08em;
 }
 .previewLabel > span {
-  font: 10px var(--mono-font);
+  font: var(--font-size-xs) var(--mono-font);
 }
 .previewText,
 .previewTranslation {
-  font-size: 16px;
+  font-size: var(--font-size-lg);
   color: var(--color-textPrimary);
   line-height: 1.7;
   margin: 16px 0;
@@ -190,7 +215,7 @@
   display: flex;
   align-items: center;
   gap: 7px;
-  font-size: 11px;
+  font-size: var(--font-size-xs);
   color: var(--color-textTertiary);
 }
 .statusDot {
@@ -202,12 +227,12 @@
 .footer {
   position: absolute;
   bottom: 22px;
-  left: clamp(36px, 8vw, 150px);
-  right: clamp(36px, 8vw, 150px);
+  left: clamp(36px, 7vw, 120px);
+  right: clamp(36px, 7vw, 120px);
   display: flex;
   justify-content: space-between;
   gap: 16px;
-  font-size: 11px;
+  font-size: var(--font-size-xs);
   color: var(--color-textTertiary);
 }
 @media (max-width: 900px) {

@@ -80,7 +80,7 @@ const renderVirtualItem = (
       aria-selected={isSelected}
       aria-label={labels.itemLabel
         .replace('{{index}}', String(globalIndex + 1))
-        .replace('{{status}}', getEntryStatusDescription(status, globalIndex, isSelected))}
+        .replace('{{status}}', getEntryStatusDescription(status, isSelected))}
       tabIndex={0}
       className={`
         ${styles.virtualItem}

@@ -1,0 +1,86 @@
+{
+  "date": "2026-10-04",
+  "completedUtc": "2026-10-04T13:16:35Z",
+  "baselineCommit": "614db8288cb2d1cd4f0b901990688c415d810d92",
+  "workingTreeChanges": true,
+  "design": {
+    "skill": "ui-ux-pro-max",
+    "direction": "Neutral graphite and soft light surfaces with a teal action accent",
+    "purpleWasUserRequirement": false,
+    "accentIsImplementationChoice": true
+  },
+  "release": {
+    "path": "src-tauri/target/release/po-translator-gui.exe",
+    "bytes": 8507392,
+    "modifiedUtc": "2026-10-04T12:57:33.5259254Z",
+    "sha256": "0706D1F2FBC7A7D869CF36469823685F824803395A422A701DCBF49E6D10F44F",
+    "command": "npm run tauri:build -- --no-bundle",
+    "exitCode": 0
+  },
+  "checks": [
+    {
+      "command": "npm run test:run",
+      "exitCode": 0,
+      "filesPassed": 28,
+      "testsPassed": 103,
+      "durationSeconds": 72.96
+    },
+    { "command": "npm run test:scripts", "exitCode": 0, "testsPassed": 6 },
+    { "command": "npx tsc --noEmit", "exitCode": 0 },
+    { "command": "npm run lint:all", "exitCode": 0 },
+    { "command": "git diff --check", "exitCode": 0 },
+    {
+      "command": "npm run i18n:check",
+      "exitCode": 0,
+      "note": "74 candidates per locale remain unresolved because dynamic keys exist; none were deleted"
+    },
+    {
+      "command": "node e2e-tests/scripts/run-wdio.cjs --spec F:/Github/ai-l10n-studio/e2e-tests/specs/design.e2e.cjs",
+      "exitCode": 0,
+      "testsPassed": 3,
+      "durationSeconds": 13.7
+    },
+    {
+      "command": "node e2e-tests/scripts/run-wdio.cjs",
+      "exitCode": 0,
+      "testsPassed": 6,
+      "durationSeconds": 15.4,
+      "evidence": "runtime/"
+    },
+    {
+      "command": "npm run test:e2e:close",
+      "exitCode": 0,
+      "testsPassed": 4,
+      "scenarios": ["clean", "discard", "save", "devtools"],
+      "evidence": "close/",
+      "processExitVerifiedBeforeForcedCleanup": true
+    }
+  ],
+  "desktop": {
+    "webView2": "154.0.4258.53",
+    "edgeDriver": "154.0.4258.48",
+    "secondaryMonitor": true,
+    "requestedPositionPhysicalPixels": { "x": 3840, "y": 50 },
+    "observedMainWindowBoundsPhysicalPixels": [3840, 50, 5253, 936],
+    "positionMechanism": "Ownership-checked native SetWindowPos, including developer windows",
+    "viewportSizes": [
+      [1400, 850],
+      [1000, 700]
+    ],
+    "visibleWindowRequiredForNativeKeyboardTests": true,
+    "terminalChildWindowsHidden": true,
+    "isolatedConfigurationAndPO": true,
+    "personalPreferencesSha256Unchanged": true,
+    "ownedAppAndDriverProcessesRemaining": 0,
+    "aiNetworkRequestsSent": false,
+    "cspEnabled": true,
+    "placeholderContrastLight": 4.917291279338507,
+    "placeholderContrastDark": 6.759253313669149
+  },
+  "limits": [
+    "Bounded desktop coverage; no real AI provider or complete translation workflow test",
+    "PO import exercises the existing drag-drop event handler, not an OS file picker",
+    "Native close uses SC_CLOSE, not physical mouse hit testing",
+    "Library dialog draft protection does not protect library drafts during whole-application exit"
+  ]
+}

@@ -1,0 +1,35 @@
+{
+  "date": "2026-10-04",
+  "sourceHead": "614db8288cb2d1cd4f0b901990688c415d810d92",
+  "releaseSHA256": "937A65657B041099359547C9154B9D6456CB50888EFD487C13A3AF4164246228",
+  "skillSource": "https://github.com/nextlevelbuilder/ui-ux-pro-max-skill",
+  "skillPath": "C:/Users/xiybh/.codex/skills/ui-ux-pro-max",
+  "skillSHA256": "EA087C341BFB5B23195C7302027268EDE86DA802554C18A5C4896A6017B439F9",
+  "applicationSourceChanged": false,
+  "finalProbes": [
+    "layout capture completed",
+    "interaction evidence completed",
+    "provider feedback CSP defect reproduced"
+  ],
+  "verifiedIssues": [
+    "memory dirty close loses edits",
+    "provider static message outside viewport with five rejected style nodes",
+    "English status filters clip at 260px list width",
+    "Tab focus moves under AI assistant overlay",
+    "memory row computed labels empty",
+    "English navigation and row descriptions include Chinese"
+  ],
+  "codeDerivedIssues": [
+    "term edit textarea has no explicit accessible name",
+    "light source badge contrast below 4.5:1"
+  ],
+  "views": ["1400x850", "1000x700"],
+  "devicePixelRatio": 2,
+  "realAIRequests": 0,
+  "testFixture": "repository app-fixture isolated portable copy",
+  "limitations": [
+    "No actual screen reader test",
+    "No complete business-flow or provider network test",
+    "No claim of exhaustive frontend coverage"
+  ]
+}

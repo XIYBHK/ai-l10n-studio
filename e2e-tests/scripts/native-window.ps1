@@ -1,8 +1,10 @@
 param(
   [Parameter(Mandatory = $true)][string]$ExecutablePath,
   [Parameter(Mandatory = $true)][string]$ExpectedOwner,
-  [ValidateSet('close', 'probe')][string]$Action = 'probe',
-  [string]$WindowTitle
+  [ValidateSet('close', 'probe', 'place')][string]$Action = 'probe',
+  [string]$WindowTitle,
+  [int]$X,
+  [int]$Y
 )
 
 $ErrorActionPreference = 'Stop'
@@ -33,6 +35,43 @@ public static class IsolatedWindowActions {
   [DllImport("user32.dll")] private static extern uint GetWindowThreadProcessId(IntPtr window, out uint processId);
   [DllImport("user32.dll", CharSet = CharSet.Unicode)] private static extern int GetWindowText(IntPtr window, StringBuilder text, int length);
   [DllImport("user32.dll", SetLastError = true)] public static extern bool PostMessage(IntPtr window, uint message, IntPtr wParam, IntPtr lParam);
+  [DllImport("user32.dll")] private static extern bool IsWindowVisible(IntPtr window);
+  [DllImport("user32.dll", SetLastError = true)] private static extern bool SetWindowPos(IntPtr window, IntPtr after, int x, int y, int width, int height, uint flags);
+  [DllImport("user32.dll")] private static extern IntPtr SetThreadDpiAwarenessContext(IntPtr context);
+  [StructLayout(LayoutKind.Sequential)] public struct Rect { public int Left, Top, Right, Bottom; }
+  [DllImport("user32.dll")] private static extern bool GetWindowRect(IntPtr window, out Rect rect);
+  public static System.Collections.Generic.List<int[]> Bounds(uint processId) {
+    var result = new System.Collections.Generic.List<int[]>();
+    var previous = SetThreadDpiAwarenessContext(new IntPtr(-4));
+    try {
+      EnumWindows((window, parameter) => {
+        uint owner;
+        GetWindowThreadProcessId(window, out owner);
+        Rect rect;
+        if (owner == processId && IsWindowVisible(window) && GetWindowRect(window, out rect))
+          result.Add(new int[] { rect.Left, rect.Top, rect.Right, rect.Bottom });
+        return true;
+      }, IntPtr.Zero);
+    } finally { SetThreadDpiAwarenessContext(previous); }
+    return result;
+  }
+  public static int Place(uint processId, int x, int y) {
+    var previous = SetThreadDpiAwarenessContext(new IntPtr(-4));
+    int count = 0;
+    try {
+      EnumWindows((window, parameter) => {
+        uint owner;
+        GetWindowThreadProcessId(window, out owner);
+        if (owner == processId && IsWindowVisible(window)) {
+          if (!SetWindowPos(window, IntPtr.Zero, x, y, 0, 0, 0x0015))
+            throw new System.ComponentModel.Win32Exception(Marshal.GetLastWin32Error());
+          count++;
+        }
+        return true;
+      }, IntPtr.Zero);
+    } finally { SetThreadDpiAwarenessContext(previous); }
+    return count;
+  }
   public static IntPtr Find(uint processId, string title) {
     IntPtr result = IntPtr.Zero;
     EnumWindows((window, parameter) => {
@@ -51,6 +90,12 @@ public static class IsolatedWindowActions {
 '@
 
 $ownedProcess = $ownedProcesses[0]
+if ($Action -eq 'place') {
+  $placed = [IsolatedWindowActions]::Place([uint32]$ownedProcess.Id, $X, $Y)
+  if ($placed -eq 0) { throw 'No visible owned test windows to place' }
+  @{ pid = $ownedProcess.Id; command = 'place'; x = $X; y = $Y; count = $placed; bounds = @([IsolatedWindowActions]::Bounds([uint32]$ownedProcess.Id)) } | ConvertTo-Json -Depth 4 -Compress
+  exit 0
+}
 $handle = [IsolatedWindowActions]::Find([uint32]$ownedProcess.Id, $WindowTitle)
 if ($handle -eq [IntPtr]::Zero) { throw "Owned window not found: $WindowTitle" }
 # SC_CLOSE follows the same native command as the title-bar close button.

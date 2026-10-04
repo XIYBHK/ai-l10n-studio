@@ -1,0 +1,162 @@
+{
+  "overlayFocus": {
+    "focusedLabel": "复制原文到剪贴板",
+    "focusedBox": {
+      "x": 692.75,
+      "y": 125,
+      "w": 94,
+      "h": 24
+    },
+    "hitTag": "SPAN",
+    "hitText": "",
+    "obscured": true,
+    "assistantOpen": "true"
+  },
+  "memoryFields": [
+    {
+      "placeholder": "搜索…",
+      "ariaLabel": null,
+      "computedLabel": "搜索…"
+    },
+    {
+      "placeholder": "原文",
+      "ariaLabel": null,
+      "computedLabel": "原文"
+    },
+    {
+      "placeholder": "译文",
+      "ariaLabel": null,
+      "computedLabel": "译文"
+    },
+    {
+      "placeholder": null,
+      "ariaLabel": null,
+      "computedLabel": ""
+    },
+    {
+      "placeholder": null,
+      "ariaLabel": null,
+      "computedLabel": ""
+    },
+    {
+      "placeholder": null,
+      "ariaLabel": null,
+      "computedLabel": ""
+    },
+    {
+      "placeholder": null,
+      "ariaLabel": null,
+      "computedLabel": ""
+    },
+    {
+      "placeholder": null,
+      "ariaLabel": null,
+      "computedLabel": ""
+    },
+    {
+      "placeholder": null,
+      "ariaLabel": null,
+      "computedLabel": ""
+    },
+    {
+      "placeholder": null,
+      "ariaLabel": null,
+      "computedLabel": ""
+    },
+    {
+      "placeholder": null,
+      "ariaLabel": null,
+      "computedLabel": ""
+    },
+    {
+      "placeholder": null,
+      "ariaLabel": null,
+      "computedLabel": ""
+    },
+    {
+      "placeholder": null,
+      "ariaLabel": null,
+      "computedLabel": ""
+    },
+    {
+      "placeholder": null,
+      "ariaLabel": null,
+      "computedLabel": ""
+    },
+    {
+      "placeholder": null,
+      "ariaLabel": null,
+      "computedLabel": ""
+    },
+    {
+      "placeholder": null,
+      "ariaLabel": null,
+      "computedLabel": ""
+    },
+    {
+      "placeholder": null,
+      "ariaLabel": null,
+      "computedLabel": ""
+    },
+    {
+      "placeholder": null,
+      "ariaLabel": null,
+      "computedLabel": ""
+    },
+    {
+      "placeholder": null,
+      "ariaLabel": null,
+      "computedLabel": ""
+    },
+    {
+      "placeholder": null,
+      "ariaLabel": null,
+      "computedLabel": ""
+    },
+    {
+      "placeholder": null,
+      "ariaLabel": null,
+      "computedLabel": ""
+    },
+    {
+      "placeholder": null,
+      "ariaLabel": null,
+      "computedLabel": ""
+    },
+    {
+      "placeholder": null,
+      "ariaLabel": null,
+      "computedLabel": ""
+    }
+  ],
+  "memoryBeforeClose": {
+    "rows": 10,
+    "source": "XTools|RandomUI audit unsaved edited source"
+  },
+  "memoryClosedWithoutPrompt": true,
+  "memoryAfterReopen": {
+    "rows": 10,
+    "source": "XTools|Random"
+  },
+  "compactFilter": [
+    {
+      "text": "Untranslated28",
+      "client": 76,
+      "scroll": 83,
+      "boxWidth": 76.328125
+    },
+    {
+      "text": "Needs Review2",
+      "client": 76,
+      "scroll": 84,
+      "boxWidth": 76.3359375
+    },
+    {
+      "text": "Translated4",
+      "client": 76,
+      "scroll": 76,
+      "boxWidth": 76.3359375
+    }
+  ],
+  "englishNavigation": 2
+}

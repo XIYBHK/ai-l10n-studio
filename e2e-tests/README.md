@@ -26,6 +26,15 @@ npm --prefix e2e-tests run test -- --spec ./specs/ui.e2e.cjs
 
 需要已安装的 `tauri-driver`、Edge 和 WebView2。匹配 Edge 版本的驱动默认缓存到 `src-tauri/target/e2e/driver`；可用 `EDGE_DRIVER_BIN` 指定已有驱动。
 
+可通过 `TAURI_E2E_WINDOW_X` 和 `TAURI_E2E_WINDOW_Y` 指定测试窗口的桌面坐标，将主窗口与开发工具放到副屏。例如副屏左上角为 `(3840, 0)` 时，运行前设置：
+
+```powershell
+$env:TAURI_E2E_WINDOW_X = '3840'
+$env:TAURI_E2E_WINDOW_Y = '50'
+```
+
+定位 helper 仅移动有所有权标记的隔离副本，并输出实际原生窗口边界。原生键盘回归需要可见窗口和焦点，不使用隐藏窗口代替真实交互；终端子进程保持隐藏。
+
 `specs/ui.e2e.cjs` 验证真正的 `http://tauri.localhost/` UI，不能把 `about:blank` 或仅有 window handle 当成成功。当前六组回归覆盖：
 
 - 生产 CSP 保持启用，每个 Ant Design 动态 style 带 nonce 且 CSSOM 已生效；设置 Modal 在视口内，占位文字可读。

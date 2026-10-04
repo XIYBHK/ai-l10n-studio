@@ -4,6 +4,9 @@
  */
 import React, { useEffect } from 'react';
 import { ConfigProvider } from 'antd';
+import zhCN from 'antd/locale/zh_CN';
+import enUS from 'antd/locale/en_US';
+import { useTranslation } from 'react-i18next';
 import { useTheme, useThemeDocument } from '../hooks/useTheme';
 import { listen } from '@tauri-apps/api/event';
 import { useAppStore } from '../store/useAppStore';
@@ -16,6 +19,7 @@ interface DevToolsThemeProviderProps {
 
 export function DevToolsThemeProvider({ children }: DevToolsThemeProviderProps) {
   const themeData = useTheme();
+  const { i18n: translations } = useTranslation();
   useThemeDocument(themeData.appliedTheme);
 
   useEffect(() => {
@@ -69,7 +73,11 @@ export function DevToolsThemeProvider({ children }: DevToolsThemeProviderProps) 
   }, []);
 
   return (
-    <ConfigProvider theme={themeData.themeConfig} csp={getStyleCsp()}>
+    <ConfigProvider
+      theme={themeData.themeConfig}
+      csp={getStyleCsp()}
+      locale={translations.language === 'en-US' ? enUS : zhCN}
+    >
       <div
         data-theme={themeData.isDark ? 'dark' : 'light'}
         style={{

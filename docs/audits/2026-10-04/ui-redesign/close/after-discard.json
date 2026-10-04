@@ -1,0 +1,27 @@
+{
+  "scenario": "discard",
+  "requests": [
+    {
+      "handle": 1839912,
+      "command": "SC_CLOSE",
+      "pid": 52080,
+      "title": "PO 翻译工具"
+    },
+    {
+      "pid": 52080,
+      "title": "PO 翻译工具",
+      "handle": 1839912,
+      "command": "SC_CLOSE"
+    },
+    {
+      "title": "PO 翻译工具",
+      "command": "SC_CLOSE",
+      "pid": 52080,
+      "handle": 1839912
+    }
+  ],
+  "cancelPreservedDraft": true,
+  "discardPreservedDisk": true,
+  "processExited": true,
+  "forcedCleanupBeforeCheck": false
+}

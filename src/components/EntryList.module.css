@@ -72,10 +72,14 @@
   justify-content: center;
   gap: 5px;
 }
-.filterLabel > span {
-  font-size: 10px;
+.filterCount {
+  font-size: var(--font-size-xs);
   font-variant-numeric: tabular-nums;
   color: var(--color-textTertiary);
+}
+.filterText {
+  font-size: var(--font-size-xs);
+  font-weight: var(--font-weight-medium);
 }
 
 .column {
@@ -234,7 +238,7 @@
 
 /* 当前激活项 */
 .virtualItem.current {
-  background-color: var(--color-hoverBg);
+  background-color: var(--color-selectedBg);
 }
 
 .virtualItem.justUpdated {
@@ -283,7 +287,6 @@
 
 .indexLabel {
   font-family: var(--mono-font);
-  opacity: 0.7;
   font-size: var(--font-size-xs);
 }
 

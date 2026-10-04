@@ -1,0 +1,37 @@
+{
+  "theme": "light",
+  "viewport": {
+    "width": 1000,
+    "height": 700
+  },
+  "focus": {
+    "tag": "BUTTON",
+    "label": "Close",
+    "inDrawer": true
+  },
+  "tokens": {
+    "bgPrimary": "#ffffff",
+    "bgSecondary": "#f4f6f8",
+    "textPrimary": "#1d2935",
+    "textSecondary": "#465565",
+    "textTertiary": "#637284",
+    "brandPrimary": "#0f766e",
+    "sourceTmBg": "#e6f5ec",
+    "sourceTmColor": "#166534",
+    "sourceAiBg": "#fff4df",
+    "sourceAiColor": "#92400e"
+  },
+  "overflowing": [],
+  "primaryButtons": [
+    {
+      "text": "",
+      "color": "rgb(137, 149, 163)",
+      "background": "rgb(237, 241, 244)"
+    },
+    {
+      "text": "Confirm",
+      "color": "rgb(255, 255, 255)",
+      "background": "rgb(15, 118, 110)"
+    }
+  ]
+}

@@ -1,0 +1,320 @@
+{
+  "theme": "dark",
+  "message": "供应商已保存",
+  "messageHtml": "<div class=\"ant-message ant-message-top css-tql0nm css-var-root ant-message-css-var\" style=\"left: 50%; transform: translateX(-50%); top: 8px;\"><div class=\"ant-message-notice-wrapper ant-message-move-up-appear ant-message-move-up-appear-active ant-message-move-up\"><div class=\"ant-message-notice ant-message-notice-success\"><div class=\"ant-message-notice-content\"><div class=\"ant-message-custom-content ant-message-success\"><span role=\"img\" aria-label=\"check-circle\" class=\"anticon anticon-check-circle\"><svg viewBox=\"64 64 896 896\" focusable=\"false\" data-icon=\"check-circle\" width=\"1em\" height=\"1em\" fill=\"currentColor\" aria-hidden=\"true\"><path d=\"M512 64C264.6 64 64 264.6 64 512s200.6 448 448 448 448-200.6 448-448S759.4 64 512 64zm193.5 301.7l-210.6 292a31.8 31.8 0 01-51.7 0L318.5 484.9c-3.8-5.3 0-12.7 6.5-12.7h46.9c10.2 0 19.9 4.9 25.9 13.3l71.2 98.8 157.2-218c6-8.3 15.6-13.3 25.9-13.3H699c6.5 0 10.3 7.4 6.5 12.7z\"></path></svg></span><span>供应商已保存</span></div></div></div></div></div>",
+  "bodyText": "PO 翻译工具\nAI L10n Studio\n批量翻译\n文件\n你的本地化工作台\n让文字，自在跨越语言。\n\n导入一个 PO 文件，让 AI 处理初稿，把时间留给语境、细节，以及更好的表达。\n\n导入PO文件\nCtrl O\n\n也可以将 .po 文件拖入窗口\n\n上下文感知\n翻译记忆\n逐条审校\nmessages.po\nPO\n原文\nEN\nWelcome to your workspace.\n译文\nZH\n欢迎来到你的工作区。\n翻译预览 · 示例\nAI L10n Studio\n为专注的翻译工作而设计\n设置\nAI 配置\n系统提示词\n外观\n通知\n日志\nAI 模型配置\n\n按供应商管理 API 和模型，再选择用于翻译的默认模型。\n\n国产模型快速接入\n\n选择供应商，填入 API Key，即可保存并用于翻译。\n\nDeepSeek\ndeepseek-flash\n通义千问\nqwen-plus\nKimi\nkimi-k3\n智谱 GLM\nglm-5.2\nMiniMax\nMiniMax-M3\n硅基流动\ndeepseek-ai/DeepSeek-V4-Flash\n默认模型\n选择供应商和模型\nUI Audit Local\n未配置密钥\n编 辑\nopenai-completions · http://127.0.0.1:11434/v1\nui-audit-model\n添加内置供应商\n添加自定义 API\n供应商已保存",
+  "formInputs": [
+    {
+      "id": "default-model",
+      "label": "默认模型",
+      "value": ""
+    },
+    {
+      "id": "_r_14_",
+      "label": "添加内置供应商",
+      "value": ""
+    }
+  ],
+  "box": {
+    "x": -700,
+    "y": 850,
+    "w": 1400,
+    "h": 24
+  },
+  "styles": [
+    {
+      "hash": "ic0n11",
+      "nonce": true,
+      "enabled": true
+    },
+    {
+      "hash": "1puatx1",
+      "nonce": true,
+      "enabled": true
+    },
+    {
+      "hash": "hpa5c1",
+      "nonce": true,
+      "enabled": true
+    },
+    {
+      "hash": "ru9176",
+      "nonce": true,
+      "enabled": true
+    },
+    {
+      "hash": "_effect-css-tql0nm-antFadeIn",
+      "nonce": true,
+      "enabled": true
+    },
+    {
+      "hash": "_effect-css-tql0nm-antFadeOut",
+      "nonce": true,
+      "enabled": true
+    },
+    {
+      "hash": "_effect-css-tql0nm-antZoomBigIn",
+      "nonce": true,
+      "enabled": true
+    },
+    {
+      "hash": "_effect-css-tql0nm-antZoomBigOut",
+      "nonce": true,
+      "enabled": true
+    },
+    {
+      "hash": "m7schw",
+      "nonce": true,
+      "enabled": true
+    },
+    {
+      "hash": "5d1ko",
+      "nonce": true,
+      "enabled": true
+    },
+    {
+      "hash": "1vuh1q1",
+      "nonce": true,
+      "enabled": true
+    },
+    {
+      "hash": "qvgoiq",
+      "nonce": true,
+      "enabled": true
+    },
+    {
+      "hash": "15jpxnh",
+      "nonce": true,
+      "enabled": true
+    },
+    {
+      "hash": "_effect-css-tql0nm-antSlideUpIn",
+      "nonce": true,
+      "enabled": true
+    },
+    {
+      "hash": "_effect-css-tql0nm-antSlideDownIn",
+      "nonce": true,
+      "enabled": true
+    },
+    {
+      "hash": "_effect-css-tql0nm-antSlideUpOut",
+      "nonce": true,
+      "enabled": true
+    },
+    {
+      "hash": "_effect-css-tql0nm-antSlideDownOut",
+      "nonce": true,
+      "enabled": true
+    },
+    {
+      "hash": "_effect-css-tql0nm-antMoveUpIn",
+      "nonce": true,
+      "enabled": true
+    },
+    {
+      "hash": "_effect-css-tql0nm-antMoveUpOut",
+      "nonce": true,
+      "enabled": true
+    },
+    {
+      "hash": "_effect-css-tql0nm-antMoveDownIn",
+      "nonce": true,
+      "enabled": true
+    },
+    {
+      "hash": "_effect-css-tql0nm-antMoveDownOut",
+      "nonce": true,
+      "enabled": true
+    },
+    {
+      "hash": "1oo76s6",
+      "nonce": true,
+      "enabled": true
+    },
+    {
+      "hash": "12wrbw2",
+      "nonce": true,
+      "enabled": true
+    },
+    {
+      "hash": "1l3wko7",
+      "nonce": true,
+      "enabled": true
+    },
+    {
+      "hash": "_effect-css-tql0nm-antZoomIn",
+      "nonce": true,
+      "enabled": true
+    },
+    {
+      "hash": "_effect-css-tql0nm-antZoomOut",
+      "nonce": true,
+      "enabled": true
+    },
+    {
+      "hash": "1ldvsey",
+      "nonce": true,
+      "enabled": true
+    },
+    {
+      "hash": "_effect-css-tql0nm-antRotate",
+      "nonce": true,
+      "enabled": true
+    },
+    {
+      "hash": "_effect-css-tql0nm-antSpinMove",
+      "nonce": true,
+      "enabled": true
+    },
+    {
+      "hash": "1ru5cs1",
+      "nonce": true,
+      "enabled": true
+    },
+    {
+      "hash": "1qa0q5q",
+      "nonce": true,
+      "enabled": true
+    },
+    {
+      "hash": "164xv0y",
+      "nonce": true,
+      "enabled": true
+    },
+    {
+      "hash": "he7dw9",
+      "nonce": true,
+      "enabled": true
+    },
+    {
+      "hash": "11gh9jg",
+      "nonce": true,
+      "enabled": true
+    },
+    {
+      "hash": "1ovxfia",
+      "nonce": true,
+      "enabled": true
+    },
+    {
+      "hash": "6wrbus",
+      "nonce": true,
+      "enabled": true
+    },
+    {
+      "hash": "53gdld",
+      "nonce": true,
+      "enabled": true
+    },
+    {
+      "hash": "aed3k5",
+      "nonce": true,
+      "enabled": true
+    },
+    {
+      "hash": "13jjkf",
+      "nonce": true,
+      "enabled": true
+    },
+    {
+      "hash": "bl6ugd",
+      "nonce": true,
+      "enabled": true
+    },
+    {
+      "hash": "1s2f1fw",
+      "nonce": true,
+      "enabled": true
+    },
+    {
+      "hash": "2nclcp",
+      "nonce": true,
+      "enabled": true
+    },
+    {
+      "hash": "18n3fq7",
+      "nonce": true,
+      "enabled": true
+    },
+    {
+      "hash": "1na9ob5",
+      "nonce": true,
+      "enabled": true
+    },
+    {
+      "hash": "ev48kx",
+      "nonce": true,
+      "enabled": true
+    },
+    {
+      "hash": "11dre3n",
+      "nonce": true,
+      "enabled": true
+    },
+    {
+      "hash": "czy8mi",
+      "nonce": true,
+      "enabled": true
+    },
+    {
+      "hash": "1yifltr",
+      "nonce": true,
+      "enabled": true
+    },
+    {
+      "hash": "60jn3r",
+      "nonce": true,
+      "enabled": true
+    },
+    {
+      "hash": "15ai0m6",
+      "nonce": true,
+      "enabled": true
+    },
+    {
+      "hash": "g0cctx",
+      "nonce": true,
+      "enabled": true
+    },
+    {
+      "hash": "fmkred",
+      "nonce": false,
+      "enabled": false
+    },
+    {
+      "hash": "a34biy",
+      "nonce": false,
+      "enabled": false
+    },
+    {
+      "hash": "_effect-css-tql0nm-MessageMoveIn",
+      "nonce": false,
+      "enabled": false
+    },
+    {
+      "hash": "_effect-css-tql0nm-MessageMoveOut",
+      "nonce": false,
+      "enabled": false
+    },
+    {
+      "hash": "ok2poa",
+      "nonce": false,
+      "enabled": false
+    },
+    {
+      "hash": "1rjd8lh",
+      "nonce": true,
+      "enabled": true
+    },
+    {
+      "hash": "eugadl",
+      "nonce": true,
+      "enabled": true
+    }
+  ],
+  "feedbackStyle": {
+    "color": "rgb(255, 255, 255)",
+    "background": "rgba(0, 0, 0, 0)"
+  }
+}

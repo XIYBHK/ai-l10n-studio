@@ -49,7 +49,16 @@ export function TranslationWorkspace({
   const [leftWidth, setLeftWidth] = useState(320);
   const [isResizing, setIsResizing] = useState(false);
   const [assistantOpen, setAssistantOpen] = useState(false);
+  const [compactAssistant, setCompactAssistant] = useState(() => window.innerWidth <= 1180);
   const panelsRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    const media = window.matchMedia('(max-width: 1180px)');
+    setCompactAssistant(media.matches);
+    const update = (event: MediaQueryListEvent) => setCompactAssistant(event.matches);
+    media.addEventListener('change', update);
+    return () => media.removeEventListener('change', update);
+  }, []);
 
   useEffect(() => {
     if (!isResizing) return;
@@ -95,7 +104,7 @@ export function TranslationWorkspace({
           size="small"
           icon={<RobotOutlined />}
           onClick={() => setAssistantOpen((value) => !value)}
-          aria-expanded={assistantOpen}
+          aria-expanded={compactAssistant && assistantOpen}
           aria-controls="workspace-assistant"
         >
           {t('aiWorkspace.title')}
@@ -147,12 +156,15 @@ export function TranslationWorkspace({
             )}
           />
         </main>
-        <aside
-          id="workspace-assistant"
-          className={`${styles.assistant} ${assistantOpen ? styles.assistantOpen : ''}`}
-        >
+        <aside className={styles.assistant}>
           <Suspense fallback={null}>
-            <AIWorkspace isTranslating={isTranslating} onResetStats={onResetStats} />
+            <AIWorkspace
+              isTranslating={isTranslating}
+              onResetStats={onResetStats}
+              compact={compactAssistant}
+              open={assistantOpen}
+              onClose={() => setAssistantOpen(false)}
+            />
           </Suspense>
         </aside>
       </div>

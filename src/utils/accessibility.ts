@@ -2,6 +2,20 @@
  * 无障碍支持工具函数
  * 提供屏幕阅读器通知、焦点管理等辅助功能
  */
+import i18n from '../i18n/config';
+
+// A modal may focus its outer portal or temporarily return focus to body while closing.
+export function shouldIgnoreBackgroundShortcut(event: KeyboardEvent): boolean {
+  if (
+    event.defaultPrevented ||
+    (event.target instanceof Element && event.target.closest('[role="dialog"]'))
+  )
+    return true;
+  return Array.from(document.querySelectorAll('[role="dialog"][aria-modal="true"]')).some(
+    (dialog) =>
+      dialog.getClientRects().length > 0 && getComputedStyle(dialog).visibility !== 'hidden'
+  );
+}
 
 /**
  * 向屏幕阅读器发送通知（使用 aria-live 区域）
@@ -49,12 +63,12 @@ export function getBatchActionAriaLabel(
   action: 'translate' | 'confirm' | 'refine',
   count: number
 ): string {
-  const actionLabels = {
-    translate: '翻译',
-    confirm: '确认',
-    refine: '精翻',
+  const actionKeys = {
+    translate: 'workspace.list.batchTranslate',
+    confirm: 'workspace.list.batchConfirm',
+    refine: 'workspace.list.batchRefine',
   };
-  return `${actionLabels[action]}选中条目 (${count}项)`;
+  return i18n.t(actionKeys[action], { count });
 }
 
 /**
@@ -74,28 +88,26 @@ export function getNavButtonAriaLabel(direction: 'prev' | 'next', hasMore: boole
 /**
  * 获取列表项的状态描述
  * @param status 条目状态
- * @param index 索引
  * @param isSelected 是否选中
  * @returns 状态描述文本
  */
 export function getEntryStatusDescription(
   status: 'untranslated' | 'needs-review' | 'translated' | 'empty',
-  index: number,
   isSelected: boolean
 ): string {
   const statusLabels = {
-    untranslated: '未翻译',
-    'needs-review': '待确认',
-    translated: '已翻译',
-    empty: '空条目',
+    untranslated: i18n.t('entryList.untranslated'),
+    'needs-review': i18n.t('entryList.needsReview'),
+    translated: i18n.t('entryList.translated'),
+    empty: i18n.t('workspace.editor.empty'),
   };
 
-  const parts = [`第 ${index + 1} 条`, statusLabels[status]];
+  const parts = [statusLabels[status]];
   if (isSelected) {
-    parts.push('已选中');
+    parts.push(i18n.t('workspace.list.selected'));
   }
 
-  return parts.join('，');
+  return parts.join(', ');
 }
 
 /**
@@ -183,7 +195,10 @@ export class FocusTrap {
    */
   private getFocusableElements(): HTMLElement[] {
     if (!this.container) return [];
-    return Array.from(this.container.querySelectorAll(this.focusableSelectors));
+    return Array.from(this.container.querySelectorAll<HTMLElement>(this.focusableSelectors)).filter(
+      (element) =>
+        element.getClientRects().length > 0 && getComputedStyle(element).visibility !== 'hidden'
+    );
   }
 
   /**

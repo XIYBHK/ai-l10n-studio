@@ -10,7 +10,7 @@
 | `API.md`                | Tauri IPC、前端服务和状态接口                |
 | `DataContract.md`       | 前后端数据类型与持久化边界                   |
 | `SECURITY_NOTES.md`     | 配置与密钥文件边界                           |
-| `THEME.md`              | Catppuccin、Ant Design 6 和主题切换          |
+| `THEME.md`              | 设计 token、Ant Design 6 和主题切换          |
 | `COLOR_SYSTEM.md`       | `src/index.css` token SSOT                   |
 | `ERRORS.md`             | 错误排查与已知问题目录                       |
 | `ModelPresets.md`       | 快速预设的接口与核验记录                     |
@@ -19,6 +19,8 @@
 | `UIRuntimeAudit.md`     | release 界面缺陷、同类问题修复与原生回归证据 |
 | `WindowCloseAudit.md`   | 原生关闭权限、未保存保护和进程退出证据       |
 | `GraphIndexAudit.md`    | 本地图谱索引失败原因、恢复和覆盖边界         |
+| `UIUXDesignReview.md`   | UI/UX Pro Max 设计审查、release 复现与建议   |
+| `UIRefinement.md`       | 中性配色、工作区设计优化与 release 验收      |
 
 ## Recommended order
 

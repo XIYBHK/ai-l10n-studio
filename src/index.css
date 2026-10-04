@@ -27,53 +27,54 @@
      优化：使用 CSS 变量替代 Hook，避免每次渲染创建对象
      ============================================ */
   --color-bgPrimary: #ffffff;
-  --color-bgSecondary: #f5f5fa;
-  --color-bgTertiary: #eeedf5;
-  --color-textPrimary: #4c4f69;
-  --color-textSecondary: #5c5f77;
-  --color-textTertiary: #6c6f85;
-  --color-textDisabled: rgba(76, 79, 105, 0.5);
-  --color-borderPrimary: #dcdce7;
-  --color-borderSecondary: #e9e8f0;
+  --color-bgSecondary: #f4f6f8;
+  --color-bgTertiary: #edf1f4;
+  --color-textPrimary: #1d2935;
+  --color-textSecondary: #465565;
+  --color-textTertiary: #637284;
+  --color-textDisabled: #8995a3;
+  --color-borderPrimary: #d5dde5;
+  --color-borderSecondary: #e4e9ee;
 
   /* 状态颜色 */
-  --color-statusUntranslated: #7c4dbe;
-  --color-statusNeedsReview: #9c610f;
-  --color-statusTranslated: #166534;
+  --color-statusUntranslated: #475569;
+  --color-statusNeedsReview: #92400e;
+  --color-statusTranslated: #047857;
 
   /* 警示色（警告 / 错误） */
-  --color-warning: #fab387;
-  --color-warningBg: rgba(250, 179, 135, 0.15);
-  --color-error: #ed8796;
-  --color-errorBg: rgba(237, 135, 150, 0.15);
+  --color-warning: #92400e;
+  --color-warningBg: #fff4df;
+  --color-error: #b42332;
+  --color-errorBg: #fff0f1;
 
   /* 高亮闪烁（使用品牌次要色） */
-  --color-flashGlow: rgba(137, 180, 250, 0.4);
-  --color-flashGlowSoft: rgba(137, 180, 250, 0.3);
+  --color-flashGlow: rgba(15, 118, 110, 0.24);
+  --color-flashGlowSoft: rgba(15, 118, 110, 0.12);
 
   /* 交互状态 */
-  --color-selectedBg: rgba(124, 77, 190, 0.08);
-  --color-hoverBg: #f0eff7;
-  --color-activeBg: rgba(203, 166, 247, 0.1);
-  --color-selectedBorder: #7c4dbe;
+  --color-selectedBg: #e8f5f2;
+  --color-hoverBg: #f0f4f6;
+  --color-activeBg: #d8eeea;
+  --color-selectedBorder: #0f766e;
 
   /* 品牌色 */
-  --color-brandPrimary: #7c4dbe;
-  --color-brandSecondary: #89b4fa;
+  --color-brandPrimary: #0f766e;
+  --color-brandSecondary: #0369a1;
 
   /* 翻译来源标识 */
-  --color-sourceTmBg: rgba(82, 196, 26, 0.1);
-  --color-sourceTmColor: #52c41a;
-  --color-sourceDedupBg: rgba(24, 144, 255, 0.1);
-  --color-sourceDedupColor: #1890ff;
-  --color-sourceAiBg: rgba(250, 173, 20, 0.1);
-  --color-sourceAiColor: #faad14;
+  --color-sourceTmBg: #e6f5ec;
+  --color-sourceTmColor: #166534;
+  --color-sourceDedupBg: #e8f2fd;
+  --color-sourceDedupColor: #1e40af;
+  --color-sourceAiBg: #fff4df;
+  --color-sourceAiColor: #92400e;
 
   /* 遮罩层 */
-  --color-overlayBg: rgba(0, 0, 0, 0.5);
+  --color-overlayBg: rgba(15, 23, 32, 0.45);
   --color-overlayText: #ffffff;
   --color-onBrand: #ffffff;
-  --studio-header-height: 64px;
+  --color-onError: #ffffff;
+  --studio-header-height: 68px;
 
   /* ============================================
      设计系统规范 - 字体层级
@@ -115,10 +116,11 @@
   /* ============================================
      设计系统规范 - 阴影
      ============================================ */
-  --shadow-sm: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
-  --shadow-base: 0 1px 3px 0 rgba(0, 0, 0, 0.1), 0 1px 2px 0 rgba(0, 0, 0, 0.06);
-  --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
-  --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+  --shadow-sm: 0 2px 6px rgba(29, 41, 53, 0.04);
+  --shadow-base: 0 4px 16px rgba(29, 41, 53, 0.06);
+  --shadow-md: 0 12px 32px rgba(29, 41, 53, 0.1);
+  --shadow-lg: 0 24px 64px rgba(29, 41, 53, 0.14);
+  --shadow-focus: 0 0 0 2px rgba(15, 118, 110, 0.15);
 
   /* ============================================
      设计系统规范 - 过渡动画
@@ -135,53 +137,59 @@
    ============================================ */
 [data-theme='dark'] {
   color-scheme: dark;
-  --color-bgPrimary: #1e1e2e;
-  --color-bgSecondary: #181825;
-  --color-bgTertiary: #262637;
-  --color-textPrimary: #cdd6f4;
-  --color-textSecondary: #bac2de;
-  --color-textTertiary: #a6adc8;
-  --color-textDisabled: rgba(205, 214, 244, 0.5);
-  --color-borderPrimary: #363649;
-  --color-borderSecondary: #2b2b3d;
+  --color-bgPrimary: #182129;
+  --color-bgSecondary: #11181f;
+  --color-bgTertiary: #212d38;
+  --color-textPrimary: #e8eef3;
+  --color-textSecondary: #bcc9d5;
+  --color-textTertiary: #97a9bb;
+  --color-textDisabled: #687e90;
+  --color-borderPrimary: #344454;
+  --color-borderSecondary: #293743;
 
   /* 状态颜色 - 暗色模式更亮 */
-  --color-statusUntranslated: #cba6f7;
-  --color-statusNeedsReview: #fab387;
-  --color-statusTranslated: #a6e3a1;
+  --color-statusUntranslated: #b2c2d1;
+  --color-statusNeedsReview: #f5c47a;
+  --color-statusTranslated: #6ee7b7;
 
   /* 警示色（暗色模式） */
-  --color-warning: #fab387;
-  --color-warningBg: rgba(250, 179, 135, 0.2);
-  --color-error: #ed8796;
-  --color-errorBg: rgba(237, 135, 150, 0.2);
+  --color-warning: #f5c47a;
+  --color-warningBg: #352b1d;
+  --color-error: #fda4af;
+  --color-errorBg: #38252d;
 
   /* 高亮闪烁（暗色模式增强） */
-  --color-flashGlow: rgba(137, 180, 250, 0.5);
-  --color-flashGlowSoft: rgba(137, 180, 250, 0.4);
+  --color-flashGlow: rgba(94, 234, 212, 0.24);
+  --color-flashGlowSoft: rgba(94, 234, 212, 0.12);
 
   /* 交互状态 - 暗色模式降低透明度 */
-  --color-selectedBg: rgba(203, 166, 247, 0.2);
-  --color-hoverBg: rgba(203, 166, 247, 0.1);
-  --color-activeBg: rgba(203, 166, 247, 0.15);
-  --color-selectedBorder: #cba6f7;
+  --color-selectedBg: #203b3d;
+  --color-hoverBg: #202d38;
+  --color-activeBg: #27494a;
+  --color-selectedBorder: #5eead4;
 
-  /* 品牌色保持一致 */
-  --color-brandPrimary: #cba6f7;
-  --color-brandSecondary: #89b4fa;
+  /* 深色面板上的操作强调色 */
+  --color-brandPrimary: #5eead4;
+  --color-brandSecondary: #7dd3fc;
 
   /* 翻译来源标识 - 暗色模式使用更高对比度 */
-  --color-sourceTmBg: rgba(82, 196, 26, 0.2);
-  --color-sourceTmColor: #73d13d;
-  --color-sourceDedupBg: rgba(24, 144, 255, 0.2);
-  --color-sourceDedupColor: #69c0ff;
-  --color-sourceAiBg: rgba(250, 173, 20, 0.2);
-  --color-sourceAiColor: #ffd666;
+  --color-sourceTmBg: #193b30;
+  --color-sourceTmColor: #86efac;
+  --color-sourceDedupBg: #20344c;
+  --color-sourceDedupColor: #93c5fd;
+  --color-sourceAiBg: #352b1d;
+  --color-sourceAiColor: #f5c47a;
 
   /* 遮罩层 */
-  --color-overlayBg: rgba(0, 0, 0, 0.7);
-  --color-overlayText: #cdd6f4;
-  --color-onBrand: #1e1e2e;
+  --color-overlayBg: rgba(5, 10, 15, 0.65);
+  --color-overlayText: #e8eef3;
+  --color-onBrand: #102b28;
+  --color-onError: #38252d;
+  --shadow-sm: 0 2px 6px rgba(0, 0, 0, 0.12);
+  --shadow-base: 0 4px 16px rgba(0, 0, 0, 0.18);
+  --shadow-md: 0 12px 32px rgba(0, 0, 0, 0.24);
+  --shadow-lg: 0 24px 64px rgba(0, 0, 0, 0.32);
+  --shadow-focus: 0 0 0 2px rgba(94, 234, 212, 0.18);
 }
 
 /* 移除固定的链接颜色，由 Ant Design 主题控制 */
@@ -202,12 +210,6 @@ body {
 h1 {
   font-size: 3.2em;
   line-height: 1.1;
-}
-
-/* 移除固定的 button 样式，由 Ant Design 主题控制 */
-button:focus,
-button:focus-visible {
-  outline: 4px auto -webkit-focus-ring-color;
 }
 
 /* Apply a theme atomically, including portals and Ant Design CSS variables. */

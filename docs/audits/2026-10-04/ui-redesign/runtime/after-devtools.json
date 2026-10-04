@@ -1,0 +1,116 @@
+{
+  "url": "http://tauri.localhost/devtools.html",
+  "theme": "dark",
+  "viewport": {
+    "width": 897,
+    "height": 697
+  },
+  "styles": [
+    {
+      "nonce": "4043361202172889759",
+      "enabled": true,
+      "rules": 1
+    },
+    {
+      "nonce": "4043361202172889759",
+      "enabled": true,
+      "rules": 18
+    },
+    {
+      "nonce": "4043361202172889759",
+      "enabled": true,
+      "rules": 8
+    },
+    {
+      "nonce": "4043361202172889759",
+      "enabled": true,
+      "rules": 96
+    },
+    {
+      "nonce": "4043361202172889759",
+      "enabled": true,
+      "rules": 1
+    },
+    {
+      "nonce": "4043361202172889759",
+      "enabled": true,
+      "rules": 16
+    },
+    {
+      "nonce": "4043361202172889759",
+      "enabled": true,
+      "rules": 99
+    },
+    {
+      "nonce": "4043361202172889759",
+      "enabled": true,
+      "rules": 1
+    },
+    {
+      "nonce": "4043361202172889759",
+      "enabled": true,
+      "rules": 19
+    },
+    {
+      "nonce": "4043361202172889759",
+      "enabled": true,
+      "rules": 1
+    },
+    {
+      "nonce": "4043361202172889759",
+      "enabled": true,
+      "rules": 141
+    },
+    {
+      "nonce": "4043361202172889759",
+      "enabled": true,
+      "rules": 1
+    },
+    {
+      "nonce": "4043361202172889759",
+      "enabled": true,
+      "rules": 1
+    },
+    {
+      "nonce": "4043361202172889759",
+      "enabled": true,
+      "rules": 1
+    },
+    {
+      "nonce": "4043361202172889759",
+      "enabled": true,
+      "rules": 1
+    },
+    {
+      "nonce": "4043361202172889759",
+      "enabled": true,
+      "rules": 1
+    },
+    {
+      "nonce": "4043361202172889759",
+      "enabled": true,
+      "rules": 6
+    },
+    {
+      "nonce": "4043361202172889759",
+      "enabled": true,
+      "rules": 4
+    }
+  ],
+  "boxes": [
+    {
+      "class": "ant-tabs ant-tabs-top css-tql0nm css-var-_r_0_ ant-tabs-css-var",
+      "x": 16,
+      "y": 16,
+      "width": 865,
+      "height": 665
+    },
+    {
+      "class": "ant-input css-tql0nm ant-input-outlined css-var-_r_0_ ant-input-css-var _logTextArea_1j29g_9",
+      "x": 16,
+      "y": 136,
+      "width": 865,
+      "height": 502.15625
+    }
+  ]
+}

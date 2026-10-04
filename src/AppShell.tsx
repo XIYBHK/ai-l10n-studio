@@ -11,6 +11,9 @@ import { getStyleCsp } from './utils/styleCsp';
 import { LazyModalFallback } from './components/ui/LazyModalFallback';
 import { emit } from '@tauri-apps/api/event';
 import { bindUiFeedback } from './services/uiFeedback';
+import { shouldIgnoreBackgroundShortcut } from './utils/accessibility';
+import zhCN from 'antd/locale/zh_CN';
+import enUS from 'antd/locale/en_US';
 
 import i18n from './i18n/config';
 import './App.css';
@@ -35,8 +38,13 @@ interface AppShellProps {
 
 export default function AppShell({ initError = null }: AppShellProps) {
   const themeData = useThemeRuntime();
+  const language = useLanguage();
   return (
-    <ConfigProvider theme={themeData.themeConfig} csp={getStyleCsp()}>
+    <ConfigProvider
+      theme={themeData.themeConfig}
+      csp={getStyleCsp()}
+      locale={language === 'en-US' ? enUS : zhCN}
+    >
       <AntApp>
         <AppShellContent initError={initError} themeData={themeData} />
       </AntApp>
@@ -113,6 +121,7 @@ function AppShellContent({
 
   useEffect(() => {
     const handleKeyDown = (event: KeyboardEvent) => {
+      if (shouldIgnoreBackgroundShortcut(event)) return;
       if ((event.ctrlKey || event.metaKey) && event.key === 'o') {
         event.preventDefault();
         openFileRef.current();
@@ -188,7 +197,7 @@ function AppShellContent({
             left: 0,
             right: 0,
             background: 'var(--color-error)',
-            color: '#ffffff',
+            color: 'var(--color-onError)',
             padding: 'var(--space-4)',
             zIndex: 9999,
             textAlign: 'center',
@@ -204,7 +213,7 @@ function AppShellContent({
               borderRadius: 'var(--radius-base)',
               border: 'none',
               background: 'rgba(255,255,255,0.2)',
-              color: '#ffffff',
+              color: 'var(--color-onError)',
               cursor: 'pointer',
             }}
           >

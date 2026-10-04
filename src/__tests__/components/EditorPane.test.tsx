@@ -1,5 +1,6 @@
-import { screen, waitFor } from '@testing-library/react';
+import { act, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
+import { Modal, Input } from 'antd';
 import { EditorPane } from '../../components/EditorPane';
 import { useTranslationStore } from '../../store/useTranslationStore';
 import { renderWithProviders } from '../../test/renderWithProviders';
@@ -96,6 +97,68 @@ describe('EditorPane', () => {
 
     expect(screen.getByText('Ctrl + O')).toBeInTheDocument();
     expect(screen.queryByDisplayValue('Ouvrir le projet')).not.toBeInTheDocument();
+  });
+
+  it('does not cancel or navigate the editor when a dialog receives shortcuts', async () => {
+    const user = userEvent.setup();
+    const entry = createEntry();
+    const navigate = vi.fn();
+    const close = vi.fn();
+    useTranslationStore.getState().setEntries([entry]);
+    const view = renderWithProviders(
+      <EditorPane entry={entry} onConfirmEntries={vi.fn()} onNavigateNext={navigate} />
+    );
+    const editor = screen.getByDisplayValue('Ouvrir le projet');
+    await user.clear(editor);
+    await user.type(editor, 'Pending editor draft');
+    view.rerender(
+      <>
+        <EditorPane entry={entry} onConfirmEntries={vi.fn()} onNavigateNext={navigate} />
+        <Modal open onCancel={close}>
+          <Input aria-label="Dialog field" />
+        </Modal>
+      </>
+    );
+    await user.click(screen.getByRole('textbox', { name: 'Dialog field' }));
+    await user.keyboard('{Control>}{ArrowDown}{/Control}{Escape}');
+    expect(navigate).not.toHaveBeenCalled();
+    expect(editor).toHaveValue('Pending editor draft');
+  });
+
+  it('protects background drafts when modal focus is outside its dialog section', async () => {
+    const user = userEvent.setup();
+    const entry = createEntry();
+    const confirm = vi.fn();
+    const navigate = vi.fn();
+    useTranslationStore.getState().setEntries([entry]);
+    const pane = <EditorPane entry={entry} onConfirmEntries={confirm} onNavigateNext={navigate} />;
+    const view = renderWithProviders(pane);
+    const editor = screen.getByDisplayValue('Ouvrir le projet');
+    await user.clear(editor);
+    await user.type(editor, 'Pending editor draft');
+    view.rerender(
+      <>
+        {pane}
+        <div tabIndex={-1} data-testid="modal-portal-root">
+          <section role="dialog" aria-modal="true">
+            Assistant
+          </section>
+        </div>
+      </>
+    );
+    const rectangles = [new DOMRect(0, 0, 320, 700)];
+    vi.spyOn(screen.getByRole('dialog'), 'getClientRects').mockReturnValue(
+      Object.assign(rectangles, { item: (index: number) => rectangles[index] ?? null })
+    );
+    act(() => screen.getByTestId('modal-portal-root').focus());
+    await user.keyboard('{Control>}{Enter}{ArrowDown}{/Control}{Escape}');
+    expect(confirm).not.toHaveBeenCalled();
+    expect(navigate).not.toHaveBeenCalled();
+    expect(editor).toHaveValue('Pending editor draft');
+    view.rerender(pane);
+    await user.click(editor);
+    await user.keyboard('{Escape}');
+    expect(editor).toHaveValue('Ouvrir le projet');
   });
 
   it('edits the selected plural form without replacing the other forms', async () => {

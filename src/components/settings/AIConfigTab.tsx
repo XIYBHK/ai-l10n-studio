@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import {
   Alert,
+  App,
   Button,
   Card,
   Checkbox,
@@ -13,7 +14,6 @@ import {
   Select,
   Space,
   Tag,
-  message,
 } from 'antd';
 import { DeleteOutlined, PlusOutlined } from '@ant-design/icons';
 import { useTranslation } from 'react-i18next';
@@ -47,6 +47,7 @@ interface Props {
 
 export function AIConfigTab({ onProviderChange }: Props) {
   const { t } = useTranslation();
+  const { message } = App.useApp();
   const { configuration, loading, error, mutate } = useModelConfiguration();
   const [catalog, setCatalog] = useState<ProviderInfo[]>([]);
   const [editing, setEditing] = useState<ModelProviderProfile | null>(null);

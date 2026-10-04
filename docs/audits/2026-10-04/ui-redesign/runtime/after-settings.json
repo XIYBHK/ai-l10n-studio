@@ -1,0 +1,216 @@
+{
+  "url": "http://tauri.localhost/",
+  "theme": "dark",
+  "viewport": {
+    "width": 1397,
+    "height": 847
+  },
+  "styles": [
+    {
+      "nonce": "6030683274855907864",
+      "enabled": true,
+      "rules": 1
+    },
+    {
+      "nonce": "6030683274855907864",
+      "enabled": true,
+      "rules": 18
+    },
+    {
+      "nonce": "6030683274855907864",
+      "enabled": true,
+      "rules": 75
+    },
+    {
+      "nonce": "6030683274855907864",
+      "enabled": true,
+      "rules": 1
+    },
+    {
+      "nonce": "6030683274855907864",
+      "enabled": true,
+      "rules": 1
+    },
+    {
+      "nonce": "6030683274855907864",
+      "enabled": true,
+      "rules": 1
+    },
+    {
+      "nonce": "6030683274855907864",
+      "enabled": true,
+      "rules": 1
+    },
+    {
+      "nonce": "6030683274855907864",
+      "enabled": true,
+      "rules": 1
+    },
+    {
+      "nonce": "6030683274855907864",
+      "enabled": true,
+      "rules": 8
+    },
+    {
+      "nonce": "6030683274855907864",
+      "enabled": true,
+      "rules": 96
+    },
+    {
+      "nonce": "6030683274855907864",
+      "enabled": true,
+      "rules": 1
+    },
+    {
+      "nonce": "6030683274855907864",
+      "enabled": true,
+      "rules": 96
+    },
+    {
+      "nonce": "6030683274855907864",
+      "enabled": true,
+      "rules": 1
+    },
+    {
+      "nonce": "6030683274855907864",
+      "enabled": true,
+      "rules": 1
+    },
+    {
+      "nonce": "6030683274855907864",
+      "enabled": true,
+      "rules": 1
+    },
+    {
+      "nonce": "6030683274855907864",
+      "enabled": true,
+      "rules": 1
+    },
+    {
+      "nonce": "6030683274855907864",
+      "enabled": true,
+      "rules": 1
+    },
+    {
+      "nonce": "6030683274855907864",
+      "enabled": true,
+      "rules": 1
+    },
+    {
+      "nonce": "6030683274855907864",
+      "enabled": true,
+      "rules": 1
+    },
+    {
+      "nonce": "6030683274855907864",
+      "enabled": true,
+      "rules": 1
+    },
+    {
+      "nonce": "6030683274855907864",
+      "enabled": true,
+      "rules": 1
+    },
+    {
+      "nonce": "6030683274855907864",
+      "enabled": true,
+      "rules": 6
+    },
+    {
+      "nonce": "6030683274855907864",
+      "enabled": true,
+      "rules": 56
+    },
+    {
+      "nonce": "6030683274855907864",
+      "enabled": true,
+      "rules": 1
+    },
+    {
+      "nonce": "6030683274855907864",
+      "enabled": true,
+      "rules": 1
+    },
+    {
+      "nonce": "6030683274855907864",
+      "enabled": true,
+      "rules": 34
+    },
+    {
+      "nonce": "6030683274855907864",
+      "enabled": true,
+      "rules": 1
+    },
+    {
+      "nonce": "6030683274855907864",
+      "enabled": true,
+      "rules": 1
+    },
+    {
+      "nonce": "6030683274855907864",
+      "enabled": true,
+      "rules": 1
+    },
+    {
+      "nonce": "6030683274855907864",
+      "enabled": true,
+      "rules": 59
+    },
+    {
+      "nonce": "6030683274855907864",
+      "enabled": true,
+      "rules": 1
+    },
+    {
+      "nonce": "6030683274855907864",
+      "enabled": true,
+      "rules": 171
+    },
+    {
+      "nonce": "6030683274855907864",
+      "enabled": true,
+      "rules": 1
+    },
+    {
+      "nonce": "6030683274855907864",
+      "enabled": true,
+      "rules": 15
+    },
+    {
+      "nonce": "6030683274855907864",
+      "enabled": true,
+      "rules": 16
+    },
+    {
+      "nonce": "6030683274855907864",
+      "enabled": true,
+      "rules": 141
+    },
+    {
+      "nonce": "6030683274855907864",
+      "enabled": true,
+      "rules": 1
+    },
+    {
+      "nonce": "6030683274855907864",
+      "enabled": true,
+      "rules": 4
+    }
+  ],
+  "boxes": [
+    {
+      "class": "ant-modal css-tql0nm",
+      "x": 298.5,
+      "y": 100,
+      "width": 800,
+      "height": 664.890625
+    },
+    {
+      "class": "ant-tabs ant-tabs-top css-tql0nm css-var-_r_d_ ant-tabs-css-var",
+      "x": 322.5,
+      "y": 152,
+      "width": 742,
+      "height": 673.78125
+    }
+  ]
+}

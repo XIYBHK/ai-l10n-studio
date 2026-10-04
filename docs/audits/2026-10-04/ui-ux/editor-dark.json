@@ -1,0 +1,925 @@
+{
+  "theme": "dark",
+  "viewport": {
+    "width": 1400,
+    "height": 850
+  },
+  "controls": [
+    {
+      "tag": "INPUT",
+      "role": "combobox",
+      "text": "",
+      "label": null,
+      "title": null,
+      "disabled": false,
+      "tabIndex": 0,
+      "box": {
+        "x": 289.421875,
+        "y": 21,
+        "w": 150,
+        "h": 22
+      }
+    },
+    {
+      "tag": "BUTTON",
+      "role": null,
+      "text": "批量翻译",
+      "label": "批量翻译",
+      "title": null,
+      "disabled": true,
+      "tabIndex": 0,
+      "box": {
+        "x": 1079,
+        "y": 17,
+        "w": 95,
+        "h": 30
+      }
+    },
+    {
+      "tag": "BUTTON",
+      "role": null,
+      "text": "文件",
+      "label": "文件操作",
+      "title": null,
+      "disabled": false,
+      "tabIndex": 0,
+      "box": {
+        "x": 1186,
+        "y": 17,
+        "w": 69,
+        "h": 30
+      }
+    },
+    {
+      "tag": "BUTTON",
+      "role": null,
+      "text": "",
+      "label": "浅色",
+      "title": null,
+      "disabled": false,
+      "tabIndex": 0,
+      "box": {
+        "x": 1276,
+        "y": 17,
+        "w": 32,
+        "h": 30
+      }
+    },
+    {
+      "tag": "BUTTON",
+      "role": null,
+      "text": "",
+      "label": "设置",
+      "title": null,
+      "disabled": false,
+      "tabIndex": 0,
+      "box": {
+        "x": 1312,
+        "y": 17,
+        "w": 32,
+        "h": 30
+      }
+    },
+    {
+      "tag": "BUTTON",
+      "role": null,
+      "text": "",
+      "label": "开发者工具",
+      "title": null,
+      "disabled": false,
+      "tabIndex": 0,
+      "box": {
+        "x": 1348,
+        "y": 17,
+        "w": 32,
+        "h": 30
+      }
+    },
+    {
+      "tag": "LABEL",
+      "role": null,
+      "text": "未翻译28",
+      "label": null,
+      "title": null,
+      "tabIndex": -1,
+      "box": {
+        "x": 28,
+        "y": 181.421875,
+        "w": 96.328125,
+        "h": 28
+      }
+    },
+    {
+      "tag": "INPUT",
+      "role": null,
+      "text": "",
+      "label": null,
+      "title": null,
+      "disabled": false,
+      "tabIndex": 0,
+      "box": {
+        "x": 28,
+        "y": 181.421875,
+        "w": 0,
+        "h": 0
+      }
+    },
+    {
+      "tag": "LABEL",
+      "role": null,
+      "text": "待确认2",
+      "label": null,
+      "title": null,
+      "tabIndex": -1,
+      "box": {
+        "x": 124.328125,
+        "y": 181.421875,
+        "w": 96.3359375,
+        "h": 28
+      }
+    },
+    {
+      "tag": "INPUT",
+      "role": null,
+      "text": "",
+      "label": null,
+      "title": null,
+      "disabled": false,
+      "tabIndex": 0,
+      "box": {
+        "x": 124.328125,
+        "y": 181.421875,
+        "w": 0,
+        "h": 0
+      }
+    },
+    {
+      "tag": "LABEL",
+      "role": null,
+      "text": "已翻译4",
+      "label": null,
+      "title": null,
+      "tabIndex": -1,
+      "box": {
+        "x": 220.6640625,
+        "y": 181.421875,
+        "w": 96.3359375,
+        "h": 28
+      }
+    },
+    {
+      "tag": "INPUT",
+      "role": null,
+      "text": "",
+      "label": null,
+      "title": null,
+      "disabled": false,
+      "tabIndex": 0,
+      "box": {
+        "x": 220.6640625,
+        "y": 181.421875,
+        "w": 0,
+        "h": 0
+      }
+    },
+    {
+      "tag": "DIV",
+      "role": "listitem",
+      "text": "#1Open file",
+      "label": "第 1 项：第 1 条，未翻译",
+      "title": null,
+      "tabIndex": 0,
+      "box": {
+        "x": 13,
+        "y": 256.421875,
+        "w": 309,
+        "h": 88
+      }
+    },
+    {
+      "tag": "DIV",
+      "role": "listitem",
+      "text": "#2Save",
+      "label": "第 2 项：第 2 条，未翻译",
+      "title": null,
+      "tabIndex": 0,
+      "box": {
+        "x": 13,
+        "y": 344.421875,
+        "w": 309,
+        "h": 88
+      }
+    },
+    {
+      "tag": "DIV",
+      "role": "listitem",
+      "text": "#3Save as...",
+      "label": "第 3 项：第 3 条，未翻译",
+      "title": null,
+      "tabIndex": 0,
+      "box": {
+        "x": 13,
+        "y": 432.421875,
+        "w": 309,
+        "h": 88
+      }
+    },
+    {
+      "tag": "DIV",
+      "role": "listitem",
+      "text": "#4Close project",
+      "label": "第 4 项：第 4 条，未翻译",
+      "title": null,
+      "tabIndex": 0,
+      "box": {
+        "x": 13,
+        "y": 520.421875,
+        "w": 309,
+        "h": 88
+      }
+    },
+    {
+      "tag": "DIV",
+      "role": "listitem",
+      "text": "#5Settings",
+      "label": "第 5 项：第 5 条，未翻译",
+      "title": null,
+      "tabIndex": 0,
+      "box": {
+        "x": 13,
+        "y": 608.421875,
+        "w": 309,
+        "h": 88
+      }
+    },
+    {
+      "tag": "DIV",
+      "role": "listitem",
+      "text": "#6Developer tools",
+      "label": "第 6 项：第 6 条，未翻译",
+      "title": null,
+      "tabIndex": 0,
+      "box": {
+        "x": 13,
+        "y": 696.421875,
+        "w": 309,
+        "h": 88
+      }
+    },
+    {
+      "tag": "DIV",
+      "role": "listitem",
+      "text": "#7Switch to dark theme",
+      "label": "第 7 项：第 7 条，未翻译",
+      "title": null,
+      "tabIndex": 0,
+      "box": {
+        "x": 13,
+        "y": 784.421875,
+        "w": 309,
+        "h": 88
+      }
+    },
+    {
+      "tag": "DIV",
+      "role": "listitem",
+      "text": "#8Switch to light theme",
+      "label": "第 8 项：第 8 条，未翻译",
+      "title": null,
+      "tabIndex": 0,
+      "box": {
+        "x": 13,
+        "y": 872.421875,
+        "w": 309,
+        "h": 88
+      }
+    },
+    {
+      "tag": "DIV",
+      "role": "listitem",
+      "text": "#9Start translation",
+      "label": "第 9 项：第 9 条，未翻译",
+      "title": null,
+      "tabIndex": 0,
+      "box": {
+        "x": 13,
+        "y": 960.421875,
+        "w": 309,
+        "h": 88
+      }
+    },
+    {
+      "tag": "DIV",
+      "role": "listitem",
+      "text": "#10Pause",
+      "label": "第 10 项：第 10 条，未翻译",
+      "title": null,
+      "tabIndex": 0,
+      "box": {
+        "x": 13,
+        "y": 1048.421875,
+        "w": 309,
+        "h": 88
+      }
+    },
+    {
+      "tag": "DIV",
+      "role": "listitem",
+      "text": "#11Resume",
+      "label": "第 11 项：第 11 条，未翻译",
+      "title": null,
+      "tabIndex": 0,
+      "box": {
+        "x": 13,
+        "y": 1136.421875,
+        "w": 309,
+        "h": 88
+      }
+    },
+    {
+      "tag": "DIV",
+      "role": "listitem",
+      "text": "#12Cancel",
+      "label": "第 12 项：第 12 条，未翻译",
+      "title": null,
+      "tabIndex": 0,
+      "box": {
+        "x": 13,
+        "y": 1224.421875,
+        "w": 309,
+        "h": 88
+      }
+    },
+    {
+      "tag": "DIV",
+      "role": "separator",
+      "text": "",
+      "label": "调整条目列表宽度",
+      "title": null,
+      "tabIndex": 0,
+      "box": {
+        "x": 329,
+        "y": 113,
+        "w": 6,
+        "h": 688.1484375
+      }
+    },
+    {
+      "tag": "BUTTON",
+      "role": null,
+      "text": "",
+      "label": "没有上一项了",
+      "title": "上一项 (Ctrl+↑)",
+      "disabled": true,
+      "tabIndex": 0,
+      "box": {
+        "x": 735.75,
+        "y": 125,
+        "w": 24,
+        "h": 24
+      }
+    },
+    {
+      "tag": "BUTTON",
+      "role": null,
+      "text": "",
+      "label": "下一项 (Ctrl+下箭头)",
+      "title": "下一项 (Ctrl+↓)",
+      "disabled": false,
+      "tabIndex": 0,
+      "box": {
+        "x": 763.75,
+        "y": 125,
+        "w": 24,
+        "h": 24
+      }
+    },
+    {
+      "tag": "BUTTON",
+      "role": null,
+      "text": "复制原文",
+      "label": "复制原文到剪贴板",
+      "title": null,
+      "disabled": false,
+      "tabIndex": 0,
+      "box": {
+        "x": 816.75,
+        "y": 125,
+        "w": 94,
+        "h": 24
+      }
+    },
+    {
+      "tag": "BUTTON",
+      "role": null,
+      "text": "确认译文 (Ctrl+Enter)",
+      "label": "确认译文 (Ctrl+Enter)",
+      "title": null,
+      "disabled": true,
+      "tabIndex": 0,
+      "box": {
+        "x": 918.75,
+        "y": 125,
+        "w": 176.25,
+        "h": 24
+      }
+    },
+    {
+      "tag": "DIV",
+      "role": "listitem",
+      "text": "工具栏按钮。",
+      "label": null,
+      "title": null,
+      "tabIndex": -1,
+      "box": {
+        "x": 362,
+        "y": 369.9765625,
+        "w": 710,
+        "h": 18.8515625
+      }
+    },
+    {
+      "tag": "TEXTAREA",
+      "role": null,
+      "text": "",
+      "label": "译文编辑",
+      "title": null,
+      "disabled": false,
+      "tabIndex": 0,
+      "box": {
+        "x": 349,
+        "y": 450.9140625,
+        "w": 746,
+        "h": 297.8828125
+      }
+    },
+    {
+      "tag": "DIV",
+      "role": "separator",
+      "text": "",
+      "label": null,
+      "title": null,
+      "tabIndex": -1,
+      "box": {
+        "x": 1128,
+        "y": 382.2890625,
+        "w": 243,
+        "h": 1
+      }
+    },
+    {
+      "tag": "BUTTON",
+      "role": null,
+      "text": "记忆库复用已经确认的译文",
+      "label": null,
+      "title": null,
+      "disabled": false,
+      "tabIndex": 0,
+      "box": {
+        "x": 1128,
+        "y": 427.7109375,
+        "w": 243,
+        "h": 64
+      }
+    },
+    {
+      "tag": "BUTTON",
+      "role": null,
+      "text": "术语库保持名称与术语一致",
+      "label": null,
+      "title": null,
+      "disabled": false,
+      "tabIndex": 0,
+      "box": {
+        "x": 1128,
+        "y": 499.7109375,
+        "w": 243,
+        "h": 64
+      }
+    }
+  ],
+  "overflowing": [
+    {
+      "tag": "H1",
+      "text": "PO 翻译工具",
+      "class": "sr-only",
+      "box": {
+        "x": -1,
+        "y": -1,
+        "w": 1,
+        "h": 1
+      },
+      "client": 1,
+      "scroll": 259,
+      "overflow": "hidden"
+    }
+  ],
+  "tokens": {
+    "bgPrimary": "#1e1e2e",
+    "bgSecondary": "#181825",
+    "textPrimary": "#cdd6f4",
+    "textSecondary": "#bac2de",
+    "textTertiary": "#a6adc8",
+    "brandPrimary": "#cba6f7",
+    "brandSecondary": "#89b4fa",
+    "warning": "#fab387",
+    "error": "#ed8796",
+    "statusUntranslated": "#cba6f7",
+    "statusNeedsReview": "#fab387",
+    "statusTranslated": "#a6e3a1",
+    "sourceTmBg": "rgba(82, 196, 26, .2)",
+    "sourceTmColor": "#73d13d",
+    "sourceDedupBg": "rgba(24, 144, 255, .2)",
+    "sourceDedupColor": "#69c0ff",
+    "sourceAiBg": "rgba(250, 173, 20, .2)",
+    "sourceAiColor": "#ffd666"
+  },
+  "styles": [
+    {
+      "enabled": true,
+      "nonce": true
+    },
+    {
+      "enabled": true,
+      "nonce": true
+    },
+    {
+      "enabled": true,
+      "nonce": true
+    },
+    {
+      "enabled": true,
+      "nonce": true
+    },
+    {
+      "enabled": true,
+      "nonce": true
+    },
+    {
+      "enabled": true,
+      "nonce": true
+    },
+    {
+      "enabled": true,
+      "nonce": true
+    },
+    {
+      "enabled": true,
+      "nonce": true
+    },
+    {
+      "enabled": true,
+      "nonce": true
+    },
+    {
+      "enabled": true,
+      "nonce": true
+    },
+    {
+      "enabled": true,
+      "nonce": true
+    },
+    {
+      "enabled": true,
+      "nonce": true
+    },
+    {
+      "enabled": true,
+      "nonce": true
+    },
+    {
+      "enabled": true,
+      "nonce": true
+    },
+    {
+      "enabled": true,
+      "nonce": true
+    },
+    {
+      "enabled": true,
+      "nonce": true
+    },
+    {
+      "enabled": true,
+      "nonce": true
+    },
+    {
+      "enabled": true,
+      "nonce": true
+    },
+    {
+      "enabled": true,
+      "nonce": true
+    },
+    {
+      "enabled": true,
+      "nonce": true
+    },
+    {
+      "enabled": true,
+      "nonce": true
+    },
+    {
+      "enabled": true,
+      "nonce": true
+    },
+    {
+      "enabled": true,
+      "nonce": true
+    },
+    {
+      "enabled": true,
+      "nonce": true
+    },
+    {
+      "enabled": true,
+      "nonce": true
+    },
+    {
+      "enabled": true,
+      "nonce": true
+    },
+    {
+      "enabled": true,
+      "nonce": true
+    },
+    {
+      "enabled": true,
+      "nonce": true
+    },
+    {
+      "enabled": true,
+      "nonce": true
+    },
+    {
+      "enabled": true,
+      "nonce": true
+    },
+    {
+      "enabled": true,
+      "nonce": true
+    },
+    {
+      "enabled": true,
+      "nonce": true
+    },
+    {
+      "enabled": true,
+      "nonce": true
+    },
+    {
+      "enabled": true,
+      "nonce": true
+    },
+    {
+      "enabled": true,
+      "nonce": true
+    },
+    {
+      "enabled": true,
+      "nonce": true
+    },
+    {
+      "enabled": true,
+      "nonce": true
+    },
+    {
+      "enabled": true,
+      "nonce": true
+    },
+    {
+      "enabled": true,
+      "nonce": true
+    },
+    {
+      "enabled": true,
+      "nonce": true
+    },
+    {
+      "enabled": true,
+      "nonce": true
+    },
+    {
+      "enabled": true,
+      "nonce": true
+    },
+    {
+      "enabled": true,
+      "nonce": true
+    },
+    {
+      "enabled": true,
+      "nonce": true
+    },
+    {
+      "enabled": true,
+      "nonce": true
+    },
+    {
+      "enabled": true,
+      "nonce": true
+    },
+    {
+      "enabled": true,
+      "nonce": true
+    },
+    {
+      "enabled": true,
+      "nonce": true
+    },
+    {
+      "enabled": true,
+      "nonce": true
+    },
+    {
+      "enabled": true,
+      "nonce": true
+    },
+    {
+      "enabled": true,
+      "nonce": true
+    },
+    {
+      "enabled": true,
+      "nonce": true
+    },
+    {
+      "enabled": true,
+      "nonce": true
+    },
+    {
+      "enabled": true,
+      "nonce": true
+    }
+  ],
+  "textSamples": [
+    {
+      "text": "#1",
+      "class": "_indexLabel_18i54_567",
+      "color": "rgb(166, 173, 200)",
+      "background": "rgba(0, 0, 0, 0)",
+      "fontSize": "12px",
+      "opacity": "0.7",
+      "box": {
+        "x": 27,
+        "y": 263,
+        "w": 13.203125,
+        "h": 18.8515625
+      }
+    },
+    {
+      "text": "#2",
+      "class": "_indexLabel_18i54_567",
+      "color": "rgb(166, 173, 200)",
+      "background": "rgba(0, 0, 0, 0)",
+      "fontSize": "12px",
+      "opacity": "0.7",
+      "box": {
+        "x": 27,
+        "y": 351,
+        "w": 13.203125,
+        "h": 18.8515625
+      }
+    },
+    {
+      "text": "#3",
+      "class": "_indexLabel_18i54_567",
+      "color": "rgb(166, 173, 200)",
+      "background": "rgba(0, 0, 0, 0)",
+      "fontSize": "12px",
+      "opacity": "0.7",
+      "box": {
+        "x": 27,
+        "y": 439,
+        "w": 13.203125,
+        "h": 18.8515625
+      }
+    },
+    {
+      "text": "#4",
+      "class": "_indexLabel_18i54_567",
+      "color": "rgb(166, 173, 200)",
+      "background": "rgba(0, 0, 0, 0)",
+      "fontSize": "12px",
+      "opacity": "0.7",
+      "box": {
+        "x": 27,
+        "y": 527,
+        "w": 13.203125,
+        "h": 18.8515625
+      }
+    },
+    {
+      "text": "#5",
+      "class": "_indexLabel_18i54_567",
+      "color": "rgb(166, 173, 200)",
+      "background": "rgba(0, 0, 0, 0)",
+      "fontSize": "12px",
+      "opacity": "0.7",
+      "box": {
+        "x": 27,
+        "y": 615,
+        "w": 13.203125,
+        "h": 18.8515625
+      }
+    },
+    {
+      "text": "#6",
+      "class": "_indexLabel_18i54_567",
+      "color": "rgb(166, 173, 200)",
+      "background": "rgba(0, 0, 0, 0)",
+      "fontSize": "12px",
+      "opacity": "0.7",
+      "box": {
+        "x": 27,
+        "y": 703,
+        "w": 13.203125,
+        "h": 18.8515625
+      }
+    },
+    {
+      "text": "#7",
+      "class": "_indexLabel_18i54_567",
+      "color": "rgb(166, 173, 200)",
+      "background": "rgba(0, 0, 0, 0)",
+      "fontSize": "12px",
+      "opacity": "0.7",
+      "box": {
+        "x": 27,
+        "y": 791,
+        "w": 13.203125,
+        "h": 18.8515625
+      }
+    },
+    {
+      "text": "#8",
+      "class": "_indexLabel_18i54_567",
+      "color": "rgb(166, 173, 200)",
+      "background": "rgba(0, 0, 0, 0)",
+      "fontSize": "12px",
+      "opacity": "0.7",
+      "box": {
+        "x": 27,
+        "y": 879,
+        "w": 13.203125,
+        "h": 18.8515625
+      }
+    },
+    {
+      "text": "#9",
+      "class": "_indexLabel_18i54_567",
+      "color": "rgb(166, 173, 200)",
+      "background": "rgba(0, 0, 0, 0)",
+      "fontSize": "12px",
+      "opacity": "0.7",
+      "box": {
+        "x": 27,
+        "y": 967,
+        "w": 13.203125,
+        "h": 18.8515625
+      }
+    },
+    {
+      "text": "#10",
+      "class": "_indexLabel_18i54_567",
+      "color": "rgb(166, 173, 200)",
+      "background": "rgba(0, 0, 0, 0)",
+      "fontSize": "12px",
+      "opacity": "0.7",
+      "box": {
+        "x": 27,
+        "y": 1055,
+        "w": 19.796875,
+        "h": 18.8515625
+      }
+    },
+    {
+      "text": "#11",
+      "class": "_indexLabel_18i54_567",
+      "color": "rgb(166, 173, 200)",
+      "background": "rgba(0, 0, 0, 0)",
+      "fontSize": "12px",
+      "opacity": "0.7",
+      "box": {
+        "x": 27,
+        "y": 1143,
+        "w": 19.796875,
+        "h": 18.8515625
+      }
+    },
+    {
+      "text": "#12",
+      "class": "_indexLabel_18i54_567",
+      "color": "rgb(166, 173, 200)",
+      "background": "rgba(0, 0, 0, 0)",
+      "fontSize": "12px",
+      "opacity": "0.7",
+      "box": {
+        "x": 27,
+        "y": 1231,
+        "w": 19.796875,
+        "h": 18.8515625
+      }
+    }
+  ]
+}

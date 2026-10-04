@@ -1,0 +1,37 @@
+{
+  "theme": "dark",
+  "viewport": {
+    "width": 1400,
+    "height": 850
+  },
+  "focus": {
+    "tag": "BUTTON",
+    "label": "Close",
+    "inDrawer": false
+  },
+  "tokens": {
+    "bgPrimary": "#182129",
+    "bgSecondary": "#11181f",
+    "textPrimary": "#e8eef3",
+    "textSecondary": "#bcc9d5",
+    "textTertiary": "#97a9bb",
+    "brandPrimary": "#5eead4",
+    "sourceTmBg": "#193b30",
+    "sourceTmColor": "#86efac",
+    "sourceAiBg": "#352b1d",
+    "sourceAiColor": "#f5c47a"
+  },
+  "overflowing": [],
+  "primaryButtons": [
+    {
+      "text": "批量翻译",
+      "color": "rgb(104, 126, 144)",
+      "background": "rgb(33, 45, 56)"
+    },
+    {
+      "text": "导入PO文件",
+      "color": "rgb(16, 43, 40)",
+      "background": "rgb(83, 202, 183)"
+    }
+  ]
+}

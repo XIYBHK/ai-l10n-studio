@@ -92,6 +92,48 @@ it('preserves manager drafts and their original revision when background memory 
   expect(screen.getByDisplayValue('Human draft')).toBeInTheDocument();
 }, 15000);
 
+it('asks before closing a dirty memory draft and keeps it when cancelled', async () => {
+  const user = userEvent.setup();
+  const onClose = vi.fn();
+  renderWithProviders(<MemoryManager visible onClose={onClose} />);
+  const input = await screen.findByDisplayValue('Before');
+  await user.clear(input);
+  await user.type(input, 'Draft');
+  await user.click(screen.getByRole('button', { name: /取.*消|cancel/i }));
+
+  const dialogs = await screen.findAllByRole('dialog');
+  const dialog = dialogs[dialogs.length - 1];
+  expect(onClose).not.toHaveBeenCalled();
+  const dialogButtons = within(dialog).getAllByRole('button');
+  await user.click(dialogButtons[0]);
+  expect(onClose).not.toHaveBeenCalled();
+  expect(screen.getByDisplayValue('Draft')).toBeInTheDocument();
+});
+
+it('discards a dirty memory draft only after confirmation', async () => {
+  const user = userEvent.setup();
+  const onClose = vi.fn();
+  renderWithProviders(<MemoryManager visible onClose={onClose} />);
+  const input = await screen.findByDisplayValue('Before');
+  await user.clear(input);
+  await user.type(input, 'Draft');
+  await user.click(screen.getByRole('button', { name: /取.*消|cancel/i }));
+  const dialogs = await screen.findAllByRole('dialog');
+  const dialog = dialogs[dialogs.length - 1];
+  const dialogButtons = within(dialog).getAllByRole('button');
+  await user.click(dialogButtons[dialogButtons.length - 1]);
+  expect(onClose).toHaveBeenCalledOnce();
+});
+
+it('closes a clean memory manager without a discard prompt', async () => {
+  const user = userEvent.setup();
+  const onClose = vi.fn();
+  renderWithProviders(<MemoryManager visible onClose={onClose} />);
+  await screen.findByDisplayValue('Before');
+  await user.click(screen.getByRole('button', { name: /取.*消|cancel/i }));
+  expect(onClose).toHaveBeenCalledOnce();
+});
+
 it('edits a same-source term only in the selected language and context', async () => {
   const user = userEvent.setup();
   mocks.add.mockResolvedValue(undefined);

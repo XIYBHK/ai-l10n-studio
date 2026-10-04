@@ -37,7 +37,14 @@
     "memorySaveFailed": "译文已保留，但记忆库写入失败；这些条目仍需确认。",
     "confirmFailed": "确认译文失败：{{error}}"
   },
+  "libraryDraft": {
+    "discardTitle": "放弃库中的未保存修改？",
+    "discardDescription": "当前库包含尚未保存的修改。关闭会丢弃这些修改。"
+  },
   "entryList": {
+    "compact": { "untranslated": "未翻译", "needsReview": "待确认", "translated": "已翻译" },
+    "batchActions": "批量操作",
+    "refineSelected": "精翻选中 (Ctrl+Shift+R)",
     "filterStatus": "按翻译状态筛选",
     "total": "共 {{count}} 条",
     "selected": "(已选 {{count}})",
@@ -62,6 +69,7 @@
     "pluralRule": "复数规则"
   },
   "aiWorkspace": {
+    "configureService": "尚未配置翻译服务",
     "session": "本次会话统计",
     "cumulative": "累计统计",
     "noStats": "暂无统计数据",
@@ -172,6 +180,10 @@
   },
   "workspace": {
     "list": {
+      "selected": "已选中",
+      "batchTranslate": "翻译选中条目 ({{count}} 项)",
+      "batchConfirm": "确认选中条目 ({{count}} 项)",
+      "batchRefine": "精翻选中条目 ({{count}} 项)",
       "region": "{{title}}列表（{{count}}项）",
       "count": "{{count}}项",
       "items": "{{title}}条目",
@@ -183,6 +195,13 @@
       "itemLabel": "第 {{index}} 项：{{status}}"
     },
     "editor": {
+      "region": "翻译编辑器",
+      "form": "翻译编辑表单",
+      "shortcuts": "键盘快捷键",
+      "previous": "上一项 (Ctrl+↑)",
+      "next": "下一项 (Ctrl+↓)",
+      "noPrevious": "没有上一项了",
+      "noNext": "没有下一项了",
       "sourceRegion": "原文区域",
       "sourceContent": "原文内容",
       "empty": "（空）",
@@ -194,7 +213,7 @@
       "sourceMemory": "记忆库",
       "sourceDedup": "去重",
       "unsavedChanges": "有未保存的修改",
-      "draftSynchronized": "编辑内容已同步",
+      "draftSynchronized": "草稿已同步",
       "navigation": "导航",
       "copySource": "复制原文到剪贴板",
       "copySourceShort": "复制原文",
@@ -213,8 +232,11 @@
     "welcomeDescription": "导入一个 PO 文件，让 AI 处理初稿，把时间留给语境、细节，以及更好的表达。",
     "dropHint": "也可以将 .po 文件拖入窗口",
     "contextFeature": "上下文感知",
+    "contextFeatureDescription": "保留上下文与注释",
     "memoryFeature": "翻译记忆",
+    "memoryFeatureDescription": "让好译文重复发挥价值",
     "reviewFeature": "逐条审校",
+    "reviewFeatureDescription": "最终表达，由你决定",
     "sourceLabel": "原文",
     "targetLabel": "译文",
     "sampleSource": "Welcome to your workspace.",

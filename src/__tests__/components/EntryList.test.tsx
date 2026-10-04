@@ -4,6 +4,7 @@ import { renderWithProviders } from '../../test/renderWithProviders';
 import { EntryList } from '../../components/EntryList';
 import { useTranslationStore } from '../../store/useTranslationStore';
 import type { POEntry } from '../../types/tauri';
+import i18n from '../../i18n/config';
 
 vi.mock('@tanstack/react-virtual', () => ({
   useVirtualizer: vi.fn(({ count }: { count: number }) => ({
@@ -51,6 +52,32 @@ describe('EntryList', () => {
   beforeEach(() => {
     useTranslationStore.getState().reset();
     useTranslationStore.getState().setEntries(entries);
+  });
+
+  it('localizes compact status filters and row descriptions in English', async () => {
+    await i18n.changeLanguage('en-US');
+    try {
+      const user = userEvent.setup();
+      renderWithProviders(
+        <EntryList
+          entries={entries}
+          currentEntry={entries[0]}
+          isTranslating={false}
+          progress={0}
+          onEntrySelect={vi.fn()}
+          onTranslateSelected={vi.fn()}
+        />
+      );
+      expect(screen.getByText('Pending')).toBeInTheDocument();
+      expect(screen.getByRole('listitem', { name: 'Item 1: Untranslated' })).toBeInTheDocument();
+      await user.click(screen.getByText('Review'));
+      expect(screen.getByRole('listitem', { name: 'Item 2: Needs Review' })).toBeInTheDocument();
+      await user.click(screen.getByText('Open project'));
+      expect(screen.getByRole('group', { name: 'Batch actions' })).toBeInTheDocument();
+      expect(screen.getByRole('button', { name: /Confirm selected entries/ })).toBeInTheDocument();
+    } finally {
+      await i18n.changeLanguage('zh-CN');
+    }
   });
 
   it('hides obsolete rows and clears selection when the same file is reopened', async () => {

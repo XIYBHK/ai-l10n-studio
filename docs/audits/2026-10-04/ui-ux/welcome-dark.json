@@ -1,0 +1,274 @@
+{
+  "theme": "dark",
+  "viewport": {
+    "width": 1400,
+    "height": 850
+  },
+  "controls": [
+    {
+      "tag": "BUTTON",
+      "role": null,
+      "text": "批量翻译",
+      "label": "批量翻译",
+      "title": null,
+      "disabled": true,
+      "tabIndex": 0,
+      "box": {
+        "x": 1079,
+        "y": 17,
+        "w": 95,
+        "h": 30
+      }
+    },
+    {
+      "tag": "BUTTON",
+      "role": null,
+      "text": "文件",
+      "label": "文件操作",
+      "title": null,
+      "disabled": false,
+      "tabIndex": 0,
+      "box": {
+        "x": 1186,
+        "y": 17,
+        "w": 69,
+        "h": 30
+      }
+    },
+    {
+      "tag": "BUTTON",
+      "role": null,
+      "text": "",
+      "label": "浅色",
+      "title": null,
+      "disabled": false,
+      "tabIndex": 0,
+      "box": {
+        "x": 1276,
+        "y": 17,
+        "w": 32,
+        "h": 30
+      }
+    },
+    {
+      "tag": "BUTTON",
+      "role": null,
+      "text": "",
+      "label": "设置",
+      "title": null,
+      "disabled": false,
+      "tabIndex": 0,
+      "box": {
+        "x": 1312,
+        "y": 17,
+        "w": 32,
+        "h": 30
+      }
+    },
+    {
+      "tag": "BUTTON",
+      "role": null,
+      "text": "",
+      "label": "开发者工具",
+      "title": null,
+      "disabled": false,
+      "tabIndex": 0,
+      "box": {
+        "x": 1348,
+        "y": 17,
+        "w": 32,
+        "h": 30
+      }
+    },
+    {
+      "tag": "BUTTON",
+      "role": null,
+      "text": "导入PO文件",
+      "label": null,
+      "title": null,
+      "disabled": false,
+      "tabIndex": 0,
+      "box": {
+        "x": 112,
+        "y": 466.1328125,
+        "w": 142.828125,
+        "h": 40
+      }
+    }
+  ],
+  "overflowing": [
+    {
+      "tag": "H1",
+      "text": "PO 翻译工具",
+      "class": "sr-only",
+      "box": {
+        "x": -1,
+        "y": -1,
+        "w": 1,
+        "h": 1
+      },
+      "client": 1,
+      "scroll": 259,
+      "overflow": "hidden"
+    }
+  ],
+  "tokens": {
+    "bgPrimary": "#1e1e2e",
+    "bgSecondary": "#181825",
+    "textPrimary": "#cdd6f4",
+    "textSecondary": "#bac2de",
+    "textTertiary": "#a6adc8",
+    "brandPrimary": "#cba6f7",
+    "brandSecondary": "#89b4fa",
+    "warning": "#fab387",
+    "error": "#ed8796",
+    "statusUntranslated": "#cba6f7",
+    "statusNeedsReview": "#fab387",
+    "statusTranslated": "#a6e3a1",
+    "sourceTmBg": "rgba(82, 196, 26, .2)",
+    "sourceTmColor": "#73d13d",
+    "sourceDedupBg": "rgba(24, 144, 255, .2)",
+    "sourceDedupColor": "#69c0ff",
+    "sourceAiBg": "rgba(250, 173, 20, .2)",
+    "sourceAiColor": "#ffd666"
+  },
+  "styles": [
+    {
+      "enabled": true,
+      "nonce": true
+    },
+    {
+      "enabled": true,
+      "nonce": true
+    },
+    {
+      "enabled": true,
+      "nonce": true
+    },
+    {
+      "enabled": true,
+      "nonce": true
+    },
+    {
+      "enabled": true,
+      "nonce": true
+    },
+    {
+      "enabled": true,
+      "nonce": true
+    },
+    {
+      "enabled": true,
+      "nonce": true
+    },
+    {
+      "enabled": true,
+      "nonce": true
+    },
+    {
+      "enabled": true,
+      "nonce": true
+    },
+    {
+      "enabled": true,
+      "nonce": true
+    },
+    {
+      "enabled": true,
+      "nonce": true
+    },
+    {
+      "enabled": true,
+      "nonce": true
+    },
+    {
+      "enabled": true,
+      "nonce": true
+    },
+    {
+      "enabled": true,
+      "nonce": true
+    },
+    {
+      "enabled": true,
+      "nonce": true
+    },
+    {
+      "enabled": true,
+      "nonce": true
+    },
+    {
+      "enabled": true,
+      "nonce": true
+    },
+    {
+      "enabled": true,
+      "nonce": true
+    },
+    {
+      "enabled": true,
+      "nonce": true
+    },
+    {
+      "enabled": true,
+      "nonce": true
+    },
+    {
+      "enabled": true,
+      "nonce": true
+    },
+    {
+      "enabled": true,
+      "nonce": true
+    },
+    {
+      "enabled": true,
+      "nonce": true
+    },
+    {
+      "enabled": true,
+      "nonce": true
+    },
+    {
+      "enabled": true,
+      "nonce": true
+    },
+    {
+      "enabled": true,
+      "nonce": true
+    },
+    {
+      "enabled": true,
+      "nonce": true
+    },
+    {
+      "enabled": true,
+      "nonce": true
+    },
+    {
+      "enabled": true,
+      "nonce": true
+    },
+    {
+      "enabled": true,
+      "nonce": true
+    },
+    {
+      "enabled": true,
+      "nonce": true
+    },
+    {
+      "enabled": true,
+      "nonce": true
+    },
+    {
+      "enabled": true,
+      "nonce": true
+    },
+    {
+      "enabled": true,
+      "nonce": true
+    }
+  ],
+  "textSamples": []
+}

@@ -3,7 +3,9 @@ import {
   ArrowRightOutlined,
   FileTextOutlined,
   FolderOpenOutlined,
-  CheckOutlined,
+  BulbOutlined,
+  AuditOutlined,
+  GlobalOutlined,
 } from '@ant-design/icons';
 import { useTranslation } from 'react-i18next';
 import styles from './WelcomeState.module.css';
@@ -27,10 +29,19 @@ export function WelcomeState({ onOpenFile }: { onOpenFile?: () => void }) {
         </div>
         <p className={styles.dropHint}>{t('workspace.dropHint')}</p>
         <div className={styles.features}>
-          {['contextFeature', 'memoryFeature', 'reviewFeature'].map((key) => (
+          {[
+            { key: 'contextFeature', icon: <GlobalOutlined /> },
+            { key: 'memoryFeature', icon: <BulbOutlined /> },
+            { key: 'reviewFeature', icon: <AuditOutlined /> },
+          ].map(({ key, icon }) => (
             <span key={key}>
-              <CheckOutlined aria-hidden="true" />
-              {t(`workspace.${key}`)}
+              <span className={styles.featureIcon} aria-hidden="true">
+                {icon}
+              </span>
+              <span>
+                <strong>{t(`workspace.${key}`)}</strong>
+                <small>{t(`workspace.${key}Description`)}</small>
+              </span>
             </span>
           ))}
         </div>
@@ -54,7 +65,7 @@ export function WelcomeState({ onOpenFile }: { onOpenFile?: () => void }) {
           <div className={styles.direction}>
             <ArrowRightOutlined />
           </div>
-          <div className={styles.previewSection}>
+          <div className={`${styles.previewSection} ${styles.translatedSection}`}>
             <div className={styles.previewLabel}>
               {t('workspace.targetLabel')} <span>ZH</span>
             </div>

@@ -26,6 +26,7 @@ const log = createModuleLogger('TermLibraryManager');
 interface TermLibraryManagerProps {
   visible: boolean;
   onClose: () => void;
+  afterClose?: () => void;
 }
 
 interface EditingTerm {
@@ -37,9 +38,9 @@ interface EditingTerm {
 
 const termKey = (term: TermEntry) => buildMemoryKey(term.source, term.context, term.language);
 
-export function TermLibraryManager({ visible, onClose }: TermLibraryManagerProps) {
+export function TermLibraryManager({ visible, onClose, afterClose }: TermLibraryManagerProps) {
   const { t } = useTranslation();
-  const { message } = App.useApp();
+  const { message, modal } = App.useApp();
   const { activeAIConfig } = useActiveAIConfig();
   const { termLibrary: library, refresh, mutate } = useTermLibrary({ enabled: visible });
   const language = useAppStore((state) => state.language);
@@ -116,6 +117,25 @@ export function TermLibraryManager({ visible, onClose }: TermLibraryManagerProps
     setEditingTerm(null);
   };
 
+  const requestClose = () => {
+    const dirty =
+      editingTerm !== null &&
+      (editingTerm.source !== editingTerm.original.source ||
+        editingTerm.user_translation !== editingTerm.original.user_translation);
+    if (!dirty) {
+      onClose();
+      return;
+    }
+    modal.confirm({
+      title: t('libraryDraft.discardTitle'),
+      content: t('libraryDraft.discardDescription'),
+      okText: t('document.discard'),
+      cancelText: t('common.cancel'),
+      okButtonProps: { danger: true },
+      onOk: onClose,
+    });
+  };
+
   const handleGenerateStyleSummary = async () => {
     if (!activeAIConfig) {
       message.error(t('messages.aiConfigRequired'));
@@ -175,6 +195,7 @@ export function TermLibraryManager({ visible, onClose }: TermLibraryManagerProps
         const isEditing = editingKey === termKey(record);
         return isEditing ? (
           <TextArea
+            aria-label={t('terms.userTranslation')}
             value={editingTerm?.user_translation}
             onChange={(e) => setEditingTerm({ ...editingTerm!, user_translation: e.target.value })}
             autoSize={{ minRows: 1, maxRows: 4 }}
@@ -264,7 +285,8 @@ export function TermLibraryManager({ visible, onClose }: TermLibraryManagerProps
         </span>
       }
       open={visible}
-      onCancel={onClose}
+      onCancel={requestClose}
+      afterClose={afterClose}
       width={1040}
       centered
       destroyOnHidden
@@ -287,7 +309,7 @@ export function TermLibraryManager({ visible, onClose }: TermLibraryManagerProps
         >
           {t('terms.generateSummary')}
         </Button>,
-        <Button key="close" onClick={onClose}>
+        <Button key="close" onClick={requestClose}>
           {t('common.close')}
         </Button>,
       ]}

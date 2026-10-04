@@ -68,10 +68,16 @@ export const StatusColumns = memo(function StatusColumns({
           aria-label={t('entryList.filterStatus')}
           options={columns.map((column) => ({
             value: column,
+            title: `${t(`entryList.${column}`)}: ${groupedEntries[column].length}`,
             label: (
-              <span className={styles.filterLabel}>
-                {t(`entryList.${column}`)}
-                <span>{groupedEntries[column].length}</span>
+              <span
+                className={styles.filterLabel}
+                aria-label={`${t(`entryList.${column}`)}: ${groupedEntries[column].length}`}
+              >
+                <span className={styles.filterText}>{t(`entryList.compact.${column}`)}</span>
+                <span className={styles.filterCount} aria-hidden="true">
+                  {groupedEntries[column].length}
+                </span>
               </span>
             ),
           }))}

@@ -48,7 +48,7 @@ export const ActionButton: React.FC<ActionButtonProps> = ({
       backgroundColor: CSS_COLORS.brandPrimary,
       borderColor: CSS_COLORS.brandPrimary,
       color: 'var(--color-onBrand)',
-      boxShadow: '0 1px 2px rgba(0, 0, 0, 0.08)',
+      boxShadow: 'var(--shadow-sm)',
     },
     secondary: {
       backgroundColor: CSS_COLORS.bgTertiary,
@@ -63,7 +63,7 @@ export const ActionButton: React.FC<ActionButtonProps> = ({
     danger: {
       backgroundColor: CSS_COLORS.error,
       borderColor: CSS_COLORS.error,
-      color: '#ffffff',
+      color: 'var(--color-onError)',
     },
     text: {
       backgroundColor: 'transparent',

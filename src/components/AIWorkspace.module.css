@@ -4,6 +4,10 @@
   background: var(--color-bgSecondary);
   border-radius: 0;
 }
+.inlineContent,
+.drawerContent {
+  height: 100%;
+}
 .header {
   display: flex;
   align-items: center;
@@ -24,8 +28,8 @@
   width: 30px;
   height: 30px;
   border-radius: var(--radius-md);
-  color: var(--color-overlayText);
-  background: var(--color-brandPrimary);
+  color: var(--color-brandPrimary);
+  background: var(--color-selectedBg);
 }
 .title {
   display: flex;
@@ -58,7 +62,8 @@
   width: 6px;
   height: 6px;
   border-radius: 50%;
-  background: var(--color-statusTranslated);
+  background: var(--color-textTertiary);
+  flex-shrink: 0;
 }
 .model {
   overflow: hidden;
@@ -73,7 +78,9 @@
   border-color: var(--color-borderSecondary);
 }
 .empty {
-  padding: var(--space-5) var(--space-2);
+  padding: var(--space-6) var(--space-3);
+  border: 1px dashed var(--color-borderPrimary);
+  border-radius: var(--radius-md);
   text-align: center;
   line-height: 1.6;
 }
@@ -85,6 +92,7 @@
 .emptyTitle {
   color: var(--color-textSecondary);
   font-weight: 600;
+  margin-bottom: var(--space-2);
 }
 .resourcesTitle {
   margin-bottom: var(--space-2);
@@ -104,10 +112,15 @@
   padding: var(--space-3);
   color: var(--color-textSecondary);
   text-align: left;
-  background: transparent;
-  border: 1px solid var(--color-borderSecondary);
+  background: var(--color-bgPrimary);
+  border: 1px solid var(--color-borderPrimary);
   border-radius: var(--radius-md);
   cursor: pointer;
+  transition: border-color var(--duration-fast) var(--ease-out);
+}
+.resourceArrow {
+  margin-left: auto;
+  font-size: var(--font-size-xs);
 }
 .resource:hover {
   color: var(--color-textPrimary);

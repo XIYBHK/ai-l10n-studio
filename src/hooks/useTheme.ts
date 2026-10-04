@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useLayoutEffect, useMemo } from 'react';
 import { useAppStore } from '../store/useAppStore';
-import { lightTheme, darkTheme, semanticColors } from '../theme/config';
+import { lightTheme, darkTheme } from '../theme/config';
+import { CSS_COLORS } from './useCssColors';
 import { emit } from '@tauri-apps/api/event';
 
 type Theme = 'light' | 'dark' | 'system';
@@ -18,7 +19,7 @@ export const useTheme = () => {
     const isDark = appliedTheme === 'dark';
     return {
       themeConfig: isDark ? darkTheme : lightTheme,
-      colors: isDark ? semanticColors.dark : semanticColors.light,
+      colors: CSS_COLORS,
     };
   }, [appliedTheme]);
 

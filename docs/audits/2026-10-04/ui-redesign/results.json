@@ -1,0 +1,291 @@
+{
+  "feedback": {
+    "text": "供应商已保存",
+    "box": {
+      "x": 634,
+      "y": 16,
+      "width": 132,
+      "height": 42.5
+    },
+    "inViewport": true
+  },
+  "filters": [
+    {
+      "text": "Pending28",
+      "client": 76,
+      "scroll": 76
+    },
+    {
+      "text": "Review2",
+      "client": 76,
+      "scroll": 76
+    },
+    {
+      "text": "Done4",
+      "client": 76,
+      "scroll": 76
+    }
+  ],
+  "entryLabel": "Item 1: Untranslated",
+  "drawerFocus": [
+    {
+      "label": "MemoryReuse reviewed translations",
+      "inDrawer": true,
+      "unobscured": true
+    },
+    {
+      "label": "GlossaryKeep names and terms consistent",
+      "inDrawer": true,
+      "unobscured": true
+    },
+    {
+      "label": "Close",
+      "inDrawer": true,
+      "unobscured": true
+    },
+    {
+      "label": "MemoryReuse reviewed translations",
+      "inDrawer": true,
+      "unobscured": true
+    },
+    {
+      "label": "GlossaryKeep names and terms consistent",
+      "inDrawer": true,
+      "unobscured": true
+    },
+    {
+      "label": "Close",
+      "inDrawer": true,
+      "unobscured": true
+    },
+    {
+      "label": "MemoryReuse reviewed translations",
+      "inDrawer": true,
+      "unobscured": true
+    },
+    {
+      "label": "GlossaryKeep names and terms consistent",
+      "inDrawer": true,
+      "unobscured": true
+    },
+    {
+      "label": "MemoryReuse reviewed translations",
+      "inDrawer": true,
+      "unobscured": true
+    },
+    {
+      "label": "Close",
+      "inDrawer": true,
+      "unobscured": true
+    },
+    {
+      "label": "GlossaryKeep names and terms consistent",
+      "inDrawer": true,
+      "unobscured": true
+    },
+    {
+      "label": "MemoryReuse reviewed translations",
+      "inDrawer": true,
+      "unobscured": true
+    },
+    {
+      "label": "Close",
+      "inDrawer": true,
+      "unobscured": true
+    },
+    {
+      "label": "GlossaryKeep names and terms consistent",
+      "inDrawer": true,
+      "unobscured": true
+    },
+    {
+      "label": "MemoryReuse reviewed translations",
+      "inDrawer": true,
+      "unobscured": true
+    },
+    {
+      "label": "Close",
+      "inDrawer": true,
+      "unobscured": true
+    }
+  ],
+  "memoryFieldLabels": [
+    "Original",
+    "Translation",
+    "Original",
+    "Translation",
+    "Original",
+    "Translation",
+    "Original",
+    "Translation",
+    "Original",
+    "Translation",
+    "Original",
+    "Translation",
+    "Original",
+    "Translation",
+    "Original",
+    "Translation",
+    "Original",
+    "Translation",
+    "Original",
+    "Translation"
+  ],
+  "libraryDraftGuard": true,
+  "focusRestoredAfterLibrary": true,
+  "inputTrace": [
+    {
+      "key": "Tab",
+      "composing": false,
+      "sinceComposition": 9173.599999997765,
+      "target": "BUTTON",
+      "label": "Close",
+      "defaultPrevented": false,
+      "stopped": false
+    },
+    {
+      "key": "Tab",
+      "composing": false,
+      "sinceComposition": 9205.89999999851,
+      "target": "BUTTON",
+      "label": null,
+      "defaultPrevented": false,
+      "stopped": false
+    },
+    {
+      "key": "Tab",
+      "composing": false,
+      "sinceComposition": 9238.599999997765,
+      "target": "BUTTON",
+      "label": null,
+      "defaultPrevented": true,
+      "stopped": false
+    },
+    {
+      "key": "Tab",
+      "composing": false,
+      "sinceComposition": 9268.5,
+      "target": "BUTTON",
+      "label": "Close",
+      "defaultPrevented": false,
+      "stopped": false
+    },
+    {
+      "key": "Tab",
+      "composing": false,
+      "sinceComposition": 9299.099999997765,
+      "target": "BUTTON",
+      "label": null,
+      "defaultPrevented": false,
+      "stopped": false
+    },
+    {
+      "key": "Tab",
+      "composing": false,
+      "sinceComposition": 9331.099999997765,
+      "target": "BUTTON",
+      "label": null,
+      "defaultPrevented": true,
+      "stopped": false
+    },
+    {
+      "key": "Tab",
+      "composing": false,
+      "sinceComposition": 9359.099999997765,
+      "target": "BUTTON",
+      "label": "Close",
+      "defaultPrevented": false,
+      "stopped": false
+    },
+    {
+      "key": "Tab",
+      "composing": false,
+      "sinceComposition": 9391.099999997765,
+      "target": "BUTTON",
+      "label": null,
+      "defaultPrevented": false,
+      "stopped": false
+    },
+    {
+      "key": "Tab",
+      "composing": false,
+      "sinceComposition": 9421.300000000745,
+      "target": "BUTTON",
+      "label": null,
+      "defaultPrevented": false,
+      "stopped": false
+    },
+    {
+      "key": "Tab",
+      "composing": false,
+      "sinceComposition": 9451.89999999851,
+      "target": "BUTTON",
+      "label": null,
+      "defaultPrevented": false,
+      "stopped": false
+    },
+    {
+      "key": "Tab",
+      "composing": false,
+      "sinceComposition": 9484.599999997765,
+      "target": "BUTTON",
+      "label": "Close",
+      "defaultPrevented": true,
+      "stopped": false
+    },
+    {
+      "key": "Tab",
+      "composing": false,
+      "sinceComposition": 9514.199999999255,
+      "target": "BUTTON",
+      "label": null,
+      "defaultPrevented": false,
+      "stopped": false
+    },
+    {
+      "key": "Tab",
+      "composing": false,
+      "sinceComposition": 9544.300000000745,
+      "target": "BUTTON",
+      "label": null,
+      "defaultPrevented": false,
+      "stopped": false
+    },
+    {
+      "key": "Tab",
+      "composing": false,
+      "sinceComposition": 9575.300000000745,
+      "target": "BUTTON",
+      "label": "Close",
+      "defaultPrevented": true,
+      "stopped": false
+    },
+    {
+      "key": "Tab",
+      "composing": false,
+      "sinceComposition": 9605.300000000745,
+      "target": "BUTTON",
+      "label": null,
+      "defaultPrevented": false,
+      "stopped": false
+    },
+    {
+      "key": "Tab",
+      "composing": false,
+      "sinceComposition": 9635.599999997765,
+      "target": "BUTTON",
+      "label": null,
+      "defaultPrevented": false,
+      "stopped": false
+    },
+    {
+      "key": "Escape",
+      "composing": false,
+      "sinceComposition": 12323,
+      "target": "INPUT",
+      "label": "Original",
+      "defaultPrevented": false,
+      "stopped": true
+    }
+  ]
+}

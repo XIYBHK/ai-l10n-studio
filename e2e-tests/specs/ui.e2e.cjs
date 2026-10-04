@@ -2,7 +2,9 @@ const assert = require('node:assert/strict');
 const fs = require('node:fs');
 const path = require('node:path');
 
-const evidence = path.resolve(__dirname, '../../docs/audits/2026-10-03/ui-runtime');
+const evidence = process.env.TAURI_E2E_EVIDENCE_DIR
+  ? path.resolve(process.env.TAURI_E2E_EVIDENCE_DIR)
+  : path.resolve(__dirname, '../../docs/audits/2026-10-03/ui-runtime');
 let mainHandle;
 
 function luminance(channels) {
@@ -312,6 +314,10 @@ describe('Production desktop UI', () => {
       assert.ok((await modal.getSize('width')) >= 700);
       await capture('after-' + entry);
       await closeModal();
+    }
+    if ((await assistant.getAttribute('aria-expanded')) === 'true') {
+      await browser.keys('Escape');
+      await browser.$('.ant-drawer-section').waitForDisplayed({ reverse: true });
     }
   });
 

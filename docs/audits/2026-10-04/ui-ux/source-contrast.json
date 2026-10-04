@@ -1,0 +1,59 @@
+{
+  "method": "WCAG relative luminance; alpha background composited over actual release CSS bgPrimary; code-derived source badges, no live AI translation requested",
+  "rows": [
+    {
+      "theme": "light",
+      "source": "Tm",
+      "foreground": "#52c41a",
+      "background": "rgba(82, 196, 26, .1)",
+      "parent": "#ffffff",
+      "contrast": 2.088,
+      "passesNormalText": false
+    },
+    {
+      "theme": "light",
+      "source": "Dedup",
+      "foreground": "#1890ff",
+      "background": "rgba(24, 144, 255, .1)",
+      "parent": "#ffffff",
+      "contrast": 2.905,
+      "passesNormalText": false
+    },
+    {
+      "theme": "light",
+      "source": "Ai",
+      "foreground": "#faad14",
+      "background": "rgba(250, 173, 20, .1)",
+      "parent": "#ffffff",
+      "contrast": 1.78,
+      "passesNormalText": false
+    },
+    {
+      "theme": "dark",
+      "source": "Tm",
+      "foreground": "#73d13d",
+      "background": "rgba(82, 196, 26, .2)",
+      "parent": "#1e1e2e",
+      "contrast": 5.931,
+      "passesNormalText": true
+    },
+    {
+      "theme": "dark",
+      "source": "Dedup",
+      "foreground": "#69c0ff",
+      "background": "rgba(24, 144, 255, .2)",
+      "parent": "#1e1e2e",
+      "contrast": 6.235,
+      "passesNormalText": true
+    },
+    {
+      "theme": "dark",
+      "source": "Ai",
+      "foreground": "#ffd666",
+      "background": "rgba(250, 173, 20, .2)",
+      "parent": "#1e1e2e",
+      "contrast": 7.763,
+      "passesNormalText": true
+    }
+  ]
+}

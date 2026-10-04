@@ -1,0 +1,998 @@
+{
+  "theme": "dark",
+  "viewport": {
+    "width": 1000,
+    "height": 700
+  },
+  "controls": [
+    {
+      "tag": "INPUT",
+      "role": "combobox",
+      "text": "",
+      "label": null,
+      "title": null,
+      "disabled": false,
+      "tabIndex": 0,
+      "box": {
+        "x": 200.8515625,
+        "y": 21,
+        "w": 108,
+        "h": 22
+      }
+    },
+    {
+      "tag": "BUTTON",
+      "role": null,
+      "text": "",
+      "label": "批量翻译",
+      "title": null,
+      "disabled": true,
+      "tabIndex": 0,
+      "box": {
+        "x": 795,
+        "y": 17,
+        "w": 32,
+        "h": 30
+      }
+    },
+    {
+      "tag": "BUTTON",
+      "role": null,
+      "text": "",
+      "label": "文件操作",
+      "title": null,
+      "disabled": false,
+      "tabIndex": 0,
+      "box": {
+        "x": 835,
+        "y": 17,
+        "w": 32,
+        "h": 30
+      }
+    },
+    {
+      "tag": "BUTTON",
+      "role": null,
+      "text": "",
+      "label": "浅色",
+      "title": null,
+      "disabled": false,
+      "tabIndex": 0,
+      "box": {
+        "x": 884,
+        "y": 17,
+        "w": 32,
+        "h": 30
+      }
+    },
+    {
+      "tag": "BUTTON",
+      "role": null,
+      "text": "",
+      "label": "设置",
+      "title": null,
+      "disabled": false,
+      "tabIndex": 0,
+      "box": {
+        "x": 920,
+        "y": 17,
+        "w": 32,
+        "h": 30
+      }
+    },
+    {
+      "tag": "BUTTON",
+      "role": null,
+      "text": "",
+      "label": "开发者工具",
+      "title": null,
+      "disabled": false,
+      "tabIndex": 0,
+      "box": {
+        "x": 956,
+        "y": 17,
+        "w": 32,
+        "h": 30
+      }
+    },
+    {
+      "tag": "BUTTON",
+      "role": null,
+      "text": "AI 工作区",
+      "label": null,
+      "title": null,
+      "disabled": false,
+      "tabIndex": 0,
+      "box": {
+        "x": 868.890625,
+        "y": 76.5,
+        "w": 98.109375,
+        "h": 24
+      }
+    },
+    {
+      "tag": "LABEL",
+      "role": null,
+      "text": "未翻译28",
+      "label": null,
+      "title": null,
+      "tabIndex": -1,
+      "box": {
+        "x": 28,
+        "y": 181.421875,
+        "w": 96.328125,
+        "h": 28
+      }
+    },
+    {
+      "tag": "INPUT",
+      "role": null,
+      "text": "",
+      "label": null,
+      "title": null,
+      "disabled": false,
+      "tabIndex": 0,
+      "box": {
+        "x": 28,
+        "y": 181.421875,
+        "w": 0,
+        "h": 0
+      }
+    },
+    {
+      "tag": "LABEL",
+      "role": null,
+      "text": "待确认2",
+      "label": null,
+      "title": null,
+      "tabIndex": -1,
+      "box": {
+        "x": 124.328125,
+        "y": 181.421875,
+        "w": 96.3359375,
+        "h": 28
+      }
+    },
+    {
+      "tag": "INPUT",
+      "role": null,
+      "text": "",
+      "label": null,
+      "title": null,
+      "disabled": false,
+      "tabIndex": 0,
+      "box": {
+        "x": 124.328125,
+        "y": 181.421875,
+        "w": 0,
+        "h": 0
+      }
+    },
+    {
+      "tag": "LABEL",
+      "role": null,
+      "text": "已翻译4",
+      "label": null,
+      "title": null,
+      "tabIndex": -1,
+      "box": {
+        "x": 220.6640625,
+        "y": 181.421875,
+        "w": 96.3359375,
+        "h": 28
+      }
+    },
+    {
+      "tag": "INPUT",
+      "role": null,
+      "text": "",
+      "label": null,
+      "title": null,
+      "disabled": false,
+      "tabIndex": 0,
+      "box": {
+        "x": 220.6640625,
+        "y": 181.421875,
+        "w": 0,
+        "h": 0
+      }
+    },
+    {
+      "tag": "DIV",
+      "role": "listitem",
+      "text": "#1Open file",
+      "label": "第 1 项：第 1 条，未翻译",
+      "title": null,
+      "tabIndex": 0,
+      "box": {
+        "x": 13,
+        "y": 256.421875,
+        "w": 309,
+        "h": 88
+      }
+    },
+    {
+      "tag": "DIV",
+      "role": "listitem",
+      "text": "#2Save",
+      "label": "第 2 项：第 2 条，未翻译",
+      "title": null,
+      "tabIndex": 0,
+      "box": {
+        "x": 13,
+        "y": 344.421875,
+        "w": 309,
+        "h": 88
+      }
+    },
+    {
+      "tag": "DIV",
+      "role": "listitem",
+      "text": "#3Save as...",
+      "label": "第 3 项：第 3 条，未翻译",
+      "title": null,
+      "tabIndex": 0,
+      "box": {
+        "x": 13,
+        "y": 432.421875,
+        "w": 309,
+        "h": 88
+      }
+    },
+    {
+      "tag": "DIV",
+      "role": "listitem",
+      "text": "#4Close project",
+      "label": "第 4 项：第 4 条，未翻译",
+      "title": null,
+      "tabIndex": 0,
+      "box": {
+        "x": 13,
+        "y": 520.421875,
+        "w": 309,
+        "h": 88
+      }
+    },
+    {
+      "tag": "DIV",
+      "role": "listitem",
+      "text": "#5Settings",
+      "label": "第 5 项：第 5 条，未翻译",
+      "title": null,
+      "tabIndex": 0,
+      "box": {
+        "x": 13,
+        "y": 608.421875,
+        "w": 309,
+        "h": 88
+      }
+    },
+    {
+      "tag": "DIV",
+      "role": "listitem",
+      "text": "#6Developer tools",
+      "label": "第 6 项：第 6 条，未翻译",
+      "title": null,
+      "tabIndex": 0,
+      "box": {
+        "x": 13,
+        "y": 696.421875,
+        "w": 309,
+        "h": 88
+      }
+    },
+    {
+      "tag": "DIV",
+      "role": "listitem",
+      "text": "#7Switch to dark theme",
+      "label": "第 7 项：第 7 条，未翻译",
+      "title": null,
+      "tabIndex": 0,
+      "box": {
+        "x": 13,
+        "y": 784.421875,
+        "w": 309,
+        "h": 88
+      }
+    },
+    {
+      "tag": "DIV",
+      "role": "listitem",
+      "text": "#8Switch to light theme",
+      "label": "第 8 项：第 8 条，未翻译",
+      "title": null,
+      "tabIndex": 0,
+      "box": {
+        "x": 13,
+        "y": 872.421875,
+        "w": 309,
+        "h": 88
+      }
+    },
+    {
+      "tag": "DIV",
+      "role": "listitem",
+      "text": "#9Start translation",
+      "label": "第 9 项：第 9 条，未翻译",
+      "title": null,
+      "tabIndex": 0,
+      "box": {
+        "x": 13,
+        "y": 960.421875,
+        "w": 309,
+        "h": 88
+      }
+    },
+    {
+      "tag": "DIV",
+      "role": "listitem",
+      "text": "#10Pause",
+      "label": "第 10 项：第 10 条，未翻译",
+      "title": null,
+      "tabIndex": 0,
+      "box": {
+        "x": 13,
+        "y": 1048.421875,
+        "w": 309,
+        "h": 88
+      }
+    },
+    {
+      "tag": "DIV",
+      "role": "separator",
+      "text": "",
+      "label": "调整条目列表宽度",
+      "title": null,
+      "tabIndex": 0,
+      "box": {
+        "x": 329,
+        "y": 113,
+        "w": 6,
+        "h": 538.1484375
+      }
+    },
+    {
+      "tag": "BUTTON",
+      "role": null,
+      "text": "",
+      "label": "没有上一项了",
+      "title": "上一项 (Ctrl+↑)",
+      "disabled": true,
+      "tabIndex": 0,
+      "box": {
+        "x": 611.75,
+        "y": 125,
+        "w": 24,
+        "h": 24
+      }
+    },
+    {
+      "tag": "BUTTON",
+      "role": null,
+      "text": "",
+      "label": "下一项 (Ctrl+下箭头)",
+      "title": "下一项 (Ctrl+↓)",
+      "disabled": false,
+      "tabIndex": 0,
+      "box": {
+        "x": 639.75,
+        "y": 125,
+        "w": 24,
+        "h": 24
+      }
+    },
+    {
+      "tag": "BUTTON",
+      "role": null,
+      "text": "复制原文",
+      "label": "复制原文到剪贴板",
+      "title": null,
+      "disabled": false,
+      "tabIndex": 0,
+      "box": {
+        "x": 692.75,
+        "y": 125,
+        "w": 94,
+        "h": 24
+      }
+    },
+    {
+      "tag": "BUTTON",
+      "role": null,
+      "text": "确认译文 (Ctrl+Enter)",
+      "label": "确认译文 (Ctrl+Enter)",
+      "title": null,
+      "disabled": true,
+      "tabIndex": 0,
+      "box": {
+        "x": 794.75,
+        "y": 125,
+        "w": 176.25,
+        "h": 24
+      }
+    },
+    {
+      "tag": "DIV",
+      "role": "listitem",
+      "text": "工具栏按钮。",
+      "label": null,
+      "title": null,
+      "tabIndex": -1,
+      "box": {
+        "x": 362,
+        "y": 369.9765625,
+        "w": 586,
+        "h": 18.8515625
+      }
+    },
+    {
+      "tag": "TEXTAREA",
+      "role": null,
+      "text": "",
+      "label": "译文编辑",
+      "title": null,
+      "disabled": false,
+      "tabIndex": 0,
+      "box": {
+        "x": 349,
+        "y": 393.9140625,
+        "w": 622,
+        "h": 204.8828125
+      }
+    },
+    {
+      "tag": "BUTTON",
+      "role": null,
+      "text": "",
+      "label": "Close",
+      "title": null,
+      "disabled": false,
+      "tabIndex": 0,
+      "box": {
+        "x": 856,
+        "y": 112,
+        "w": 32,
+        "h": 32
+      }
+    },
+    {
+      "tag": "BUTTON",
+      "role": null,
+      "text": "DeepSeekdeepseek-flash",
+      "label": null,
+      "title": null,
+      "disabled": false,
+      "tabIndex": 0,
+      "box": {
+        "x": 137,
+        "y": 372.28125,
+        "w": 233.328125,
+        "h": 62.5
+      }
+    },
+    {
+      "tag": "BUTTON",
+      "role": null,
+      "text": "通义千问qwen-plus",
+      "label": null,
+      "title": null,
+      "disabled": false,
+      "tabIndex": 0,
+      "box": {
+        "x": 378.328125,
+        "y": 372.28125,
+        "w": 233.3359375,
+        "h": 62.5
+      }
+    },
+    {
+      "tag": "BUTTON",
+      "role": null,
+      "text": "Kimikimi-k3",
+      "label": null,
+      "title": null,
+      "disabled": false,
+      "tabIndex": 0,
+      "box": {
+        "x": 619.6640625,
+        "y": 372.28125,
+        "w": 233.328125,
+        "h": 62.5
+      }
+    },
+    {
+      "tag": "BUTTON",
+      "role": null,
+      "text": "智谱 GLMglm-5.2",
+      "label": null,
+      "title": null,
+      "disabled": false,
+      "tabIndex": 0,
+      "box": {
+        "x": 137,
+        "y": 442.78125,
+        "w": 233.328125,
+        "h": 62.5
+      }
+    },
+    {
+      "tag": "BUTTON",
+      "role": null,
+      "text": "MiniMaxMiniMax-M3",
+      "label": null,
+      "title": null,
+      "disabled": false,
+      "tabIndex": 0,
+      "box": {
+        "x": 378.328125,
+        "y": 442.78125,
+        "w": 233.3359375,
+        "h": 62.5
+      }
+    },
+    {
+      "tag": "BUTTON",
+      "role": null,
+      "text": "硅基流动deepseek-ai/DeepSeek-V4-Flash",
+      "label": null,
+      "title": null,
+      "disabled": false,
+      "tabIndex": 0,
+      "box": {
+        "x": 619.6640625,
+        "y": 442.78125,
+        "w": 233.328125,
+        "h": 62.5
+      }
+    },
+    {
+      "tag": "INPUT",
+      "role": "combobox",
+      "text": "",
+      "label": "默认模型",
+      "title": null,
+      "disabled": false,
+      "tabIndex": 0,
+      "box": {
+        "x": 136,
+        "y": 577.28125,
+        "w": 700,
+        "h": 22
+      }
+    },
+    {
+      "tag": "INPUT",
+      "role": "combobox",
+      "text": "",
+      "label": "添加内置供应商",
+      "title": null,
+      "disabled": false,
+      "tabIndex": 0,
+      "box": {
+        "x": 136,
+        "y": 791.28125,
+        "w": 158,
+        "h": 22
+      }
+    },
+    {
+      "tag": "BUTTON",
+      "role": null,
+      "text": "添加自定义 API",
+      "label": null,
+      "title": null,
+      "disabled": false,
+      "tabIndex": 0,
+      "box": {
+        "x": 332,
+        "y": 786.28125,
+        "w": 150.6796875,
+        "h": 32
+      }
+    }
+  ],
+  "overflowing": [
+    {
+      "tag": "H1",
+      "text": "PO 翻译工具",
+      "class": "sr-only",
+      "box": {
+        "x": -1,
+        "y": -1,
+        "w": 1,
+        "h": 1
+      },
+      "client": 1,
+      "scroll": 259,
+      "overflow": "hidden"
+    }
+  ],
+  "tokens": {
+    "bgPrimary": "#1e1e2e",
+    "bgSecondary": "#181825",
+    "textPrimary": "#cdd6f4",
+    "textSecondary": "#bac2de",
+    "textTertiary": "#a6adc8",
+    "brandPrimary": "#cba6f7",
+    "brandSecondary": "#89b4fa",
+    "warning": "#fab387",
+    "error": "#ed8796",
+    "statusUntranslated": "#cba6f7",
+    "statusNeedsReview": "#fab387",
+    "statusTranslated": "#a6e3a1",
+    "sourceTmBg": "rgba(82, 196, 26, .2)",
+    "sourceTmColor": "#73d13d",
+    "sourceDedupBg": "rgba(24, 144, 255, .2)",
+    "sourceDedupColor": "#69c0ff",
+    "sourceAiBg": "rgba(250, 173, 20, .2)",
+    "sourceAiColor": "#ffd666"
+  },
+  "styles": [
+    {
+      "enabled": true,
+      "nonce": true
+    },
+    {
+      "enabled": true,
+      "nonce": true
+    },
+    {
+      "enabled": true,
+      "nonce": true
+    },
+    {
+      "enabled": true,
+      "nonce": true
+    },
+    {
+      "enabled": true,
+      "nonce": true
+    },
+    {
+      "enabled": true,
+      "nonce": true
+    },
+    {
+      "enabled": true,
+      "nonce": true
+    },
+    {
+      "enabled": true,
+      "nonce": true
+    },
+    {
+      "enabled": true,
+      "nonce": true
+    },
+    {
+      "enabled": true,
+      "nonce": true
+    },
+    {
+      "enabled": true,
+      "nonce": true
+    },
+    {
+      "enabled": true,
+      "nonce": true
+    },
+    {
+      "enabled": true,
+      "nonce": true
+    },
+    {
+      "enabled": true,
+      "nonce": true
+    },
+    {
+      "enabled": true,
+      "nonce": true
+    },
+    {
+      "enabled": true,
+      "nonce": true
+    },
+    {
+      "enabled": true,
+      "nonce": true
+    },
+    {
+      "enabled": true,
+      "nonce": true
+    },
+    {
+      "enabled": true,
+      "nonce": true
+    },
+    {
+      "enabled": true,
+      "nonce": true
+    },
+    {
+      "enabled": true,
+      "nonce": true
+    },
+    {
+      "enabled": true,
+      "nonce": true
+    },
+    {
+      "enabled": true,
+      "nonce": true
+    },
+    {
+      "enabled": true,
+      "nonce": true
+    },
+    {
+      "enabled": true,
+      "nonce": true
+    },
+    {
+      "enabled": true,
+      "nonce": true
+    },
+    {
+      "enabled": true,
+      "nonce": true
+    },
+    {
+      "enabled": true,
+      "nonce": true
+    },
+    {
+      "enabled": true,
+      "nonce": true
+    },
+    {
+      "enabled": true,
+      "nonce": true
+    },
+    {
+      "enabled": true,
+      "nonce": true
+    },
+    {
+      "enabled": true,
+      "nonce": true
+    },
+    {
+      "enabled": true,
+      "nonce": true
+    },
+    {
+      "enabled": true,
+      "nonce": true
+    },
+    {
+      "enabled": true,
+      "nonce": true
+    },
+    {
+      "enabled": true,
+      "nonce": true
+    },
+    {
+      "enabled": true,
+      "nonce": true
+    },
+    {
+      "enabled": true,
+      "nonce": true
+    },
+    {
+      "enabled": true,
+      "nonce": true
+    },
+    {
+      "enabled": true,
+      "nonce": true
+    },
+    {
+      "enabled": true,
+      "nonce": true
+    },
+    {
+      "enabled": true,
+      "nonce": true
+    },
+    {
+      "enabled": true,
+      "nonce": true
+    },
+    {
+      "enabled": true,
+      "nonce": true
+    },
+    {
+      "enabled": true,
+      "nonce": true
+    },
+    {
+      "enabled": true,
+      "nonce": true
+    },
+    {
+      "enabled": true,
+      "nonce": true
+    },
+    {
+      "enabled": true,
+      "nonce": true
+    },
+    {
+      "enabled": true,
+      "nonce": true
+    },
+    {
+      "enabled": true,
+      "nonce": true
+    },
+    {
+      "enabled": true,
+      "nonce": true
+    },
+    {
+      "enabled": true,
+      "nonce": true
+    },
+    {
+      "enabled": true,
+      "nonce": true
+    },
+    {
+      "enabled": true,
+      "nonce": true
+    },
+    {
+      "enabled": true,
+      "nonce": true
+    },
+    {
+      "enabled": true,
+      "nonce": true
+    }
+  ],
+  "textSamples": [
+    {
+      "text": "#1",
+      "class": "_indexLabel_18i54_567",
+      "color": "rgb(166, 173, 200)",
+      "background": "rgba(0, 0, 0, 0)",
+      "fontSize": "12px",
+      "opacity": "0.7",
+      "box": {
+        "x": 27,
+        "y": 263,
+        "w": 13.203125,
+        "h": 18.8515625
+      }
+    },
+    {
+      "text": "#2",
+      "class": "_indexLabel_18i54_567",
+      "color": "rgb(166, 173, 200)",
+      "background": "rgba(0, 0, 0, 0)",
+      "fontSize": "12px",
+      "opacity": "0.7",
+      "box": {
+        "x": 27,
+        "y": 351,
+        "w": 13.203125,
+        "h": 18.8515625
+      }
+    },
+    {
+      "text": "#3",
+      "class": "_indexLabel_18i54_567",
+      "color": "rgb(166, 173, 200)",
+      "background": "rgba(0, 0, 0, 0)",
+      "fontSize": "12px",
+      "opacity": "0.7",
+      "box": {
+        "x": 27,
+        "y": 439,
+        "w": 13.203125,
+        "h": 18.8515625
+      }
+    },
+    {
+      "text": "#4",
+      "class": "_indexLabel_18i54_567",
+      "color": "rgb(166, 173, 200)",
+      "background": "rgba(0, 0, 0, 0)",
+      "fontSize": "12px",
+      "opacity": "0.7",
+      "box": {
+        "x": 27,
+        "y": 527,
+        "w": 13.203125,
+        "h": 18.8515625
+      }
+    },
+    {
+      "text": "#5",
+      "class": "_indexLabel_18i54_567",
+      "color": "rgb(166, 173, 200)",
+      "background": "rgba(0, 0, 0, 0)",
+      "fontSize": "12px",
+      "opacity": "0.7",
+      "box": {
+        "x": 27,
+        "y": 615,
+        "w": 13.203125,
+        "h": 18.8515625
+      }
+    },
+    {
+      "text": "#6",
+      "class": "_indexLabel_18i54_567",
+      "color": "rgb(166, 173, 200)",
+      "background": "rgba(0, 0, 0, 0)",
+      "fontSize": "12px",
+      "opacity": "0.7",
+      "box": {
+        "x": 27,
+        "y": 703,
+        "w": 13.203125,
+        "h": 18.8515625
+      }
+    },
+    {
+      "text": "#7",
+      "class": "_indexLabel_18i54_567",
+      "color": "rgb(166, 173, 200)",
+      "background": "rgba(0, 0, 0, 0)",
+      "fontSize": "12px",
+      "opacity": "0.7",
+      "box": {
+        "x": 27,
+        "y": 791,
+        "w": 13.203125,
+        "h": 18.8515625
+      }
+    },
+    {
+      "text": "#8",
+      "class": "_indexLabel_18i54_567",
+      "color": "rgb(166, 173, 200)",
+      "background": "rgba(0, 0, 0, 0)",
+      "fontSize": "12px",
+      "opacity": "0.7",
+      "box": {
+        "x": 27,
+        "y": 879,
+        "w": 13.203125,
+        "h": 18.8515625
+      }
+    },
+    {
+      "text": "#9",
+      "class": "_indexLabel_18i54_567",
+      "color": "rgb(166, 173, 200)",
+      "background": "rgba(0, 0, 0, 0)",
+      "fontSize": "12px",
+      "opacity": "0.7",
+      "box": {
+        "x": 27,
+        "y": 967,
+        "w": 13.203125,
+        "h": 18.8515625
+      }
+    },
+    {
+      "text": "#10",
+      "class": "_indexLabel_18i54_567",
+      "color": "rgb(166, 173, 200)",
+      "background": "rgba(0, 0, 0, 0)",
+      "fontSize": "12px",
+      "opacity": "0.7",
+      "box": {
+        "x": 27,
+        "y": 1055,
+        "w": 19.796875,
+        "h": 18.8515625
+      }
+    }
+  ]
+}

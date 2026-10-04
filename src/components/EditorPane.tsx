@@ -3,7 +3,7 @@ import { App } from 'antd';
 import { useTranslation } from 'react-i18next';
 import { POEntry } from '../types/tauri';
 import { useTranslationStore } from '../store';
-import { announceToScreenReader } from '../utils/accessibility';
+import { announceToScreenReader, shouldIgnoreBackgroundShortcut } from '../utils/accessibility';
 import { TermConfirmModal } from './TermConfirmModal';
 import { ErrorBoundary } from './ErrorBoundary';
 import { createModuleLogger } from '../utils/logger';
@@ -96,6 +96,7 @@ export const EditorPane = memo(function EditorPane({
   // 快捷键支持
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
+      if (shouldIgnoreBackgroundShortcut(e)) return;
       // Ctrl+Enter: 保存
       if ((e.ctrlKey || e.metaKey) && e.key === 'Enter' && hasUnsavedChanges) {
         e.preventDefault();
@@ -144,7 +145,12 @@ export const EditorPane = memo(function EditorPane({
   const saveStatusId = 'save-status';
 
   return (
-    <div className={styles.container} role="region" aria-label="翻译编辑器" id="main-editor">
+    <div
+      className={styles.container}
+      role="region"
+      aria-label={t('workspace.editor.region')}
+      id="main-editor"
+    >
       {/* 工具栏 */}
       <EditorToolbar
         hasUnsavedChanges={hasUnsavedChanges}
@@ -181,7 +187,7 @@ export const EditorPane = memo(function EditorPane({
       )}
 
       {/* 双栏编辑区域 */}
-      <div className={styles.splitView} role="form" aria-label="翻译编辑表单">
+      <div className={styles.splitView} role="form" aria-label={t('workspace.editor.form')}>
         {/* 原文区域 */}
         <SourceSection entry={entry} />
 

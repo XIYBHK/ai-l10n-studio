@@ -1,6 +1,8 @@
-import React, { CSSProperties } from 'react';
-import { CSS_COLORS } from '../../hooks/useCssColors';
+import React from 'react';
+import { Button, Popover } from 'antd';
+import { QuestionCircleOutlined } from '@ant-design/icons';
 import { useTranslation } from 'react-i18next';
+import styles from '../EditorPane.module.css';
 
 interface StatusBarProps {
   lineNumber?: number;
@@ -8,82 +10,42 @@ interface StatusBarProps {
   isTranslated: boolean;
 }
 
-/**
- * 底部状态栏组件
- */
 export const StatusBar: React.FC<StatusBarProps> = ({ lineNumber, charCount, isTranslated }) => {
   const { t } = useTranslation();
-  const containerStyles: CSSProperties = {
-    padding: 'var(--space-2) var(--space-4)',
-    borderTop: `1px solid ${CSS_COLORS.borderSecondary}`,
-    backgroundColor: CSS_COLORS.bgTertiary,
-    fontSize: 'var(--font-size-xs)',
-    color: CSS_COLORS.textTertiary,
-    display: 'flex',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-  };
-
-  const leftSectionStyles: CSSProperties = {
-    display: 'flex',
-    gap: 'var(--space-4)',
-  };
-
-  const rightSectionStyles: CSSProperties = {
-    display: 'flex',
-    gap: 'var(--space-4)',
-    alignItems: 'center',
-  };
-
-  const shortcutStyles: CSSProperties = {
-    display: 'flex',
-    gap: 'var(--space-3)',
-  };
-
-  const kbdStyles: CSSProperties = {
-    backgroundColor: CSS_COLORS.bgPrimary,
-    padding: '2px 6px',
-    borderRadius: 'var(--radius-sm)',
-    border: `1px solid ${CSS_COLORS.borderSecondary}`,
-    fontFamily: 'var(--mono-font)',
-    fontSize: 'var(--font-size-xs)',
-    color: CSS_COLORS.textSecondary,
-  };
-
-  const statusStyles: CSSProperties = {
-    color: isTranslated ? CSS_COLORS.statusTranslated : CSS_COLORS.statusUntranslated,
-    fontWeight: 'var(--font-weight-medium)',
-  };
-
+  const shortcuts = (
+    <div className={styles.shortcutHelp}>
+      <span>
+        <kbd className={styles.kbd}>Ctrl + Enter</kbd> {t('common.confirm')}
+      </span>
+      <span>
+        <kbd className={styles.kbd}>Esc</kbd> {t('common.cancel')}
+      </span>
+      <span>
+        <kbd className={styles.kbd}>Ctrl + ↑ / ↓</kbd> {t('workspace.editor.navigation')}
+      </span>
+    </div>
+  );
   return (
-    <div style={containerStyles}>
-      <div style={leftSectionStyles}>
+    <div className={styles.statusBar}>
+      <div className={styles.statusBarLeft}>
         {lineNumber !== undefined && (
           <span>{t('workspace.editor.lineNumber', { count: lineNumber })}</span>
         )}
         <span>{t('workspace.editor.charCount', { count: charCount })}</span>
-        <span style={statusStyles}>
-          {isTranslated
-            ? `✓ ${t('workspace.editor.translated')}`
-            : `○ ${t('workspace.editor.untranslated')}`}
+        <span
+          className={`${styles.translationStatus} ${isTranslated ? styles.translated : styles.untranslated}`}
+        >
+          {t(isTranslated ? 'workspace.editor.translated' : 'workspace.editor.untranslated')}
         </span>
       </div>
-
-      <div style={rightSectionStyles}>
-        <div style={shortcutStyles}>
-          <span>
-            <kbd style={kbdStyles}>Ctrl</kbd> + <kbd style={kbdStyles}>Enter</kbd>{' '}
-            {t('common.confirm')}
-          </span>
-          <span>
-            <kbd style={kbdStyles}>Esc</kbd> {t('common.cancel')}
-          </span>
-          <span>
-            <kbd style={kbdStyles}>Ctrl</kbd> + <kbd style={kbdStyles}>↑/↓</kbd>{' '}
-            {t('workspace.editor.navigation')}
-          </span>
-        </div>
-      </div>
+      <Popover title={t('workspace.editor.shortcuts')} content={shortcuts} trigger="click">
+        <Button
+          type="text"
+          size="small"
+          icon={<QuestionCircleOutlined />}
+          aria-label={t('workspace.editor.shortcuts')}
+        />
+      </Popover>
     </div>
   );
 };

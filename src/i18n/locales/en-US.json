@@ -37,7 +37,14 @@
     "memorySaveFailed": "Translations are preserved, but memory could not be updated. These entries still need confirmation.",
     "confirmFailed": "Could not confirm translations: {{error}}"
   },
+  "libraryDraft": {
+    "discardTitle": "Discard unsaved library changes?",
+    "discardDescription": "This library has unsaved changes. Closing will discard them."
+  },
   "entryList": {
+    "compact": { "untranslated": "Pending", "needsReview": "Review", "translated": "Done" },
+    "batchActions": "Batch actions",
+    "refineSelected": "Refine selected (Ctrl+Shift+R)",
     "filterStatus": "Filter by translation status",
     "total": "Total: {{count}}",
     "selected": "({{count}} selected)",
@@ -62,6 +69,7 @@
     "pluralRule": "Plural rule"
   },
   "aiWorkspace": {
+    "configureService": "Translation service not configured",
     "session": "Session statistics",
     "cumulative": "Cumulative statistics",
     "noStats": "No statistics yet",
@@ -172,6 +180,10 @@
   },
   "workspace": {
     "list": {
+      "selected": "Selected",
+      "batchTranslate": "Translate selected entries ({{count}} items)",
+      "batchConfirm": "Confirm selected entries ({{count}} items)",
+      "batchRefine": "Refine selected entries ({{count}} items)",
       "region": "{{title}} list ({{count}} items)",
       "count": "{{count}} items",
       "items": "{{title}} entries",
@@ -183,6 +195,13 @@
       "itemLabel": "Item {{index}}: {{status}}"
     },
     "editor": {
+      "region": "Translation editor",
+      "form": "Translation editing form",
+      "shortcuts": "Keyboard shortcuts",
+      "previous": "Previous entry (Ctrl+↑)",
+      "next": "Next entry (Ctrl+↓)",
+      "noPrevious": "No previous entry",
+      "noNext": "No next entry",
       "sourceRegion": "Source region",
       "sourceContent": "Source content",
       "empty": "(Empty)",
@@ -194,7 +213,7 @@
       "sourceMemory": "Translation memory",
       "sourceDedup": "Deduplicated",
       "unsavedChanges": "Unsaved changes",
-      "draftSynchronized": "Editor content synchronized",
+      "draftSynchronized": "Draft synchronized",
       "navigation": "Navigation",
       "copySource": "Copy source to clipboard",
       "copySourceShort": "Copy source",
@@ -213,8 +232,11 @@
     "welcomeDescription": "Open a PO file and let AI draft your translations. Make room for context, nuance, and a thoughtful final edit.",
     "dropHint": "Or drop a .po file anywhere in this window",
     "contextFeature": "Context-aware",
+    "contextFeatureDescription": "Keep context and comments",
     "memoryFeature": "Translation memory",
+    "memoryFeatureDescription": "Reuse your best translations",
     "reviewFeature": "Human review",
+    "reviewFeatureDescription": "The final word is yours",
     "sourceLabel": "SOURCE",
     "targetLabel": "TRANSLATION",
     "sampleSource": "Welcome to your workspace.",

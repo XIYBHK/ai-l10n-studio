@@ -1,4 +1,4 @@
-import React, { CSSProperties } from 'react';
+import React from 'react';
 import {
   CopyOutlined,
   SaveOutlined,
@@ -6,9 +6,10 @@ import {
   DownOutlined,
   CloseOutlined,
 } from '@ant-design/icons';
-import { Button, Badge } from 'antd';
+import { Button } from 'antd';
 import { useTranslation } from 'react-i18next';
 import { CSS_COLORS } from '../../hooks/useCssColors';
+import styles from '../EditorPane.module.css';
 
 interface EditorToolbarProps {
   saving?: boolean;
@@ -40,91 +41,22 @@ export const EditorToolbar: React.FC<EditorToolbarProps> = ({
   const getStatusIndicator = () => {
     if (hasUnsavedChanges) {
       return (
-        <Badge
-          dot
-          color={CSS_COLORS.statusUntranslated}
-          style={{
-            animation: 'pulse-dot 2s ease-in-out infinite',
-          }}
-        >
-          <span
-            style={{
-              color: CSS_COLORS.statusUntranslated,
-              fontSize: 'var(--font-size-sm)',
-              fontWeight: 'var(--font-weight-medium)',
-              marginLeft: 'var(--space-2)',
-            }}
-          >
-            {t('workspace.editor.unsavedChanges')}
-          </span>
-        </Badge>
+        <span className={styles.unsavedIndicator}>{t('workspace.editor.unsavedChanges')}</span>
       );
     }
 
-    return (
-      <span
-        style={{
-          color: CSS_COLORS.statusTranslated,
-          fontSize: 'var(--font-size-sm)',
-          fontWeight: 'var(--font-weight-medium)',
-          display: 'flex',
-          alignItems: 'center',
-          gap: 'var(--space-1)',
-        }}
-      >
-        <span
-          style={{
-            width: 8,
-            height: 8,
-            borderRadius: '50%',
-            backgroundColor: CSS_COLORS.statusTranslated,
-          }}
-        />
-        {t('workspace.editor.draftSynchronized')}
-      </span>
-    );
-  };
-
-  const toolbarStyles: CSSProperties = {
-    padding: 'var(--space-3) var(--space-4)',
-    backgroundColor: CSS_COLORS.bgTertiary,
-    borderBottom: `1px solid ${CSS_COLORS.borderSecondary}`,
-    display: 'flex',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    gap: 'var(--space-3)',
-  };
-
-  const leftSectionStyles: CSSProperties = {
-    display: 'flex',
-    alignItems: 'center',
-    gap: 'var(--space-3)',
-  };
-
-  const rightSectionStyles: CSSProperties = {
-    display: 'flex',
-    alignItems: 'center',
-    gap: 'var(--space-2)',
-  };
-
-  const navigationGroupStyles: CSSProperties = {
-    display: 'flex',
-    alignItems: 'center',
-    gap: 'var(--space-1)',
-    paddingRight: 'var(--space-3)',
-    borderRight: `1px solid ${CSS_COLORS.borderSecondary}`,
-    marginRight: 'var(--space-2)',
+    return <span className={styles.savedIndicator}>{t('workspace.editor.draftSynchronized')}</span>;
   };
 
   return (
-    <div style={toolbarStyles} role="toolbar" aria-label={t('workspace.editor.toolbar')}>
-      <div style={leftSectionStyles}>{getStatusIndicator()}</div>
+    <div className={styles.toolbar} role="toolbar" aria-label={t('workspace.editor.toolbar')}>
+      <div className={styles.toolbarStatus}>{getStatusIndicator()}</div>
 
-      <div style={rightSectionStyles}>
+      <div className={styles.toolbarActions}>
         {/* 导航按钮组 */}
         {(onNavigatePrev || onNavigateNext) && (
           <div
-            style={navigationGroupStyles}
+            className={styles.navigationGroup}
             role="group"
             aria-label={t('workspace.editor.navigation')}
           >
@@ -133,16 +65,18 @@ export const EditorToolbar: React.FC<EditorToolbarProps> = ({
               icon={<UpOutlined />}
               onClick={onNavigatePrev}
               disabled={!canNavigatePrev}
-              aria-label={canNavigatePrev ? '上一项 (Ctrl+上箭头)' : '没有上一项了'}
-              title="上一项 (Ctrl+↑)"
+              aria-label={t(
+                canNavigatePrev ? 'workspace.editor.previous' : 'workspace.editor.noPrevious'
+              )}
+              title={t('workspace.editor.previous')}
             />
             <Button
               size="small"
               icon={<DownOutlined />}
               onClick={onNavigateNext}
               disabled={!canNavigateNext}
-              aria-label={canNavigateNext ? '下一项 (Ctrl+下箭头)' : '没有下一项了'}
-              title="下一项 (Ctrl+↓)"
+              aria-label={t(canNavigateNext ? 'workspace.editor.next' : 'workspace.editor.noNext')}
+              title={t('workspace.editor.next')}
             />
           </div>
         )}
@@ -154,8 +88,9 @@ export const EditorToolbar: React.FC<EditorToolbarProps> = ({
           onClick={onCopyOriginal}
           disabled={hasUnsavedChanges}
           aria-label={t('workspace.editor.copySource')}
+          title={t('workspace.editor.copySource')}
         >
-          {t('workspace.editor.copySourceShort')}
+          <span className={styles.copyButtonText}>{t('workspace.editor.copySourceShort')}</span>
         </Button>
 
         {hasUnsavedChanges && (
@@ -189,7 +124,7 @@ export const EditorToolbar: React.FC<EditorToolbarProps> = ({
               : undefined
           }
         >
-          {t('workspace.editor.confirmTranslation')}
+          {t('common.confirm')}
         </Button>
       </div>
     </div>

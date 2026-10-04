@@ -1,9 +1,12 @@
 const assert = require('node:assert/strict');
 const fs = require('node:fs');
 const path = require('node:path');
+const zh = require('../../src/i18n/locales/zh-CN.json');
 const { nativeWindow } = require('../scripts/native-window.cjs');
 
-const evidence = path.resolve(__dirname, '../../docs/audits/2026-10-03/window-close');
+const evidence = process.env.TAURI_E2E_EVIDENCE_DIR
+  ? path.resolve(process.env.TAURI_E2E_EVIDENCE_DIR)
+  : path.resolve(__dirname, '../../docs/audits/2026-10-03/window-close');
 const scenario = process.env.TAURI_E2E_CLOSE_SCENARIO || 'clean';
 
 async function visible(selector) {
@@ -111,7 +114,7 @@ describe('Native title-bar close', () => {
             .$('[role="toolbar"][aria-label="编辑器工具栏"]')
             .getText();
           assert.equal(fileStatus, '文件尚未保存');
-          assert.ok(editorStatus.includes('编辑内容已同步'));
+          assert.ok(editorStatus.includes(zh.workspace.editor.draftSynchronized));
           assert.ok(!editorStatus.includes('已保存'));
           result.saveFailureLabelsAccurate = true;
           await browser.saveScreenshot(path.join(evidence, 'save-failure.png'));

@@ -1,5 +1,5 @@
 import { useState, useEffect, useMemo, useDeferredValue } from 'react';
-import { App, Modal, Table, Input, Button, Space, Popconfirm, Tag, Select } from 'antd';
+import { App, Modal, Table, Input, Button, Space, Popconfirm, Tag, Select, Form } from 'antd';
 import { useTranslation } from 'react-i18next';
 import {
   DeleteOutlined,
@@ -78,13 +78,15 @@ const isTranslationMemory = (value: unknown): value is TranslationMemory => {
 interface MemoryManagerProps {
   visible: boolean;
   onClose: () => void;
+  afterClose?: () => void;
 }
 
-export function MemoryManager({ visible, onClose }: MemoryManagerProps) {
+export function MemoryManager({ visible, onClose, afterClose }: MemoryManagerProps) {
   const { t } = useTranslation();
-  const { message } = App.useApp();
+  const { message, modal } = App.useApp();
   const [memories, setMemories] = useState<MemoryEntry[]>([]);
   const [baseMemory, setBaseMemory] = useState<TranslationMemory | null>(null);
+  const [dirty, setDirty] = useState(false);
   const [loading, setLoading] = useState(false);
   const { tm, isLoading: loadingTM, mutate } = useTranslationMemory();
   const { languages } = useSupportedLanguages(); // 从后端动态获取语言列表
@@ -125,7 +127,8 @@ export function MemoryManager({ visible, onClose }: MemoryManagerProps) {
   useEffect(() => {
     if (!visible) {
       setBaseMemory(null);
-    } else if (!baseMemory) {
+      setDirty(false);
+    } else if (!baseMemory || (!dirty && tm && tm.revision > baseMemory.revision)) {
       if (tm) {
         setBaseMemory(tm);
         const entries = entriesFromMemory(tm);
@@ -135,7 +138,22 @@ export function MemoryManager({ visible, onClose }: MemoryManagerProps) {
         setMemories([]);
       }
     }
-  }, [visible, tm, loadingTM, baseMemory]);
+  }, [visible, tm, loadingTM, baseMemory, dirty]);
+
+  const requestClose = () => {
+    if (!dirty && !newSource && !newTarget) {
+      onClose();
+      return;
+    }
+    modal.confirm({
+      title: t('libraryDraft.discardTitle'),
+      content: t('libraryDraft.discardDescription'),
+      okText: t('document.discard'),
+      cancelText: t('common.cancel'),
+      okButtonProps: { danger: true },
+      onOk: onClose,
+    });
+  };
 
   useEffect(() => {
     let rafId: number | null = null;
@@ -198,6 +216,7 @@ export function MemoryManager({ visible, onClose }: MemoryManagerProps) {
 
       message.success(t('messages.memorySaved'));
       await mutate();
+      setDirty(false);
       onClose();
     } catch (error) {
       log.logError(error, '保存记忆库失败');
@@ -213,6 +232,7 @@ export function MemoryManager({ visible, onClose }: MemoryManagerProps) {
 
   const handleDelete = (key: string) => {
     setMemories(memories.filter((entry) => entry.key !== key));
+    setDirty(true);
   };
 
   const handleClearAll = async () => {
@@ -232,6 +252,7 @@ export function MemoryManager({ visible, onClose }: MemoryManagerProps) {
 
       setMemories([]);
       setBaseMemory(cleared);
+      setDirty(false);
       const freshTM = cleared;
       log.debug('清空后重新获取记忆库', { hasTM: !!freshTM });
 
@@ -269,6 +290,7 @@ export function MemoryManager({ visible, onClose }: MemoryManagerProps) {
         ...memories,
         ...additions.map((entry, index) => ({ ...entry, key: `builtin:${Date.now()}:${index}` })),
       ]);
+      setDirty(true);
 
       message.success(t('messages.builtinLoaded', { count: addedCount }));
     } catch (error) {
@@ -345,6 +367,7 @@ export function MemoryManager({ visible, onClose }: MemoryManagerProps) {
         if (isTranslationMemory(data)) {
           const entries = entriesFromMemory(data);
           setMemories(entries);
+          setDirty(true);
           message.success(t('messages.memoryImported', { count: entries.length }));
         } else {
           message.error(t('memoryManager.invalidImport'));
@@ -386,6 +409,7 @@ export function MemoryManager({ visible, onClose }: MemoryManagerProps) {
     }
 
     setMemories([...memories, newEntry]);
+    setDirty(true);
     setNewSource('');
     setNewTarget('');
     message.success(t('messages.entryAdded'));
@@ -395,6 +419,7 @@ export function MemoryManager({ visible, onClose }: MemoryManagerProps) {
     setMemories(
       memories.map((entry) => (entry.key === key ? { ...entry, [field]: value } : entry))
     );
+    setDirty(true);
   };
 
   const deferredSearchText = useDeferredValue(searchText);
@@ -415,6 +440,7 @@ export function MemoryManager({ visible, onClose }: MemoryManagerProps) {
       width: '35%',
       render: (text: string, record: MemoryEntry) => (
         <Input
+          aria-label={t('memoryManager.original')}
           value={text}
           onChange={(e) => handleEdit(record.key, 'source', e.target.value)}
           size="small"
@@ -428,6 +454,7 @@ export function MemoryManager({ visible, onClose }: MemoryManagerProps) {
       width: '35%',
       render: (text: string, record: MemoryEntry) => (
         <Input
+          aria-label={t('memoryManager.translation')}
           value={text}
           onChange={(e) => handleEdit(record.key, 'target', e.target.value)}
           size="small"
@@ -479,7 +506,8 @@ export function MemoryManager({ visible, onClose }: MemoryManagerProps) {
     <Modal
       title={t('memoryManager.title')}
       open={visible}
-      onCancel={onClose}
+      onCancel={requestClose}
+      afterClose={afterClose}
       onOk={handleSave}
       width={960}
       centered
@@ -527,6 +555,7 @@ export function MemoryManager({ visible, onClose }: MemoryManagerProps) {
         </Space>
 
         <Input
+          aria-label={t('memoryManager.search')}
           placeholder={t('memoryManager.search')}
           prefix={<SearchOutlined />}
           value={searchText}
@@ -544,23 +573,48 @@ export function MemoryManager({ visible, onClose }: MemoryManagerProps) {
           }))}
           style={{ minWidth: 180, marginBottom: 'var(--space-3)' }}
         />
-        <Space.Compact style={{ width: '100%' }}>
-          <Input
-            placeholder={t('memoryManager.original')}
-            value={newSource}
-            onChange={(e) => setNewSource(e.target.value)}
-            onPressEnter={handleAdd}
-          />
-          <Input
-            placeholder={t('memoryManager.translation')}
-            value={newTarget}
-            onChange={(e) => setNewTarget(e.target.value)}
-            onPressEnter={handleAdd}
-          />
+        <Form
+          layout="vertical"
+          component="div"
+          style={{
+            display: 'grid',
+            gridTemplateColumns: '1fr 1fr auto',
+            gap: 'var(--space-3)',
+            alignItems: 'end',
+          }}
+        >
+          <Form.Item
+            label={t('memoryManager.original')}
+            htmlFor="memory-new-source"
+            style={{ marginBottom: 0 }}
+          >
+            <Input
+              id="memory-new-source"
+              aria-label={t('memoryManager.original')}
+              placeholder={t('memoryManager.original')}
+              value={newSource}
+              onChange={(e) => setNewSource(e.target.value)}
+              onPressEnter={handleAdd}
+            />
+          </Form.Item>
+          <Form.Item
+            label={t('memoryManager.translation')}
+            htmlFor="memory-new-target"
+            style={{ marginBottom: 0 }}
+          >
+            <Input
+              id="memory-new-target"
+              aria-label={t('memoryManager.translation')}
+              placeholder={t('memoryManager.translation')}
+              value={newTarget}
+              onChange={(e) => setNewTarget(e.target.value)}
+              onPressEnter={handleAdd}
+            />
+          </Form.Item>
           <Button type="primary" icon={<PlusOutlined />} onClick={handleAdd}>
             {t('memoryManager.add')}
           </Button>
-        </Space.Compact>
+        </Form>
       </div>
 
       <Table

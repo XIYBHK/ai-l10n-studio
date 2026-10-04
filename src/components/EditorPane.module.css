@@ -21,6 +21,7 @@
   display: flex;
   flex-direction: column;
   overflow: hidden;
+  container-type: inline-size;
 }
 
 /* 分割视图 */
@@ -40,7 +41,7 @@
   flex-direction: column;
   min-height: 0;
   border-bottom: 1px solid var(--color-borderSecondary);
-  background-color: var(--color-bgPrimary);
+  background-color: var(--color-bgSecondary);
 }
 
 /* 译文区域 - 下半部分 */
@@ -68,8 +69,8 @@
 /* 原文内容区 */
 .sourceContent {
   flex: 1;
-  padding: var(--space-4);
-  background: var(--color-bgPrimary);
+  padding: var(--space-5) var(--space-6);
+  background: var(--color-bgSecondary);
   border-radius: 0;
   margin: 0;
   box-shadow: none;
@@ -78,7 +79,7 @@
 }
 
 .sourceText {
-  font-size: 15px;
+  font-size: var(--font-size-md);
   line-height: 1.8;
   color: var(--color-textPrimary);
   white-space: pre-wrap;
@@ -94,10 +95,10 @@
 /* 上下文信息区 */
 .contextBox {
   margin-top: var(--space-5);
-  padding: var(--space-3);
-  background: transparent;
+  padding: var(--space-3) var(--space-4);
+  background: var(--color-bgPrimary);
   border-radius: var(--radius-base);
-  border: 1px solid color-mix(in srgb, var(--color-borderSecondary) 55%, transparent);
+  border: 1px solid var(--color-borderSecondary);
 }
 
 .contextItem {
@@ -144,7 +145,7 @@
   display: flex;
   flex-direction: column;
   position: relative;
-  padding: var(--space-4);
+  padding: var(--space-4) var(--space-6);
   min-height: 0;
 }
 
@@ -153,13 +154,13 @@
   flex: 1;
   font-size: 16px;
   line-height: 1.8;
-  padding: var(--space-4);
+  padding: var(--space-4) var(--space-4) 52px;
   resize: none;
   background-color: var(--color-bgPrimary) !important;
   border: 1px solid var(--color-borderSecondary) !important;
   border-radius: var(--radius-md) !important;
   box-shadow: none !important;
-  transition: all var(--duration-base) var(--ease-out) !important;
+  transition: border-color var(--duration-fast) var(--ease-out) !important;
   font-family: var(--mono-font) !important;
 }
 
@@ -195,10 +196,10 @@
 .charCounter {
   position: absolute;
   bottom: var(--space-5);
-  right: var(--space-5);
+  right: var(--space-8);
   font-size: var(--font-size-xs);
   color: var(--color-textTertiary);
-  background-color: var(--color-bgTertiary);
+  background-color: var(--color-bgSecondary);
   padding: var(--space-1) var(--space-2);
   border-radius: var(--radius-sm);
   border: 1px solid var(--color-borderSecondary);
@@ -208,17 +209,16 @@
 .unsavedBadge {
   position: absolute;
   bottom: var(--space-5);
-  left: var(--space-5);
+  left: var(--space-8);
   display: flex;
   align-items: center;
   gap: var(--space-1);
   padding: var(--space-1) var(--space-3);
-  background-color: var(--color-warning);
-  color: #1e1e2e;
+  background-color: var(--color-warningBg);
+  color: var(--color-warning);
   border-radius: var(--radius-full);
   font-size: var(--font-size-xs);
   font-weight: var(--font-weight-semibold);
-  animation: pulse-badge 2s ease-in-out infinite;
   box-shadow: none;
   z-index: 10;
 }
@@ -234,12 +234,14 @@
 /* 工具栏 */
 .toolbar {
   padding: var(--space-3) var(--space-4);
-  background: var(--color-bgTertiary);
+  background: var(--color-bgPrimary);
   border-bottom: 1px solid var(--color-borderSecondary);
   display: flex;
   justify-content: space-between;
   align-items: center;
   gap: var(--space-3);
+  min-height: 56px;
+  flex-wrap: wrap;
 }
 
 .toolbarStatus {
@@ -254,6 +256,8 @@
   display: flex;
   align-items: center;
   gap: var(--space-2);
+  margin-left: auto;
+  flex-shrink: 0;
 }
 
 .navigationGroup {
@@ -284,7 +288,7 @@
 }
 
 .unsavedIndicator {
-  color: var(--color-statusUntranslated);
+  color: var(--color-statusNeedsReview);
   font-size: var(--font-size-sm);
   font-weight: var(--font-weight-medium);
   display: flex;
@@ -297,25 +301,52 @@
   width: 8px;
   height: 8px;
   border-radius: 50%;
-  background-color: var(--color-statusUntranslated);
-  animation: pulse-dot 2s ease-in-out infinite;
+  background-color: var(--color-statusNeedsReview);
 }
 
 /* 状态栏 */
 .statusBar {
   padding: var(--space-2) var(--space-4);
   border-top: 1px solid var(--color-borderSecondary);
-  background: var(--color-bgTertiary);
+  background: var(--color-bgPrimary);
   font-size: var(--font-size-xs);
   color: var(--color-textTertiary);
   display: flex;
   justify-content: space-between;
   align-items: center;
+  flex-shrink: 0;
+  gap: var(--space-2);
 }
 
 .statusBarLeft {
   display: flex;
   gap: var(--space-4);
+  flex-wrap: wrap;
+}
+.statusBarLeft > span {
+  white-space: nowrap;
+}
+.shortcutHelp {
+  display: grid;
+  gap: var(--space-3);
+}
+.shortcutHelp > span {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-4);
+}
+@container (max-width: 540px) {
+  .copyButtonText {
+    display: none;
+  }
+  .toolbar {
+    gap: var(--space-2);
+  }
+  .navigationGroup {
+    margin-right: 0;
+    padding-right: var(--space-2);
+  }
 }
 
 .statusBarRight {

@@ -1,235 +1,85 @@
 import type { ThemeConfig } from 'antd';
 import { theme } from 'antd';
+import tokenCss from '../index.css?inline';
 
-const palette = {
-  primary: '#cba6f7',
-  accent: '#89b4fa',
-  needsReview: '#fab387',
-  successLight: '#166534',
-  successDark: '#a6e3a1',
-  warning: '#f9e2af',
-  error: '#ed8796',
-  info: '#89b4fa',
+// Ant Design's palette algorithm needs resolved values, not CSS var() references.
+// Read the bundled token stylesheet so both systems share one source of truth.
+function createTheme(mode: 'light' | 'dark'): ThemeConfig {
+  const root = tokenCss.match(/:root\s*\{([\s\S]*?)\}/)?.[1] ?? '';
+  const dark = tokenCss.match(/\[data-theme=['"]?dark['"]?\]\s*\{([\s\S]*?)\}/)?.[1] ?? '';
+  const values = new Map(
+    Array.from(
+      `${root};\n${mode === 'dark' ? dark : ''}`.matchAll(/--([\w-]+):\s*([^;]+)(?:;|$)/g),
+      ([, name, value]) => [name, value.trim()] as const
+    )
+  );
+  const token = (name: string): string => {
+    const value = values.get(name);
+    if (!value) throw new Error(`Missing design token: --${name}`);
+    return value;
+  };
+  const color = (name: string) => token(`color-${name}`);
+  return {
+    algorithm: mode === 'dark' ? theme.darkAlgorithm : theme.defaultAlgorithm,
+    token: {
+      colorPrimary: color('brandPrimary'),
+      colorSuccess: color('statusTranslated'),
+      colorWarning: color('warning'),
+      colorError: color('error'),
+      colorInfo: color('brandSecondary'),
+      colorBgBase: color('bgSecondary'),
+      colorBgContainer: color('bgPrimary'),
+      colorBgElevated: color('bgPrimary'),
+      colorBgLayout: color('bgSecondary'),
+      colorText: color('textPrimary'),
+      colorTextSecondary: color('textSecondary'),
+      colorTextTertiary: color('textTertiary'),
+      colorTextDisabled: color('textDisabled'),
+      colorTextPlaceholder: color('textTertiary'),
+      colorBorder: color('borderPrimary'),
+      colorBorderSecondary: color('borderSecondary'),
+      colorSplit: color('borderSecondary'),
+      colorBgMask: color('overlayBg'),
+      borderRadius: Number.parseFloat(token('radius-md')),
+      fontFamily: token('body-font'),
+      fontSize: Number.parseFloat(token('font-size-base')),
+      controlHeight: 34,
+      controlHeightSM: 28,
+      boxShadow: token('shadow-md'),
+      boxShadowSecondary: token('shadow-lg'),
+      motionDurationFast: token('duration-fast'),
+      motionDurationMid: token('duration-base'),
+      motionDurationSlow: token('duration-slow'),
+      motionEaseOut: token('ease-out'),
+      motionEaseInOut: token('ease-in-out'),
+    },
+    components: {
+      Button: {
+        primaryColor: color('onBrand'),
+        primaryShadow: 'none',
+        defaultShadow: 'none',
+        defaultBg: color('bgPrimary'),
+        defaultColor: color('textPrimary'),
+        defaultBorderColor: color('borderPrimary'),
+        defaultHoverBg: color('hoverBg'),
+        defaultActiveBg: color('activeBg'),
+      },
+      Input: {
+        activeShadow: token('shadow-focus'),
+        hoverBorderColor: color('brandPrimary'),
+      },
+      Select: { optionSelectedBg: color('selectedBg') },
+      Table: {
+        headerBg: color('bgSecondary'),
+        headerColor: color('textSecondary'),
+        rowHoverBg: color('hoverBg'),
+      },
+      Modal: { contentBg: color('bgPrimary'), headerBg: color('bgPrimary') },
+      Drawer: { colorBgElevated: color('bgPrimary') },
+      Layout: { headerBg: color('bgSecondary'), bodyBg: color('bgSecondary') },
+    },
+  };
+}
 
-  light: {
-    bgBase: '#f5f5fa',
-    bgContainer: '#ffffff',
-    bgElevated: '#ffffff',
-    border: '#dcdce7',
-    borderSecondary: '#e9e8f0',
-    textPrimary: '#4c4f69',
-    textSecondary: '#5c5f77',
-    textTertiary: '#64687f',
-    textDisabled: 'rgba(76, 79, 105, 0.66)',
-  },
-
-  dark: {
-    bgBase: '#181825',
-    bgContainer: '#1e1e2e',
-    bgElevated: '#262637',
-    border: '#363649',
-    borderSecondary: '#2b2b3d',
-    textPrimary: '#cdd6f4',
-    textSecondary: '#bac2de',
-    textTertiary: '#a6adc8',
-    textDisabled: 'rgba(205, 214, 244, 0.42)',
-  },
-};
-
-const commonTokens = {
-  colorPrimary: palette.primary,
-  colorSuccess: palette.successDark,
-  colorWarning: palette.warning,
-  colorError: palette.error,
-  colorInfo: palette.info,
-  borderRadius: 8,
-  fontFamily: 'var(--body-font)',
-  wireframe: false,
-  motionDurationFast: '0.1s',
-  motionDurationMid: '0.2s',
-  motionDurationSlow: '0.3s',
-  motionEaseInOut: 'cubic-bezier(0.645, 0.045, 0.355, 1)',
-  motionEaseOut: 'cubic-bezier(0.215, 0.61, 0.355, 1)',
-};
-
-export const lightTheme: ThemeConfig = {
-  token: {
-    ...commonTokens,
-    colorPrimary: '#7c4dbe',
-    colorSuccess: palette.successLight,
-    colorBgBase: palette.light.bgBase,
-    colorBgContainer: palette.light.bgContainer,
-    colorBgElevated: palette.light.bgElevated,
-    colorBgLayout: palette.light.bgBase,
-    colorText: palette.light.textPrimary,
-    colorTextSecondary: palette.light.textSecondary,
-    colorTextTertiary: palette.light.textTertiary,
-    colorTextDisabled: palette.light.textDisabled,
-    colorTextPlaceholder: palette.light.textTertiary,
-    colorBorder: palette.light.border,
-    colorBorderSecondary: palette.light.borderSecondary,
-    boxShadow: '0 2px 8px rgba(203, 166, 247, 0.08)',
-    boxShadowSecondary: '0 4px 16px rgba(203, 166, 247, 0.12)',
-  },
-  components: {
-    Layout: {
-      headerBg: palette.light.bgContainer,
-      bodyBg: palette.light.bgBase,
-      siderBg: palette.light.bgBase,
-    },
-    Button: {
-      controlHeight: 32,
-      borderRadius: 8,
-      defaultBg: palette.light.bgContainer,
-      defaultColor: palette.light.textPrimary,
-      defaultBorderColor: palette.light.border,
-      defaultHoverBg: palette.light.bgElevated,
-      defaultHoverColor: palette.light.textPrimary,
-      defaultHoverBorderColor: palette.light.border,
-      defaultActiveBg: palette.light.border,
-      defaultActiveColor: palette.light.textPrimary,
-      defaultActiveBorderColor: palette.light.border,
-      defaultShadow: '0 2px 4px rgba(0, 0, 0, 0.04)',
-      primaryShadow: 'none',
-    },
-    Input: {
-      colorBgContainer: palette.light.bgContainer,
-      colorBorder: palette.light.border,
-      colorText: palette.light.textPrimary,
-      colorTextPlaceholder: palette.light.textTertiary,
-      activeShadow: '0 0 0 2px rgba(203, 166, 247, 0.15)',
-      hoverBg: palette.light.bgElevated,
-      hoverBorderColor: palette.light.border,
-    },
-    Select: {
-      colorBgContainer: palette.light.bgContainer,
-      colorBorder: palette.light.border,
-      optionSelectedBg: palette.light.bgElevated,
-    },
-    Table: {
-      headerBg: palette.light.bgElevated,
-      headerColor: palette.light.textSecondary,
-      borderColor: palette.light.borderSecondary,
-      rowHoverBg: palette.light.bgElevated,
-    },
-    Modal: {
-      contentBg: palette.light.bgContainer,
-      headerBg: palette.light.bgContainer,
-    },
-    Card: {
-      colorBgElevated: palette.light.bgElevated,
-    },
-  },
-};
-
-export const darkTheme: ThemeConfig = {
-  algorithm: theme.darkAlgorithm,
-  token: {
-    ...commonTokens,
-    colorBgBase: palette.dark.bgBase,
-    colorBgContainer: palette.dark.bgContainer,
-    colorBgElevated: palette.dark.bgElevated,
-    colorBgLayout: palette.dark.bgBase,
-    colorText: palette.dark.textPrimary,
-    colorTextSecondary: palette.dark.textSecondary,
-    colorTextTertiary: palette.dark.textTertiary,
-    colorTextDisabled: palette.dark.textDisabled,
-    colorTextPlaceholder: palette.dark.textTertiary,
-    colorBorder: palette.dark.border,
-    colorBorderSecondary: palette.dark.borderSecondary,
-    colorSplit: palette.dark.border,
-  },
-  components: {
-    Layout: {
-      headerBg: palette.dark.bgBase,
-      bodyBg: palette.dark.bgBase,
-      siderBg: palette.dark.bgBase,
-    },
-    Button: {
-      defaultBg: palette.dark.bgElevated,
-      defaultColor: palette.dark.textPrimary,
-      defaultBorderColor: palette.dark.borderSecondary,
-      defaultHoverBg: palette.dark.bgContainer,
-      defaultHoverColor: palette.dark.textPrimary,
-      defaultHoverBorderColor: palette.dark.border,
-      primaryShadow: '0 2px 8px rgba(203, 166, 247, 0.3)',
-    },
-    Input: {
-      colorBgContainer: palette.dark.bgContainer,
-      colorBorder: palette.dark.borderSecondary,
-      activeBg: 'transparent',
-      activeShadow: '0 0 0 2px rgba(203, 166, 247, 0.2)',
-    },
-    Table: {
-      headerBg: palette.dark.bgElevated,
-      headerColor: palette.dark.textSecondary,
-      borderColor: palette.dark.border,
-      rowHoverBg: 'rgba(203, 166, 247, 0.08)',
-    },
-    Modal: {
-      contentBg: palette.dark.bgContainer,
-      headerBg: palette.dark.bgContainer,
-    },
-    Select: {
-      colorBgContainer: palette.dark.bgContainer,
-      colorBorder: palette.dark.borderSecondary,
-      optionSelectedBg: palette.dark.bgElevated,
-    },
-  },
-};
-
-const commonSourceColors = {
-  sourceTmBg: 'rgba(82, 196, 26, 0.1)',
-  sourceTmColor: '#52c41a',
-  sourceDedupBg: 'rgba(24, 144, 255, 0.1)',
-  sourceDedupColor: '#1890ff',
-  sourceAiBg: 'rgba(250, 173, 20, 0.1)',
-  sourceAiColor: '#faad14',
-  overlayBg: 'rgba(0, 0, 0, 0.6)',
-  overlayText: '#ffffff',
-};
-
-export const semanticColors = {
-  light: {
-    bgPrimary: palette.light.bgContainer,
-    bgSecondary: palette.light.bgBase,
-    bgTertiary: palette.light.bgElevated,
-    textPrimary: palette.light.textPrimary,
-    textSecondary: palette.light.textSecondary,
-    textTertiary: palette.light.textTertiary,
-    textDisabled: palette.light.textDisabled,
-    borderPrimary: palette.light.border,
-    borderSecondary: palette.light.borderSecondary,
-    statusUntranslated: palette.primary,
-    statusNeedsReview: palette.needsReview,
-    statusTranslated: palette.successLight,
-    hoverBg: palette.light.bgElevated,
-    activeBg: 'rgba(203, 166, 247, 0.1)',
-    selectedBg: 'rgba(203, 166, 247, 0.12)',
-    selectedBorder: palette.primary,
-    brandPrimary: palette.primary,
-    brandSecondary: palette.accent,
-    ...commonSourceColors,
-  },
-  dark: {
-    bgPrimary: palette.dark.bgBase,
-    bgSecondary: palette.dark.bgBase,
-    bgTertiary: palette.dark.bgElevated,
-    textPrimary: palette.dark.textPrimary,
-    textSecondary: palette.dark.textSecondary,
-    textTertiary: palette.dark.textTertiary,
-    textDisabled: palette.dark.textDisabled,
-    borderPrimary: palette.dark.border,
-    borderSecondary: palette.dark.borderSecondary,
-    statusUntranslated: palette.primary,
-    statusNeedsReview: palette.needsReview,
-    statusTranslated: palette.successDark,
-    hoverBg: 'rgba(203, 166, 247, 0.08)',
-    activeBg: 'rgba(203, 166, 247, 0.15)',
-    selectedBg: 'rgba(203, 166, 247, 0.18)',
-    selectedBorder: palette.primary,
-    brandPrimary: palette.primary,
-    brandSecondary: palette.accent,
-    ...commonSourceColors,
-  },
-};
+export const lightTheme = createTheme('light');
+export const darkTheme = createTheme('dark');

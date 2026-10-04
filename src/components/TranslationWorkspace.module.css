@@ -3,7 +3,7 @@
   min-height: 0;
   display: flex;
   flex-direction: column;
-  margin: 0 12px 12px;
+  margin: 0 var(--space-4) var(--space-4);
   border: 1px solid var(--color-borderPrimary);
   border-radius: var(--radius-lg);
   overflow: hidden;
@@ -11,12 +11,12 @@
   box-shadow: var(--shadow-sm);
 }
 .heading {
-  height: 48px;
+  height: 50px;
   flex-shrink: 0;
   display: flex;
   align-items: center;
   gap: 16px;
-  padding: 0 20px;
+  padding: 0 var(--space-5);
   border-bottom: 1px solid var(--color-borderSecondary);
 }
 .fileHeading {
@@ -30,7 +30,7 @@
   font-size: 16px;
 }
 .fileHeading h2 {
-  font: 500 13px var(--body-font);
+  font: 600 var(--font-size-sm) var(--body-font);
   color: var(--color-textPrimary);
   white-space: nowrap;
   overflow: hidden;
@@ -47,7 +47,7 @@
 .headingHint {
   margin-left: auto;
   color: var(--color-textTertiary);
-  font-size: 11px;
+  font-size: var(--font-size-xs);
 }
 .panels {
   position: relative;
@@ -69,7 +69,7 @@
   overflow: hidden;
 }
 .assistant {
-  width: 276px;
+  width: 284px;
   flex-shrink: 0;
   min-height: 0;
   overflow: auto;
@@ -97,15 +97,6 @@
 @media (max-width: 1180px) {
   .assistant {
     display: none;
-  }
-  .assistantOpen {
-    display: block;
-    position: absolute;
-    top: 0;
-    bottom: 0;
-    right: 0;
-    z-index: 5;
-    box-shadow: var(--shadow-lg);
   }
   .assistantToggle {
     display: inline-flex;
